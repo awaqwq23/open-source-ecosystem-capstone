@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -23,14 +24,14 @@ class ListPage extends ConsumerWidget {
             ui.Tooltip(
               tooltip: (context) => Text(l10n.headerOpenListTabs),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.menu),
+                icon: const Icon(AppIcons.openListTabs),
                 onPressed: () => _showTabSwitcher(context, ref),
               ),
             ),
             ui.Tooltip(
               tooltip: (context) => Text(l10n.headerOpenListSettings),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.more_horiz),
+                icon: const Icon(AppIcons.moreActions),
                 onPressed: () => _showSettingsMenu(context),
               ),
             ),
@@ -60,7 +61,7 @@ class ListPage extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Icon(
-                              Icons.checklist_rtl,
+                              AppIcons.listFilled,
                               color: theme.colorScheme.primary,
                             ),
                           ),

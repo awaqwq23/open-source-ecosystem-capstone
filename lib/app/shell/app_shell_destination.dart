@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 
 enum AppShellDestination {
   home(
     route: AppRoutePaths.home,
-    icon: Icons.calendar_view_week_outlined,
-    selectedIcon: Icons.calendar_view_week,
+    icon: AppIcons.homeOutlined,
+    selectedIcon: AppIcons.homeFilled,
   ),
   list(
     route: AppRoutePaths.list,
-    icon: Icons.checklist_rtl_outlined,
-    selectedIcon: Icons.checklist_rtl,
+    icon: AppIcons.listOutlined,
+    selectedIcon: AppIcons.listFilled,
   ),
   ai(
     route: AppRoutePaths.ai,
-    icon: Icons.auto_awesome_outlined,
-    selectedIcon: Icons.auto_awesome,
+    icon: AppIcons.aiOutlined,
+    selectedIcon: AppIcons.aiFilled,
   ),
   itemEditor(
     route: AppRoutePaths.itemEditor,
-    icon: Icons.add_box_outlined,
-    selectedIcon: Icons.add_box,
+    icon: AppIcons.itemEditorOutlined,
+    selectedIcon: AppIcons.itemEditorFilled,
   ),
   settings(
     route: AppRoutePaths.settings,
-    icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
+    icon: AppIcons.settingsOutlined,
+    selectedIcon: AppIcons.settingsFilled,
   );
 
   const AppShellDestination({

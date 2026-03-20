@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class TimePickerPage extends StatelessWidget {
@@ -18,7 +19,7 @@ class TimePickerPage extends StatelessWidget {
             ui.Tooltip(
               tooltip: (context) => Text(context.l10n.commonBack),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(AppIcons.back),
                 onPressed: context.pop,
               ),
             ),
@@ -44,7 +45,7 @@ class TimePickerPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
-                        Icons.calendar_month,
+                        AppIcons.openTimePicker,
                         color: theme.colorScheme.primary,
                       ),
                     ),

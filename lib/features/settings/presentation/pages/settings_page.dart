@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -39,7 +40,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ui.Tooltip(
               tooltip: (context) => Text(l10n.settingsQuickActionsTitle),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.tune),
+                icon: const Icon(AppIcons.quickActions),
                 onPressed: () => _showQuickActions(context),
               ),
             ),
@@ -78,7 +79,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             children: [
                               _OptionButton<ui.ThemeMode>(
                                 label: l10n.themeSystem,
-                                icon: Icons.brightness_auto_outlined,
+                                icon: AppIcons.themeSystem,
                                 value: ui.ThemeMode.system,
                                 selected: themeMode == ui.ThemeMode.system,
                                 onTap: (value) {
@@ -87,7 +88,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                               _OptionButton<ui.ThemeMode>(
                                 label: l10n.themeLight,
-                                icon: Icons.light_mode_outlined,
+                                icon: AppIcons.themeLight,
                                 value: ui.ThemeMode.light,
                                 selected: themeMode == ui.ThemeMode.light,
                                 onTap: (value) {
@@ -96,7 +97,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                               _OptionButton<ui.ThemeMode>(
                                 label: l10n.themeDark,
-                                icon: Icons.dark_mode_outlined,
+                                icon: AppIcons.themeDark,
                                 value: ui.ThemeMode.dark,
                                 selected: themeMode == ui.ThemeMode.dark,
                                 onTap: (value) {
@@ -125,7 +126,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             children: [
                               _OptionButton<Locale>(
                                 label: l10n.languageChinese,
-                                icon: Icons.translate_outlined,
+                                icon: AppIcons.languageChinese,
                                 value: AppLocale.chinese.locale,
                                 selected: locale == AppLocale.chinese.locale,
                                 onTap: (value) {
@@ -134,7 +135,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                               _OptionButton<Locale>(
                                 label: l10n.languageEnglish,
-                                icon: Icons.language_outlined,
+                                icon: AppIcons.languageEnglish,
                                 value: AppLocale.english.locale,
                                 selected: locale == AppLocale.english.locale,
                                 onTap: (value) {
@@ -178,7 +179,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  leading: const Icon(Icons.palette_outlined),
+                  leading: const Icon(AppIcons.appearanceSection),
                   title: Text(l10n.themeSectionTitle),
                   onTap: () {
                     ui.closeDrawer(sheetContext);
@@ -186,7 +187,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.translate_outlined),
+                  leading: const Icon(AppIcons.languageChinese),
                   title: Text(l10n.languageSectionTitle),
                   onTap: () {
                     ui.closeDrawer(sheetContext);

@@ -5,6 +5,7 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -40,7 +41,7 @@ class HomePage extends ConsumerWidget {
                         child: ui.Tooltip(
                           tooltip: (context) => Text(context.l10n.headerPreviousPeriod),
                           child: ui.IconButton.ghost(
-                            icon: const Icon(Icons.chevron_left),
+                            icon: const Icon(AppIcons.previousPeriod),
                             onPressed: viewModel.showPrevious,
                           ),
                         ),
@@ -73,7 +74,7 @@ class HomePage extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.keyboard_arrow_down, size: 18),
+                              const Icon(AppIcons.expandSelection, size: 18),
                             ],
                           ),
                         ),
@@ -83,7 +84,7 @@ class HomePage extends ConsumerWidget {
                         child: ui.Tooltip(
                           tooltip: (context) => Text(context.l10n.headerNextPeriod),
                           child: ui.IconButton.ghost(
-                            icon: const Icon(Icons.chevron_right),
+                            icon: const Icon(AppIcons.nextPeriod),
                             onPressed: viewModel.showNext,
                           ),
                         ),

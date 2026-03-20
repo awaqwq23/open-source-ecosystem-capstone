@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/viewmodels/item_editor_header_view_model.dart';
@@ -618,7 +619,7 @@ class _TypeSelectorRow extends StatelessWidget {
         Expanded(
           child: _TypeButton(
             selected: selectedType == ItemType.task,
-            icon: Icons.check_circle_outline,
+            icon: AppIcons.itemTypeTask,
             label: taskLabel,
             onPressed: () => onSelected(ItemType.task),
           ),
@@ -627,7 +628,7 @@ class _TypeSelectorRow extends StatelessWidget {
         Expanded(
           child: _TypeButton(
             selected: selectedType == ItemType.schedule,
-            icon: Icons.calendar_month_outlined,
+            icon: AppIcons.itemTypeSchedule,
             label: scheduleLabel,
             onPressed: () => onSelected(ItemType.schedule),
           ),
@@ -636,7 +637,7 @@ class _TypeSelectorRow extends StatelessWidget {
         Expanded(
           child: _TypeButton(
             selected: selectedType == ItemType.memo,
-            icon: Icons.sticky_note_2_outlined,
+            icon: AppIcons.itemTypeMemo,
             label: memoLabel,
             onPressed: () => onSelected(ItemType.memo),
           ),
@@ -804,7 +805,7 @@ class _SubmitActionButton extends StatelessWidget {
 
     return ui.IconButton.ghost(
       onPressed: onPressed,
-      icon: const Icon(Icons.add_circle_outline),
+      icon: const Icon(AppIcons.submitCreate),
     );
   }
 }
@@ -997,7 +998,7 @@ class _PlainActionRow extends StatelessWidget {
                       const SizedBox(width: 8),
                       Icon(
                         key: trailingKey,
-                        Icons.chevron_right,
+                        AppIcons.drillIn,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ],

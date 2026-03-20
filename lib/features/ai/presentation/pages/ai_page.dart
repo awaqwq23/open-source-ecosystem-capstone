@@ -5,6 +5,7 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -25,7 +26,7 @@ class AiPage extends ConsumerWidget {
             ui.Tooltip(
               tooltip: (context) => Text(context.l10n.headerOpenTimePicker),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.calendar_month),
+                icon: const Icon(AppIcons.openTimePicker),
                 onPressed: () => _showPeriodPicker(context, ref),
               ),
             ),
@@ -55,7 +56,7 @@ class AiPage extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Icon(
-                              Icons.auto_awesome,
+                              AppIcons.aiFilled,
                               color: theme.colorScheme.primary,
                             ),
                           ),

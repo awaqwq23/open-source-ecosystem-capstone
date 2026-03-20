@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -24,7 +25,7 @@ class ReminderSettingsPage extends StatelessWidget {
             ui.Tooltip(
               tooltip: (context) => Text(l10n.commonBack),
               child: ui.IconButton.ghost(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(AppIcons.back),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -48,10 +49,10 @@ class ReminderSettingsPage extends StatelessWidget {
               title: Text(_label(l10n, reminder)),
               trailing: selected
                   ? Icon(
-                      Icons.check_circle,
+                      AppIcons.selected,
                       color: Theme.of(context).colorScheme.primary,
                     )
-                  : const Icon(Icons.chevron_right),
+                  : const Icon(AppIcons.drillIn),
               onTap: () => Navigator.of(context).pop(reminder),
             );
           },
