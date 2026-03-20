@@ -18,7 +18,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('compact shell renders app bar and bottom navigation', (
+  testWidgets('compact shell renders page header and bottom navigation', (
     WidgetTester tester,
   ) async {
     await pumpApp(tester, const Size(390, 844));
@@ -29,7 +29,9 @@ void main() {
     expect(find.text('AI'), findsWidgets);
     expect(find.text('添加'), findsWidgets);
     expect(find.text('设置'), findsWidgets);
-    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.text('2026年第12周'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
   });
 
   testWidgets('expanded shell renders navigation rail and content', (

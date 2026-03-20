@@ -62,8 +62,7 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,18 +82,17 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('zh'),
+    Locale('zh')
   ];
 
   /// No description provided for @appTitle.
@@ -277,10 +274,201 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'English'**
   String get languageEnglish;
+
+  /// No description provided for @commonBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get commonBack;
+
+  /// No description provided for @headerPreviousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous period'**
+  String get headerPreviousPeriod;
+
+  /// No description provided for @headerNextPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Next period'**
+  String get headerNextPeriod;
+
+  /// No description provided for @headerOpenTimePicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open time picker'**
+  String get headerOpenTimePicker;
+
+  /// No description provided for @headerOpenListTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Open list tabs'**
+  String get headerOpenListTabs;
+
+  /// No description provided for @headerOpenListSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open list settings'**
+  String get headerOpenListSettings;
+
+  /// No description provided for @headerOpenItemTypePicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open item type picker'**
+  String get headerOpenItemTypePicker;
+
+  /// No description provided for @homeScopePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display range'**
+  String get homeScopePickerTitle;
+
+  /// No description provided for @homeScopeWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get homeScopeWeek;
+
+  /// No description provided for @homeScopeMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get homeScopeMonth;
+
+  /// No description provided for @listTabMyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'My Day'**
+  String get listTabMyDay;
+
+  /// No description provided for @listTabAllItems.
+  ///
+  /// In en, this message translates to:
+  /// **'All Items'**
+  String get listTabAllItems;
+
+  /// No description provided for @listTabTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get listTabTasks;
+
+  /// No description provided for @listTabSchedules.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedules'**
+  String get listTabSchedules;
+
+  /// No description provided for @listTabMemos.
+  ///
+  /// In en, this message translates to:
+  /// **'Memos'**
+  String get listTabMemos;
+
+  /// No description provided for @listTabImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get listTabImportant;
+
+  /// No description provided for @listMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch list tab'**
+  String get listMenuTitle;
+
+  /// No description provided for @listSettingsMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List settings'**
+  String get listSettingsMenuTitle;
+
+  /// No description provided for @listSettingsSort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get listSettingsSort;
+
+  /// No description provided for @listSettingsReorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder tasks'**
+  String get listSettingsReorder;
+
+  /// No description provided for @listSettingsTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Change theme'**
+  String get listSettingsTheme;
+
+  /// No description provided for @listSettingsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More settings'**
+  String get listSettingsMore;
+
+  /// No description provided for @aiPeriodPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time range'**
+  String get aiPeriodPickerTitle;
+
+  /// No description provided for @aiPeriodDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get aiPeriodDay;
+
+  /// No description provided for @aiPeriodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get aiPeriodWeek;
+
+  /// No description provided for @aiPeriodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get aiPeriodMonth;
+
+  /// No description provided for @editorTypePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch item type'**
+  String get editorTypePickerTitle;
+
+  /// No description provided for @editorTypeTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get editorTypeTask;
+
+  /// No description provided for @editorTypeSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get editorTypeSchedule;
+
+  /// No description provided for @editorTypeMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo'**
+  String get editorTypeMemo;
+
+  /// No description provided for @placeholderOpenPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open picker'**
+  String get placeholderOpenPicker;
+
+  /// No description provided for @placeholderOpenMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Open menu'**
+  String get placeholderOpenMenu;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -289,26 +477,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'zh':
-      return AppLocalizationsZh();
+    case 'en': return AppLocalizationsEn();
+    case 'zh': return AppLocalizationsZh();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
+    'that was used.'
   );
 }

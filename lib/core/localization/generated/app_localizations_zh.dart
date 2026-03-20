@@ -97,4 +97,100 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get languageEnglish => '英文';
+
+  @override
+  String get commonBack => '返回';
+
+  @override
+  String get headerPreviousPeriod => '上一时间段';
+
+  @override
+  String get headerNextPeriod => '下一时间段';
+
+  @override
+  String get headerOpenTimePicker => '打开时间选择';
+
+  @override
+  String get headerOpenListTabs => '打开标签页选择';
+
+  @override
+  String get headerOpenListSettings => '打开列表页设置';
+
+  @override
+  String get headerOpenItemTypePicker => '打开事项类型切换';
+
+  @override
+  String get homeScopePickerTitle => '显示范围';
+
+  @override
+  String get homeScopeWeek => '周';
+
+  @override
+  String get homeScopeMonth => '月';
+
+  @override
+  String get listTabMyDay => '我的一天';
+
+  @override
+  String get listTabAllItems => '全部事项列表';
+
+  @override
+  String get listTabTasks => '任务列表';
+
+  @override
+  String get listTabSchedules => '日程列表';
+
+  @override
+  String get listTabMemos => '备忘列表';
+
+  @override
+  String get listTabImportant => '重要事项';
+
+  @override
+  String get listMenuTitle => '切换标签页';
+
+  @override
+  String get listSettingsMenuTitle => '列表页设置';
+
+  @override
+  String get listSettingsSort => '排序依据';
+
+  @override
+  String get listSettingsReorder => '对任务重新排序';
+
+  @override
+  String get listSettingsTheme => '更改主题';
+
+  @override
+  String get listSettingsMore => '更多设置';
+
+  @override
+  String get aiPeriodPickerTitle => '选择时间范围';
+
+  @override
+  String get aiPeriodDay => '按日';
+
+  @override
+  String get aiPeriodWeek => '按周';
+
+  @override
+  String get aiPeriodMonth => '按月';
+
+  @override
+  String get editorTypePickerTitle => '切换事项类型';
+
+  @override
+  String get editorTypeTask => '任务';
+
+  @override
+  String get editorTypeSchedule => '日程';
+
+  @override
+  String get editorTypeMemo => '备忘';
+
+  @override
+  String get placeholderOpenPicker => '打开选择器';
+
+  @override
+  String get placeholderOpenMenu => '打开菜单';
 }

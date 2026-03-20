@@ -7,7 +7,6 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends StatelessWidget {
-  static const _compactAppBarHeight = 40.0;
   static const _compactNavBarHeight = 64.0;
 
   const AppShell({
@@ -33,10 +32,6 @@ class AppShell extends StatelessWidget {
     if (isCompact) {
       return ui.Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        headers: [
-          _buildAppBar(context, current),
-          const ui.Divider(),
-        ],
         footers: [
           const ui.Divider(),
           _buildNavigationBar(context, destinations, current),
@@ -47,10 +42,6 @@ class AppShell extends StatelessWidget {
 
     return ui.Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      headers: [
-        _buildAppBar(context, current),
-        const ui.Divider(),
-      ],
       child: Row(
         children: [
           Padding(
@@ -68,24 +59,6 @@ class AppShell extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  ui.AppBar _buildAppBar(
-    BuildContext context,
-    AppShellDestination current,
-  ) {
-    return ui.AppBar(
-      height: _compactAppBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      title: Text(current.label(context)),
-      trailing: [
-        ui.GhostButton(
-          onPressed: () => context.go(AppShellDestination.settings.route),
-          density: ui.ButtonDensity.icon,
-          child: const Icon(Icons.tune),
-        ),
-      ],
     );
   }
 
