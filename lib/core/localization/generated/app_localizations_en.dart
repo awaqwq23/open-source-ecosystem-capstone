@@ -69,7 +69,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get detailDescription =>
-      'This route is reserved for viewing a single item\'s details.';
+      'Shows a full item profile with quick actions.';
+
+  @override
+  String get detailMissing => 'This item could not be found. It may have been deleted.';
+
+  @override
+  String get detailTimeLabel => 'Time';
+
+  @override
+  String get detailDeadlineLabel => 'Deadline';
+
+  @override
+  String get detailLocationLabel => 'Location';
+
+  @override
+  String get detailNotesLabel => 'Notes';
+
+  @override
+  String get detailReminderLabel => 'Reminder';
+
+  @override
+  String get detailRepeatLabel => 'Repeat';
+
+  @override
+  String get detailMarkComplete => 'Mark complete';
+
+  @override
+  String get detailMarkIncomplete => 'Mark incomplete';
+
+  @override
+  String get detailMarkImportant => 'Mark important';
+
+  @override
+  String get detailUnmarkImportant => 'Remove importance';
+
+  @override
+  String get detailDelete => 'Delete item';
 
   @override
   String get timePickerTitle => 'Time Picker';
@@ -175,6 +211,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listSettingsMore => 'More settings';
 
   @override
+  String listSummary(int pending, int completed) => '$pending pending, $completed completed';
+
+  @override
+  String listPendingSection(int count) => 'Pending $count';
+
+  @override
+  String listCompletedSection(int count) => 'Completed $count';
+
+  @override
+  String get listCompletedExpand => 'Expand completed items';
+
+  @override
+  String get listCompletedCollapse => 'Collapse completed items';
+
+  @override
+  String get listEmptyTitle => 'No items yet';
+
+  @override
+  String get listEmptyDescription =>
+      'Use the add button to create your first task, schedule, or memo.';
+
+  @override
+  String get listReorderHint =>
+      'Manual order is enabled. Drag the handle on each task to rearrange it.';
+
+  @override
+  String get listStaticItemsLabel => 'Other items';
+
+  @override
+  String get listActionEdit => 'Edit';
+
+  @override
+  String get listActionDelete => 'Delete';
+
+  @override
+  String get listSortImportance => 'Importance';
+
+  @override
+  String get listSortDueDate => 'Due date';
+
+  @override
+  String get listSortTodayFocus => 'Today focus';
+
+  @override
+  String get listSortAlphabetical => 'Alphabetical';
+
+  @override
+  String get listSortCreatedDate => 'Created date';
+
+  @override
+  String get listSortManual => 'Manual order';
+
+  @override
+  String get listThemeComingSoon => 'Tab themes are out of scope for this pass.';
+
+  @override
+  String get listStatusPending => 'Pending';
+
+  @override
+  String get listStatusCompleted => 'Completed';
+
+  @override
+  String get listImportantEnabled => 'Important';
+
+  @override
+  String get listImportantDisabled => 'Normal';
+
+  @override
   String get aiPeriodPickerTitle => 'Select time range';
 
   @override
@@ -206,6 +310,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorCreateMemo => 'Create memo';
+
+  @override
+  String get editorEditTask => 'Edit task';
+
+  @override
+  String get editorEditSchedule => 'Edit schedule';
+
+  @override
+  String get editorEditMemo => 'Edit memo';
 
   @override
   String get editorSectionBasic => 'Basic info';
@@ -269,6 +382,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorFieldEstimatedDuration => 'Estimated duration';
+
+  @override
+  String get editorFieldImportant => 'Important item';
 
   @override
   String get editorHintTitle => 'What needs to be done?';
@@ -375,7 +491,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorSubmitInvalid => 'Please fix the highlighted fields first.';
 
   @override
-  String get editorSubmitSuccess => 'Item draft is ready for saving.';
+  String get editorSubmitSuccess => 'Item saved.';
 
   @override
   String get editorErrorTitleRequired => 'Please enter a title.';
@@ -404,6 +520,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String editorDurationHourMinute(int hours, int minutes) {
     return '$hours h $minutes min';
+  }
+
+  @override
+  String detailRangeDate(String start, String end) {
+    return '$start to $end';
+  }
+
+  @override
+  String detailMemoDate(String date, String duration) {
+    return '$date · est. $duration';
   }
 
   @override

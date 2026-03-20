@@ -18,7 +18,19 @@
   "settingsDescription": "这里将承载全局、主页、列表页和 AI 的设置入口。",
   "settingsQuickActionsTitle": "快捷定位",
   "detailTitle": "事项详情",
-  "detailDescription": "这个路由预留给单个事项的详情展示。",
+  "detailDescription": "展示单个事项的完整信息与快捷操作。",
+  "detailMissing": "没有找到这个事项，可能已经被删除。",
+  "detailTimeLabel": "时间",
+  "detailDeadlineLabel": "截止时间",
+  "detailLocationLabel": "地点",
+  "detailNotesLabel": "备注",
+  "detailReminderLabel": "提醒",
+  "detailRepeatLabel": "重复",
+  "detailMarkComplete": "标记完成",
+  "detailMarkIncomplete": "恢复未完成",
+  "detailMarkImportant": "标记重要",
+  "detailUnmarkImportant": "取消重要",
+  "detailDelete": "删除事项",
   "timePickerTitle": "时间选择",
   "timePickerDescription": "这个路由预留给共享的日周月时间选择器。",
   "developmentTag": "基础 UI",
@@ -53,6 +65,52 @@
   "listSettingsReorder": "对任务重新排序",
   "listSettingsTheme": "更改主题",
   "listSettingsMore": "更多设置",
+  "@listSummary": {
+    "placeholders": {
+      "pending": {
+        "type": "int"
+      },
+      "completed": {
+        "type": "int"
+      }
+    }
+  },
+  "listSummary": "未完成 {pending} 项，已完成 {completed} 项",
+  "@listPendingSection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listPendingSection": "待处理 {count}",
+  "@listCompletedSection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listCompletedSection": "已完成 {count}",
+  "listCompletedExpand": "展开已完成事项",
+  "listCompletedCollapse": "收起已完成事项",
+  "listEmptyTitle": "这里还没有事项",
+  "listEmptyDescription": "点击右下角加号，先创建第一条任务、日程或备忘。",
+  "listReorderHint": "当前已进入手动排序，拖动任务右侧的手柄即可重新排列。",
+  "listStaticItemsLabel": "其他事项",
+  "listActionEdit": "编辑",
+  "listActionDelete": "删除",
+  "listSortImportance": "重要性",
+  "listSortDueDate": "到期日期",
+  "listSortTodayFocus": "今天执行者",
+  "listSortAlphabetical": "字母顺序",
+  "listSortCreatedDate": "创建日期",
+  "listSortManual": "手动排序",
+  "listThemeComingSoon": "本轮先不实现标签页主题。",
+  "listStatusPending": "未完成",
+  "listStatusCompleted": "已完成",
+  "listImportantEnabled": "重要",
+  "listImportantDisabled": "普通",
   "aiPeriodPickerTitle": "选择时间范围",
   "aiPeriodDay": "按日",
   "aiPeriodWeek": "按周",
@@ -64,6 +122,9 @@
   "editorCreateTask": "创建任务",
   "editorCreateSchedule": "创建日程",
   "editorCreateMemo": "创建备忘",
+  "editorEditTask": "编辑任务",
+  "editorEditSchedule": "编辑日程",
+  "editorEditMemo": "编辑备忘",
   "editorSectionBasic": "基本信息",
   "editorSectionColor": "颜色",
   "editorSectionTime": "日期与时间",
@@ -85,6 +146,7 @@
   "editorFieldDeadlineTime": "截止时刻",
   "editorFieldTargetDate": "目标日期",
   "editorFieldEstimatedDuration": "预计完成时长",
+  "editorFieldImportant": "重要事项",
   "editorHintTitle": "这件事叫什么？",
   "editorHintDetails": "补充更多说明",
   "editorHintLocation": "发生地点或执行地点",
@@ -119,7 +181,7 @@
   "editorPickerConfirm": "确定",
   "editorSubmitButton": "创建事项",
   "editorSubmitInvalid": "请先修正高亮字段。",
-  "editorSubmitSuccess": "事项草稿已准备好，后续可直接接入保存。",
+  "editorSubmitSuccess": "事项已保存。",
   "editorErrorTitleRequired": "请输入名称。",
   "editorErrorEndBeforeStart": "结束时间不能早于开始时间。",
   "editorErrorDeadlineBeforeStart": "截止时间不能早于开始时间。",
@@ -151,6 +213,20 @@
     }
   },
   "editorDurationHourMinute": "{hours} 小时 {minutes} 分钟",
+  "@detailRangeDate": {
+    "placeholders": {
+      "start": {},
+      "end": {}
+    }
+  },
+  "detailRangeDate": "{start} 至 {end}",
+  "@detailMemoDate": {
+    "placeholders": {
+      "date": {},
+      "duration": {}
+    }
+  },
+  "detailMemoDate": "{date} · 预计 {duration}",
   "placeholderOpenPicker": "打开选择器",
   "placeholderOpenMenu": "打开菜单"
 }

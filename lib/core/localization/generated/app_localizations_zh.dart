@@ -63,7 +63,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get detailTitle => '事项详情';
 
   @override
-  String get detailDescription => '这个路由预留给单个事项的详情展示。';
+  String get detailDescription => '展示单个事项的完整信息与快捷操作。';
+
+  @override
+  String get detailMissing => '没有找到这个事项，可能已经被删除。';
+
+  @override
+  String get detailTimeLabel => '时间';
+
+  @override
+  String get detailDeadlineLabel => '截止时间';
+
+  @override
+  String get detailLocationLabel => '地点';
+
+  @override
+  String get detailNotesLabel => '备注';
+
+  @override
+  String get detailReminderLabel => '提醒';
+
+  @override
+  String get detailRepeatLabel => '重复';
+
+  @override
+  String get detailMarkComplete => '标记完成';
+
+  @override
+  String get detailMarkIncomplete => '恢复未完成';
+
+  @override
+  String get detailMarkImportant => '标记重要';
+
+  @override
+  String get detailUnmarkImportant => '取消重要';
+
+  @override
+  String get detailDelete => '删除事项';
 
   @override
   String get timePickerTitle => '时间选择';
@@ -168,6 +204,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listSettingsMore => '更多设置';
 
   @override
+  String listSummary(int pending, int completed) => '未完成 $pending 项，已完成 $completed 项';
+
+  @override
+  String listPendingSection(int count) => '待处理 $count';
+
+  @override
+  String listCompletedSection(int count) => '已完成 $count';
+
+  @override
+  String get listCompletedExpand => '展开已完成事项';
+
+  @override
+  String get listCompletedCollapse => '收起已完成事项';
+
+  @override
+  String get listEmptyTitle => '这里还没有事项';
+
+  @override
+  String get listEmptyDescription => '点击右下角加号，先创建第一条任务、日程或备忘。';
+
+  @override
+  String get listReorderHint => '当前已进入手动排序，拖动任务右侧的手柄即可重新排列。';
+
+  @override
+  String get listStaticItemsLabel => '其他事项';
+
+  @override
+  String get listActionEdit => '编辑';
+
+  @override
+  String get listActionDelete => '删除';
+
+  @override
+  String get listSortImportance => '重要性';
+
+  @override
+  String get listSortDueDate => '到期日期';
+
+  @override
+  String get listSortTodayFocus => '今天执行者';
+
+  @override
+  String get listSortAlphabetical => '字母顺序';
+
+  @override
+  String get listSortCreatedDate => '创建日期';
+
+  @override
+  String get listSortManual => '手动排序';
+
+  @override
+  String get listThemeComingSoon => '本轮先不实现标签页主题。';
+
+  @override
+  String get listStatusPending => '未完成';
+
+  @override
+  String get listStatusCompleted => '已完成';
+
+  @override
+  String get listImportantEnabled => '重要';
+
+  @override
+  String get listImportantDisabled => '普通';
+
+  @override
   String get aiPeriodPickerTitle => '选择时间范围';
 
   @override
@@ -199,6 +301,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editorCreateMemo => '创建备忘';
+
+  @override
+  String get editorEditTask => '编辑任务';
+
+  @override
+  String get editorEditSchedule => '编辑日程';
+
+  @override
+  String get editorEditMemo => '编辑备忘';
 
   @override
   String get editorSectionBasic => '基本信息';
@@ -262,6 +373,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editorFieldEstimatedDuration => '预计完成时长';
+
+  @override
+  String get editorFieldImportant => '重要事项';
 
   @override
   String get editorHintTitle => '这件事叫什么？';
@@ -366,7 +480,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorSubmitInvalid => '请先修正高亮字段。';
 
   @override
-  String get editorSubmitSuccess => '事项草稿已准备好，后续可直接接入保存。';
+  String get editorSubmitSuccess => '事项已保存。';
 
   @override
   String get editorErrorTitleRequired => '请输入名称。';
@@ -393,6 +507,16 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String editorDurationHourMinute(int hours, int minutes) {
     return '$hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String detailRangeDate(String start, String end) {
+    return '$start 至 $end';
+  }
+
+  @override
+  String detailMemoDate(String date, String duration) {
+    return '$date · 预计 $duration';
   }
 
   @override

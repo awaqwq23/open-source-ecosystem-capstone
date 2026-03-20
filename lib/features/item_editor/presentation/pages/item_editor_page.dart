@@ -8,7 +8,7 @@ import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
-import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/viewmodels/item_editor_header_view_model.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
@@ -26,11 +26,11 @@ const double _kEditorErrorBottomPadding = 4;
 
 class ItemEditorPage extends ConsumerStatefulWidget {
   const ItemEditorPage({
-    this.prefill,
+    this.args,
     super.key,
   });
 
-  final ItemEditorPrefill? prefill;
+  final ItemEditorArgs? args;
 
   @override
   ConsumerState<ItemEditorPage> createState() => _ItemEditorPageState();
@@ -48,16 +48,16 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _detailsController = TextEditingController();
     _locationController = TextEditingController();
     Future<void>.microtask(
-      () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.prefill),
+      () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
     );
   }
 
   @override
   void didUpdateWidget(covariant ItemEditorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.prefill != widget.prefill) {
+    if (oldWidget.args != widget.args) {
       Future<void>.microtask(
-        () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.prefill),
+        () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
       );
     }
   }
@@ -83,6 +83,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.l10n.editorSubmitSuccess)),
           );
+          if (context.canPop()) {
+            context.pop();
+          }
         }
       },
     );
@@ -96,7 +99,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     return ui.Scaffold(
       headers: [
         ui.AppBar(
-          title: Text(_createTitle(l10n, state.draft.type)),
+          title: Text(_createTitle(l10n, state)),
           trailing: [
             _SubmitActionButton(
               onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
@@ -214,6 +217,13 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         ],
                       ],
                     ),
+                  ),
+                  const Gap(20),
+                  _SwitchRow(
+                    rowKey: const ValueKey('item-editor-row-important'),
+                    label: l10n.editorFieldImportant,
+                    value: state.isImportant,
+                    onChanged: notifier.toggleImportant,
                   ),
                   const Gap(20),
                   const Divider(),
@@ -519,8 +529,16 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
   }
 
-  String _createTitle(AppLocalizations l10n, ItemType type) {
-    return switch (type) {
+  String _createTitle(AppLocalizations l10n, ItemEditorPageState state) {
+    if (state.isEditing) {
+      return switch (state.draft.type) {
+        ItemType.task => l10n.editorEditTask,
+        ItemType.schedule => l10n.editorEditSchedule,
+        ItemType.memo => l10n.editorEditMemo,
+      };
+    }
+
+    return switch (state.draft.type) {
       ItemType.task => l10n.editorCreateTask,
       ItemType.schedule => l10n.editorCreateSchedule,
       ItemType.memo => l10n.editorCreateMemo,

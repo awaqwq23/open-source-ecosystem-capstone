@@ -43,4 +43,18 @@ abstract final class AppIcons {
   static const IconData itemTypeSchedule = Icons.calendar_month_outlined;
   static const IconData itemTypeMemo = Icons.sticky_note_2_outlined;
   static const IconData submitCreate = Icons.add_circle_outline;
+  static const IconData add = Icons.add;
+  static const IconData complete = Icons.check_circle;
+  static const IconData incomplete = Icons.radio_button_unchecked;
+  static const IconData importantFilled = Icons.star;
+  static const IconData importantOutlined = Icons.star_border;
+  static const IconData delete = Icons.delete_outline;
+  static const IconData edit = Icons.edit_outlined;
+  static const IconData expandLess = Icons.expand_less;
+  static const IconData expandMore = Icons.expand_more;
+  static const IconData drag = Icons.drag_indicator;
+  static const IconData info = Icons.info_outline;
+  static const IconData calendar = Icons.event_outlined;
+  static const IconData clock = Icons.schedule_outlined;
+  static const IconData location = Icons.location_on_outlined;
 }

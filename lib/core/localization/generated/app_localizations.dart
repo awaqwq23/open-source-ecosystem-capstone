@@ -209,8 +209,32 @@ abstract class AppLocalizations {
   /// No description provided for @detailDescription.
   ///
   /// In en, this message translates to:
-  /// **'This route is reserved for viewing a single item\'s details.'**
+  /// **'Shows a full item profile with quick actions.'**
   String get detailDescription;
+
+  String get detailMissing;
+
+  String get detailTimeLabel;
+
+  String get detailDeadlineLabel;
+
+  String get detailLocationLabel;
+
+  String get detailNotesLabel;
+
+  String get detailReminderLabel;
+
+  String get detailRepeatLabel;
+
+  String get detailMarkComplete;
+
+  String get detailMarkIncomplete;
+
+  String get detailMarkImportant;
+
+  String get detailUnmarkImportant;
+
+  String get detailDelete;
 
   /// No description provided for @timePickerTitle.
   ///
@@ -416,6 +440,50 @@ abstract class AppLocalizations {
   /// **'More settings'**
   String get listSettingsMore;
 
+  String listSummary(int pending, int completed);
+
+  String listPendingSection(int count);
+
+  String listCompletedSection(int count);
+
+  String get listCompletedExpand;
+
+  String get listCompletedCollapse;
+
+  String get listEmptyTitle;
+
+  String get listEmptyDescription;
+
+  String get listReorderHint;
+
+  String get listStaticItemsLabel;
+
+  String get listActionEdit;
+
+  String get listActionDelete;
+
+  String get listSortImportance;
+
+  String get listSortDueDate;
+
+  String get listSortTodayFocus;
+
+  String get listSortAlphabetical;
+
+  String get listSortCreatedDate;
+
+  String get listSortManual;
+
+  String get listThemeComingSoon;
+
+  String get listStatusPending;
+
+  String get listStatusCompleted;
+
+  String get listImportantEnabled;
+
+  String get listImportantDisabled;
+
   /// No description provided for @aiPeriodPickerTitle.
   ///
   /// In en, this message translates to:
@@ -481,6 +549,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create memo'**
   String get editorCreateMemo;
+
+  String get editorEditTask;
+
+  String get editorEditSchedule;
+
+  String get editorEditMemo;
 
   /// No description provided for @editorSectionBasic.
   ///
@@ -607,6 +681,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Estimated duration'**
   String get editorFieldEstimatedDuration;
+
+  String get editorFieldImportant;
 
   /// No description provided for @editorHintTitle.
   ///
@@ -815,7 +891,7 @@ abstract class AppLocalizations {
   /// No description provided for @editorSubmitSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Item draft is ready for saving.'**
+  /// **'Item saved.'**
   String get editorSubmitSuccess;
 
   /// No description provided for @editorErrorTitleRequired.
@@ -859,6 +935,10 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{hours} h {minutes} min'**
   String editorDurationHourMinute(int hours, int minutes);
+
+  String detailRangeDate(String start, String end);
+
+  String detailMemoDate(String date, String duration);
 
   /// No description provided for @placeholderOpenPicker.
   ///

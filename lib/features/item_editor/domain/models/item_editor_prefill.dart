@@ -18,6 +18,7 @@ class ItemEditorPrefill {
     this.deadline,
     this.targetDate,
     this.estimatedDuration,
+    this.isImportant,
   });
 
   final ItemType? type;
@@ -33,4 +34,5 @@ class ItemEditorPrefill {
   final DateTime? deadline;
   final DateTime? targetDate;
   final Duration? estimatedDuration;
+  final bool? isImportant;
 }

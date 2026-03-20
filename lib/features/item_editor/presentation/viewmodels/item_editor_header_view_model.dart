@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/item_editor/data/item_editor_repository.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_defaults.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
-import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/models/item_draft.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
@@ -12,27 +12,37 @@ import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 
 class ItemEditorPageState {
   const ItemEditorPageState({
+    required this.itemId,
     required this.draft,
+    required this.isImportant,
     this.errors = const ItemEditorValidationErrors(),
     this.isSubmitting = false,
     this.submitSucceeded = false,
   });
 
+  final String? itemId;
   final ItemDraft draft;
+  final bool isImportant;
   final ItemEditorValidationErrors errors;
   final bool isSubmitting;
   final bool submitSucceeded;
 
   bool get canSubmit => !isSubmitting;
+  bool get isEditing => itemId != null;
 
   ItemEditorPageState copyWith({
+    String? itemId,
+    bool clearItemId = false,
     ItemDraft? draft,
+    bool? isImportant,
     ItemEditorValidationErrors? errors,
     bool? isSubmitting,
     bool? submitSucceeded,
   }) {
     return ItemEditorPageState(
+      itemId: clearItemId ? null : (itemId ?? this.itemId),
       draft: draft ?? this.draft,
+      isImportant: isImportant ?? this.isImportant,
       errors: errors ?? this.errors,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitSucceeded: submitSucceeded ?? this.submitSucceeded,
@@ -41,23 +51,28 @@ class ItemEditorPageState {
 }
 
 class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> {
-  ItemEditorPrefill? _prefill;
+  ItemEditorArgs? _args;
 
   @override
   ItemEditorPageState build() {
     return ItemEditorPageState(
+      itemId: null,
       draft: ItemEditorDefaults.createDraft(),
+      isImportant: false,
     );
   }
 
-  void initialize([ItemEditorPrefill? prefill]) {
-    if (_prefill == prefill && prefill != null) {
+  void initialize([ItemEditorArgs? args]) {
+    if (_args == args && args != null) {
       return;
     }
 
-    _prefill = prefill;
+    _args = args;
+    final prefill = args?.prefill;
     state = ItemEditorPageState(
+      itemId: args?.itemId,
       draft: ItemEditorDefaults.createDraft(prefill),
+      isImportant: prefill?.isImportant ?? false,
     );
   }
 
@@ -277,6 +292,14 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(state.draft.copyWith(estimatedDuration: duration));
   }
 
+  void toggleImportant(bool value) {
+    state = state.copyWith(
+      isImportant: value,
+      errors: const ItemEditorValidationErrors(),
+      submitSucceeded: false,
+    );
+  }
+
   Future<bool> submit(ItemEditorValidationErrors errors) async {
     state = state.copyWith(errors: errors, submitSucceeded: false);
     if (errors.hasErrors) {
@@ -284,7 +307,19 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     }
 
     state = state.copyWith(isSubmitting: true);
-    await ref.read(itemEditorRepositoryProvider).createItem(state.draft);
+    final repository = ref.read(itemEditorRepositoryProvider);
+    if (state.isEditing) {
+      await repository.updateItem(
+        state.itemId!,
+        state.draft,
+        isImportant: state.isImportant,
+      );
+    } else {
+      await repository.createItem(
+        state.draft,
+        isImportant: state.isImportant,
+      );
+    }
     state = state.copyWith(
       isSubmitting: false,
       submitSucceeded: true,

@@ -6,7 +6,9 @@ import 'package:huajuan_agenda/app/shell/app_shell.dart';
 import 'package:huajuan_agenda/core/motion/app_route_transitions.dart';
 import 'package:huajuan_agenda/features/ai/presentation/pages/ai_page.dart';
 import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
+import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/item_editor_page.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/reminder_settings_page.dart';
@@ -55,9 +57,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.itemEditor,
                 builder: (context, state) => ItemEditorPage(
-                  prefill: state.extra is ItemEditorPrefill
-                      ? state.extra! as ItemEditorPrefill
-                      : null,
+                  args: switch (state.extra) {
+                    final ItemEditorArgs args => args,
+                    final ItemEditorPrefill prefill => ItemEditorArgs(prefill: prefill),
+                    _ => null,
+                  },
                 ),
               ),
             ],
@@ -77,7 +81,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
           context,
           state,
-          const ItemDetailPage(),
+          ItemDetailPage(
+            args: state.extra is ItemDetailArgs
+                ? state.extra! as ItemDetailArgs
+                : null,
+          ),
           type: SharedAxisTransitionType.scaled,
         ),
       ),
