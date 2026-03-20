@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -31,30 +32,32 @@ class ReminderSettingsPage extends StatelessWidget {
           title: Text(l10n.editorReminderPageTitle),
         ),
       ],
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-        itemBuilder: (context, index) {
-          final reminder = options[index];
-          final selected = reminder == initialReminder;
-          return ListTile(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            tileColor: selected
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                : Theme.of(context).colorScheme.surfaceContainerLowest,
-            title: Text(_label(l10n, reminder)),
-            trailing: selected
-                ? Icon(
-                    Icons.check_circle,
-                    color: Theme.of(context).colorScheme.primary,
-                  )
-                : const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).pop(reminder),
-          );
-        },
-        separatorBuilder: (_, index) => const SizedBox(height: 12),
-        itemCount: options.length,
+      child: AppEntrance(
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          itemBuilder: (context, index) {
+            final reminder = options[index];
+            final selected = reminder == initialReminder;
+            return ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              tileColor: selected
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                  : Theme.of(context).colorScheme.surfaceContainerLowest,
+              title: Text(_label(l10n, reminder)),
+              trailing: selected
+                  ? Icon(
+                      Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  : const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).pop(reminder),
+            );
+          },
+          separatorBuilder: (_, index) => const SizedBox(height: 12),
+          itemCount: options.length,
+        ),
       ),
     );
   }

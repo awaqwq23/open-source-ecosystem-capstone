@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart'
     hide AppBar, NavigationBar, NavigationRail, Scaffold;
+import 'package:animations/animations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/shell/app_shell_destination.dart';
+import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -36,7 +38,7 @@ class AppShell extends StatelessWidget {
           const ui.Divider(),
           _buildNavigationBar(context, destinations, current),
         ],
-        child: navigationShell,
+        child: _buildAnimatedContent(current),
       );
     }
 
@@ -53,11 +55,29 @@ class AppShell extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ui.Card(
-                child: SizedBox.expand(child: navigationShell),
+                child: SizedBox.expand(child: _buildAnimatedContent(current)),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedContent(AppShellDestination current) {
+    return PageTransitionSwitcher(
+      duration: AppMotion.slow,
+      transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+        return FadeThroughTransition(
+          animation: primaryAnimation,
+          secondaryAnimation: secondaryAnimation,
+          fillColor: Colors.transparent,
+          child: child,
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey(current.route),
+        child: navigationShell,
       ),
     );
   }

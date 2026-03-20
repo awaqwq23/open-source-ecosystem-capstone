@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:animations/animations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/app/shell/app_shell.dart';
+import 'package:huajuan_agenda/core/motion/app_route_transitions.dart';
 import 'package:huajuan_agenda/features/ai/presentation/pages/ai_page.dart';
 import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
@@ -72,25 +74,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutePaths.itemDetail,
-        builder: (context, state) => const ItemDetailPage(),
+        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
+          context,
+          state,
+          const ItemDetailPage(),
+          type: SharedAxisTransitionType.scaled,
+        ),
       ),
       GoRoute(
         path: AppRoutePaths.timePicker,
-        builder: (context, state) => const TimePickerPage(),
+        pageBuilder: (context, state) => AppRouteTransitions.fadeThroughPage<void>(
+          context,
+          state,
+          const TimePickerPage(),
+        ),
       ),
       GoRoute(
         path: AppRoutePaths.repeatSettings,
-        builder: (context, state) => RepeatSettingsPage(
-          initialRule:
-              state.extra is RepeatRule ? state.extra! as RepeatRule : RepeatRule.none,
+        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<RepeatRule>(
+          context,
+          state,
+          RepeatSettingsPage(
+            initialRule:
+                state.extra is RepeatRule ? state.extra! as RepeatRule : RepeatRule.none,
+          ),
+          type: SharedAxisTransitionType.horizontal,
         ),
       ),
       GoRoute(
         path: AppRoutePaths.reminderSettings,
-        builder: (context, state) => ReminderSettingsPage(
-          initialReminder: state.extra is ReminderOption
-              ? state.extra! as ReminderOption
-              : ReminderOption.none,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<ReminderOption>(
+          context,
+          state,
+          ReminderSettingsPage(
+            initialReminder: state.extra is ReminderOption
+                ? state.extra! as ReminderOption
+                : ReminderOption.none,
+          ),
+          type: SharedAxisTransitionType.horizontal,
         ),
       ),
     ],

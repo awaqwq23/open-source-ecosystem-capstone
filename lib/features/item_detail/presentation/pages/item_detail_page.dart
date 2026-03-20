@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ItemDetailPage extends StatelessWidget {
@@ -30,30 +31,32 @@ class ItemDetailPage extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 980),
-            child: ui.Card(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(20),
+            child: AppEntrance(
+              child: ui.Card(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        Icons.article_outlined,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.article_outlined,
-                      color: theme.colorScheme.primary,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        context.l10n.detailDescription,
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      context.l10n.detailDescription,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

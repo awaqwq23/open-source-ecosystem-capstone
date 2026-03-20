@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -52,99 +53,101 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.settingsDescription,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Gap(24),
-                  ui.Card(
-                    key: _appearanceSectionKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.themeSectionTitle,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const Gap(16),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _OptionButton<ui.ThemeMode>(
-                              label: l10n.themeSystem,
-                              icon: Icons.brightness_auto_outlined,
-                              value: ui.ThemeMode.system,
-                              selected: themeMode == ui.ThemeMode.system,
-                              onTap: (value) {
-                                ref.read(appThemeModeProvider.notifier).state = value;
-                              },
-                            ),
-                            _OptionButton<ui.ThemeMode>(
-                              label: l10n.themeLight,
-                              icon: Icons.light_mode_outlined,
-                              value: ui.ThemeMode.light,
-                              selected: themeMode == ui.ThemeMode.light,
-                              onTap: (value) {
-                                ref.read(appThemeModeProvider.notifier).state = value;
-                              },
-                            ),
-                            _OptionButton<ui.ThemeMode>(
-                              label: l10n.themeDark,
-                              icon: Icons.dark_mode_outlined,
-                              value: ui.ThemeMode.dark,
-                              selected: themeMode == ui.ThemeMode.dark,
-                              onTap: (value) {
-                                ref.read(appThemeModeProvider.notifier).state = value;
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+              child: AppEntrance(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsDescription,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                  const Gap(16),
-                  ui.Card(
-                    key: _languageSectionKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.languageSectionTitle,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const Gap(16),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _OptionButton<Locale>(
-                              label: l10n.languageChinese,
-                              icon: Icons.translate_outlined,
-                              value: AppLocale.chinese.locale,
-                              selected: locale == AppLocale.chinese.locale,
-                              onTap: (value) {
-                                ref.read(appLocaleProvider.notifier).state = value;
-                              },
-                            ),
-                            _OptionButton<Locale>(
-                              label: l10n.languageEnglish,
-                              icon: Icons.language_outlined,
-                              value: AppLocale.english.locale,
-                              selected: locale == AppLocale.english.locale,
-                              onTap: (value) {
-                                ref.read(appLocaleProvider.notifier).state = value;
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                    const Gap(24),
+                    ui.Card(
+                      key: _appearanceSectionKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.themeSectionTitle,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Gap(16),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _OptionButton<ui.ThemeMode>(
+                                label: l10n.themeSystem,
+                                icon: Icons.brightness_auto_outlined,
+                                value: ui.ThemeMode.system,
+                                selected: themeMode == ui.ThemeMode.system,
+                                onTap: (value) {
+                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                },
+                              ),
+                              _OptionButton<ui.ThemeMode>(
+                                label: l10n.themeLight,
+                                icon: Icons.light_mode_outlined,
+                                value: ui.ThemeMode.light,
+                                selected: themeMode == ui.ThemeMode.light,
+                                onTap: (value) {
+                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                },
+                              ),
+                              _OptionButton<ui.ThemeMode>(
+                                label: l10n.themeDark,
+                                icon: Icons.dark_mode_outlined,
+                                value: ui.ThemeMode.dark,
+                                selected: themeMode == ui.ThemeMode.dark,
+                                onTap: (value) {
+                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const Gap(16),
+                    ui.Card(
+                      key: _languageSectionKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.languageSectionTitle,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Gap(16),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _OptionButton<Locale>(
+                                label: l10n.languageChinese,
+                                icon: Icons.translate_outlined,
+                                value: AppLocale.chinese.locale,
+                                selected: locale == AppLocale.chinese.locale,
+                                onTap: (value) {
+                                  ref.read(appLocaleProvider.notifier).state = value;
+                                },
+                              ),
+                              _OptionButton<Locale>(
+                                label: l10n.languageEnglish,
+                                icon: Icons.language_outlined,
+                                value: AppLocale.english.locale,
+                                selected: locale == AppLocale.english.locale,
+                                onTap: (value) {
+                                  ref.read(appLocaleProvider.notifier).state = value;
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -160,36 +163,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       position: ui.OverlayPosition.bottom,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.settingsQuickActionsTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.settingsQuickActionsTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.palette_outlined),
-                title: Text(l10n.themeSectionTitle),
-                onTap: () {
-                  ui.closeDrawer(sheetContext);
-                  _scrollToSection(_appearanceSectionKey);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.translate_outlined),
-                title: Text(l10n.languageSectionTitle),
-                onTap: () {
-                  ui.closeDrawer(sheetContext);
-                  _scrollToSection(_languageSectionKey);
-                },
-              ),
-            ],
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text(l10n.themeSectionTitle),
+                  onTap: () {
+                    ui.closeDrawer(sheetContext);
+                    _scrollToSection(_appearanceSectionKey);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.translate_outlined),
+                  title: Text(l10n.languageSectionTitle),
+                  onTap: () {
+                    ui.closeDrawer(sheetContext);
+                    _scrollToSection(_languageSectionKey);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },

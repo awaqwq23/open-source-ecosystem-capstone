@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/viewmodels/item_editor_header_view_model.dart';
@@ -109,124 +110,138 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 860),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TypeSelectorRow(
-                  selectedType: state.draft.type,
-                  onSelected: notifier.selectType,
-                  taskLabel: l10n.editorTypeTask,
-                  scheduleLabel: l10n.editorTypeSchedule,
-                  memoLabel: l10n.editorTypeMemo,
-                ),
-                const Gap(20),
-                _RoundedInputField(
-                  containerKey: const ValueKey('item-editor-field-title'),
-                  controller: _titleController,
-                  hintText: l10n.editorHintTitle,
-                  errorText: state.errors.title,
-                  onChanged: notifier.updateTitle,
-                  trailing: _ColorTrigger(
-                    color: state.draft.color.resolve(Theme.of(context).brightness),
-                    onPressed: () => _showColorPicker(context, ref),
+            child: AppEntrance(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _TypeSelectorRow(
+                    selectedType: state.draft.type,
+                    onSelected: notifier.selectType,
+                    taskLabel: l10n.editorTypeTask,
+                    scheduleLabel: l10n.editorTypeSchedule,
+                    memoLabel: l10n.editorTypeMemo,
                   ),
-                ),
-                const Gap(12),
-                if (state.draft.type != ItemType.memo)
-                  _SwitchRow(
-                    rowKey: const ValueKey('item-editor-row-all-day'),
-                    label: l10n.editorAllDayTitle,
-                    value: state.draft.isAllDay,
-                    onChanged: notifier.toggleAllDay,
-                  ),
-                if (state.draft.type == ItemType.memo) ...[
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-target-date'),
-                    label: l10n.editorFieldTargetDate,
-                    value: _formatDate(context, state.draft.targetDate),
-                    onTap: () => _pickMemoTargetDate(context, ref, state.draft.targetDate),
-                  ),
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-estimated-duration'),
-                    label: l10n.editorFieldEstimatedDuration,
-                    value: _formatDuration(context, state.draft.estimatedDuration),
-                    errorText: state.errors.estimatedDuration,
-                    onTap: () => _showDurationPicker(context, ref),
-                  ),
-                ] else ...[
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-start'),
-                    labelKey: const ValueKey('item-editor-row-start-label'),
-                    trailingGroupKey: const ValueKey('item-editor-row-start-trailing-group'),
-                    valueKey: const ValueKey('item-editor-row-start-value'),
-                    trailingKey: const ValueKey('item-editor-row-start-chevron'),
-                    label: l10n.editorFieldStart,
-                    value: _formatDateTimeSummary(
-                      context,
-                      state.draft.startAt,
-                      allDay: state.draft.isAllDay,
-                    ),
-                    onTap: () => _pickStartDateTime(context, ref, state),
-                  ),
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-end'),
-                    label: l10n.editorFieldEnd,
-                    value: _formatDateTimeSummary(
-                      context,
-                      state.draft.endAt,
-                      allDay: state.draft.isAllDay,
-                    ),
-                    errorText: state.errors.timeRange,
-                    onTap: () => _pickEndDateTime(context, ref, state),
-                  ),
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-repeat'),
-                    label: l10n.editorSectionRepeat,
-                    value: _repeatLabel(l10n, state.draft.repeatRule),
-                    onTap: () => _openRepeatSettings(context, ref, state.draft.repeatRule),
-                  ),
-                  if (state.draft.type == ItemType.task)
-                    _PlainActionRow(
-                      rowKey: const ValueKey('item-editor-row-deadline'),
-                      label: l10n.editorFieldDeadline,
-                      value: state.draft.deadline == null
-                          ? l10n.editorDeadlineUnset
-                          : _formatDateTimeSummary(
+                  const Gap(20),
+                  AppSwitchingContent(
+                    contentKey: '${state.draft.type.name}-${state.draft.isAllDay}',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _RoundedInputField(
+                          containerKey: const ValueKey('item-editor-field-title'),
+                          controller: _titleController,
+                          hintText: l10n.editorHintTitle,
+                          errorText: state.errors.title,
+                          onChanged: notifier.updateTitle,
+                          trailing: _ColorTrigger(
+                            color: state.draft.color.resolve(Theme.of(context).brightness),
+                            onPressed: () => _showColorPicker(context, ref),
+                          ),
+                        ),
+                        const Gap(12),
+                        if (state.draft.type != ItemType.memo)
+                          _SwitchRow(
+                            rowKey: const ValueKey('item-editor-row-all-day'),
+                            label: l10n.editorAllDayTitle,
+                            value: state.draft.isAllDay,
+                            onChanged: notifier.toggleAllDay,
+                          ),
+                        if (state.draft.type == ItemType.memo) ...[
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-target-date'),
+                            label: l10n.editorFieldTargetDate,
+                            value: _formatDate(context, state.draft.targetDate),
+                            onTap: () =>
+                                _pickMemoTargetDate(context, ref, state.draft.targetDate),
+                          ),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-estimated-duration'),
+                            label: l10n.editorFieldEstimatedDuration,
+                            value: _formatDuration(context, state.draft.estimatedDuration),
+                            errorText: state.errors.estimatedDuration,
+                            onTap: () => _showDurationPicker(context, ref),
+                          ),
+                        ] else ...[
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-start'),
+                            labelKey: const ValueKey('item-editor-row-start-label'),
+                            trailingGroupKey: const ValueKey(
+                              'item-editor-row-start-trailing-group',
+                            ),
+                            valueKey: const ValueKey('item-editor-row-start-value'),
+                            trailingKey: const ValueKey('item-editor-row-start-chevron'),
+                            label: l10n.editorFieldStart,
+                            value: _formatDateTimeSummary(
                               context,
-                              state.draft.deadline!,
+                              state.draft.startAt,
                               allDay: state.draft.isAllDay,
                             ),
-                      errorText: state.errors.deadline,
-                      onTap: () => _pickDeadlineDateTime(context, ref, state),
+                            onTap: () => _pickStartDateTime(context, ref, state),
+                          ),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-end'),
+                            label: l10n.editorFieldEnd,
+                            value: _formatDateTimeSummary(
+                              context,
+                              state.draft.endAt,
+                              allDay: state.draft.isAllDay,
+                            ),
+                            errorText: state.errors.timeRange,
+                            onTap: () => _pickEndDateTime(context, ref, state),
+                          ),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-repeat'),
+                            label: l10n.editorSectionRepeat,
+                            value: _repeatLabel(l10n, state.draft.repeatRule),
+                            onTap: () =>
+                                _openRepeatSettings(context, ref, state.draft.repeatRule),
+                          ),
+                          if (state.draft.type == ItemType.task)
+                            _PlainActionRow(
+                              rowKey: const ValueKey('item-editor-row-deadline'),
+                              label: l10n.editorFieldDeadline,
+                              value: state.draft.deadline == null
+                                  ? l10n.editorDeadlineUnset
+                                  : _formatDateTimeSummary(
+                                      context,
+                                      state.draft.deadline!,
+                                      allDay: state.draft.isAllDay,
+                                    ),
+                              errorText: state.errors.deadline,
+                              onTap: () => _pickDeadlineDateTime(context, ref, state),
+                            ),
+                        ],
+                      ],
                     ),
+                  ),
+                  const Gap(20),
+                  const Divider(),
+                  const Gap(8),
+                  _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-reminder'),
+                    label: l10n.editorSectionReminder,
+                    value: _reminderLabel(l10n, state.draft.reminder),
+                    onTap: () => _openReminderSettings(context, ref, state.draft.reminder),
+                  ),
+                  const Gap(20),
+                  const Divider(),
+                  const Gap(20),
+                  _RoundedInputField(
+                    containerKey: const ValueKey('item-editor-field-location'),
+                    controller: _locationController,
+                    hintText: l10n.editorHintLocation,
+                    onChanged: notifier.updateLocation,
+                  ),
+                  const Gap(12),
+                  _RoundedInputField(
+                    containerKey: const ValueKey('item-editor-field-details'),
+                    controller: _detailsController,
+                    hintText: l10n.editorHintDetails,
+                    onChanged: notifier.updateDetails,
+                    maxLines: 4,
+                  ),
                 ],
-                const Gap(20),
-                const Divider(),
-                const Gap(8),
-                _PlainActionRow(
-                  rowKey: const ValueKey('item-editor-row-reminder'),
-                  label: l10n.editorSectionReminder,
-                  value: _reminderLabel(l10n, state.draft.reminder),
-                  onTap: () => _openReminderSettings(context, ref, state.draft.reminder),
-                ),
-                const Gap(20),
-                const Divider(),
-                const Gap(20),
-                _RoundedInputField(
-                  containerKey: const ValueKey('item-editor-field-location'),
-                  controller: _locationController,
-                  hintText: l10n.editorHintLocation,
-                  onChanged: notifier.updateLocation,
-                ),
-                const Gap(12),
-                _RoundedInputField(
-                  containerKey: const ValueKey('item-editor-field-details'),
-                  controller: _detailsController,
-                  hintText: l10n.editorHintDetails,
-                  onChanged: notifier.updateDetails,
-                  maxLines: 4,
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -278,36 +293,38 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       context: context,
       position: ui.OverlayPosition.bottom,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.editorColorPickerTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.editorColorPickerTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final color in ItemColorOption.values)
-                    _ColorChoiceChip(
-                      color: color.resolve(Theme.of(context).brightness),
-                      label: _colorLabel(l10n, color),
-                      selected: state.draft.color == color,
-                      onPressed: () {
-                        ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
-                        ui.closeDrawer(sheetContext);
-                      },
-                    ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final color in ItemColorOption.values)
+                      _ColorChoiceChip(
+                        color: color.resolve(Theme.of(context).brightness),
+                        label: _colorLabel(l10n, color),
+                        selected: state.draft.color == color,
+                        onPressed: () {
+                          ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
+                          ui.closeDrawer(sheetContext);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -434,36 +451,38 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       context: context,
       position: ui.OverlayPosition.bottom,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: RadioGroup<int>(
-            groupValue: currentMinutes,
-            onChanged: (value) {
-              if (value == null) {
-                return;
-              }
-              ref
-                  .read(itemEditorPageControllerProvider.notifier)
-                  .updateEstimatedDuration(Duration(minutes: value));
-              ui.closeDrawer(sheetContext);
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.editorDurationPickerTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: RadioGroup<int>(
+              groupValue: currentMinutes,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                ref
+                    .read(itemEditorPageControllerProvider.notifier)
+                    .updateEstimatedDuration(Duration(minutes: value));
+                ui.closeDrawer(sheetContext);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.editorDurationPickerTitle,
+                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                for (final minutes in options)
-                  RadioListTile<int>(
-                    value: minutes,
-                    title: Text(_formatDuration(context, Duration(minutes: minutes))),
-                  ),
-              ],
+                  const SizedBox(height: 16),
+                  for (final minutes in options)
+                    RadioListTile<int>(
+                      value: minutes,
+                      title: Text(_formatDuration(context, Duration(minutes: minutes))),
+                    ),
+                ],
+              ),
             ),
           ),
         );

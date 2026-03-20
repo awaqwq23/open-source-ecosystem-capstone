@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/motion/app_motion.dart';
+import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -40,62 +42,71 @@ class ListPage extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 980),
-            child: ui.Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: AppEntrance(
+              child: ui.Card(
+                child: AppSwitchingContent(
+                  contentKey: state.currentTab,
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(
-                          Icons.checklist_rtl,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              context.l10n.listTitle,
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              context.l10n.listDescription,
-                              style: theme.textTheme.titleMedium,
+                            child: Icon(
+                              Icons.checklist_rtl,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.l10n.listTitle,
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  context.l10n.listDescription,
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      AppEntrance(
+                        delay: AppMotion.fast,
+                        offset: AppMotion.sectionOffset,
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            ui.PrimaryButton(
+                              onPressed: () => _showTabSwitcher(context, ref),
+                              child: Text(l10n.placeholderOpenMenu),
+                            ),
+                            ui.GhostButton(
+                              onPressed: () => _showSettingsMenu(context),
+                              child: Text(l10n.listSettingsMenuTitle),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      ui.PrimaryButton(
-                        onPressed: () => _showTabSwitcher(context, ref),
-                        child: Text(l10n.placeholderOpenMenu),
-                      ),
-                      ui.GhostButton(
-                        onPressed: () => _showSettingsMenu(context),
-                        child: Text(l10n.listSettingsMenuTitle),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -123,33 +134,35 @@ class ListPage extends ConsumerWidget {
       context: context,
       position: ui.OverlayPosition.bottom,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: RadioGroup<ListHeaderTab>(
-            groupValue: state.currentTab,
-            onChanged: (value) {
-              if (value == null) return;
-              ref.read(listHeaderViewModelProvider.notifier).switchTab(value);
-              ui.closeDrawer(sheetContext);
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.listMenuTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: RadioGroup<ListHeaderTab>(
+              groupValue: state.currentTab,
+              onChanged: (value) {
+                if (value == null) return;
+                ref.read(listHeaderViewModelProvider.notifier).switchTab(value);
+                ui.closeDrawer(sheetContext);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.listMenuTitle,
+                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ...ListHeaderTab.values.map(
-                  (tab) => RadioListTile<ListHeaderTab>(
-                    value: tab,
-                    title: Text(_tabLabel(l10n, tab)),
+                  const SizedBox(height: 16),
+                  ...ListHeaderTab.values.map(
+                    (tab) => RadioListTile<ListHeaderTab>(
+                      value: tab,
+                      title: Text(_tabLabel(l10n, tab)),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -164,24 +177,26 @@ class ListPage extends ConsumerWidget {
       context: context,
       position: ui.OverlayPosition.bottom,
       builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.listSettingsMenuTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.listSettingsMenuTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(title: Text(l10n.listSettingsSort)),
-              ListTile(title: Text(l10n.listSettingsReorder)),
-              ListTile(title: Text(l10n.listSettingsTheme)),
-              ListTile(title: Text(l10n.listSettingsMore)),
-            ],
+                const SizedBox(height: 16),
+                ListTile(title: Text(l10n.listSettingsSort)),
+                ListTile(title: Text(l10n.listSettingsReorder)),
+                ListTile(title: Text(l10n.listSettingsTheme)),
+                ListTile(title: Text(l10n.listSettingsMore)),
+              ],
+            ),
           ),
         );
       },
