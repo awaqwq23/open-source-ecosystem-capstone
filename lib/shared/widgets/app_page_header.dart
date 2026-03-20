@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppPageHeader extends StatelessWidget {
   const AppPageHeader({
@@ -24,32 +25,35 @@ class AppPageHeader extends StatelessWidget {
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
     final centerTitle =
         isCompact ? centerTitleWhenCompact : centerTitleWhenExpanded;
+    final theme = Theme.of(context);
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding:
-            padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
-          children: [
-            centerTitle
-                ? _CenteredHeaderRow(
-                    title: title,
-                    leading: leading,
-                    trailing: trailing,
-                  )
-                : _InlineHeaderRow(
-                    title: title,
-                    leading: leading,
-                    trailing: trailing,
-                  ),
-            const SizedBox(height: 12),
-            Divider(
-              height: 1,
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
-            ),
-          ],
-        ),
+    return ui.AppBar(
+      useSafeArea: true,
+      alignment: Alignment.centerLeft,
+      padding:
+          padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      backgroundColor: Colors.transparent,
+      surfaceBlur: 0,
+      surfaceOpacity: 0,
+      child: Column(
+        children: [
+          centerTitle
+              ? _CenteredHeaderRow(
+                  title: title,
+                  leading: leading,
+                  trailing: trailing,
+                )
+              : _InlineHeaderRow(
+                  title: title,
+                  leading: leading,
+                  trailing: trailing,
+                ),
+          const SizedBox(height: 12),
+          Divider(
+            height: 1,
+            color: theme.dividerColor.withValues(alpha: 0.6),
+          ),
+        ],
       ),
     );
   }
