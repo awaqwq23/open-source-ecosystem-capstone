@@ -62,6 +62,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Global, list, home and AI settings will be grouped here.';
 
   @override
+  String get settingsQuickActionsTitle => 'Quick access';
+
+  @override
   String get detailTitle => 'Item Detail';
 
   @override

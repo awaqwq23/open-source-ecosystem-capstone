@@ -20,19 +20,15 @@ class ListPage extends ConsumerWidget {
       description: context.l10n.listDescription,
       icon: Icons.checklist_rtl,
       header: AppPageHeader(
-        centerTitleWhenCompact: true,
         title: AppPageHeaderTitle(
           text: _tabLabel(l10n, state.currentTab),
-          center: true,
         ),
-        leading: [
+        trailing: [
           AppPageActionButton(
             icon: Icons.menu,
             tooltip: l10n.headerOpenListTabs,
             onPressed: () => _showTabSwitcher(context, ref),
           ),
-        ],
-        trailing: [
           AppPageActionButton(
             icon: Icons.more_horiz,
             tooltip: l10n.headerOpenListSettings,

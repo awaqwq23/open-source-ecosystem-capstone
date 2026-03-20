@@ -57,6 +57,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDescription => '这里将承载全局、主页、列表页和 AI 的设置入口。';
 
   @override
+  String get settingsQuickActionsTitle => '快捷定位';
+
+  @override
   String get detailTitle => '事项详情';
 
   @override

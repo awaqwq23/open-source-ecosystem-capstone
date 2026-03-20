@@ -194,6 +194,12 @@ abstract class AppLocalizations {
   /// **'Global, list, home and AI settings will be grouped here.'**
   String get settingsDescription;
 
+  /// No description provided for @settingsQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick access'**
+  String get settingsQuickActionsTitle;
+
   /// No description provided for @detailTitle.
   ///
   /// In en, this message translates to:

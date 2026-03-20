@@ -15,10 +15,8 @@ class ItemDetailPage extends StatelessWidget {
       description: context.l10n.detailDescription,
       icon: Icons.article_outlined,
       header: AppPageHeader(
-        centerTitleWhenCompact: true,
         title: AppPageHeaderTitle(
           text: context.l10n.detailTitle,
-          center: true,
         ),
         leading: [
           AppPageActionButton(

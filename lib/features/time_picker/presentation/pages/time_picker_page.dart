@@ -15,10 +15,8 @@ class TimePickerPage extends StatelessWidget {
       description: context.l10n.timePickerDescription,
       icon: Icons.calendar_month,
       header: AppPageHeader(
-        centerTitleWhenCompact: true,
         title: AppPageHeaderTitle(
           text: context.l10n.timePickerTitle,
-          center: true,
         ),
         leading: [
           AppPageActionButton(

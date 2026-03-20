@@ -16,6 +16,7 @@
   "editorDescription": "The unified editor for schedule, task and memo will live here.",
   "settingsTitle": "Settings",
   "settingsDescription": "Global, list, home and AI settings will be grouped here.",
+  "settingsQuickActionsTitle": "Quick access",
   "detailTitle": "Item Detail",
   "detailDescription": "This route is reserved for viewing a single item's details.",
   "timePickerTitle": "Time Picker",

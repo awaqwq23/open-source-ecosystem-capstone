@@ -16,6 +16,7 @@
   "editorDescription": "这里将承载日程、任务、备忘的统一编辑页面。",
   "settingsTitle": "设置",
   "settingsDescription": "这里将承载全局、主页、列表页和 AI 的设置入口。",
+  "settingsQuickActionsTitle": "快捷定位",
   "detailTitle": "事项详情",
   "detailDescription": "这个路由预留给单个事项的详情展示。",
   "timePickerTitle": "时间选择",

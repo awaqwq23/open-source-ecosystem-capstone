@@ -12,6 +12,7 @@ import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
+import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
 import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 
@@ -102,17 +103,17 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _TopActionBar(
-                  onClose: () => Navigator.of(context).maybePop(),
-                  onConfirm: state.canSubmit ? () => _submit(context, ref, state) : null,
-                  isSubmitting: state.isSubmitting,
-                ),
-                const Gap(8),
-                Text(
-                  _createTitle(l10n, state.draft.type),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w400,
-                      ),
+                AppPageHeader(
+                  padding: EdgeInsets.zero,
+                  title: AppPageHeaderTitle(
+                    text: _createTitle(l10n, state.draft.type),
+                  ),
+                  trailing: [
+                    _SubmitActionButton(
+                      onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
+                      isSubmitting: state.isSubmitting,
+                    ),
+                  ],
                 ),
                 const Gap(16),
                 _TypeSelectorRow(
@@ -727,43 +728,42 @@ class _ColorChoiceChip extends StatelessWidget {
   }
 }
 
-class _TopActionBar extends StatelessWidget {
-  const _TopActionBar({
-    required this.onClose,
-    required this.onConfirm,
+class _SubmitActionButton extends StatelessWidget {
+  const _SubmitActionButton({
+    required this.onPressed,
     required this.isSubmitting,
   });
 
-  final VoidCallback onClose;
-  final VoidCallback? onConfirm;
+  final VoidCallback? onPressed;
   final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: onClose,
-            icon: const Icon(Icons.close),
-            splashRadius: 20,
+    if (isSubmitting) {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
-          const Spacer(),
-          IconButton(
-            onPressed: isSubmitting ? null : onConfirm,
-            icon: isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check),
-            splashRadius: 20,
-          ),
-        ],
+        ),
+      );
+    }
+
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: context.l10n.editorSubmitButton,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(44, 44),
+        padding: EdgeInsets.zero,
       ),
+      icon: const Icon(Icons.add_circle_outline),
     );
   }
 }

@@ -192,28 +192,36 @@ class _InlineHeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ...leading,
-        if (leading.isNotEmpty) const SizedBox(width: 8),
-        Expanded(
-          child: IconTheme.merge(
-            data: IconThemeData(
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 18,
-            ),
-            child: DefaultTextStyle.merge(
-              style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-              child: title,
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          ...leading,
+          if (leading.isNotEmpty) const SizedBox(width: 8),
+          Expanded(
+            child: IconTheme.merge(
+              data: IconThemeData(
+                color: theme.colorScheme.onSurface,
+                size: 18,
+              ),
+              child: DefaultTextStyle.merge(
+                style: theme.textTheme.titleLarge!.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurface,
+                ),
+                child: title,
+              ),
             ),
           ),
-        ),
-        if (trailing.isNotEmpty) const SizedBox(width: 8),
-        ...trailing,
-      ],
+          if (trailing.isNotEmpty) const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: trailing,
+          ),
+        ],
+      ),
     );
   }
 }

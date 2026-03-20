@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
+import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
 import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
 import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
 import 'package:huajuan_agenda/shared/widgets/app_placeholder_page.dart';
@@ -21,15 +22,18 @@ class AiPage extends ConsumerWidget {
       description: context.l10n.aiDescription,
       icon: Icons.auto_awesome,
       header: AppPageHeader(
-        centerTitleWhenCompact: true,
         title: AppPageHeaderTitle(
-          text: _periodLabel(context, state),
-          center: true,
-          showDropdownIndicator: true,
-          onPressed: () => _showPeriodPicker(context, ref),
+          text: context.l10n.aiTitle,
         ),
+        trailing: [
+          AppPageActionButton(
+            icon: Icons.calendar_month,
+            tooltip: context.l10n.headerOpenTimePicker,
+            onPressed: () => _showPeriodPicker(context, ref),
+          ),
+        ],
       ),
-      primaryActionLabel: context.l10n.placeholderOpenPicker,
+      primaryActionLabel: _periodLabel(context, state),
       onPrimaryAction: () => _showPeriodPicker(context, ref),
       secondaryActionLabel: context.l10n.timePickerTitle,
       onSecondaryAction: () => context.push(AppRoutePaths.timePicker),
