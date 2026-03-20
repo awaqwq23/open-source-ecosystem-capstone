@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class RepeatSettingsPage extends StatelessWidget {
   const RepeatSettingsPage({
@@ -17,55 +16,46 @@ class RepeatSettingsPage extends StatelessWidget {
     final l10n = context.l10n;
     final options = RepeatRule.values;
 
-    return Scaffold(
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            AppPageHeader(
-              title: AppPageHeaderTitle(
-                text: l10n.editorRepeatPageTitle,
-              ),
-              leading: [
-                AppPageActionButton(
-                  icon: Icons.arrow_back,
-                  tooltip: l10n.commonBack,
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                itemBuilder: (context, index) {
-                  final rule = options[index];
-                  final selected = rule == initialRule;
-                  return ListTile(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    tileColor: selected
-                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                        : Theme.of(context).colorScheme.surfaceContainerLowest,
-                    title: Text(_label(l10n, rule)),
-                    subtitle: index == 0
-                        ? Text(l10n.editorRepeatPagePlaceholder)
-                        : null,
-                    trailing: selected
-                        ? Icon(
-                            Icons.check_circle,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).pop(rule),
-                  );
-                },
-                separatorBuilder: (_, index) => const SizedBox(height: 12),
-                itemCount: options.length,
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ],
+          title: Text(l10n.editorRepeatPageTitle),
         ),
+      ],
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        itemBuilder: (context, index) {
+          final rule = options[index];
+          final selected = rule == initialRule;
+          return ListTile(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            tileColor: selected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                : Theme.of(context).colorScheme.surfaceContainerLowest,
+            title: Text(_label(l10n, rule)),
+            subtitle: index == 0 ? Text(l10n.editorRepeatPagePlaceholder) : null,
+            trailing: selected
+                ? Icon(
+                    Icons.check_circle,
+                    color: Theme.of(context).colorScheme.primary,
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pop(rule),
+          );
+        },
+        separatorBuilder: (_, index) => const SizedBox(height: 12),
+        itemCount: options.length,
       ),
     );
   }

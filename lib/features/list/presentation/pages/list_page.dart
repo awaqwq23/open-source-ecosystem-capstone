@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
-import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
-import 'package:huajuan_agenda/shared/widgets/app_placeholder_page.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ListPage extends ConsumerWidget {
   const ListPage({super.key});
@@ -14,32 +11,96 @@ class ListPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(listHeaderViewModelProvider);
     final l10n = context.l10n;
+    final theme = Theme.of(context);
 
-    return AppPlaceholderPage(
-      title: context.l10n.listTitle,
-      description: context.l10n.listDescription,
-      icon: Icons.checklist_rtl,
-      header: AppPageHeader(
-        title: AppPageHeaderTitle(
-          text: _tabLabel(l10n, state.currentTab),
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          title: Text(_tabLabel(l10n, state.currentTab)),
+          trailing: [
+            ui.Tooltip(
+              tooltip: (context) => Text(l10n.headerOpenListTabs),
+              child: ui.IconButton.ghost(
+                icon: const Icon(Icons.menu),
+                onPressed: () => _showTabSwitcher(context, ref),
+              ),
+            ),
+            ui.Tooltip(
+              tooltip: (context) => Text(l10n.headerOpenListSettings),
+              child: ui.IconButton.ghost(
+                icon: const Icon(Icons.more_horiz),
+                onPressed: () => _showSettingsMenu(context),
+              ),
+            ),
+          ],
         ),
-        trailing: [
-          AppPageActionButton(
-            icon: Icons.menu,
-            tooltip: l10n.headerOpenListTabs,
-            onPressed: () => _showTabSwitcher(context, ref),
+      ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: ui.Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.checklist_rtl,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.l10n.listTitle,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              context.l10n.listDescription,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      ui.PrimaryButton(
+                        onPressed: () => _showTabSwitcher(context, ref),
+                        child: Text(l10n.placeholderOpenMenu),
+                      ),
+                      ui.GhostButton(
+                        onPressed: () => _showSettingsMenu(context),
+                        child: Text(l10n.listSettingsMenuTitle),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          AppPageActionButton(
-            icon: Icons.more_horiz,
-            tooltip: l10n.headerOpenListSettings,
-            onPressed: () => _showSettingsMenu(context),
-          ),
-        ],
+        ),
       ),
-      primaryActionLabel: l10n.placeholderOpenMenu,
-      onPrimaryAction: () => _showTabSwitcher(context, ref),
-      secondaryActionLabel: l10n.listSettingsMenuTitle,
-      onSecondaryAction: () => _showSettingsMenu(context),
     );
   }
 
@@ -58,44 +119,72 @@ class ListPage extends ConsumerWidget {
     final state = ref.read(listHeaderViewModelProvider);
     final l10n = context.l10n;
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.listMenuTitle,
-      child: RadioGroup<ListHeaderTab>(
-        groupValue: state.currentTab,
-        onChanged: (value) {
-          if (value == null) return;
-          ref.read(listHeaderViewModelProvider.notifier).switchTab(value);
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ListHeaderTab.values.map((tab) {
-            return RadioListTile<ListHeaderTab>(
-              value: tab,
-              title: Text(_tabLabel(l10n, tab)),
-            );
-          }).toList(growable: false),
-        ),
-      ),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: RadioGroup<ListHeaderTab>(
+            groupValue: state.currentTab,
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(listHeaderViewModelProvider.notifier).switchTab(value);
+              ui.closeDrawer(sheetContext);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.listMenuTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...ListHeaderTab.values.map(
+                  (tab) => RadioListTile<ListHeaderTab>(
+                    value: tab,
+                    title: Text(_tabLabel(l10n, tab)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Future<void> _showSettingsMenu(BuildContext context) {
     final l10n = context.l10n;
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.listSettingsMenuTitle,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(title: Text(l10n.listSettingsSort)),
-          ListTile(title: Text(l10n.listSettingsReorder)),
-          ListTile(title: Text(l10n.listSettingsTheme)),
-          ListTile(title: Text(l10n.listSettingsMore)),
-        ],
-      ),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.listSettingsMenuTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(title: Text(l10n.listSettingsSort)),
+              ListTile(title: Text(l10n.listSettingsReorder)),
+              ListTile(title: Text(l10n.listSettingsTheme)),
+              ListTile(title: Text(l10n.listSettingsMore)),
+            ],
+          ),
+        );
+      },
     );
   }
 }

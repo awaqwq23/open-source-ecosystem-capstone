@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
-import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
-import 'package:huajuan_agenda/shared/widgets/app_placeholder_page.dart';
 import 'package:intl/intl.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AiPage extends ConsumerWidget {
   const AiPage({super.key});
@@ -16,27 +13,89 @@ class AiPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(aiHeaderViewModelProvider);
+    final theme = Theme.of(context);
 
-    return AppPlaceholderPage(
-      title: context.l10n.aiTitle,
-      description: context.l10n.aiDescription,
-      icon: Icons.auto_awesome,
-      header: AppPageHeader(
-        title: AppPageHeaderTitle(
-          text: context.l10n.aiTitle,
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          title: Text(context.l10n.aiTitle),
+          trailing: [
+            ui.Tooltip(
+              tooltip: (context) => Text(context.l10n.headerOpenTimePicker),
+              child: ui.IconButton.ghost(
+                icon: const Icon(Icons.calendar_month),
+                onPressed: () => _showPeriodPicker(context, ref),
+              ),
+            ),
+          ],
         ),
-        trailing: [
-          AppPageActionButton(
-            icon: Icons.calendar_month,
-            tooltip: context.l10n.headerOpenTimePicker,
-            onPressed: () => _showPeriodPicker(context, ref),
+      ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: ui.Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.auto_awesome,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.l10n.aiTitle,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              context.l10n.aiDescription,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      ui.PrimaryButton(
+                        onPressed: () => _showPeriodPicker(context, ref),
+                        child: Text(_periodLabel(context, state)),
+                      ),
+                      ui.GhostButton(
+                        onPressed: () => context.push(AppRoutePaths.timePicker),
+                        child: Text(context.l10n.timePickerTitle),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
-      primaryActionLabel: _periodLabel(context, state),
-      onPrimaryAction: () => _showPeriodPicker(context, ref),
-      secondaryActionLabel: context.l10n.timePickerTitle,
-      onSecondaryAction: () => context.push(AppRoutePaths.timePicker),
     );
   }
 
@@ -62,34 +121,47 @@ class AiPage extends ConsumerWidget {
     final state = ref.read(aiHeaderViewModelProvider);
     final l10n = context.l10n;
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.aiPeriodPickerTitle,
-      child: RadioGroup<AiHeaderPeriod>(
-        groupValue: state.period,
-        onChanged: (value) {
-          if (value == null) return;
-          ref.read(aiHeaderViewModelProvider.notifier).select(value);
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<AiHeaderPeriod>(
-              value: AiHeaderPeriod.day,
-              title: Text(l10n.aiPeriodDay),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: RadioGroup<AiHeaderPeriod>(
+            groupValue: state.period,
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(aiHeaderViewModelProvider.notifier).select(value);
+              ui.closeDrawer(sheetContext);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.aiPeriodPickerTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                RadioListTile<AiHeaderPeriod>(
+                  value: AiHeaderPeriod.day,
+                  title: Text(l10n.aiPeriodDay),
+                ),
+                RadioListTile<AiHeaderPeriod>(
+                  value: AiHeaderPeriod.week,
+                  title: Text(l10n.aiPeriodWeek),
+                ),
+                RadioListTile<AiHeaderPeriod>(
+                  value: AiHeaderPeriod.month,
+                  title: Text(l10n.aiPeriodMonth),
+                ),
+              ],
             ),
-            RadioListTile<AiHeaderPeriod>(
-              value: AiHeaderPeriod.week,
-              title: Text(l10n.aiPeriodWeek),
-            ),
-            RadioListTile<AiHeaderPeriod>(
-              value: AiHeaderPeriod.month,
-              title: Text(l10n.aiPeriodMonth),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

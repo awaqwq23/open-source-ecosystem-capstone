@@ -12,9 +12,8 @@ import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
-import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 const double _kEditorBaseRowHeight = 56;
 const double _kEditorMultiLineMinHeight = 112;
@@ -92,10 +91,20 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
     final horizontalPadding = isCompact ? 20.0 : 32.0;
 
-    return SafeArea(
-      top: false,
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          title: Text(_createTitle(l10n, state.draft.type)),
+          trailing: [
+            _SubmitActionButton(
+              onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
+              isSubmitting: state.isSubmitting,
+            ),
+          ],
+        ),
+      ],
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 32),
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 32),
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -103,19 +112,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppPageHeader(
-                  padding: EdgeInsets.zero,
-                  title: AppPageHeaderTitle(
-                    text: _createTitle(l10n, state.draft.type),
-                  ),
-                  trailing: [
-                    _SubmitActionButton(
-                      onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
-                      isSubmitting: state.isSubmitting,
-                    ),
-                  ],
-                ),
-                const Gap(16),
                 _TypeSelectorRow(
                   selectedType: state.draft.type,
                   onSelected: notifier.selectType,
@@ -278,25 +274,43 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     final state = ref.read(itemEditorPageControllerProvider);
     final l10n = context.l10n;
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.editorColorPickerTitle,
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          for (final color in ItemColorOption.values)
-            _ColorChoiceChip(
-              color: color.resolve(Theme.of(context).brightness),
-              label: _colorLabel(l10n, color),
-              selected: state.draft.color == color,
-              onPressed: () {
-                ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
-                Navigator.of(context).pop();
-              },
-            ),
-        ],
-      ),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.editorColorPickerTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final color in ItemColorOption.values)
+                    _ColorChoiceChip(
+                      color: color.resolve(Theme.of(context).brightness),
+                      label: _colorLabel(l10n, color),
+                      selected: state.draft.color == color,
+                      onPressed: () {
+                        ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
+                        ui.closeDrawer(sheetContext);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -416,31 +430,44 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     final currentMinutes = state.draft.estimatedDuration.inMinutes;
     final options = <int>[15, 30, 45, 60, 90, 120, 180];
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.editorDurationPickerTitle,
-      child: RadioGroup<int>(
-        groupValue: currentMinutes,
-        onChanged: (value) {
-          if (value == null) {
-            return;
-          }
-          ref
-              .read(itemEditorPageControllerProvider.notifier)
-              .updateEstimatedDuration(Duration(minutes: value));
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final minutes in options)
-              RadioListTile<int>(
-                value: minutes,
-                title: Text(_formatDuration(context, Duration(minutes: minutes))),
-              ),
-          ],
-        ),
-      ),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: RadioGroup<int>(
+            groupValue: currentMinutes,
+            onChanged: (value) {
+              if (value == null) {
+                return;
+              }
+              ref
+                  .read(itemEditorPageControllerProvider.notifier)
+                  .updateEstimatedDuration(Duration(minutes: value));
+              ui.closeDrawer(sheetContext);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.editorDurationPickerTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                for (final minutes in options)
+                  RadioListTile<int>(
+                    value: minutes,
+                    title: Text(_formatDuration(context, Duration(minutes: minutes))),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -756,13 +783,8 @@ class _SubmitActionButton extends StatelessWidget {
       );
     }
 
-    return IconButton(
+    return ui.IconButton.ghost(
       onPressed: onPressed,
-      tooltip: context.l10n.editorSubmitButton,
-      style: IconButton.styleFrom(
-        minimumSize: const Size(44, 44),
-        padding: EdgeInsets.zero,
-      ),
       icon: const Icon(Icons.add_circle_outline),
     );
   }

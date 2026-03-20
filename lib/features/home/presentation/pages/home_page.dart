@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
-import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
-import 'package:huajuan_agenda/shared/widgets/app_placeholder_page.dart';
 import 'package:intl/intl.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -17,38 +14,131 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeHeaderViewModelProvider);
     final viewModel = ref.read(homeHeaderViewModelProvider.notifier);
+    final theme = Theme.of(context);
 
-    return AppPlaceholderPage(
-      title: context.l10n.homeTitle,
-      description: context.l10n.homeDescription,
-      icon: Icons.calendar_view_week,
-      header: AppPageHeader(
-        centerTitleWhenCompact: true,
-        title: AppPageHeaderTitle(
-          text: _formatPeriodLabel(context, state),
-          center: true,
-          showDropdownIndicator: true,
-          onPressed: () => context.push(AppRoutePaths.timePicker),
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          useSafeArea: true,
+          backgroundColor: Colors.transparent,
+          surfaceBlur: 0,
+          surfaceOpacity: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: SizedBox(
+            height: 60,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ui.Tooltip(
+                          tooltip: (context) => Text(context.l10n.headerPreviousPeriod),
+                          child: ui.IconButton.ghost(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: viewModel.showPrevious,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 72),
+                        child: TextButton(
+                          onPressed: () => context.push(AppRoutePaths.timePicker),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _formatPeriodLabel(context, state),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.keyboard_arrow_down, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ui.Tooltip(
+                          tooltip: (context) => Text(context.l10n.headerNextPeriod),
+                          child: ui.IconButton.ghost(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: viewModel.showNext,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(
+                  height: 12,
+                  color: theme.dividerColor.withValues(alpha: 0.6),
+                ),
+              ],
+            ),
+          ),
         ),
-        leading: [
-          AppPageActionButton(
-            icon: Icons.chevron_left,
-            tooltip: context.l10n.headerPreviousPeriod,
-            onPressed: viewModel.showPrevious,
+      ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: ui.Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.homeTitle,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    context.l10n.homeDescription,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      ui.PrimaryButton(
+                        onPressed: () => context.push(AppRoutePaths.timePicker),
+                        child: Text(context.l10n.placeholderOpenPicker),
+                      ),
+                      ui.GhostButton(
+                        onPressed: () => _showScopePicker(context, ref),
+                        child: Text(context.l10n.homeScopePickerTitle),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-        trailing: [
-          AppPageActionButton(
-            icon: Icons.chevron_right,
-            tooltip: context.l10n.headerNextPeriod,
-            onPressed: viewModel.showNext,
-          ),
-        ],
+        ),
       ),
-      primaryActionLabel: context.l10n.placeholderOpenPicker,
-      onPrimaryAction: () => context.push(AppRoutePaths.timePicker),
-      secondaryActionLabel: context.l10n.homeScopePickerTitle,
-      onSecondaryAction: () => _showScopePicker(context, ref),
     );
   }
 
@@ -74,30 +164,43 @@ class HomePage extends ConsumerWidget {
     final l10n = context.l10n;
     final state = ref.read(homeHeaderViewModelProvider);
 
-    return showAppSheetScaffold(
+    return ui.openSheet<void>(
       context: context,
-      title: l10n.homeScopePickerTitle,
-      child: RadioGroup<HomeHeaderScope>(
-        groupValue: state.scope,
-        onChanged: (value) {
-          if (value == null) return;
-          ref.read(homeHeaderViewModelProvider.notifier).switchScope(value);
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<HomeHeaderScope>(
-              value: HomeHeaderScope.week,
-              title: Text(l10n.homeScopeWeek),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: RadioGroup<HomeHeaderScope>(
+            groupValue: state.scope,
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(homeHeaderViewModelProvider.notifier).switchScope(value);
+              ui.closeDrawer(sheetContext);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.homeScopePickerTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                RadioListTile<HomeHeaderScope>(
+                  value: HomeHeaderScope.week,
+                  title: Text(l10n.homeScopeWeek),
+                ),
+                RadioListTile<HomeHeaderScope>(
+                  value: HomeHeaderScope.month,
+                  title: Text(l10n.homeScopeMonth),
+                ),
+              ],
             ),
-            RadioListTile<HomeHeaderScope>(
-              value: HomeHeaderScope.month,
-              title: Text(l10n.homeScopeMonth),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
