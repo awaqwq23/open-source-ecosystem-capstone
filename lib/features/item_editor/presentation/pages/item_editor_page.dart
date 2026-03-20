@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:date_field/date_field.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
@@ -12,7 +13,6 @@ import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
-import 'package:omni_datetime_picker/omni_datetime_picker.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 
 class ItemEditorPage extends ConsumerStatefulWidget {
@@ -282,11 +282,10 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     DateTime initialDate,
   ) async {
-    final picked = await _showDateTimePickerSheet(
+    final picked = await _showDateTimePicker(
       context: context,
-      title: context.l10n.editorFieldTargetDate,
       initialDateTime: initialDate,
-      type: OmniDateTimePickerType.date,
+      mode: DateTimeFieldPickerMode.date,
     );
 
     if (picked != null && mounted) {
@@ -301,13 +300,12 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await _showDateTimePickerSheet(
+    final picked = await _showDateTimePicker(
       context: context,
-      title: context.l10n.editorFieldStart,
       initialDateTime: state.draft.startAt,
-      type: state.draft.isAllDay
-          ? OmniDateTimePickerType.date
-          : OmniDateTimePickerType.dateAndTime,
+      mode: state.draft.isAllDay
+          ? DateTimeFieldPickerMode.date
+          : DateTimeFieldPickerMode.dateAndTime,
     );
 
     if (picked != null && mounted) {
@@ -325,13 +323,12 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await _showDateTimePickerSheet(
+    final picked = await _showDateTimePicker(
       context: context,
-      title: context.l10n.editorFieldEnd,
       initialDateTime: state.draft.endAt,
-      type: state.draft.isAllDay
-          ? OmniDateTimePickerType.date
-          : OmniDateTimePickerType.dateAndTime,
+      mode: state.draft.isAllDay
+          ? DateTimeFieldPickerMode.date
+          : DateTimeFieldPickerMode.dateAndTime,
     );
 
     if (picked != null && mounted) {
@@ -347,13 +344,12 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await _showDateTimePickerSheet(
+    final picked = await _showDateTimePicker(
       context: context,
-      title: context.l10n.editorFieldDeadline,
       initialDateTime: state.draft.deadline ?? state.draft.endAt,
-      type: state.draft.isAllDay
-          ? OmniDateTimePickerType.date
-          : OmniDateTimePickerType.dateAndTime,
+      mode: state.draft.isAllDay
+          ? DateTimeFieldPickerMode.date
+          : DateTimeFieldPickerMode.dateAndTime,
     );
 
     if (picked != null && mounted) {
@@ -366,81 +362,28 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
   }
 
-  Future<DateTime?> _showDateTimePickerSheet({
+  Future<DateTime?> _showDateTimePicker({
     required BuildContext context,
-    required String title,
     required DateTime initialDateTime,
-    required OmniDateTimePickerType type,
+    required DateTimeFieldPickerMode mode,
   }) {
-    return showModalBottomSheet<DateTime>(
+    return showAdaptiveDateTimePicker(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) {
-        DateTime selected = initialDateTime;
-        bool canSave = true;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                8,
-                20,
-                24 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(context.l10n.editorPickerCancel),
-                      ),
-                      const Gap(8),
-                      FilledButton(
-                        onPressed: canSave ? () => Navigator.of(context).pop(selected) : null,
-                        child: Text(context.l10n.editorPickerConfirm),
-                      ),
-                    ],
-                  ),
-                  const Gap(12),
-                  SizedBox(
-                    height: 420,
-                    child: OmniDateTimePicker(
-                      initialDate: initialDateTime,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                      type: type,
-                      is24HourMode: true,
-                      minutesInterval: 5,
-                      onDateTimeChanged: (dateTime) {
-                        selected = dateTime;
-                      },
-                      onCanSaveChanged: (value) {
-                        setModalState(() {
-                          canSave = value;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      mode: mode,
+      pickerPlatform: DateTimeFieldPickerPlatform.cupertino,
+      initialPickerDateTime: initialDateTime,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      cupertinoDatePickerOptions: CupertinoDatePickerOptions(
+        minuteInterval: 5,
+        saveText: context.l10n.editorPickerConfirm,
+        cancelText: context.l10n.editorPickerCancel,
+        modalTitleText: switch (mode) {
+          DateTimeFieldPickerMode.date => context.l10n.editorFieldTargetDate,
+          DateTimeFieldPickerMode.time => context.l10n.editorSectionTime,
+          DateTimeFieldPickerMode.dateAndTime => context.l10n.editorSectionTime,
+        },
+      ),
     );
   }
 
@@ -656,6 +599,7 @@ class _TypeButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
+        minimumSize: const Size.fromHeight(64),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
@@ -692,7 +636,10 @@ class _ColorTrigger extends StatelessWidget {
       onPressed: onPressed,
       style: IconButton.styleFrom(
         backgroundColor: color.withValues(alpha: 0.14),
-        minimumSize: const Size(44, 44),
+        minimumSize: const Size(32, 32),
+        maximumSize: const Size(32, 32),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: const CircleBorder(),
       ),
       icon: Container(
@@ -772,8 +719,9 @@ class _TopActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
             onPressed: onClose,
@@ -818,37 +766,45 @@ class _RoundedInputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const fieldHeight = 56.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
+          constraints: BoxConstraints(
+            minHeight: fieldHeight,
+            maxHeight: maxLines == 1 ? fieldHeight : fieldHeight * maxLines,
+          ),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
+            crossAxisAlignment:
+                maxLines == 1 ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: TextField(
                   controller: controller,
                   onChanged: onChanged,
+                  textAlignVertical: maxLines == 1 ? TextAlignVertical.center : TextAlignVertical.top,
                   minLines: maxLines,
                   maxLines: maxLines,
                   decoration: InputDecoration(
                     hintText: hintText,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
+                    isCollapsed: false,
+                    contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 14,
+                      vertical: maxLines == 1 ? 18 : 16,
                     ),
                   ),
                 ),
               ),
               if (trailing != null) ...[
-                const Gap(4),
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 12),
                   child: trailing!,
                 ),
               ],
@@ -883,8 +839,9 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 56,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Text(
@@ -895,6 +852,7 @@ class _SwitchRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ],
       ),
@@ -918,6 +876,7 @@ class _PlainActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const rowHeight = 56.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -925,8 +884,9 @@ class _PlainActionRow extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: SizedBox(
-            height: 52,
+            height: rowHeight,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -945,7 +905,7 @@ class _PlainActionRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Gap(4),
+                const SizedBox(width: 4),
                 Icon(
                   Icons.chevron_right,
                   color: theme.colorScheme.onSurfaceVariant,
