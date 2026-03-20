@@ -458,6 +458,24 @@ abstract class AppLocalizations {
   /// **'Memo'**
   String get editorTypeMemo;
 
+  /// No description provided for @editorCreateTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Create task'**
+  String get editorCreateTask;
+
+  /// No description provided for @editorCreateSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Create schedule'**
+  String get editorCreateSchedule;
+
+  /// No description provided for @editorCreateMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Create memo'**
+  String get editorCreateMemo;
+
   /// No description provided for @editorSectionBasic.
   ///
   /// In en, this message translates to:
@@ -488,11 +506,23 @@ abstract class AppLocalizations {
   /// **'Repeat'**
   String get editorSectionRepeat;
 
+  /// No description provided for @editorSectionLocationNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Location & notes'**
+  String get editorSectionLocationNotes;
+
   /// No description provided for @editorFieldTitle.
   ///
   /// In en, this message translates to:
   /// **'Title'**
   String get editorFieldTitle;
+
+  /// No description provided for @editorFieldTitleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Task name'**
+  String get editorFieldTitleName;
 
   /// No description provided for @editorFieldDetails.
   ///
@@ -505,6 +535,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Location'**
   String get editorFieldLocation;
+
+  /// No description provided for @editorFieldStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get editorFieldStart;
+
+  /// No description provided for @editorFieldEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get editorFieldEnd;
 
   /// No description provided for @editorFieldStartDate.
   ///
@@ -614,6 +656,24 @@ abstract class AppLocalizations {
   /// **'Slate'**
   String get editorColorSlate;
 
+  /// No description provided for @editorColorPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose color'**
+  String get editorColorPickerTitle;
+
+  /// No description provided for @editorAllDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All-day item'**
+  String get editorAllDayTitle;
+
+  /// No description provided for @editorAllDayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, only dates are shown and specific times are hidden.'**
+  String get editorAllDayDescription;
+
   /// No description provided for @editorReminderNone.
   ///
   /// In en, this message translates to:
@@ -649,6 +709,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'1 day before'**
   String get editorReminderOneDay;
+
+  /// No description provided for @editorReminderPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder settings'**
+  String get editorReminderPageTitle;
 
   /// No description provided for @editorRepeatNone.
   ///
@@ -686,6 +752,18 @@ abstract class AppLocalizations {
   /// **'Every year'**
   String get editorRepeatYearly;
 
+  /// No description provided for @editorRepeatPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat settings'**
+  String get editorRepeatPageTitle;
+
+  /// No description provided for @editorRepeatPagePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced repeat rules will be expanded later.'**
+  String get editorRepeatPagePlaceholder;
+
   /// No description provided for @editorDurationPickerTitle.
   ///
   /// In en, this message translates to:
@@ -697,6 +775,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear'**
   String get editorDeadlineClear;
+
+  /// No description provided for @editorDeadlineUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get editorDeadlineUnset;
+
+  /// No description provided for @editorPickerCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get editorPickerCancel;
+
+  /// No description provided for @editorPickerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get editorPickerConfirm;
 
   /// No description provided for @editorSubmitButton.
   ///

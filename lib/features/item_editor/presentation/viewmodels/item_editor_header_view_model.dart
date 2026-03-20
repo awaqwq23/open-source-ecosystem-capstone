@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/item_editor/data/item_editor_repository.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_defaults.dart';
@@ -80,6 +81,87 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(state.draft.copyWith(color: color));
   }
 
+  void toggleAllDay(bool value) {
+    if (state.draft.type == ItemType.memo) {
+      return;
+    }
+
+    if (value) {
+      final normalizedStart = DateTime(
+        state.draft.startAt.year,
+        state.draft.startAt.month,
+        state.draft.startAt.day,
+      );
+      final normalizedEnd = DateTime(
+        state.draft.endAt.year,
+        state.draft.endAt.month,
+        state.draft.endAt.day,
+        23,
+        59,
+      );
+      final normalizedDeadline = state.draft.deadline == null
+          ? null
+          : DateTime(
+              state.draft.deadline!.year,
+              state.draft.deadline!.month,
+              state.draft.deadline!.day,
+              23,
+              59,
+            );
+
+      _updateDraft(
+        state.draft.copyWith(
+          isAllDay: true,
+          startAt: normalizedStart,
+          endAt: normalizedEnd.isBefore(normalizedStart)
+              ? DateTime(
+                  normalizedStart.year,
+                  normalizedStart.month,
+                  normalizedStart.day,
+                  23,
+                  59,
+                )
+              : normalizedEnd,
+          deadline: normalizedDeadline,
+        ),
+      );
+      return;
+    }
+
+    final start = DateTime(
+      state.draft.startAt.year,
+      state.draft.startAt.month,
+      state.draft.startAt.day,
+      9,
+    );
+    final hasSameDayRange = DateUtils.isSameDay(state.draft.startAt, state.draft.endAt);
+    final end = hasSameDayRange
+        ? start.add(const Duration(hours: 1))
+        : DateTime(
+            state.draft.endAt.year,
+            state.draft.endAt.month,
+            state.draft.endAt.day,
+            10,
+          );
+    final deadline = state.draft.deadline == null
+        ? null
+        : DateTime(
+            state.draft.deadline!.year,
+            state.draft.deadline!.month,
+            state.draft.deadline!.day,
+            18,
+          );
+
+    _updateDraft(
+      state.draft.copyWith(
+        isAllDay: false,
+        startAt: start,
+        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        deadline: deadline,
+      ),
+    );
+  }
+
   void selectReminder(ReminderOption option) {
     _updateDraft(state.draft.copyWith(reminder: option));
   }
@@ -102,6 +184,17 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
         startAt: start,
         endAt: end,
         targetDate: date,
+      ),
+    );
+  }
+
+  void updateStartDateTime(DateTime dateTime) {
+    final end = state.draft.endAt.isBefore(dateTime) ? dateTime : state.draft.endAt;
+    _updateDraft(
+      state.draft.copyWith(
+        startAt: dateTime,
+        endAt: end,
+        targetDate: dateTime,
       ),
     );
   }
@@ -140,6 +233,10 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(state.draft.copyWith(endAt: end));
   }
 
+  void updateEndDateTime(DateTime dateTime) {
+    _updateDraft(state.draft.copyWith(endAt: dateTime));
+  }
+
   void updateDeadlineDate(DateTime date) {
     final currentDeadline = state.draft.deadline ?? state.draft.endAt;
     final deadline = DateTime(
@@ -162,6 +259,10 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       minute,
     );
     _updateDraft(state.draft.copyWith(deadline: deadline));
+  }
+
+  void updateDeadlineDateTime(DateTime dateTime) {
+    _updateDraft(state.draft.copyWith(deadline: dateTime));
   }
 
   void clearDeadline() {

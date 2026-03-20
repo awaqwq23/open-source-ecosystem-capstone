@@ -7,9 +7,13 @@ import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/item_editor_page.dart';
+import 'package:huajuan_agenda/features/item_editor/presentation/pages/reminder_settings_page.dart';
+import 'package:huajuan_agenda/features/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:huajuan_agenda/features/list/presentation/pages/list_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_page.dart';
 import 'package:huajuan_agenda/features/time_picker/presentation/pages/time_picker_page.dart';
+import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
+import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -73,6 +77,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutePaths.timePicker,
         builder: (context, state) => const TimePickerPage(),
+      ),
+      GoRoute(
+        path: AppRoutePaths.repeatSettings,
+        builder: (context, state) => RepeatSettingsPage(
+          initialRule:
+              state.extra is RepeatRule ? state.extra! as RepeatRule : RepeatRule.none,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutePaths.reminderSettings,
+        builder: (context, state) => ReminderSettingsPage(
+          initialReminder: state.extra is ReminderOption
+              ? state.extra! as ReminderOption
+              : ReminderOption.none,
+        ),
       ),
     ],
   );

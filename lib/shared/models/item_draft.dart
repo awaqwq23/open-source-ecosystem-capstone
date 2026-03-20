@@ -10,6 +10,7 @@ class ItemDraft {
     required this.details,
     required this.location,
     required this.color,
+    required this.isAllDay,
     required this.reminder,
     required this.repeatRule,
     required this.startAt,
@@ -24,6 +25,7 @@ class ItemDraft {
   final String details;
   final String location;
   final ItemColorOption color;
+  final bool isAllDay;
   final ReminderOption reminder;
   final RepeatRule repeatRule;
   final DateTime startAt;
@@ -38,6 +40,7 @@ class ItemDraft {
     String? details,
     String? location,
     ItemColorOption? color,
+    bool? isAllDay,
     ReminderOption? reminder,
     RepeatRule? repeatRule,
     DateTime? startAt,
@@ -53,6 +56,7 @@ class ItemDraft {
       details: details ?? this.details,
       location: location ?? this.location,
       color: color ?? this.color,
+      isAllDay: isAllDay ?? this.isAllDay,
       reminder: reminder ?? this.reminder,
       repeatRule: repeatRule ?? this.repeatRule,
       startAt: startAt ?? this.startAt,

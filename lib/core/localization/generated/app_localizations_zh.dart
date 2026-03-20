@@ -189,6 +189,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorTypeMemo => '备忘';
 
   @override
+  String get editorCreateTask => '创建任务';
+
+  @override
+  String get editorCreateSchedule => '创建日程';
+
+  @override
+  String get editorCreateMemo => '创建备忘';
+
+  @override
   String get editorSectionBasic => '基本信息';
 
   @override
@@ -204,13 +213,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorSectionRepeat => '重复';
 
   @override
+  String get editorSectionLocationNotes => '地点与备注';
+
+  @override
   String get editorFieldTitle => '名称';
+
+  @override
+  String get editorFieldTitleName => '任务名称';
 
   @override
   String get editorFieldDetails => '详情';
 
   @override
   String get editorFieldLocation => '地点';
+
+  @override
+  String get editorFieldStart => '开始时间';
+
+  @override
+  String get editorFieldEnd => '结束时间';
 
   @override
   String get editorFieldStartDate => '开始日期';
@@ -267,6 +288,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorColorSlate => '石板灰';
 
   @override
+  String get editorColorPickerTitle => '选择事项颜色';
+
+  @override
+  String get editorAllDayTitle => '全天事项';
+
+  @override
+  String get editorAllDayDescription => '开启后只显示日期，不再单独设置具体时分。';
+
+  @override
   String get editorReminderNone => '不提醒';
 
   @override
@@ -283,6 +313,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editorReminderOneDay => '提前 1 天';
+
+  @override
+  String get editorReminderPageTitle => '提醒设置';
 
   @override
   String get editorRepeatNone => '不重复';
@@ -303,10 +336,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorRepeatYearly => '每年';
 
   @override
+  String get editorRepeatPageTitle => '重复设置';
+
+  @override
+  String get editorRepeatPagePlaceholder => '复杂重复规则后续继续扩展。';
+
+  @override
   String get editorDurationPickerTitle => '选择时长';
 
   @override
   String get editorDeadlineClear => '清除';
+
+  @override
+  String get editorDeadlineUnset => '未设置';
+
+  @override
+  String get editorPickerCancel => '取消';
+
+  @override
+  String get editorPickerConfirm => '确定';
 
   @override
   String get editorSubmitButton => '创建事项';

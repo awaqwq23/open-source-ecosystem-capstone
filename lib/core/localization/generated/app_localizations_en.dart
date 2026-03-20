@@ -196,6 +196,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorTypeMemo => 'Memo';
 
   @override
+  String get editorCreateTask => 'Create task';
+
+  @override
+  String get editorCreateSchedule => 'Create schedule';
+
+  @override
+  String get editorCreateMemo => 'Create memo';
+
+  @override
   String get editorSectionBasic => 'Basic info';
 
   @override
@@ -211,13 +220,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorSectionRepeat => 'Repeat';
 
   @override
+  String get editorSectionLocationNotes => 'Location & notes';
+
+  @override
   String get editorFieldTitle => 'Title';
+
+  @override
+  String get editorFieldTitleName => 'Task name';
 
   @override
   String get editorFieldDetails => 'Details';
 
   @override
   String get editorFieldLocation => 'Location';
+
+  @override
+  String get editorFieldStart => 'Start';
+
+  @override
+  String get editorFieldEnd => 'End';
 
   @override
   String get editorFieldStartDate => 'Start date';
@@ -274,6 +295,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorColorSlate => 'Slate';
 
   @override
+  String get editorColorPickerTitle => 'Choose color';
+
+  @override
+  String get editorAllDayTitle => 'All-day item';
+
+  @override
+  String get editorAllDayDescription =>
+      'When enabled, only dates are shown and specific times are hidden.';
+
+  @override
   String get editorReminderNone => 'No reminder';
 
   @override
@@ -290,6 +321,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorReminderOneDay => '1 day before';
+
+  @override
+  String get editorReminderPageTitle => 'Reminder settings';
 
   @override
   String get editorRepeatNone => 'Does not repeat';
@@ -310,10 +344,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorRepeatYearly => 'Every year';
 
   @override
+  String get editorRepeatPageTitle => 'Repeat settings';
+
+  @override
+  String get editorRepeatPagePlaceholder =>
+      'Advanced repeat rules will be expanded later.';
+
+  @override
   String get editorDurationPickerTitle => 'Choose duration';
 
   @override
   String get editorDeadlineClear => 'Clear';
+
+  @override
+  String get editorDeadlineUnset => 'Not set';
+
+  @override
+  String get editorPickerCancel => 'Cancel';
+
+  @override
+  String get editorPickerConfirm => 'Confirm';
 
   @override
   String get editorSubmitButton => 'Create item';

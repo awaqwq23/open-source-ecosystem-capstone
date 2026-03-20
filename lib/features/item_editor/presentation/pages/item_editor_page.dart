@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
@@ -9,10 +11,9 @@ import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
-import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
 import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
+import 'package:omni_datetime_picker/omni_datetime_picker.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ItemEditorPage extends ConsumerStatefulWidget {
   const ItemEditorPage({
@@ -47,8 +48,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.prefill != widget.prefill) {
       Future<void>.microtask(
-        () =>
-            ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.prefill),
+        () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.prefill),
       );
     }
   }
@@ -82,257 +82,135 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _syncControllers(state);
     final l10n = context.l10n;
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
-    final theme = Theme.of(context);
+    final horizontalPadding = isCompact ? 20.0 : 32.0;
 
     return SafeArea(
       top: false,
-      child: Column(
-        children: [
-          AppPageHeader(
-            centerTitleWhenCompact: true,
-            title: AppPageHeaderTitle(
-              text: _typeLabel(l10n, state.draft.type),
-              center: true,
-              showDropdownIndicator: true,
-              onPressed: () => _showTypePicker(context, ref),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                isCompact ? 20 : 32,
-                20,
-                isCompact ? 20 : 32,
-                32,
-              ),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 860),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.editorDescription,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.5,
-                        ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 32),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TopActionBar(
+                  onClose: () => Navigator.of(context).maybePop(),
+                  onConfirm: state.canSubmit ? () => _submit(context, ref, state) : null,
+                  isSubmitting: state.isSubmitting,
+                ),
+                const Gap(8),
+                Text(
+                  _createTitle(l10n, state.draft.type),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w400,
                       ),
-                      const Gap(20),
-                      _SectionCard(
-                        title: l10n.editorSectionBasic,
-                        child: Column(
-                          children: [
-                            TextField(
-                              controller: _titleController,
-                              onChanged: notifier.updateTitle,
-                              decoration: InputDecoration(
-                                labelText: l10n.editorFieldTitle,
-                                hintText: l10n.editorHintTitle,
-                                errorText: state.errors.title,
-                              ),
-                            ),
-                            const Gap(16),
-                            TextField(
-                              controller: _detailsController,
-                              minLines: 3,
-                              maxLines: 5,
-                              onChanged: notifier.updateDetails,
-                              decoration: InputDecoration(
-                                labelText: l10n.editorFieldDetails,
-                                hintText: l10n.editorHintDetails,
-                              ),
-                            ),
-                            const Gap(16),
-                            TextField(
-                              controller: _locationController,
-                              onChanged: notifier.updateLocation,
-                              decoration: InputDecoration(
-                                labelText: l10n.editorFieldLocation,
-                                hintText: l10n.editorHintLocation,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Gap(16),
-                      _SectionCard(
-                        title: l10n.editorSectionColor,
-                        child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            for (final color in ItemColorOption.values)
-                              _ColorChip(
-                                option: color,
-                                label: _colorLabel(l10n, color),
-                                selected: state.draft.color == color,
-                                onPressed: () => notifier.selectColor(color),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const Gap(16),
-                      _SectionCard(
-                        title: l10n.editorSectionTime,
-                        child: Column(
-                          children: [
-                            if (state.draft.type == ItemType.memo) ...[
-                              _DateField(
-                                label: l10n.editorFieldTargetDate,
-                                value: _formatDate(context, state.draft.targetDate),
-                                onTap: () => _pickDate(
-                                  context: context,
-                                  initialDate: state.draft.targetDate,
-                                  onSelected: notifier.updateTargetDate,
-                                ),
-                              ),
-                              const Gap(16),
-                              _DurationField(
-                                label: l10n.editorFieldEstimatedDuration,
-                                value: _formatDuration(context, state.draft.estimatedDuration),
-                                errorText: state.errors.estimatedDuration,
-                                onTap: () => _showDurationPicker(context, ref),
-                              ),
-                            ] else ...[
-                              _DateField(
-                                label: l10n.editorFieldStartDate,
-                                value: _formatDate(context, state.draft.startAt),
-                                onTap: () => _pickDate(
-                                  context: context,
-                                  initialDate: state.draft.startAt,
-                                  onSelected: notifier.updateStartDate,
-                                ),
-                              ),
-                              const Gap(16),
-                              _DateField(
-                                label: l10n.editorFieldStartTime,
-                                value: _formatTime(context, state.draft.startAt),
-                                onTap: () => _pickTime(
-                                  context: context,
-                                  initialDateTime: state.draft.startAt,
-                                  onSelected: notifier.updateStartTime,
-                                ),
-                              ),
-                              const Gap(16),
-                              _DateField(
-                                label: l10n.editorFieldEndDate,
-                                value: _formatDate(context, state.draft.endAt),
-                                onTap: () => _pickDate(
-                                  context: context,
-                                  initialDate: state.draft.endAt,
-                                  onSelected: notifier.updateEndDate,
-                                ),
-                              ),
-                              const Gap(16),
-                              _DateField(
-                                label: l10n.editorFieldEndTime,
-                                value: _formatTime(context, state.draft.endAt),
-                                onTap: () => _pickTime(
-                                  context: context,
-                                  initialDateTime: state.draft.endAt,
-                                  onSelected: notifier.updateEndTime,
-                                ),
-                              ),
-                              if (state.errors.timeRange != null) ...[
-                                const Gap(12),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    state.errors.timeRange!,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.error,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              if (state.draft.type == ItemType.task) ...[
-                                const Gap(16),
-                                _TaskDeadlineSection(
-                                  deadline: state.draft.deadline,
-                                  dateText: _formatDate(
-                                    context,
-                                    state.draft.deadline ?? state.draft.endAt,
-                                  ),
-                                  timeText: _formatTime(
-                                    context,
-                                    state.draft.deadline ?? state.draft.endAt,
-                                  ),
-                                  errorText: state.errors.deadline,
-                                  onPickDate: () => _pickDate(
-                                    context: context,
-                                    initialDate: state.draft.deadline ?? state.draft.endAt,
-                                    onSelected: notifier.updateDeadlineDate,
-                                  ),
-                                  onPickTime: () => _pickTime(
-                                    context: context,
-                                    initialDateTime:
-                                        state.draft.deadline ?? state.draft.endAt,
-                                    onSelected: notifier.updateDeadlineTime,
-                                  ),
-                                  onClear: notifier.clearDeadline,
-                                ),
-                              ],
-                            ],
-                          ],
-                        ),
-                      ),
-                      const Gap(16),
-                      _SectionCard(
-                        title: l10n.editorSectionReminder,
-                        child: _OptionWrap(
-                          options: ReminderOption.values
-                              .map(
-                                (option) => _OptionData<ReminderOption>(
-                                  value: option,
-                                  label: _reminderLabel(l10n, option),
-                                ),
-                              )
-                              .toList(growable: false),
-                          selected: state.draft.reminder,
-                          onSelected: notifier.selectReminder,
-                        ),
-                      ),
-                      const Gap(16),
-                      _SectionCard(
-                        title: l10n.editorSectionRepeat,
-                        child: _OptionWrap(
-                          options: RepeatRule.values
-                              .map(
-                                (rule) => _OptionData<RepeatRule>(
-                                  value: rule,
-                                  label: _repeatLabel(l10n, rule),
-                                ),
-                              )
-                              .toList(growable: false),
-                          selected: state.draft.repeatRule,
-                          onSelected: notifier.selectRepeatRule,
-                        ),
-                      ),
-                      const Gap(24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ui.PrimaryButton(
-                          onPressed: state.canSubmit
-                              ? () => _submit(context, ref, state)
-                              : null,
-                          child: state.isSubmitting
-                              ? const SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : Text(l10n.editorSubmitButton),
-                        ),
-                      ),
-                    ],
+                ),
+                const Gap(16),
+                _TypeSelectorRow(
+                  selectedType: state.draft.type,
+                  onSelected: notifier.selectType,
+                  taskLabel: l10n.editorTypeTask,
+                  scheduleLabel: l10n.editorTypeSchedule,
+                  memoLabel: l10n.editorTypeMemo,
+                ),
+                const Gap(20),
+                _RoundedInputField(
+                  controller: _titleController,
+                  hintText: l10n.editorHintTitle,
+                  errorText: state.errors.title,
+                  onChanged: notifier.updateTitle,
+                  trailing: _ColorTrigger(
+                    color: state.draft.color.resolve(Theme.of(context).brightness),
+                    onPressed: () => _showColorPicker(context, ref),
                   ),
                 ),
-              ),
+                const Gap(12),
+                if (state.draft.type != ItemType.memo)
+                  _SwitchRow(
+                    label: l10n.editorAllDayTitle,
+                    value: state.draft.isAllDay,
+                    onChanged: notifier.toggleAllDay,
+                  ),
+                if (state.draft.type == ItemType.memo) ...[
+                  _PlainActionRow(
+                    label: l10n.editorFieldTargetDate,
+                    value: _formatDate(context, state.draft.targetDate),
+                    onTap: () => _pickMemoTargetDate(context, ref, state.draft.targetDate),
+                  ),
+                  _PlainActionRow(
+                    label: l10n.editorFieldEstimatedDuration,
+                    value: _formatDuration(context, state.draft.estimatedDuration),
+                    errorText: state.errors.estimatedDuration,
+                    onTap: () => _showDurationPicker(context, ref),
+                  ),
+                ] else ...[
+                  _PlainActionRow(
+                    label: l10n.editorFieldStart,
+                    value: _formatDateTimeSummary(
+                      context,
+                      state.draft.startAt,
+                      allDay: state.draft.isAllDay,
+                    ),
+                    onTap: () => _pickStartDateTime(context, ref, state),
+                  ),
+                  _PlainActionRow(
+                    label: l10n.editorFieldEnd,
+                    value: _formatDateTimeSummary(
+                      context,
+                      state.draft.endAt,
+                      allDay: state.draft.isAllDay,
+                    ),
+                    errorText: state.errors.timeRange,
+                    onTap: () => _pickEndDateTime(context, ref, state),
+                  ),
+                  _PlainActionRow(
+                    label: l10n.editorSectionRepeat,
+                    value: _repeatLabel(l10n, state.draft.repeatRule),
+                    onTap: () => _openRepeatSettings(context, ref, state.draft.repeatRule),
+                  ),
+                  if (state.draft.type == ItemType.task)
+                    _PlainActionRow(
+                      label: l10n.editorFieldDeadline,
+                      value: state.draft.deadline == null
+                          ? l10n.editorDeadlineUnset
+                          : _formatDateTimeSummary(
+                              context,
+                              state.draft.deadline!,
+                              allDay: state.draft.isAllDay,
+                            ),
+                      errorText: state.errors.deadline,
+                      onTap: () => _pickDeadlineDateTime(context, ref, state),
+                    ),
+                ],
+                const Gap(20),
+                const Divider(),
+                const Gap(8),
+                _PlainActionRow(
+                  label: l10n.editorSectionReminder,
+                  value: _reminderLabel(l10n, state.draft.reminder),
+                  onTap: () => _openReminderSettings(context, ref, state.draft.reminder),
+                ),
+                const Gap(20),
+                const Divider(),
+                const Gap(20),
+                _RoundedInputField(
+                  controller: _locationController,
+                  hintText: l10n.editorHintLocation,
+                  onChanged: notifier.updateLocation,
+                ),
+                const Gap(12),
+                _RoundedInputField(
+                  controller: _detailsController,
+                  hintText: l10n.editorHintDetails,
+                  onChanged: notifier.updateDetails,
+                  maxLines: 4,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -373,11 +251,266 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
   }
 
-  String _typeLabel(AppLocalizations l10n, ItemType type) {
+  Future<void> _showColorPicker(BuildContext context, WidgetRef ref) {
+    final state = ref.read(itemEditorPageControllerProvider);
+    final l10n = context.l10n;
+
+    return showAppSheetScaffold(
+      context: context,
+      title: l10n.editorColorPickerTitle,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (final color in ItemColorOption.values)
+            _ColorChoiceChip(
+              color: color.resolve(Theme.of(context).brightness),
+              label: _colorLabel(l10n, color),
+              selected: state.draft.color == color,
+              onPressed: () {
+                ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
+                Navigator.of(context).pop();
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickMemoTargetDate(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime initialDate,
+  ) async {
+    final picked = await _showDateTimePickerSheet(
+      context: context,
+      title: context.l10n.editorFieldTargetDate,
+      initialDateTime: initialDate,
+      type: OmniDateTimePickerType.date,
+    );
+
+    if (picked != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).updateTargetDate(
+            DateTime(picked.year, picked.month, picked.day),
+          );
+    }
+  }
+
+  Future<void> _pickStartDateTime(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await _showDateTimePickerSheet(
+      context: context,
+      title: context.l10n.editorFieldStart,
+      initialDateTime: state.draft.startAt,
+      type: state.draft.isAllDay
+          ? OmniDateTimePickerType.date
+          : OmniDateTimePickerType.dateAndTime,
+    );
+
+    if (picked != null && mounted) {
+      final normalized = state.draft.isAllDay
+          ? DateTime(picked.year, picked.month, picked.day)
+          : picked;
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateStartDateTime(normalized);
+    }
+  }
+
+  Future<void> _pickEndDateTime(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await _showDateTimePickerSheet(
+      context: context,
+      title: context.l10n.editorFieldEnd,
+      initialDateTime: state.draft.endAt,
+      type: state.draft.isAllDay
+          ? OmniDateTimePickerType.date
+          : OmniDateTimePickerType.dateAndTime,
+    );
+
+    if (picked != null && mounted) {
+      final normalized = state.draft.isAllDay
+          ? DateTime(picked.year, picked.month, picked.day, 23, 59)
+          : picked;
+      ref.read(itemEditorPageControllerProvider.notifier).updateEndDateTime(normalized);
+    }
+  }
+
+  Future<void> _pickDeadlineDateTime(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await _showDateTimePickerSheet(
+      context: context,
+      title: context.l10n.editorFieldDeadline,
+      initialDateTime: state.draft.deadline ?? state.draft.endAt,
+      type: state.draft.isAllDay
+          ? OmniDateTimePickerType.date
+          : OmniDateTimePickerType.dateAndTime,
+    );
+
+    if (picked != null && mounted) {
+      final normalized = state.draft.isAllDay
+          ? DateTime(picked.year, picked.month, picked.day, 23, 59)
+          : picked;
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateDeadlineDateTime(normalized);
+    }
+  }
+
+  Future<DateTime?> _showDateTimePickerSheet({
+    required BuildContext context,
+    required String title,
+    required DateTime initialDateTime,
+    required OmniDateTimePickerType type,
+  }) {
+    return showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        DateTime selected = initialDateTime;
+        bool canSave = true;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(context.l10n.editorPickerCancel),
+                      ),
+                      const Gap(8),
+                      FilledButton(
+                        onPressed: canSave ? () => Navigator.of(context).pop(selected) : null,
+                        child: Text(context.l10n.editorPickerConfirm),
+                      ),
+                    ],
+                  ),
+                  const Gap(12),
+                  SizedBox(
+                    height: 420,
+                    child: OmniDateTimePicker(
+                      initialDate: initialDateTime,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      type: type,
+                      is24HourMode: true,
+                      minutesInterval: 5,
+                      onDateTimeChanged: (dateTime) {
+                        selected = dateTime;
+                      },
+                      onCanSaveChanged: (value) {
+                        setModalState(() {
+                          canSave = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showDurationPicker(BuildContext context, WidgetRef ref) {
+    final state = ref.read(itemEditorPageControllerProvider);
+    final l10n = context.l10n;
+    final currentMinutes = state.draft.estimatedDuration.inMinutes;
+    final options = <int>[15, 30, 45, 60, 90, 120, 180];
+
+    return showAppSheetScaffold(
+      context: context,
+      title: l10n.editorDurationPickerTitle,
+      child: RadioGroup<int>(
+        groupValue: currentMinutes,
+        onChanged: (value) {
+          if (value == null) {
+            return;
+          }
+          ref
+              .read(itemEditorPageControllerProvider.notifier)
+              .updateEstimatedDuration(Duration(minutes: value));
+          Navigator.of(context).pop();
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final minutes in options)
+              RadioListTile<int>(
+                value: minutes,
+                title: Text(_formatDuration(context, Duration(minutes: minutes))),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openRepeatSettings(
+    BuildContext context,
+    WidgetRef ref,
+    RepeatRule current,
+  ) async {
+    final result = await context.push<RepeatRule>(
+      AppRoutePaths.repeatSettings,
+      extra: current,
+    );
+    if (result != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).selectRepeatRule(result);
+    }
+  }
+
+  Future<void> _openReminderSettings(
+    BuildContext context,
+    WidgetRef ref,
+    ReminderOption current,
+  ) async {
+    final result = await context.push<ReminderOption>(
+      AppRoutePaths.reminderSettings,
+      extra: current,
+    );
+    if (result != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).selectReminder(result);
+    }
+  }
+
+  String _createTitle(AppLocalizations l10n, ItemType type) {
     return switch (type) {
-      ItemType.task => l10n.editorTypeTask,
-      ItemType.schedule => l10n.editorTypeSchedule,
-      ItemType.memo => l10n.editorTypeMemo,
+      ItemType.task => l10n.editorCreateTask,
+      ItemType.schedule => l10n.editorCreateSchedule,
+      ItemType.memo => l10n.editorCreateMemo,
     };
   }
 
@@ -415,16 +548,25 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   }
 
   String _formatDate(BuildContext context, DateTime value) {
-    final material = MaterialLocalizations.of(context);
-    return material.formatMediumDate(value);
+    return MaterialLocalizations.of(context).formatMediumDate(value);
   }
 
   String _formatTime(BuildContext context, DateTime value) {
-    final material = MaterialLocalizations.of(context);
-    return material.formatTimeOfDay(
+    return MaterialLocalizations.of(context).formatTimeOfDay(
       TimeOfDay.fromDateTime(value),
       alwaysUse24HourFormat: true,
     );
+  }
+
+  String _formatDateTimeSummary(
+    BuildContext context,
+    DateTime value, {
+    required bool allDay,
+  }) {
+    if (allDay) {
+      return _formatDate(context, value);
+    }
+    return '${_formatDate(context, value)}  ${_formatTime(context, value)}';
   }
 
   String _formatDuration(BuildContext context, Duration value) {
@@ -440,311 +582,160 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
     return l10n.editorDurationMinutes(value.inMinutes);
   }
-
-  Future<void> _pickDate({
-    required BuildContext context,
-    required DateTime initialDate,
-    required ValueChanged<DateTime> onSelected,
-  }) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      onSelected(picked);
-    }
-  }
-
-  Future<void> _pickTime({
-    required BuildContext context,
-    required DateTime initialDateTime,
-    required void Function(int hour, int minute) onSelected,
-  }) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initialDateTime),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      onSelected(picked.hour, picked.minute);
-    }
-  }
-
-  Future<void> _showDurationPicker(BuildContext context, WidgetRef ref) {
-    final state = ref.read(itemEditorPageControllerProvider);
-    final l10n = context.l10n;
-    final currentMinutes = state.draft.estimatedDuration.inMinutes;
-    final options = <int>[15, 30, 45, 60, 90, 120, 180];
-
-    return showAppSheetScaffold(
-      context: context,
-      title: l10n.editorDurationPickerTitle,
-      child: RadioGroup<int>(
-        groupValue: currentMinutes,
-        onChanged: (value) {
-          if (value == null) {
-            return;
-          }
-          ref
-              .read(itemEditorPageControllerProvider.notifier)
-              .updateEstimatedDuration(Duration(minutes: value));
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final minutes in options)
-              RadioListTile<int>(
-                value: minutes,
-                title: Text(
-                  _formatDuration(
-                    context,
-                    Duration(minutes: minutes),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showTypePicker(BuildContext context, WidgetRef ref) {
-    final state = ref.read(itemEditorPageControllerProvider);
-    final l10n = context.l10n;
-
-    return showAppSheetScaffold(
-      context: context,
-      title: l10n.editorTypePickerTitle,
-      child: RadioGroup<ItemType>(
-        groupValue: state.draft.type,
-        onChanged: (value) {
-          if (value == null) {
-            return;
-          }
-          ref.read(itemEditorPageControllerProvider.notifier).selectType(value);
-          Navigator.of(context).pop();
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<ItemType>(
-              value: ItemType.task,
-              title: Text(l10n.editorTypeTask),
-            ),
-            RadioListTile<ItemType>(
-              value: ItemType.schedule,
-              title: Text(l10n.editorTypeSchedule),
-            ),
-            RadioListTile<ItemType>(
-              value: ItemType.memo,
-              title: Text(l10n.editorTypeMemo),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
+class _TypeSelectorRow extends StatelessWidget {
+  const _TypeSelectorRow({
+    required this.selectedType,
+    required this.onSelected,
+    required this.taskLabel,
+    required this.scheduleLabel,
+    required this.memoLabel,
   });
 
-  final String title;
-  final Widget child;
+  final ItemType selectedType;
+  final ValueChanged<ItemType> onSelected;
+  final String taskLabel;
+  final String scheduleLabel;
+  final String memoLabel;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return ui.Card(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const Gap(16),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _DateField extends StatelessWidget {
-  const _DateField({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: const Icon(Icons.chevron_right),
-        ),
-        child: Text(value),
-      ),
-    );
-  }
-}
-
-class _DurationField extends StatelessWidget {
-  const _DurationField({
-    required this.label,
-    required this.value,
-    required this.onTap,
-    this.errorText,
-  });
-
-  final String label;
-  final String value;
-  final String? errorText;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          errorText: errorText,
-          suffixIcon: const Icon(Icons.timer_outlined),
-        ),
-        child: Text(value),
-      ),
-    );
-  }
-}
-
-class _TaskDeadlineSection extends StatelessWidget {
-  const _TaskDeadlineSection({
-    required this.deadline,
-    required this.dateText,
-    required this.timeText,
-    required this.onPickDate,
-    required this.onPickTime,
-    required this.onClear,
-    this.errorText,
-  });
-
-  final DateTime? deadline;
-  final String dateText;
-  final String timeText;
-  final String? errorText;
-  final VoidCallback onPickDate;
-  final VoidCallback onPickTime;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.editorFieldDeadline,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            if (deadline != null)
-              TextButton(
-                onPressed: onClear,
-                child: Text(l10n.editorDeadlineClear),
-              ),
-          ],
+        Expanded(
+          child: _TypeButton(
+            selected: selectedType == ItemType.task,
+            icon: Icons.check_circle_outline,
+            label: taskLabel,
+            onPressed: () => onSelected(ItemType.task),
+          ),
         ),
         const Gap(12),
-        _DateField(
-          label: l10n.editorFieldDeadlineDate,
-          value: dateText,
-          onTap: onPickDate,
-        ),
-        const Gap(16),
-        _DateField(
-          label: l10n.editorFieldDeadlineTime,
-          value: timeText,
-          onTap: onPickTime,
-        ),
-        if (errorText != null) ...[
-          const Gap(12),
-          Text(
-            errorText!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
+        Expanded(
+          child: _TypeButton(
+            selected: selectedType == ItemType.schedule,
+            icon: Icons.calendar_month_outlined,
+            label: scheduleLabel,
+            onPressed: () => onSelected(ItemType.schedule),
           ),
-        ],
+        ),
+        const Gap(12),
+        Expanded(
+          child: _TypeButton(
+            selected: selectedType == ItemType.memo,
+            icon: Icons.sticky_note_2_outlined,
+            label: memoLabel,
+            onPressed: () => onSelected(ItemType.memo),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _ColorChip extends StatelessWidget {
-  const _ColorChip({
-    required this.option,
+class _TypeButton extends StatelessWidget {
+  const _TypeButton({
+    required this.selected,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color =
+        selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const Gap(8),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColorTrigger extends StatelessWidget {
+  const _ColorTrigger({
+    required this.color,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: context.l10n.editorColorPickerTitle,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.14),
+        minimumSize: const Size(44, 44),
+        shape: const CircleBorder(),
+      ),
+      icon: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorChoiceChip extends StatelessWidget {
+  const _ColorChoiceChip({
+    required this.color,
     required this.label,
     required this.selected,
     required this.onPressed,
   });
 
-  final ItemColorOption option;
+  final Color color;
   final String label;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = option.resolve(theme.brightness);
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
         borderRadius: BorderRadius.circular(18),
+        onTap: onPressed,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: selected ? 0.18 : 0.1),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: selected ? color : theme.colorScheme.outlineVariant,
+              color: selected ? color : Theme.of(context).colorScheme.outlineVariant,
               width: selected ? 2 : 1,
             ),
+            color: color.withValues(alpha: selected ? 0.16 : 0.08),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -767,43 +758,213 @@ class _ColorChip extends StatelessWidget {
   }
 }
 
-class _OptionWrap<T> extends StatelessWidget {
-  const _OptionWrap({
-    required this.options,
-    required this.selected,
-    required this.onSelected,
+class _TopActionBar extends StatelessWidget {
+  const _TopActionBar({
+    required this.onClose,
+    required this.onConfirm,
+    required this.isSubmitting,
   });
 
-  final List<_OptionData<T>> options;
-  final T selected;
-  final ValueChanged<T> onSelected;
+  final VoidCallback onClose;
+  final VoidCallback? onConfirm;
+  final bool isSubmitting;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close),
+            splashRadius: 20,
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: isSubmitting ? null : onConfirm,
+            icon: isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            splashRadius: 20,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundedInputField extends StatelessWidget {
+  const _RoundedInputField({
+    required this.controller,
+    required this.hintText,
+    this.errorText,
+    this.trailing,
+    this.maxLines = 1,
+    this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final String? errorText;
+  final Widget? trailing;
+  final int maxLines;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final option in options)
-          ChoiceChip(
-            label: Text(option.label),
-            selected: option.value == selected,
-            onSelected: (_) => onSelected(option.value),
-            selectedColor: theme.colorScheme.primary.withValues(alpha: 0.16),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(18),
           ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  onChanged: onChanged,
+                  minLines: maxLines,
+                  maxLines: maxLines,
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+              if (trailing != null) ...[
+                const Gap(4),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: trailing!,
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (errorText != null) ...[
+          const Gap(6),
+          Text(
+            errorText!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
-class _OptionData<T> {
-  const _OptionData({
-    required this.value,
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
     required this.label,
+    required this.value,
+    required this.onChanged,
   });
 
-  final T value;
   final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlainActionRow extends StatelessWidget {
+  const _PlainActionRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.errorText,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Gap(4),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (errorText != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              errorText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

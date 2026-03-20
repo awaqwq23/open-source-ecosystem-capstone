@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
+import 'package:huajuan_agenda/shared/widgets/app_page_action_button.dart';
+import 'package:huajuan_agenda/shared/widgets/app_page_header.dart';
+
+class RepeatSettingsPage extends StatelessWidget {
+  const RepeatSettingsPage({
+    required this.initialRule,
+    super.key,
+  });
+
+  final RepeatRule initialRule;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final options = RepeatRule.values;
+
+    return Scaffold(
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            AppPageHeader(
+              title: AppPageHeaderTitle(
+                text: l10n.editorRepeatPageTitle,
+              ),
+              leading: [
+                AppPageActionButton(
+                  icon: Icons.arrow_back,
+                  tooltip: l10n.commonBack,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                itemBuilder: (context, index) {
+                  final rule = options[index];
+                  final selected = rule == initialRule;
+                  return ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    tileColor: selected
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                        : Theme.of(context).colorScheme.surfaceContainerLowest,
+                    title: Text(_label(l10n, rule)),
+                    subtitle: index == 0
+                        ? Text(l10n.editorRepeatPagePlaceholder)
+                        : null,
+                    trailing: selected
+                        ? Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pop(rule),
+                  );
+                },
+                separatorBuilder: (_, index) => const SizedBox(height: 12),
+                itemCount: options.length,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _label(AppLocalizations l10n, RepeatRule rule) {
+    return switch (rule) {
+      RepeatRule.none => l10n.editorRepeatNone,
+      RepeatRule.everyDay => l10n.editorRepeatDaily,
+      RepeatRule.weekdays => l10n.editorRepeatWeekdays,
+      RepeatRule.everyWeek => l10n.editorRepeatWeekly,
+      RepeatRule.everyMonth => l10n.editorRepeatMonthly,
+      RepeatRule.everyYear => l10n.editorRepeatYearly,
+    };
+  }
+}

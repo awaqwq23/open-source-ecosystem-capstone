@@ -28,6 +28,7 @@ class ItemEditorDefaults {
       details: prefill?.details ?? '',
       location: prefill?.location ?? '',
       color: prefill?.color ?? ItemColorOption.sky,
+      isAllDay: prefill?.isAllDay ?? false,
       reminder: prefill?.reminder ?? ReminderOption.none,
       repeatRule: prefill?.repeatRule ?? RepeatRule.none,
       startAt: start,
@@ -45,6 +46,7 @@ class ItemEditorDefaults {
 
     return draft.copyWith(
       type: type,
+      isAllDay: type == ItemType.memo ? false : draft.isAllDay,
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
       targetDate: type == ItemType.memo ? _dateOnly(draft.targetDate) : draft.targetDate,
