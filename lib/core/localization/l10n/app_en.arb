@@ -60,6 +60,80 @@
   "editorTypeTask": "Task",
   "editorTypeSchedule": "Schedule",
   "editorTypeMemo": "Memo",
+  "editorSectionBasic": "Basic info",
+  "editorSectionColor": "Color",
+  "editorSectionTime": "Date & time",
+  "editorSectionReminder": "Reminder",
+  "editorSectionRepeat": "Repeat",
+  "editorFieldTitle": "Title",
+  "editorFieldDetails": "Details",
+  "editorFieldLocation": "Location",
+  "editorFieldStartDate": "Start date",
+  "editorFieldStartTime": "Start time",
+  "editorFieldEndDate": "End date",
+  "editorFieldEndTime": "End time",
+  "editorFieldDeadline": "Deadline",
+  "editorFieldDeadlineDate": "Deadline date",
+  "editorFieldDeadlineTime": "Deadline time",
+  "editorFieldTargetDate": "Target date",
+  "editorFieldEstimatedDuration": "Estimated duration",
+  "editorHintTitle": "What needs to be done?",
+  "editorHintDetails": "Add more context",
+  "editorHintLocation": "Where does it happen?",
+  "editorColorSky": "Sky",
+  "editorColorJade": "Jade",
+  "editorColorAmber": "Amber",
+  "editorColorCoral": "Coral",
+  "editorColorOrchid": "Orchid",
+  "editorColorSlate": "Slate",
+  "editorReminderNone": "No reminder",
+  "editorReminderAtTime": "At time",
+  "editorReminderFiveMinutes": "5 minutes before",
+  "editorReminderFifteenMinutes": "15 minutes before",
+  "editorReminderOneHour": "1 hour before",
+  "editorReminderOneDay": "1 day before",
+  "editorRepeatNone": "Does not repeat",
+  "editorRepeatDaily": "Every day",
+  "editorRepeatWeekdays": "Weekdays",
+  "editorRepeatWeekly": "Every week",
+  "editorRepeatMonthly": "Every month",
+  "editorRepeatYearly": "Every year",
+  "editorDurationPickerTitle": "Choose duration",
+  "editorDeadlineClear": "Clear",
+  "editorSubmitButton": "Create item",
+  "editorSubmitInvalid": "Please fix the highlighted fields first.",
+  "editorSubmitSuccess": "Item draft is ready for saving.",
+  "editorErrorTitleRequired": "Please enter a title.",
+  "editorErrorEndBeforeStart": "End time cannot be earlier than start time.",
+  "editorErrorDeadlineBeforeStart": "Deadline cannot be earlier than the start time.",
+  "editorErrorDurationPositive": "Duration must be greater than 0.",
+  "@editorDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "editorDurationHours": "{hours} h",
+  "@editorDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "editorDurationMinutes": "{minutes} min",
+  "@editorDurationHourMinute": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "editorDurationHourMinute": "{hours} h {minutes} min",
   "placeholderOpenPicker": "Open picker",
   "placeholderOpenMenu": "Open menu"
 }

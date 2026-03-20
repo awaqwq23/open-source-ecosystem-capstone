@@ -62,7 +62,8 @@ import 'app_localizations_zh.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,17 +84,18 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('zh')
+    Locale('zh'),
   ];
 
   /// No description provided for @appTitle.
@@ -455,6 +458,306 @@ abstract class AppLocalizations {
   /// **'Memo'**
   String get editorTypeMemo;
 
+  /// No description provided for @editorSectionBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic info'**
+  String get editorSectionBasic;
+
+  /// No description provided for @editorSectionColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get editorSectionColor;
+
+  /// No description provided for @editorSectionTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Date & time'**
+  String get editorSectionTime;
+
+  /// No description provided for @editorSectionReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder'**
+  String get editorSectionReminder;
+
+  /// No description provided for @editorSectionRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get editorSectionRepeat;
+
+  /// No description provided for @editorFieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get editorFieldTitle;
+
+  /// No description provided for @editorFieldDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get editorFieldDetails;
+
+  /// No description provided for @editorFieldLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get editorFieldLocation;
+
+  /// No description provided for @editorFieldStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get editorFieldStartDate;
+
+  /// No description provided for @editorFieldStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get editorFieldStartTime;
+
+  /// No description provided for @editorFieldEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'End date'**
+  String get editorFieldEndDate;
+
+  /// No description provided for @editorFieldEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get editorFieldEndTime;
+
+  /// No description provided for @editorFieldDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get editorFieldDeadline;
+
+  /// No description provided for @editorFieldDeadlineDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline date'**
+  String get editorFieldDeadlineDate;
+
+  /// No description provided for @editorFieldDeadlineTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline time'**
+  String get editorFieldDeadlineTime;
+
+  /// No description provided for @editorFieldTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date'**
+  String get editorFieldTargetDate;
+
+  /// No description provided for @editorFieldEstimatedDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated duration'**
+  String get editorFieldEstimatedDuration;
+
+  /// No description provided for @editorHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What needs to be done?'**
+  String get editorHintTitle;
+
+  /// No description provided for @editorHintDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Add more context'**
+  String get editorHintDetails;
+
+  /// No description provided for @editorHintLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Where does it happen?'**
+  String get editorHintLocation;
+
+  /// No description provided for @editorColorSky.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky'**
+  String get editorColorSky;
+
+  /// No description provided for @editorColorJade.
+  ///
+  /// In en, this message translates to:
+  /// **'Jade'**
+  String get editorColorJade;
+
+  /// No description provided for @editorColorAmber.
+  ///
+  /// In en, this message translates to:
+  /// **'Amber'**
+  String get editorColorAmber;
+
+  /// No description provided for @editorColorCoral.
+  ///
+  /// In en, this message translates to:
+  /// **'Coral'**
+  String get editorColorCoral;
+
+  /// No description provided for @editorColorOrchid.
+  ///
+  /// In en, this message translates to:
+  /// **'Orchid'**
+  String get editorColorOrchid;
+
+  /// No description provided for @editorColorSlate.
+  ///
+  /// In en, this message translates to:
+  /// **'Slate'**
+  String get editorColorSlate;
+
+  /// No description provided for @editorReminderNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No reminder'**
+  String get editorReminderNone;
+
+  /// No description provided for @editorReminderAtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'At time'**
+  String get editorReminderAtTime;
+
+  /// No description provided for @editorReminderFiveMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'5 minutes before'**
+  String get editorReminderFiveMinutes;
+
+  /// No description provided for @editorReminderFifteenMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'15 minutes before'**
+  String get editorReminderFifteenMinutes;
+
+  /// No description provided for @editorReminderOneHour.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour before'**
+  String get editorReminderOneHour;
+
+  /// No description provided for @editorReminderOneDay.
+  ///
+  /// In en, this message translates to:
+  /// **'1 day before'**
+  String get editorReminderOneDay;
+
+  /// No description provided for @editorRepeatNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Does not repeat'**
+  String get editorRepeatNone;
+
+  /// No description provided for @editorRepeatDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get editorRepeatDaily;
+
+  /// No description provided for @editorRepeatWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get editorRepeatWeekdays;
+
+  /// No description provided for @editorRepeatWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get editorRepeatWeekly;
+
+  /// No description provided for @editorRepeatMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month'**
+  String get editorRepeatMonthly;
+
+  /// No description provided for @editorRepeatYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every year'**
+  String get editorRepeatYearly;
+
+  /// No description provided for @editorDurationPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose duration'**
+  String get editorDurationPickerTitle;
+
+  /// No description provided for @editorDeadlineClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get editorDeadlineClear;
+
+  /// No description provided for @editorSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create item'**
+  String get editorSubmitButton;
+
+  /// No description provided for @editorSubmitInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fix the highlighted fields first.'**
+  String get editorSubmitInvalid;
+
+  /// No description provided for @editorSubmitSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Item draft is ready for saving.'**
+  String get editorSubmitSuccess;
+
+  /// No description provided for @editorErrorTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a title.'**
+  String get editorErrorTitleRequired;
+
+  /// No description provided for @editorErrorEndBeforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time cannot be earlier than start time.'**
+  String get editorErrorEndBeforeStart;
+
+  /// No description provided for @editorErrorDeadlineBeforeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline cannot be earlier than the start time.'**
+  String get editorErrorDeadlineBeforeStart;
+
+  /// No description provided for @editorErrorDurationPositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration must be greater than 0.'**
+  String get editorErrorDurationPositive;
+
+  /// No description provided for @editorDurationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String editorDurationHours(int hours);
+
+  /// No description provided for @editorDurationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String editorDurationMinutes(int minutes);
+
+  /// No description provided for @editorDurationHourMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String editorDurationHourMinute(int hours, int minutes);
+
   /// No description provided for @placeholderOpenPicker.
   ///
   /// In en, this message translates to:
@@ -468,7 +771,8 @@ abstract class AppLocalizations {
   String get placeholderOpenMenu;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -477,25 +781,26 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'zh': return AppLocalizationsZh();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
+    'that was used.',
   );
 }

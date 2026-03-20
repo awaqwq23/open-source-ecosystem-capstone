@@ -189,6 +189,162 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorTypeMemo => '备忘';
 
   @override
+  String get editorSectionBasic => '基本信息';
+
+  @override
+  String get editorSectionColor => '颜色';
+
+  @override
+  String get editorSectionTime => '日期与时间';
+
+  @override
+  String get editorSectionReminder => '提醒';
+
+  @override
+  String get editorSectionRepeat => '重复';
+
+  @override
+  String get editorFieldTitle => '名称';
+
+  @override
+  String get editorFieldDetails => '详情';
+
+  @override
+  String get editorFieldLocation => '地点';
+
+  @override
+  String get editorFieldStartDate => '开始日期';
+
+  @override
+  String get editorFieldStartTime => '开始时间';
+
+  @override
+  String get editorFieldEndDate => '结束日期';
+
+  @override
+  String get editorFieldEndTime => '结束时间';
+
+  @override
+  String get editorFieldDeadline => '截止时间';
+
+  @override
+  String get editorFieldDeadlineDate => '截止日期';
+
+  @override
+  String get editorFieldDeadlineTime => '截止时刻';
+
+  @override
+  String get editorFieldTargetDate => '目标日期';
+
+  @override
+  String get editorFieldEstimatedDuration => '预计完成时长';
+
+  @override
+  String get editorHintTitle => '这件事叫什么？';
+
+  @override
+  String get editorHintDetails => '补充更多说明';
+
+  @override
+  String get editorHintLocation => '发生地点或执行地点';
+
+  @override
+  String get editorColorSky => '天蓝';
+
+  @override
+  String get editorColorJade => '翡翠绿';
+
+  @override
+  String get editorColorAmber => '琥珀';
+
+  @override
+  String get editorColorCoral => '珊瑚红';
+
+  @override
+  String get editorColorOrchid => '兰紫';
+
+  @override
+  String get editorColorSlate => '石板灰';
+
+  @override
+  String get editorReminderNone => '不提醒';
+
+  @override
+  String get editorReminderAtTime => '准时提醒';
+
+  @override
+  String get editorReminderFiveMinutes => '提前 5 分钟';
+
+  @override
+  String get editorReminderFifteenMinutes => '提前 15 分钟';
+
+  @override
+  String get editorReminderOneHour => '提前 1 小时';
+
+  @override
+  String get editorReminderOneDay => '提前 1 天';
+
+  @override
+  String get editorRepeatNone => '不重复';
+
+  @override
+  String get editorRepeatDaily => '每天';
+
+  @override
+  String get editorRepeatWeekdays => '工作日';
+
+  @override
+  String get editorRepeatWeekly => '每周';
+
+  @override
+  String get editorRepeatMonthly => '每月';
+
+  @override
+  String get editorRepeatYearly => '每年';
+
+  @override
+  String get editorDurationPickerTitle => '选择时长';
+
+  @override
+  String get editorDeadlineClear => '清除';
+
+  @override
+  String get editorSubmitButton => '创建事项';
+
+  @override
+  String get editorSubmitInvalid => '请先修正高亮字段。';
+
+  @override
+  String get editorSubmitSuccess => '事项草稿已准备好，后续可直接接入保存。';
+
+  @override
+  String get editorErrorTitleRequired => '请输入名称。';
+
+  @override
+  String get editorErrorEndBeforeStart => '结束时间不能早于开始时间。';
+
+  @override
+  String get editorErrorDeadlineBeforeStart => '截止时间不能早于开始时间。';
+
+  @override
+  String get editorErrorDurationPositive => '时长必须大于 0。';
+
+  @override
+  String editorDurationHours(int hours) {
+    return '$hours 小时';
+  }
+
+  @override
+  String editorDurationMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String editorDurationHourMinute(int hours, int minutes) {
+    return '$hours 小时 $minutes 分钟';
+  }
+
+  @override
   String get placeholderOpenPicker => '打开选择器';
 
   @override

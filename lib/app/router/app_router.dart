@@ -5,6 +5,7 @@ import 'package:huajuan_agenda/app/shell/app_shell.dart';
 import 'package:huajuan_agenda/features/ai/presentation/pages/ai_page.dart';
 import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/item_editor_page.dart';
 import 'package:huajuan_agenda/features/list/presentation/pages/list_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_page.dart';
@@ -47,7 +48,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutePaths.itemEditor,
-                builder: (context, state) => const ItemEditorPage(),
+                builder: (context, state) => ItemEditorPage(
+                  prefill: state.extra is ItemEditorPrefill
+                      ? state.extra! as ItemEditorPrefill
+                      : null,
+                ),
               ),
             ],
           ),

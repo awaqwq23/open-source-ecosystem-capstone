@@ -30,43 +30,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTitle => 'Schedule Overview';
 
   @override
-  String get homeDescription => 'The table page will show week and month planning grids here.';
+  String get homeDescription =>
+      'The table page will show week and month planning grids here.';
 
   @override
   String get listTitle => 'Items List';
 
   @override
-  String get listDescription => 'Task, schedule, memo and tag-based lists will be organized here.';
+  String get listDescription =>
+      'Task, schedule, memo and tag-based lists will be organized here.';
 
   @override
   String get aiTitle => 'AI Assistant';
 
   @override
-  String get aiDescription => 'AI conversations and schedule commands will be handled here.';
+  String get aiDescription =>
+      'AI conversations and schedule commands will be handled here.';
 
   @override
   String get editorTitle => 'Create Item';
 
   @override
-  String get editorDescription => 'The unified editor for schedule, task and memo will live here.';
+  String get editorDescription =>
+      'The unified editor for schedule, task and memo will live here.';
 
   @override
   String get settingsTitle => 'Settings';
 
   @override
-  String get settingsDescription => 'Global, list, home and AI settings will be grouped here.';
+  String get settingsDescription =>
+      'Global, list, home and AI settings will be grouped here.';
 
   @override
   String get detailTitle => 'Item Detail';
 
   @override
-  String get detailDescription => 'This route is reserved for viewing a single item\'s details.';
+  String get detailDescription =>
+      'This route is reserved for viewing a single item\'s details.';
 
   @override
   String get timePickerTitle => 'Time Picker';
 
   @override
-  String get timePickerDescription => 'This route is reserved for the shared day, week and month picker.';
+  String get timePickerDescription =>
+      'This route is reserved for the shared day, week and month picker.';
 
   @override
   String get developmentTag => 'Foundation UI';
@@ -187,6 +194,164 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorTypeMemo => 'Memo';
+
+  @override
+  String get editorSectionBasic => 'Basic info';
+
+  @override
+  String get editorSectionColor => 'Color';
+
+  @override
+  String get editorSectionTime => 'Date & time';
+
+  @override
+  String get editorSectionReminder => 'Reminder';
+
+  @override
+  String get editorSectionRepeat => 'Repeat';
+
+  @override
+  String get editorFieldTitle => 'Title';
+
+  @override
+  String get editorFieldDetails => 'Details';
+
+  @override
+  String get editorFieldLocation => 'Location';
+
+  @override
+  String get editorFieldStartDate => 'Start date';
+
+  @override
+  String get editorFieldStartTime => 'Start time';
+
+  @override
+  String get editorFieldEndDate => 'End date';
+
+  @override
+  String get editorFieldEndTime => 'End time';
+
+  @override
+  String get editorFieldDeadline => 'Deadline';
+
+  @override
+  String get editorFieldDeadlineDate => 'Deadline date';
+
+  @override
+  String get editorFieldDeadlineTime => 'Deadline time';
+
+  @override
+  String get editorFieldTargetDate => 'Target date';
+
+  @override
+  String get editorFieldEstimatedDuration => 'Estimated duration';
+
+  @override
+  String get editorHintTitle => 'What needs to be done?';
+
+  @override
+  String get editorHintDetails => 'Add more context';
+
+  @override
+  String get editorHintLocation => 'Where does it happen?';
+
+  @override
+  String get editorColorSky => 'Sky';
+
+  @override
+  String get editorColorJade => 'Jade';
+
+  @override
+  String get editorColorAmber => 'Amber';
+
+  @override
+  String get editorColorCoral => 'Coral';
+
+  @override
+  String get editorColorOrchid => 'Orchid';
+
+  @override
+  String get editorColorSlate => 'Slate';
+
+  @override
+  String get editorReminderNone => 'No reminder';
+
+  @override
+  String get editorReminderAtTime => 'At time';
+
+  @override
+  String get editorReminderFiveMinutes => '5 minutes before';
+
+  @override
+  String get editorReminderFifteenMinutes => '15 minutes before';
+
+  @override
+  String get editorReminderOneHour => '1 hour before';
+
+  @override
+  String get editorReminderOneDay => '1 day before';
+
+  @override
+  String get editorRepeatNone => 'Does not repeat';
+
+  @override
+  String get editorRepeatDaily => 'Every day';
+
+  @override
+  String get editorRepeatWeekdays => 'Weekdays';
+
+  @override
+  String get editorRepeatWeekly => 'Every week';
+
+  @override
+  String get editorRepeatMonthly => 'Every month';
+
+  @override
+  String get editorRepeatYearly => 'Every year';
+
+  @override
+  String get editorDurationPickerTitle => 'Choose duration';
+
+  @override
+  String get editorDeadlineClear => 'Clear';
+
+  @override
+  String get editorSubmitButton => 'Create item';
+
+  @override
+  String get editorSubmitInvalid => 'Please fix the highlighted fields first.';
+
+  @override
+  String get editorSubmitSuccess => 'Item draft is ready for saving.';
+
+  @override
+  String get editorErrorTitleRequired => 'Please enter a title.';
+
+  @override
+  String get editorErrorEndBeforeStart =>
+      'End time cannot be earlier than start time.';
+
+  @override
+  String get editorErrorDeadlineBeforeStart =>
+      'Deadline cannot be earlier than the start time.';
+
+  @override
+  String get editorErrorDurationPositive => 'Duration must be greater than 0.';
+
+  @override
+  String editorDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String editorDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String editorDurationHourMinute(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
 
   @override
   String get placeholderOpenPicker => 'Open picker';
