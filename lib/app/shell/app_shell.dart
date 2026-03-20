@@ -7,6 +7,9 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends StatelessWidget {
+  static const _compactAppBarHeight = 40.0;
+  static const _compactNavBarHeight = 64.0;
+
   const AppShell({
     required this.navigationShell,
     super.key,
@@ -73,6 +76,8 @@ class AppShell extends StatelessWidget {
     AppShellDestination current,
   ) {
     return ui.AppBar(
+      height: _compactAppBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       title: Text(current.label(context)),
       trailing: [
         ui.GhostButton(
@@ -90,6 +95,11 @@ class AppShell extends StatelessWidget {
     AppShellDestination current,
   ) {
     return ui.NavigationBar(
+      alignment: ui.NavigationBarAlignment.spaceEvenly,
+      expanded: true,
+      expandedSize: _compactNavBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      spacing: 4,
       selectedKey: ValueKey(current.route),
       onSelected: (key) {
         final index = destinations.indexWhere(
