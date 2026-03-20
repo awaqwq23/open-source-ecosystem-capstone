@@ -47,16 +47,19 @@ void main() {
 
     final startRow = find.byKey(const ValueKey('item-editor-row-start'));
     final label = find.byKey(const ValueKey('item-editor-row-start-label'));
+    final trailingGroup = find.byKey(const ValueKey('item-editor-row-start-trailing-group'));
     final value = find.byKey(const ValueKey('item-editor-row-start-value'));
     final chevron = find.byKey(const ValueKey('item-editor-row-start-chevron'));
 
     final rowRect = tester.getRect(startRow);
+    final trailingGroupRect = tester.getRect(trailingGroup);
     final labelCenter = tester.getCenter(label);
     final valueCenter = tester.getCenter(value);
     final chevronCenter = tester.getCenter(chevron);
 
     expect(labelCenter.dx, lessThan(valueCenter.dx));
     expect(valueCenter.dx, lessThan(chevronCenter.dx));
+    expect((rowRect.right - trailingGroupRect.right).abs(), lessThanOrEqualTo(1));
     expect((labelCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
     expect((valueCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
     expect((chevronCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));

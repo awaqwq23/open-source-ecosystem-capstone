@@ -160,6 +160,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                   _PlainActionRow(
                     rowKey: const ValueKey('item-editor-row-start'),
                     labelKey: const ValueKey('item-editor-row-start-label'),
+                    trailingGroupKey: const ValueKey('item-editor-row-start-trailing-group'),
                     valueKey: const ValueKey('item-editor-row-start-value'),
                     trailingKey: const ValueKey('item-editor-row-start-chevron'),
                     label: l10n.editorFieldStart,
@@ -893,6 +894,7 @@ class _PlainActionRow extends StatelessWidget {
   const _PlainActionRow({
     this.rowKey,
     this.labelKey,
+    this.trailingGroupKey,
     this.valueKey,
     this.trailingKey,
     required this.label,
@@ -903,6 +905,7 @@ class _PlainActionRow extends StatelessWidget {
 
   final Key? rowKey;
   final Key? labelKey;
+  final Key? trailingGroupKey;
   final Key? valueKey;
   final Key? trailingKey;
   final String label;
@@ -932,25 +935,31 @@ class _PlainActionRow extends StatelessWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
-                Flexible(
-                  child: Text(
-                    key: valueKey,
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Icon(
-                    key: trailingKey,
-                    Icons.chevron_right,
-                    color: theme.colorScheme.onSurfaceVariant,
+                Expanded(
+                  child: Row(
+                    key: trailingGroupKey,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          key: valueKey,
+                          value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        key: trailingKey,
+                        Icons.chevron_right,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ),
                 ),
               ],
