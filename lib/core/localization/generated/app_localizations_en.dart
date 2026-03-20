@@ -196,48 +196,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorTypeMemo => 'Memo';
 
   @override
-  String get editorIntroTask =>
-      'Lock in the task rhythm first, then fill in the details. Start, end and deadline should work together at a glance.';
-
-  @override
-  String get editorIntroSchedule =>
-      'Reserve this time block for something that will definitely happen. Set the time range first, then add place and notes.';
-
-  @override
-  String get editorIntroMemo =>
-      'Memos are better for things that need to be remembered. Start with a target date and expected duration, then refine later.';
-
-  @override
-  String get editorOverviewUntitled => 'Untitled item';
-
-  @override
-  String get editorOverviewTaskSubtitle =>
-      'This view emphasizes execution range and deadline so you can quickly judge whether the plan fits.';
-
-  @override
-  String get editorOverviewScheduleSubtitle =>
-      'This view emphasizes the time range and location for events that are expected to happen.';
-
-  @override
-  String get editorOverviewMemoSubtitle =>
-      'This view emphasizes target date and expected duration for items you want to remember or finish later.';
-
-  @override
-  String get editorOverviewDeadlinePrefix => 'Deadline';
-
-  @override
-  String get editorOverviewTimeLabel => 'Time overview';
-
-  @override
-  String get editorOverviewReminderLabel => 'Reminder';
-
-  @override
-  String get editorOverviewRepeatLabel => 'Repeat';
-
-  @override
-  String get editorOverviewColorLabel => 'Color';
-
-  @override
   String get editorSectionBasic => 'Basic info';
 
   @override
@@ -247,19 +205,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorSectionTime => 'Date & time';
 
   @override
-  String get editorSectionStart => 'Start';
-
-  @override
-  String get editorSectionEnd => 'End';
-
-  @override
   String get editorSectionReminder => 'Reminder';
 
   @override
   String get editorSectionRepeat => 'Repeat';
-
-  @override
-  String get editorSectionRules => 'Rules';
 
   @override
   String get editorFieldTitle => 'Title';
@@ -365,9 +314,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorDeadlineClear => 'Clear';
-
-  @override
-  String get editorDeadlineUnset => 'No deadline yet';
 
   @override
   String get editorSubmitButton => 'Create item';

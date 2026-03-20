@@ -458,78 +458,6 @@ abstract class AppLocalizations {
   /// **'Memo'**
   String get editorTypeMemo;
 
-  /// No description provided for @editorIntroTask.
-  ///
-  /// In en, this message translates to:
-  /// **'Lock in the task rhythm first, then fill in the details. Start, end and deadline should work together at a glance.'**
-  String get editorIntroTask;
-
-  /// No description provided for @editorIntroSchedule.
-  ///
-  /// In en, this message translates to:
-  /// **'Reserve this time block for something that will definitely happen. Set the time range first, then add place and notes.'**
-  String get editorIntroSchedule;
-
-  /// No description provided for @editorIntroMemo.
-  ///
-  /// In en, this message translates to:
-  /// **'Memos are better for things that need to be remembered. Start with a target date and expected duration, then refine later.'**
-  String get editorIntroMemo;
-
-  /// No description provided for @editorOverviewUntitled.
-  ///
-  /// In en, this message translates to:
-  /// **'Untitled item'**
-  String get editorOverviewUntitled;
-
-  /// No description provided for @editorOverviewTaskSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'This view emphasizes execution range and deadline so you can quickly judge whether the plan fits.'**
-  String get editorOverviewTaskSubtitle;
-
-  /// No description provided for @editorOverviewScheduleSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'This view emphasizes the time range and location for events that are expected to happen.'**
-  String get editorOverviewScheduleSubtitle;
-
-  /// No description provided for @editorOverviewMemoSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'This view emphasizes target date and expected duration for items you want to remember or finish later.'**
-  String get editorOverviewMemoSubtitle;
-
-  /// No description provided for @editorOverviewDeadlinePrefix.
-  ///
-  /// In en, this message translates to:
-  /// **'Deadline'**
-  String get editorOverviewDeadlinePrefix;
-
-  /// No description provided for @editorOverviewTimeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Time overview'**
-  String get editorOverviewTimeLabel;
-
-  /// No description provided for @editorOverviewReminderLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Reminder'**
-  String get editorOverviewReminderLabel;
-
-  /// No description provided for @editorOverviewRepeatLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Repeat'**
-  String get editorOverviewRepeatLabel;
-
-  /// No description provided for @editorOverviewColorLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Color'**
-  String get editorOverviewColorLabel;
-
   /// No description provided for @editorSectionBasic.
   ///
   /// In en, this message translates to:
@@ -548,18 +476,6 @@ abstract class AppLocalizations {
   /// **'Date & time'**
   String get editorSectionTime;
 
-  /// No description provided for @editorSectionStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Start'**
-  String get editorSectionStart;
-
-  /// No description provided for @editorSectionEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'End'**
-  String get editorSectionEnd;
-
   /// No description provided for @editorSectionReminder.
   ///
   /// In en, this message translates to:
@@ -571,12 +487,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repeat'**
   String get editorSectionRepeat;
-
-  /// No description provided for @editorSectionRules.
-  ///
-  /// In en, this message translates to:
-  /// **'Rules'**
-  String get editorSectionRules;
 
   /// No description provided for @editorFieldTitle.
   ///
@@ -787,12 +697,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear'**
   String get editorDeadlineClear;
-
-  /// No description provided for @editorDeadlineUnset.
-  ///
-  /// In en, this message translates to:
-  /// **'No deadline yet'**
-  String get editorDeadlineUnset;
 
   /// No description provided for @editorSubmitButton.
   ///

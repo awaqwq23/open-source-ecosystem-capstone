@@ -189,42 +189,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorTypeMemo => '备忘';
 
   @override
-  String get editorIntroTask => '先抓住任务的节奏，再补充细节。开始时间、结束时间和截止时间会一起形成今天的执行感。';
-
-  @override
-  String get editorIntroSchedule => '把这段时间留给一件明确会发生的事。先定好起止时间，再补充地点与说明。';
-
-  @override
-  String get editorIntroMemo => '备忘更适合记录需要被记住的事项。先定目标日期和预计时长，后续再慢慢完善。';
-
-  @override
-  String get editorOverviewUntitled => '未命名事项';
-
-  @override
-  String get editorOverviewTaskSubtitle => '当前会优先突出执行区间与截止时间，方便你快速检查是否排得下。';
-
-  @override
-  String get editorOverviewScheduleSubtitle => '当前会优先突出起止时间和地点，适合安排确定发生的活动。';
-
-  @override
-  String get editorOverviewMemoSubtitle => '当前会优先突出目标日期与预计时长，适合收纳待记住和待完成的信息。';
-
-  @override
-  String get editorOverviewDeadlinePrefix => '截止';
-
-  @override
-  String get editorOverviewTimeLabel => '时间概览';
-
-  @override
-  String get editorOverviewReminderLabel => '提醒';
-
-  @override
-  String get editorOverviewRepeatLabel => '重复';
-
-  @override
-  String get editorOverviewColorLabel => '颜色';
-
-  @override
   String get editorSectionBasic => '基本信息';
 
   @override
@@ -234,19 +198,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorSectionTime => '日期与时间';
 
   @override
-  String get editorSectionStart => '开始安排';
-
-  @override
-  String get editorSectionEnd => '结束安排';
-
-  @override
   String get editorSectionReminder => '提醒';
 
   @override
   String get editorSectionRepeat => '重复';
-
-  @override
-  String get editorSectionRules => '规则设置';
 
   @override
   String get editorFieldTitle => '名称';
@@ -352,9 +307,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editorDeadlineClear => '清除';
-
-  @override
-  String get editorDeadlineUnset => '暂未设置截止时间';
 
   @override
   String get editorSubmitButton => '创建事项';
