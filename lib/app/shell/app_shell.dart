@@ -7,7 +7,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends StatelessWidget {
-  static const _compactNavBarHeight = 64.0;
+  static const _compactNavBarHeight = 72.0;
 
   const AppShell({
     required this.navigationShell,
@@ -69,6 +69,7 @@ class AppShell extends StatelessWidget {
   ) {
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
+      labelType: ui.NavigationLabelType.all,
       expanded: true,
       expandedSize: _compactNavBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
