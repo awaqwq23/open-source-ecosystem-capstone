@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:huajuan_agenda/app/app.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size) async {
@@ -22,6 +23,7 @@ void main() {
   ) async {
     await pumpApp(tester, const Size(390, 844));
 
+    expect(find.byType(ui.NavigationBar), findsOneWidget);
     expect(find.text('主页'), findsWidgets);
     expect(find.text('列表'), findsWidgets);
     expect(find.text('AI'), findsWidgets);
@@ -35,6 +37,7 @@ void main() {
   ) async {
     await pumpApp(tester, const Size(1280, 900));
 
+    expect(find.byType(ui.NavigationSidebar), findsOneWidget);
     expect(find.text('主页'), findsWidgets);
     expect(find.text('列表'), findsWidgets);
     expect(find.text('AI'), findsWidgets);

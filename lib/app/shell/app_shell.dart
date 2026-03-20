@@ -52,7 +52,7 @@ class AppShell extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildNavigationRail(context, destinations, current),
+            child: _buildNavigationSidebar(context, destinations, current),
           ),
           const VerticalDivider(width: 1),
           Expanded(
@@ -114,15 +114,14 @@ class AppShell extends StatelessWidget {
     );
   }
 
-  ui.NavigationRail _buildNavigationRail(
+  ui.NavigationSidebar _buildNavigationSidebar(
     BuildContext context,
     List<AppShellDestination> destinations,
     AppShellDestination current,
   ) {
-    return ui.NavigationRail(
+    return ui.NavigationSidebar(
       selectedKey: ValueKey(current.route),
-      expanded: true,
-      labelType: ui.NavigationLabelType.all,
+      labelType: ui.NavigationLabelType.expanded,
       onSelected: (key) {
         final index = destinations.indexWhere(
           (destination) => ValueKey(destination.route) == key,
