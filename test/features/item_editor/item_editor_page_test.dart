@@ -25,6 +25,42 @@ void main() {
     expect(find.text('预计完成时长'), findsOneWidget);
     expect(find.text('截止时间'), findsNothing);
   });
+
+  testWidgets('正文单行表单项行高统一且详情输入更高', (tester) async {
+    await tester.pumpWidget(const _TestApp(child: ItemEditorPage()));
+    await tester.pumpAndSettle();
+
+    final titleSize = tester.getSize(find.byKey(const ValueKey('item-editor-field-title')));
+    final allDaySize = tester.getSize(find.byKey(const ValueKey('item-editor-row-all-day')));
+    final startSize = tester.getSize(find.byKey(const ValueKey('item-editor-row-start')));
+    final detailsSize = tester.getSize(find.byKey(const ValueKey('item-editor-field-details')));
+
+    expect(titleSize.height, 56);
+    expect(allDaySize.height, 56);
+    expect(startSize.height, 56);
+    expect(detailsSize.height, greaterThan(titleSize.height));
+  });
+
+  testWidgets('操作行左右内容分离并保持纵向居中', (tester) async {
+    await tester.pumpWidget(const _TestApp(child: ItemEditorPage()));
+    await tester.pumpAndSettle();
+
+    final startRow = find.byKey(const ValueKey('item-editor-row-start'));
+    final label = find.byKey(const ValueKey('item-editor-row-start-label'));
+    final value = find.byKey(const ValueKey('item-editor-row-start-value'));
+    final chevron = find.byKey(const ValueKey('item-editor-row-start-chevron'));
+
+    final rowRect = tester.getRect(startRow);
+    final labelCenter = tester.getCenter(label);
+    final valueCenter = tester.getCenter(value);
+    final chevronCenter = tester.getCenter(chevron);
+
+    expect(labelCenter.dx, lessThan(valueCenter.dx));
+    expect(valueCenter.dx, lessThan(chevronCenter.dx));
+    expect((labelCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
+    expect((valueCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
+    expect((chevronCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
+  });
 }
 
 class _TestApp extends StatelessWidget {

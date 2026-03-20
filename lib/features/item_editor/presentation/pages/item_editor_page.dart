@@ -15,6 +15,13 @@ import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 import 'package:huajuan_agenda/shared/widgets/app_sheet_scaffold.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 
+const double _kEditorBaseRowHeight = 56;
+const double _kEditorMultiLineMinHeight = 112;
+const double _kEditorHorizontalPadding = 16;
+const double _kEditorTrailingPadding = 12;
+const double _kEditorErrorGap = 6;
+const double _kEditorErrorBottomPadding = 4;
+
 class ItemEditorPage extends ConsumerStatefulWidget {
   const ItemEditorPage({
     this.prefill,
@@ -117,6 +124,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 ),
                 const Gap(20),
                 _RoundedInputField(
+                  containerKey: const ValueKey('item-editor-field-title'),
                   controller: _titleController,
                   hintText: l10n.editorHintTitle,
                   errorText: state.errors.title,
@@ -129,17 +137,20 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 const Gap(12),
                 if (state.draft.type != ItemType.memo)
                   _SwitchRow(
+                    rowKey: const ValueKey('item-editor-row-all-day'),
                     label: l10n.editorAllDayTitle,
                     value: state.draft.isAllDay,
                     onChanged: notifier.toggleAllDay,
                   ),
                 if (state.draft.type == ItemType.memo) ...[
                   _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-target-date'),
                     label: l10n.editorFieldTargetDate,
                     value: _formatDate(context, state.draft.targetDate),
                     onTap: () => _pickMemoTargetDate(context, ref, state.draft.targetDate),
                   ),
                   _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-estimated-duration'),
                     label: l10n.editorFieldEstimatedDuration,
                     value: _formatDuration(context, state.draft.estimatedDuration),
                     errorText: state.errors.estimatedDuration,
@@ -147,6 +158,10 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                   ),
                 ] else ...[
                   _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-start'),
+                    labelKey: const ValueKey('item-editor-row-start-label'),
+                    valueKey: const ValueKey('item-editor-row-start-value'),
+                    trailingKey: const ValueKey('item-editor-row-start-chevron'),
                     label: l10n.editorFieldStart,
                     value: _formatDateTimeSummary(
                       context,
@@ -156,6 +171,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     onTap: () => _pickStartDateTime(context, ref, state),
                   ),
                   _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-end'),
                     label: l10n.editorFieldEnd,
                     value: _formatDateTimeSummary(
                       context,
@@ -166,12 +182,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     onTap: () => _pickEndDateTime(context, ref, state),
                   ),
                   _PlainActionRow(
+                    rowKey: const ValueKey('item-editor-row-repeat'),
                     label: l10n.editorSectionRepeat,
                     value: _repeatLabel(l10n, state.draft.repeatRule),
                     onTap: () => _openRepeatSettings(context, ref, state.draft.repeatRule),
                   ),
                   if (state.draft.type == ItemType.task)
                     _PlainActionRow(
+                      rowKey: const ValueKey('item-editor-row-deadline'),
                       label: l10n.editorFieldDeadline,
                       value: state.draft.deadline == null
                           ? l10n.editorDeadlineUnset
@@ -188,6 +206,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 const Divider(),
                 const Gap(8),
                 _PlainActionRow(
+                  rowKey: const ValueKey('item-editor-row-reminder'),
                   label: l10n.editorSectionReminder,
                   value: _reminderLabel(l10n, state.draft.reminder),
                   onTap: () => _openReminderSettings(context, ref, state.draft.reminder),
@@ -196,12 +215,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 const Divider(),
                 const Gap(20),
                 _RoundedInputField(
+                  containerKey: const ValueKey('item-editor-field-location'),
                   controller: _locationController,
                   hintText: l10n.editorHintLocation,
                   onChanged: notifier.updateLocation,
                 ),
                 const Gap(12),
                 _RoundedInputField(
+                  containerKey: const ValueKey('item-editor-field-details'),
                   controller: _detailsController,
                   hintText: l10n.editorHintDetails,
                   onChanged: notifier.updateDetails,
@@ -748,6 +769,7 @@ class _TopActionBar extends StatelessWidget {
 
 class _RoundedInputField extends StatelessWidget {
   const _RoundedInputField({
+    this.containerKey,
     required this.controller,
     required this.hintText,
     this.errorText,
@@ -756,6 +778,7 @@ class _RoundedInputField extends StatelessWidget {
     this.onChanged,
   });
 
+  final Key? containerKey;
   final TextEditingController controller;
   final String hintText;
   final String? errorText;
@@ -766,45 +789,48 @@ class _RoundedInputField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const fieldHeight = 56.0;
+    final isSingleLine = maxLines == 1;
+    final minHeight =
+        isSingleLine ? _kEditorBaseRowHeight : _kEditorMultiLineMinHeight;
+    final maxHeight = isSingleLine ? _kEditorBaseRowHeight : _kEditorBaseRowHeight * maxLines;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
+          key: containerKey,
           constraints: BoxConstraints(
-            minHeight: fieldHeight,
-            maxHeight: maxLines == 1 ? fieldHeight : fieldHeight * maxLines,
+            minHeight: minHeight,
+            maxHeight: maxHeight,
           ),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
-            crossAxisAlignment:
-                maxLines == 1 ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: TextField(
                   controller: controller,
                   onChanged: onChanged,
-                  textAlignVertical: maxLines == 1 ? TextAlignVertical.center : TextAlignVertical.top,
-                  minLines: maxLines,
+                  textAlignVertical: isSingleLine ? TextAlignVertical.center : null,
+                  minLines: isSingleLine ? 1 : 4,
                   maxLines: maxLines,
                   decoration: InputDecoration(
                     hintText: hintText,
                     border: InputBorder.none,
                     isCollapsed: false,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: maxLines == 1 ? 18 : 16,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: _kEditorHorizontalPadding,
+                      vertical: 16,
                     ),
                   ),
                 ),
               ),
               if (trailing != null) ...[
                 Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: _kEditorTrailingPadding),
                   child: trailing!,
                 ),
               ],
@@ -812,7 +838,7 @@ class _RoundedInputField extends StatelessWidget {
           ),
         ),
         if (errorText != null) ...[
-          const Gap(6),
+          const Gap(_kEditorErrorGap),
           Text(
             errorText!,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -827,11 +853,13 @@ class _RoundedInputField extends StatelessWidget {
 
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
+    this.rowKey,
     required this.label,
     required this.value,
     required this.onChanged,
   });
 
+  final Key? rowKey;
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -839,7 +867,8 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 56,
+      key: rowKey,
+      height: _kEditorBaseRowHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -862,12 +891,20 @@ class _SwitchRow extends StatelessWidget {
 
 class _PlainActionRow extends StatelessWidget {
   const _PlainActionRow({
+    this.rowKey,
+    this.labelKey,
+    this.valueKey,
+    this.trailingKey,
     required this.label,
     required this.value,
     required this.onTap,
     this.errorText,
   });
 
+  final Key? rowKey;
+  final Key? labelKey;
+  final Key? valueKey;
+  final Key? trailingKey;
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -876,7 +913,6 @@ class _PlainActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const rowHeight = 56.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,18 +920,21 @@ class _PlainActionRow extends StatelessWidget {
         InkWell(
           onTap: onTap,
           child: SizedBox(
-            height: rowHeight,
+            key: rowKey,
+            height: _kEditorBaseRowHeight,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
+                    key: labelKey,
                     label,
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
                 Flexible(
                   child: Text(
+                    key: valueKey,
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -905,10 +944,14 @@ class _PlainActionRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(width: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Icon(
+                    key: trailingKey,
+                    Icons.chevron_right,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -916,7 +959,7 @@ class _PlainActionRow extends StatelessWidget {
         ),
         if (errorText != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: _kEditorErrorBottomPadding),
             child: Text(
               errorText!,
               style: theme.textTheme.bodySmall?.copyWith(
