@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/core/theme/theme_controller.dart';
+import 'package:huajuan_agenda/core/localization/locale_controller.dart';
+import 'package:huajuan_agenda/features/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -28,8 +28,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(appThemeModeProvider);
-    final locale = ref.watch(appLocaleProvider);
+    final state = ref.watch(settingsViewModelProvider);
     final l10n = context.l10n;
 
     return ui.Scaffold(
@@ -81,27 +80,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 label: l10n.themeSystem,
                                 icon: AppIcons.themeSystem,
                                 value: ui.ThemeMode.system,
-                                selected: themeMode == ui.ThemeMode.system,
+                                selected: state.themeMode == ui.ThemeMode.system,
                                 onTap: (value) {
-                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
                                 },
                               ),
                               _OptionButton<ui.ThemeMode>(
                                 label: l10n.themeLight,
                                 icon: AppIcons.themeLight,
                                 value: ui.ThemeMode.light,
-                                selected: themeMode == ui.ThemeMode.light,
+                                selected: state.themeMode == ui.ThemeMode.light,
                                 onTap: (value) {
-                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
                                 },
                               ),
                               _OptionButton<ui.ThemeMode>(
                                 label: l10n.themeDark,
                                 icon: AppIcons.themeDark,
                                 value: ui.ThemeMode.dark,
-                                selected: themeMode == ui.ThemeMode.dark,
+                                selected: state.themeMode == ui.ThemeMode.dark,
                                 onTap: (value) {
-                                  ref.read(appThemeModeProvider.notifier).state = value;
+                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
                                 },
                               ),
                             ],
@@ -128,18 +127,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                 label: l10n.languageChinese,
                                 icon: AppIcons.languageChinese,
                                 value: AppLocale.chinese.locale,
-                                selected: locale == AppLocale.chinese.locale,
+                                selected: state.locale == AppLocale.chinese.locale,
                                 onTap: (value) {
-                                  ref.read(appLocaleProvider.notifier).state = value;
+                                  ref.read(settingsViewModelProvider.notifier).selectLocale(value);
                                 },
                               ),
                               _OptionButton<Locale>(
                                 label: l10n.languageEnglish,
                                 icon: AppIcons.languageEnglish,
                                 value: AppLocale.english.locale,
-                                selected: locale == AppLocale.english.locale,
+                                selected: state.locale == AppLocale.english.locale,
                                 onTap: (value) {
-                                  ref.read(appLocaleProvider.notifier).state = value;
+                                  ref.read(settingsViewModelProvider.notifier).selectLocale(value);
                                 },
                               ),
                             ],

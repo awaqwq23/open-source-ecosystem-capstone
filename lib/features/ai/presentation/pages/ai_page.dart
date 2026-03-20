@@ -6,17 +6,40 @@ import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
+import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class AiPage extends ConsumerWidget {
+class AiPage extends ConsumerStatefulWidget {
   const AiPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AiPage> createState() => _AiPageState();
+}
+
+class _AiPageState extends ConsumerState<AiPage> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(aiHeaderViewModelProvider);
+    final groups = ref.watch(aiConversationGroupsProvider);
     final theme = Theme.of(context);
+    _syncController(state.input);
 
     return ui.Scaffold(
       headers: [
@@ -73,7 +96,7 @@ class AiPage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  context.l10n.aiDescription,
+                                  '按 ${_periodLabel(context, state)} 聚合聊天记录。当前分组 ${groups.length} 个。',
                                   style: theme.textTheme.titleMedium,
                                 ),
                               ],
@@ -94,12 +117,68 @@ class AiPage extends ConsumerWidget {
                               child: Text(_periodLabel(context, state)),
                             ),
                             ui.GhostButton(
-                              onPressed: () => context.push(AppRoutePaths.timePicker),
+                              onPressed: () async {
+                                final result = await context.push<DateTime>(
+                                  AppRoutePaths.timePicker,
+                                  extra: TimePickerArgs(
+                                    mode: switch (state.period) {
+                                      AiHeaderPeriod.day => TimePickerMode.day,
+                                      AiHeaderPeriod.week => TimePickerMode.week,
+                                      AiHeaderPeriod.month => TimePickerMode.month,
+                                    },
+                                    initialDate: state.anchor,
+                                  ),
+                                );
+                                if (result != null && mounted) {
+                                  ref
+                                      .read(aiHeaderViewModelProvider.notifier)
+                                      .selectAnchor(result);
+                                }
+                              },
                               child: Text(context.l10n.timePickerTitle),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      _ConversationList(groups: groups),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _controller,
+                        onChanged: ref.read(aiHeaderViewModelProvider.notifier).updateInput,
+                        minLines: 2,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: '输入一句话，让 AI 帮你创建事项或查询日程',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ui.PrimaryButton(
+                              onPressed: state.isSending
+                                  ? null
+                                  : () => ref
+                                      .read(aiHeaderViewModelProvider.notifier)
+                                      .sendMessage(),
+                              child: Text(state.isSending ? '发送中...' : '发送'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (state.lastError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          state.lastError!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -108,6 +187,16 @@ class AiPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _syncController(String value) {
+    if (_controller.text == value) {
+      return;
+    }
+    _controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
     );
   }
 
@@ -176,6 +265,52 @@ class AiPage extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ConversationList extends StatelessWidget {
+  const _ConversationList({
+    required this.groups,
+  });
+
+  final List<AiConversationGroup> groups;
+
+  @override
+  Widget build(BuildContext context) {
+    if (groups.isEmpty || groups.every((group) => group.messages.isEmpty)) {
+      return const Text('当前时间范围内还没有聊天记录。');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final group in groups) ...[
+          Text(
+            group.label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final message in group.messages)
+            Align(
+              alignment: message.role == AiChatRole.user
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: message.role == AiChatRole.user
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(message.content),
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

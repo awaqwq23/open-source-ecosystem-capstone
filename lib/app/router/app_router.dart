@@ -15,6 +15,7 @@ import 'package:huajuan_agenda/features/item_editor/presentation/pages/reminder_
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:huajuan_agenda/features/list/presentation/pages/list_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_page.dart';
+import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:huajuan_agenda/features/time_picker/presentation/pages/time_picker_page.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
@@ -94,7 +95,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => AppRouteTransitions.fadeThroughPage<void>(
           context,
           state,
-          const TimePickerPage(),
+          TimePickerPage(
+            args: state.extra is TimePickerArgs ? state.extra! as TimePickerArgs : null,
+          ),
         ),
       ),
       GoRoute(

@@ -6,6 +6,7 @@ import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -17,6 +18,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeHeaderViewModelProvider);
     final viewModel = ref.read(homeHeaderViewModelProvider.notifier);
+    final viewData = ref.watch(homeViewDataProvider);
     final theme = Theme.of(context);
 
     return ui.Scaffold(
@@ -124,11 +126,16 @@ class HomePage extends ConsumerWidget {
                     AppSwitchingContent(
                       contentKey: 'home-description-${state.scope.name}',
                       child: Text(
-                        context.l10n.homeDescription,
+                        '当前时间段 ${viewData.columns.length} 天，已聚合 ${viewData.items.length} 个展示事项。',
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
                     const SizedBox(height: 24),
+                    _HomePreviewCard(
+                      viewData: viewData,
+                      onSelectDate: viewModel.selectDate,
+                    ),
+                    const SizedBox(height: 20),
                     AppEntrance(
                       delay: AppMotion.fast,
                       offset: AppMotion.sectionOffset,
@@ -218,6 +225,70 @@ class HomePage extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _HomePreviewCard extends StatelessWidget {
+  const _HomePreviewCard({
+    required this.viewData,
+    required this.onSelectDate,
+  });
+
+  final HomeViewData viewData;
+  final ValueChanged<DateTime> onSelectDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return ui.Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '主页 ViewModel 预览',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columns: [
+                const DataColumn(label: Text('时间')),
+                for (final column in viewData.columns)
+                  DataColumn(
+                    label: InkWell(
+                      onTap: () => onSelectDate(column.date),
+                      child: Text(column.label),
+                    ),
+                  ),
+              ],
+              rows: [
+                for (final slot in viewData.timeSlots.take(4))
+                  DataRow(
+                    cells: [
+                      DataCell(Text(slot.label)),
+                      for (final column in viewData.columns)
+                        DataCell(
+                          Text(
+                            viewData.items
+                                .where((item) =>
+                                    item.item.startAt.year == column.date.year &&
+                                    item.item.startAt.month == column.date.month &&
+                                    item.item.startAt.day == column.date.day)
+                                .map((item) => item.item.title)
+                                .take(1)
+                                .join(' / '),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

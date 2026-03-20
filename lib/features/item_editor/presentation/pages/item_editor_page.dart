@@ -7,8 +7,8 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/use_cases/validate_item_draft.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/viewmodels/item_editor_header_view_model.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
@@ -23,6 +23,7 @@ const double _kEditorHorizontalPadding = 16;
 const double _kEditorTrailingPadding = 12;
 const double _kEditorErrorGap = 6;
 const double _kEditorErrorBottomPadding = 4;
+const _kValidateItemDraft = ValidateItemDraftUseCase();
 
 class ItemEditorPage extends ConsumerStatefulWidget {
   const ItemEditorPage({
@@ -284,7 +285,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     ItemEditorPageState state,
   ) async {
     final l10n = context.l10n;
-    final errors = ItemEditorValidator.validate(state.draft, l10n);
+    final errors = _kValidateItemDraft(state.draft, l10n);
     final success = await ref
         .read(itemEditorPageControllerProvider.notifier)
         .submit(errors);

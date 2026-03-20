@@ -6,6 +6,7 @@ import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
+import 'package:huajuan_agenda/features/item_detail/presentation/viewmodels/item_detail_view_model.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
@@ -25,8 +26,8 @@ class ItemDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemId = args?.itemId;
-    final item = itemId == null ? null : ref.watch(agendaItemByIdProvider(itemId));
+    final state = ref.watch(itemDetailViewModelProvider(args));
+    final item = state.item;
 
     return ui.Scaffold(
       headers: [

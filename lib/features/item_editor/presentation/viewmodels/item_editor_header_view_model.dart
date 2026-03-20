@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/item_editor/data/item_editor_repository.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_defaults.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/use_cases/build_item_editor_draft.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/use_cases/save_item_draft.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/models/item_draft.dart';
@@ -51,13 +53,14 @@ class ItemEditorPageState {
 }
 
 class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> {
+  static const _buildDraft = BuildItemEditorDraftUseCase();
   ItemEditorArgs? _args;
 
   @override
   ItemEditorPageState build() {
     return ItemEditorPageState(
       itemId: null,
-      draft: ItemEditorDefaults.createDraft(),
+      draft: _buildDraft(),
       isImportant: false,
     );
   }
@@ -71,7 +74,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     final prefill = args?.prefill;
     state = ItemEditorPageState(
       itemId: args?.itemId,
-      draft: ItemEditorDefaults.createDraft(prefill),
+      draft: _buildDraft(prefill),
       isImportant: prefill?.isImportant ?? false,
     );
   }
@@ -308,18 +311,12 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
 
     state = state.copyWith(isSubmitting: true);
     final repository = ref.read(itemEditorRepositoryProvider);
-    if (state.isEditing) {
-      await repository.updateItem(
-        state.itemId!,
-        state.draft,
-        isImportant: state.isImportant,
-      );
-    } else {
-      await repository.createItem(
-        state.draft,
-        isImportant: state.isImportant,
-      );
-    }
+    final saveDraft = SaveItemDraftUseCase(repository);
+    await saveDraft(
+      itemId: state.itemId,
+      draft: state.draft,
+      isImportant: state.isImportant,
+    );
     state = state.copyWith(
       isSubmitting: false,
       submitSucceeded: true,
