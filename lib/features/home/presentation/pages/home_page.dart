@@ -435,18 +435,15 @@ class _HomeGridState extends State<_HomeGrid> {
       return null;
     }
 
-    final itemHits = <HomeLaidOutItem>[];
-    for (final item in widget.viewData.items) {
+    for (var index = widget.viewData.items.length - 1; index >= 0; index--) {
+      final item = widget.viewData.items[index];
       final itemShape = RRect.fromRectAndRadius(
         layout.itemRect(item),
         const Radius.circular(_HomeGridLayoutSpec.itemRadius),
       );
       if (itemShape.contains(contentPosition)) {
-        itemHits.add(item);
+        return _ItemHit(item);
       }
-    }
-    if (itemHits.isNotEmpty) {
-      return _ItemHit(_resolveOverlappedItems(itemHits));
     }
 
     final columnExtent = layout.columnWidth + layout.columnGap;
@@ -468,28 +465,6 @@ class _HomeGridState extends State<_HomeGrid> {
       return null;
     }
     return _CellHit(widget.viewData.columns[columnIndex].date, rowIndex);
-  }
-
-  HomeLaidOutItem _resolveOverlappedItems(List<HomeLaidOutItem> items) {
-    final wrapped = [
-      for (final item in items)
-        if (items.any(
-          (other) =>
-              other.item.id != item.item.id &&
-              other.startMinute <= item.startMinute &&
-              other.endMinute >= item.endMinute,
-        ))
-          item,
-    ];
-    final candidates = wrapped.isNotEmpty ? wrapped : items;
-    candidates.sort((left, right) {
-      final startCompare = left.item.startAt.compareTo(right.item.startAt);
-      if (startCompare != 0) {
-        return startCompare;
-      }
-      return left.item.createdAt.compareTo(right.item.createdAt);
-    });
-    return candidates.first;
   }
 }
 
@@ -669,13 +644,8 @@ class _TimelineLabel extends StatelessWidget {
                             fontSize: HomeGridMetrics.timelineFontSize,
                           ),
                         ),
-                        Container(
-                          width: math.min(HomeGridMetrics.timelineDividerWidth, width * 0.34),
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(
-                            vertical: _HomeGridLayoutSpec.timelineDividerMargin,
-                          ),
-                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
+                        const SizedBox(
+                          height: _HomeGridLayoutSpec.timelineDividerMargin * 2 + 1,
                         ),
                         Text(
                           end,
@@ -807,7 +777,7 @@ class _HomeGridLayout {
   }
 
   double itemLeft(HomeLaidOutItem item) {
-    return columnLeft(item.columnIndex) + item.left * columnWidth + itemInset;
+    return columnLeft(item.columnIndex) + itemInset;
   }
 
   double itemTop(HomeLaidOutItem item) {
@@ -817,7 +787,7 @@ class _HomeGridLayout {
   double itemWidth(HomeLaidOutItem item) {
     return math.max(
       _HomeGridLayoutSpec.minimumItemWidth,
-      columnWidth * item.width - itemInset * 2,
+      columnWidth - itemInset * 2,
     );
   }
 
@@ -900,7 +870,6 @@ class _AgendaBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
-    final opacity = item.opacity.clamp(0, 1).toDouble();
 
     return Positioned(
       left: left,
@@ -908,91 +877,88 @@ class _AgendaBlock extends StatelessWidget {
       width: width,
       height: height,
       child: IgnorePointer(
-        child: Opacity(
-          opacity: opacity,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.24),
+            borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
+            border: Border.all(
               color: accent.withValues(alpha: 0.24),
-              borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.24),
-              ),
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compactHeight =
-                    constraints.maxHeight < _HomeGridLayoutSpec.itemCompactHeight;
-                final ultraCompactHeight =
-                    constraints.maxHeight < _HomeGridLayoutSpec.itemUltraCompactHeight;
-                final showDetails =
-                    constraints.maxHeight >= _HomeGridLayoutSpec.itemDetailsHeight &&
-                        item.item.details.isNotEmpty;
-                final titleMaxLines = constraints.maxHeight <
-                        _HomeGridLayoutSpec.itemSingleLineHeight
-                    ? 1
-                    : constraints.maxHeight < _HomeGridLayoutSpec.itemTwoLineHeight
-                        ? 2
-                        : 3;
-                final horizontalPadding =
-                    constraints.maxWidth < _HomeGridLayoutSpec.itemCompactWidth
-                        ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
-                        : _HomeGridLayoutSpec.itemHorizontalPadding;
-                final verticalPadding = compactHeight
-                    ? _HomeGridLayoutSpec.itemCompactVerticalPadding
-                    : _HomeGridLayoutSpec.itemVerticalPadding;
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compactHeight =
+                  constraints.maxHeight < _HomeGridLayoutSpec.itemCompactHeight;
+              final ultraCompactHeight =
+                  constraints.maxHeight < _HomeGridLayoutSpec.itemUltraCompactHeight;
+              final showDetails =
+                  constraints.maxHeight >= _HomeGridLayoutSpec.itemDetailsHeight &&
+                      item.item.details.isNotEmpty;
+              final titleMaxLines = constraints.maxHeight <
+                      _HomeGridLayoutSpec.itemSingleLineHeight
+                  ? 1
+                  : constraints.maxHeight < _HomeGridLayoutSpec.itemTwoLineHeight
+                      ? 2
+                      : 3;
+              final horizontalPadding =
+                  constraints.maxWidth < _HomeGridLayoutSpec.itemCompactWidth
+                      ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
+                      : _HomeGridLayoutSpec.itemHorizontalPadding;
+              final verticalPadding = compactHeight
+                  ? _HomeGridLayoutSpec.itemCompactVerticalPadding
+                  : _HomeGridLayoutSpec.itemVerticalPadding;
 
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    verticalPadding,
-                    horizontalPadding,
-                    verticalPadding,
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  verticalPadding,
+                  horizontalPadding,
+                  verticalPadding,
+                ),
+                child: DefaultTextStyle(
+                  style: theme.textTheme.bodySmall!.copyWith(
+                    color: accent.withValues(alpha: 0.96),
+                    fontWeight: FontWeight.w700,
+                    height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
-                  child: DefaultTextStyle(
-                    style: theme.textTheme.bodySmall!.copyWith(
-                      color: accent.withValues(alpha: 0.96),
-                      fontWeight: FontWeight.w700,
-                      height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
-                    ),
-                    child: ultraCompactHeight
-                        ? Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
+                  child: ultraCompactHeight
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            item.item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: compactHeight
+                              ? MainAxisAlignment.center
+                              : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               item.item.title,
-                              maxLines: 1,
+                              maxLines: titleMaxLines,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: compactHeight
-                                ? MainAxisAlignment.center
-                                : MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                            if (showDetails) ...[
+                              const SizedBox(height: _HomeGridLayoutSpec.itemDetailsSpacing),
                               Text(
-                                item.item.title,
-                                maxLines: titleMaxLines,
+                                item.item.details,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                              if (showDetails) ...[
-                                const SizedBox(height: _HomeGridLayoutSpec.itemDetailsSpacing),
-                                Text(
-                                  item.item.details,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: accent.withValues(alpha: 0.84),
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: accent.withValues(alpha: 0.84),
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ],
+                              ),
                             ],
-                          ),
-                  ),
-                );
-              },
-            ),
+                          ],
+                        ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -1066,5 +1032,4 @@ abstract final class _HomeGridLayoutSpec {
         contentHorizontalPadding * 2;
     return viewportWidth >= requiredWidth;
   }
-
 }

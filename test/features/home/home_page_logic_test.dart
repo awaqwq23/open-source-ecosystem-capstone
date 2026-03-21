@@ -8,7 +8,7 @@ import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
 void main() {
-  test('重叠事项会被分配到不同横向列', () {
+  test('重叠事项会保持全宽叠压', () {
     const source = HomeDemoItemsSource();
     const useCase = LayoutHomeItemsUseCase();
     final visibleRange = DateTimeRangeValue(
@@ -38,9 +38,9 @@ void main() {
     );
 
     expect(laidOutItems, hasLength(2));
-    expect(laidOutItems.map((item) => item.left).toSet(), hasLength(2));
-    expect(laidOutItems.map((item) => item.width).toSet(), {0.5});
-    expect(laidOutItems.every((item) => item.maxOverlap == 2), isTrue);
+    expect(laidOutItems.map((item) => item.left).toSet(), {0.0});
+    expect(laidOutItems.map((item) => item.width).toSet(), {1.0});
+    expect(laidOutItems.every((item) => item.maxOverlap == 1), isTrue);
   });
 
   test('切换时间段时会清空已选时间块并把选中日期约束在可见范围内', () {
@@ -62,7 +62,7 @@ void main() {
     expect(movedState.selectedDate, nextWeekStart);
 
     notifier.jumpToSelection(
-      const HomePeriodSelection(
+      HomePeriodSelection(
         anchor: DateTime(2026, 5, 1),
         scope: HomeDisplayScope.month,
       ),
