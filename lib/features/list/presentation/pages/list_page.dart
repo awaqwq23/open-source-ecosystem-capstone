@@ -129,6 +129,7 @@ class ListPage extends ConsumerWidget {
                                 },
                               for (var index = 0; index < emptyRowCount; index++)
                                 const _EmptyRow(),
+                              if (emptyRowCount > 0) const _EmptyRowsBottomLine(),
                             ],
                           ),
                         ),
@@ -710,25 +711,32 @@ class _EmptyRow extends StatelessWidget {
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
       width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              height: 1,
-              color: dividerColor,
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: 1,
-              color: dividerColor,
-            ),
-          ),
-        ],
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          height: 1,
+          color: dividerColor,
+        ),
       ),
+    );
+  }
+}
+
+class _EmptyRowsBottomLine extends StatelessWidget {
+  const _EmptyRowsBottomLine();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dividerColor = Color.alphaBlend(
+      theme.colorScheme.outline.withValues(alpha: 0.52),
+      theme.colorScheme.surface,
+    );
+
+    return Container(
+      height: 1,
+      width: double.infinity,
+      color: dividerColor,
     );
   }
 }
