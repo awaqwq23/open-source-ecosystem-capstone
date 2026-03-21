@@ -87,7 +87,7 @@ class ListPage extends ConsumerWidget {
                       horizontalPadding,
                       topPadding,
                       horizontalPadding,
-                      0,
+                      bottomPadding,
                     ),
                     child: Center(
                       child: ConstrainedBox(
@@ -130,7 +130,6 @@ class ListPage extends ConsumerWidget {
                               for (var index = 0; index < emptyRowCount; index++)
                                 const _EmptyRow(),
                               if (emptyRowCount > 0) const _EmptyRowsBottomLine(),
-                              _LinedBottomSpacer(height: bottomPadding),
                             ],
                           ),
                         ),
@@ -739,73 +738,6 @@ class _EmptyRowsBottomLine extends StatelessWidget {
       width: double.infinity,
       color: dividerColor,
     );
-  }
-}
-
-class _LinedBottomSpacer extends StatelessWidget {
-  const _LinedBottomSpacer({
-    required this.height,
-  });
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    if (height <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    final theme = Theme.of(context);
-    final dividerColor = Color.alphaBlend(
-      theme.colorScheme.outline.withValues(alpha: 0.52),
-      theme.colorScheme.surface,
-    );
-
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _LinedBottomSpacerPainter(
-          color: dividerColor,
-        ),
-      ),
-    );
-  }
-}
-
-class _LinedBottomSpacerPainter extends CustomPainter {
-  const _LinedBottomSpacerPainter({
-    required this.color,
-  });
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1;
-
-    for (double y = 0; y <= size.height; y += _ListRowMetrics.rowHeight) {
-      final clampedY = y > size.height ? size.height : y;
-      canvas.drawLine(
-        Offset(0, clampedY),
-        Offset(size.width, clampedY),
-        paint,
-      );
-    }
-    if (size.height % _ListRowMetrics.rowHeight != 0) {
-      canvas.drawLine(
-        Offset(0, size.height),
-        Offset(size.width, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _LinedBottomSpacerPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
 
