@@ -631,67 +631,72 @@ class _ListItemRow extends StatelessWidget {
         ),
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
-            onTap: onOpenDetail,
-            borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
-                border: Border.all(color: borderColor, width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _ListRowMetrics.cardHorizontalPadding,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: _ListRowMetrics.cardVerticalInset,
+            ),
+            child: InkWell(
+              onTap: onOpenDetail,
+              borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+              child: Ink(
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+                  border: Border.all(color: borderColor, width: 1),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _ActionIconButton(
-                      onPressed: onToggleComplete,
-                      icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                      color: item.isCompleted ? theme.colorScheme.primary : accent,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          item.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                                decoration:
-                                    item.isCompleted ? TextDecoration.lineThrough : null,
-                                height: 1,
-                              ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _ListRowMetrics.cardHorizontalPadding,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _ActionIconButton(
+                        onPressed: onToggleComplete,
+                        icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                        color: item.isCompleted ? theme.colorScheme.primary : accent,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurface,
+                                  decoration:
+                                      item.isCompleted ? TextDecoration.lineThrough : null,
+                                  height: 1,
+                                ),
+                          ),
                         ),
                       ),
-                    ),
-                    if (dragIndex != null) ...[
-                      const SizedBox(width: 8),
-                      ReorderableDragStartListener(
-                        index: dragIndex!,
-                        child: Icon(
-                          AppIcons.drag,
-                          size: 20,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      if (dragIndex != null) ...[
+                        const SizedBox(width: 8),
+                        ReorderableDragStartListener(
+                          index: dragIndex!,
+                          child: Icon(
+                            AppIcons.drag,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
+                      ],
+                      const SizedBox(width: 4),
+                      _ActionIconButton(
+                        onPressed: onToggleImportant,
+                        icon: item.isImportant
+                            ? AppIcons.importantFilled
+                            : AppIcons.importantOutlined,
+                        color: item.isImportant
+                            ? const Color(0xFFF4A63E)
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ],
-                    const SizedBox(width: 4),
-                    _ActionIconButton(
-                      onPressed: onToggleImportant,
-                      icon: item.isImportant
-                          ? AppIcons.importantFilled
-                          : AppIcons.importantOutlined,
-                      color: item.isImportant
-                          ? const Color(0xFFF4A63E)
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -888,8 +893,9 @@ class _CompletedHeaderRow extends _ListVisualRow {
 }
 
 abstract final class _ListRowMetrics {
-  static const rowHeight = 56.0;
+  static const rowHeight = 66.0;
   static const horizontalPadding = 4.0;
   static const cardHorizontalPadding = 8.0;
+  static const cardVerticalInset = 5.0;
   static const cardRadius = 8.0;
 }
