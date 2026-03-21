@@ -24,7 +24,7 @@ class HomePage extends ConsumerWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final viewModel = ref.read(homeHeaderViewModelProvider.notifier);
     final width = MediaQuery.sizeOf(context).width;
-    final allowMonthLayout = width >= 1360 &&
+    final allowMonthLayout = _HomeGridLayoutSpec.canFitMonthLayout(width) &&
         ResponsiveBreakpoints.of(context).largerThan(TABLET);
     final homeSettings = ref.watch(appHomeSettingsProvider);
     final viewData = ref.watch(
@@ -291,12 +291,20 @@ class _HomeGrid extends StatefulWidget {
 }
 
 class _HomeGridState extends State<_HomeGrid> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridOuterRadius),
       child: Container(
         color: theme.colorScheme.surfaceContainerLowest,
         child: LayoutBuilder(
@@ -323,6 +331,7 @@ class _HomeGridState extends State<_HomeGrid> {
                 layout,
               ),
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: EdgeInsets.fromLTRB(
                   layout.horizontalPadding,
                   layout.topPadding,
@@ -411,23 +420,23 @@ class _HomeGridState extends State<_HomeGrid> {
   }
 
   _GridHit? _resolveHit(Offset position, _HomeGridLayout layout) {
-    final localPosition = Offset(
-      position.dx - layout.horizontalPadding,
-      position.dy - layout.topPadding,
+    final contentPosition = layout.contentOffsetFromViewport(
+      position,
+      scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0,
     );
-    final x = localPosition.dx;
-    final y = localPosition.dy;
+    final x = contentPosition.dx;
+    final y = contentPosition.dy;
     if (x < 0 || y < 0 || y < layout.headerHeight || x < layout.timelineWidth) {
       return null;
     }
 
     final itemHits = <HomeLaidOutItem>[];
     for (final item in widget.viewData.items) {
-      final left = layout.itemLeft(item);
-      final top = layout.itemTop(item);
-      final width = layout.itemWidth(item);
-      final height = layout.itemHeight(item);
-      if (x >= left && x <= left + width && y >= top && y <= top + height) {
+      final itemShape = RRect.fromRectAndRadius(
+        layout.itemRect(item),
+        const Radius.circular(_HomeGridLayoutSpec.itemRadius),
+      );
+      if (itemShape.contains(contentPosition)) {
         itemHits.add(item);
       }
     }
@@ -499,18 +508,27 @@ class _HeaderCell extends StatelessWidget {
       height: height,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 44;
+          final compact = constraints.maxWidth < _HomeGridLayoutSpec.headerCompactWidth;
+          final textColor = column.isToday
+              ? theme.colorScheme.primary
+              : column.emphasize
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant;
           return DecoratedBox(
             decoration: BoxDecoration(
               color: column.isToday
                   ? theme.colorScheme.primary.withValues(alpha: 0.14)
                   : theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.headerCellRadius),
             ),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 1.5 : 4,
-                vertical: compact ? 3 : 4,
+                horizontal: compact
+                    ? _HomeGridLayoutSpec.headerCompactHorizontalPadding
+                    : _HomeGridLayoutSpec.headerHorizontalPadding,
+                vertical: compact
+                    ? _HomeGridLayoutSpec.headerCompactVerticalPadding
+                    : _HomeGridLayoutSpec.headerVerticalPadding,
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -521,9 +539,7 @@ class _HeaderCell extends StatelessWidget {
                       compact ? column.dateLabel : column.weekdayLabel,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: column.isToday
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
+                        color: textColor,
                       ),
                     ),
                     if (!compact) ...[
@@ -572,11 +588,15 @@ class _TimelineLabel extends StatelessWidget {
       height: height,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxHeight < 34;
+          final compact = constraints.maxHeight < _HomeGridLayoutSpec.timelineCompactHeight;
           return Padding(
             padding: EdgeInsets.only(
-              left: compact ? 1 : 2,
-              right: compact ? 1 : 2,
+              left: compact
+                  ? _HomeGridLayoutSpec.timelineCompactHorizontalPadding
+                  : _HomeGridLayoutSpec.timelineHorizontalPadding,
+              right: compact
+                  ? _HomeGridLayoutSpec.timelineCompactHorizontalPadding
+                  : _HomeGridLayoutSpec.timelineHorizontalPadding,
             ),
             child: compact
                 ? Align(
@@ -589,8 +609,8 @@ class _TimelineLabel extends StatelessWidget {
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w700,
-                        height: 0.92,
-                        fontSize: 10,
+                        height: _HomeGridLayoutSpec.timelineCompactLineHeight,
+                        fontSize: _HomeGridLayoutSpec.timelineCompactFontSize,
                       ),
                     ),
                   )
@@ -604,14 +624,16 @@ class _TimelineLabel extends StatelessWidget {
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w700,
-                          height: 0.92,
-                          fontSize: 10.5,
+                          height: _HomeGridLayoutSpec.timelineLineHeight,
+                          fontSize: _HomeGridLayoutSpec.timelineFontSize,
                         ),
                       ),
                       Container(
-                        width: math.min(14, width * 0.34),
+                        width: math.min(_HomeGridLayoutSpec.timelineDividerWidth, width * 0.34),
                         height: 1,
-                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        margin: const EdgeInsets.symmetric(
+                          vertical: _HomeGridLayoutSpec.timelineDividerMargin,
+                        ),
                         color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
                       ),
                       Text(
@@ -620,8 +642,8 @@ class _TimelineLabel extends StatelessWidget {
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
                           fontWeight: FontWeight.w600,
-                          height: 0.92,
-                          fontSize: 10,
+                          height: _HomeGridLayoutSpec.timelineLineHeight,
+                          fontSize: _HomeGridLayoutSpec.timelineCompactFontSize,
                         ),
                       ),
                     ],
@@ -664,26 +686,22 @@ class _HomeGridLayout {
     required int columnCount,
     required int rowCount,
   }) {
-    const horizontalPadding = 2.0;
-    const topPadding = 6.0;
-    const bottomPadding = 12.0;
-    const columnGap = 2.0;
-    const rowGap = 2.0;
-    const headerHeight = 44.0;
-    const headerCellHeight = 38.0;
-    const itemInset = 1.0;
+    const horizontalPadding = _HomeGridLayoutSpec.contentHorizontalPadding;
+    const topPadding = _HomeGridLayoutSpec.contentTopPadding;
+    const bottomPadding = _HomeGridLayoutSpec.contentBottomPadding;
+    const columnGap = _HomeGridLayoutSpec.columnGap;
+    const rowGap = _HomeGridLayoutSpec.rowGap;
+    const headerHeight = _HomeGridLayoutSpec.headerHeight;
+    const headerCellHeight = _HomeGridLayoutSpec.headerCellHeight;
+    const itemInset = _HomeGridLayoutSpec.itemInset;
     final availableWidth = math.max(
       0.0,
       constraints.maxWidth - horizontalPadding * 2,
     );
     final safeColumnCount = math.max(1, columnCount);
-    final timelineWidth = switch (safeColumnCount) {
-      <= 7 => 40.0,
-      <= 14 => 38.0,
-      _ => 36.0,
-    };
+    final timelineWidth = _HomeGridLayoutSpec.timelineWidthForColumnCount(safeColumnCount);
     final columnWidth = math.max(
-      18.0,
+      _HomeGridLayoutSpec.minimumColumnWidth,
       (availableWidth - timelineWidth - columnGap * (safeColumnCount - 1)) / safeColumnCount,
     );
     final cellSize = columnWidth;
@@ -729,6 +747,13 @@ class _HomeGridLayout {
 
   double get timelineLabelWidth => timelineWidth;
 
+  Offset contentOffsetFromViewport(Offset viewportPosition, {required double scrollOffset}) {
+    return Offset(
+      viewportPosition.dx - horizontalPadding,
+      viewportPosition.dy + scrollOffset - topPadding,
+    );
+  }
+
   double columnLeft(int columnIndex) {
     return timelineWidth + columnIndex * (columnWidth + columnGap);
   }
@@ -746,11 +771,26 @@ class _HomeGridLayout {
   }
 
   double itemWidth(HomeLaidOutItem item) {
-    return math.max(16, columnWidth * item.width - itemInset * 2);
+    return math.max(
+      _HomeGridLayoutSpec.minimumItemWidth,
+      columnWidth * item.width - itemInset * 2,
+    );
   }
 
   double itemHeight(HomeLaidOutItem item) {
-    return math.max(24, item.height * gridHeight - itemInset * 2);
+    return math.max(
+      _HomeGridLayoutSpec.minimumItemHeight,
+      item.height * gridHeight - itemInset * 2,
+    );
+  }
+
+  Rect itemRect(HomeLaidOutItem item) {
+    return Rect.fromLTWH(
+      itemLeft(item),
+      itemTop(item),
+      itemWidth(item),
+      itemHeight(item),
+    );
   }
 }
 
@@ -784,7 +824,7 @@ class _GridSlot extends StatelessWidget {
               : today
                   ? theme.colorScheme.primary.withValues(alpha: 0.08)
                   : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
           border: Border.all(
             color: highlight
                 ? theme.colorScheme.primary.withValues(alpha: 0.5)
@@ -816,7 +856,7 @@ class _AgendaBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
-    final opacity = item.opacity.clamp(0.25, 1.0).toDouble();
+    final opacity = item.opacity.clamp(0, 1).toDouble();
 
     return Positioned(
       left: left,
@@ -829,24 +869,33 @@ class _AgendaBlock extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.24),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
               border: Border.all(
                 color: accent.withValues(alpha: 0.24),
               ),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compactHeight = constraints.maxHeight < 36;
-                final ultraCompactHeight = constraints.maxHeight < 28;
+                final compactHeight =
+                    constraints.maxHeight < _HomeGridLayoutSpec.itemCompactHeight;
+                final ultraCompactHeight =
+                    constraints.maxHeight < _HomeGridLayoutSpec.itemUltraCompactHeight;
                 final showDetails =
-                    constraints.maxHeight >= 60 && item.item.details.isNotEmpty;
-                final titleMaxLines = constraints.maxHeight < 34
+                    constraints.maxHeight >= _HomeGridLayoutSpec.itemDetailsHeight &&
+                        item.item.details.isNotEmpty;
+                final titleMaxLines = constraints.maxHeight <
+                        _HomeGridLayoutSpec.itemSingleLineHeight
                     ? 1
-                    : constraints.maxHeight < 56
+                    : constraints.maxHeight < _HomeGridLayoutSpec.itemTwoLineHeight
                         ? 2
                         : 3;
-                final horizontalPadding = constraints.maxWidth < 56 ? 5.0 : 8.0;
-                final verticalPadding = compactHeight ? 3.0 : 6.0;
+                final horizontalPadding =
+                    constraints.maxWidth < _HomeGridLayoutSpec.itemCompactWidth
+                        ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
+                        : _HomeGridLayoutSpec.itemHorizontalPadding;
+                final verticalPadding = compactHeight
+                    ? _HomeGridLayoutSpec.itemCompactVerticalPadding
+                    : _HomeGridLayoutSpec.itemVerticalPadding;
 
                 return Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -883,7 +932,7 @@ class _AgendaBlock extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               if (showDetails) ...[
-                                const SizedBox(height: 4),
+                                const SizedBox(height: _HomeGridLayoutSpec.itemDetailsSpacing),
                                 Text(
                                   item.item.details,
                                   maxLines: 2,
@@ -922,4 +971,71 @@ class _CellHit extends _GridHit {
 
   final DateTime date;
   final int slotIndex;
+}
+
+abstract final class _HomeGridLayoutSpec {
+  static const gridOuterRadius = 12.0;
+  static const gridCellRadius = 7.0;
+  static const headerCellRadius = 8.0;
+  static const itemRadius = 8.0;
+
+  static const contentHorizontalPadding = 2.0;
+  static const contentTopPadding = 6.0;
+  static const contentBottomPadding = 12.0;
+  static const columnGap = 2.0;
+  static const rowGap = 2.0;
+  static const headerHeight = 44.0;
+  static const headerCellHeight = 38.0;
+  static const minimumColumnWidth = 18.0;
+  static const minimumItemWidth = 16.0;
+  static const minimumItemHeight = 24.0;
+  static const itemInset = 1.0;
+
+  static const headerCompactWidth = 44.0;
+  static const headerHorizontalPadding = 4.0;
+  static const headerVerticalPadding = 4.0;
+  static const headerCompactHorizontalPadding = 2.0;
+  static const headerCompactVerticalPadding = 3.0;
+
+  static const timelineCompactHeight = 34.0;
+  static const timelineHorizontalPadding = 2.0;
+  static const timelineCompactHorizontalPadding = 1.0;
+  static const timelineCompactFontSize = 10.0;
+  static const timelineFontSize = 10.5;
+  static const timelineLineHeight = 0.92;
+  static const timelineCompactLineHeight = 0.92;
+  static const timelineDividerWidth = 14.0;
+  static const timelineDividerMargin = 2.0;
+
+  static const itemUltraCompactHeight = 28.0;
+  static const itemCompactHeight = 36.0;
+  static const itemSingleLineHeight = 34.0;
+  static const itemTwoLineHeight = 56.0;
+  static const itemDetailsHeight = 60.0;
+  static const itemCompactWidth = 56.0;
+  static const itemCompactHorizontalPadding = 5.0;
+  static const itemHorizontalPadding = 8.0;
+  static const itemCompactVerticalPadding = 3.0;
+  static const itemVerticalPadding = 6.0;
+  static const itemDetailsSpacing = 4.0;
+
+  static const minMonthColumnWidth = 34.0;
+  static const maxMonthColumnCount = 31;
+
+  static bool canFitMonthLayout(double viewportWidth) {
+    final requiredWidth =
+        maxMonthColumnCount * minMonthColumnWidth +
+        (maxMonthColumnCount - 1) * columnGap +
+        timelineWidthForColumnCount(maxMonthColumnCount) +
+        contentHorizontalPadding * 2;
+    return viewportWidth >= requiredWidth;
+  }
+
+  static double timelineWidthForColumnCount(int columnCount) {
+    return switch (columnCount) {
+      <= 7 => 40.0,
+      <= 14 => 38.0,
+      _ => 36.0,
+    };
+  }
 }

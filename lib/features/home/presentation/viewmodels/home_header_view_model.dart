@@ -8,6 +8,7 @@ import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.d
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
 class HomeHeaderState {
   const HomeHeaderState({
@@ -61,20 +62,22 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
   }
 
   void showPrevious(HomeDisplayScope scope) {
-    state = state.copyWith(
-      anchor: switch (scope) {
+    _moveToAnchor(
+      switch (scope) {
         HomeDisplayScope.week => state.anchor.subtract(const Duration(days: 7)),
         HomeDisplayScope.month => DateTime(state.anchor.year, state.anchor.month - 1, 1),
       },
+      scope: scope,
     );
   }
 
   void showNext(HomeDisplayScope scope) {
-    state = state.copyWith(
-      anchor: switch (scope) {
+    _moveToAnchor(
+      switch (scope) {
         HomeDisplayScope.week => state.anchor.add(const Duration(days: 7)),
         HomeDisplayScope.month => DateTime(state.anchor.year, state.anchor.month + 1, 1),
       },
+      scope: scope,
     );
   }
 
@@ -90,10 +93,45 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
   }
 
   void jumpToSelection(HomePeriodSelection selection) {
-    state = state.copyWith(
-      anchor: DateUtils.dateOnly(selection.anchor),
-      selectedDate: DateUtils.dateOnly(selection.anchor),
+    _moveToAnchor(
+      DateUtils.dateOnly(selection.anchor),
+      scope: selection.scope,
+      fallbackSelectedDate: DateUtils.dateOnly(selection.anchor),
     );
+  }
+
+  void _moveToAnchor(
+    DateTime anchor, {
+    required HomeDisplayScope scope,
+    DateTime? fallbackSelectedDate,
+  }) {
+    final normalizedAnchor = DateUtils.dateOnly(anchor);
+    final visibleRange = _gridBuilder.visibleDateRange(normalizedAnchor, scope);
+    final selectedDate = state.selectedDate == null
+        ? fallbackSelectedDate
+        : _normalizeSelectionWithinRange(
+            selectedDate: state.selectedDate!,
+            visibleRange: visibleRange,
+            fallbackSelectedDate: fallbackSelectedDate ?? visibleRange.start,
+          );
+    state = state.copyWith(
+      anchor: normalizedAnchor,
+      selectedDate: selectedDate,
+      clearSelectedSlotIndex: true,
+    );
+  }
+
+  DateTime _normalizeSelectionWithinRange({
+    required DateTime selectedDate,
+    required DateTimeRangeValue visibleRange,
+    required DateTime fallbackSelectedDate,
+  }) {
+    final normalizedSelectedDate = DateUtils.dateOnly(selectedDate);
+    if (normalizedSelectedDate.isBefore(visibleRange.start) ||
+        !normalizedSelectedDate.isBefore(visibleRange.end)) {
+      return DateUtils.dateOnly(fallbackSelectedDate);
+    }
+    return normalizedSelectedDate;
   }
 }
 
@@ -119,7 +157,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     items: const [],
   );
   final visibleItems = settings.showDemoData
-      ? HomeHeaderViewModel._demoItemsSource.buildForWeek(previewGrid.visibleRange.start)
+      ? HomeHeaderViewModel._demoItemsSource.buildForRange(previewGrid.visibleRange)
       : [
           for (final item in repositoryItems)
             if (item.type == ItemType.task || item.type == ItemType.schedule) item,

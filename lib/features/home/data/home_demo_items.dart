@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
@@ -10,6 +11,26 @@ import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 
 class HomeDemoItemsSource {
   const HomeDemoItemsSource();
+
+  List<AgendaItem> buildForRange(DateTimeRangeValue visibleRange) {
+    final firstWeekStart = DateUtils.dateOnly(visibleRange.start).subtract(
+      Duration(days: visibleRange.start.weekday - DateTime.monday),
+    );
+    final lastVisibleDate = visibleRange.end.subtract(const Duration(milliseconds: 1));
+    final lastWeekStart = DateUtils.dateOnly(lastVisibleDate).subtract(
+      Duration(days: lastVisibleDate.weekday - DateTime.monday),
+    );
+    final weekCount = lastWeekStart.difference(firstWeekStart).inDays ~/ 7;
+
+    return [
+      for (var index = 0; index <= weekCount; index++)
+        ...buildForWeek(firstWeekStart.add(Duration(days: index * 7))),
+    ].where((item) {
+      return item.type != ItemType.memo &&
+          item.endAt.isAfter(visibleRange.start) &&
+          item.startAt.isBefore(visibleRange.end);
+    }).toList();
+  }
 
   List<AgendaItem> buildForWeek(DateTime weekStart) {
     final normalizedWeekStart = DateTime(
