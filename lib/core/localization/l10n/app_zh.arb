@@ -30,6 +30,8 @@
   "settingsAiApiKeyLabel": "API 密钥",
   "settingsAiModelLabel": "模型",
   "settingsAiSystemPromptLabel": "系统提示词",
+  "settingsAiTestButton": "测试连接",
+  "settingsAiTestingButton": "测试中...",
   "settingsAiSaveButton": "保存 AI 设置",
   "@settingsMinutesValue": {
     "placeholders": {

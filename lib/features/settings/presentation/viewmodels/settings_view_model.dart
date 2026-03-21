@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+
+enum SettingsAiConnectionStatus {
+  idle,
+  testing,
+  success,
+  failure,
+}
 
 class SettingsState {
   const SettingsState({
@@ -11,12 +19,37 @@ class SettingsState {
     required this.locale,
     required this.homeSettings,
     required this.aiSettings,
+    this.aiConnectionStatus = SettingsAiConnectionStatus.idle,
+    this.aiConnectionMessage,
   });
 
   final ui.ThemeMode themeMode;
   final Locale locale;
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
+  final SettingsAiConnectionStatus aiConnectionStatus;
+  final String? aiConnectionMessage;
+
+  SettingsState copyWith({
+    ui.ThemeMode? themeMode,
+    Locale? locale,
+    HomeSettings? homeSettings,
+    AiSettings? aiSettings,
+    SettingsAiConnectionStatus? aiConnectionStatus,
+    String? aiConnectionMessage,
+    bool clearAiConnectionMessage = false,
+  }) {
+    return SettingsState(
+      themeMode: themeMode ?? this.themeMode,
+      locale: locale ?? this.locale,
+      homeSettings: homeSettings ?? this.homeSettings,
+      aiSettings: aiSettings ?? this.aiSettings,
+      aiConnectionStatus: aiConnectionStatus ?? this.aiConnectionStatus,
+      aiConnectionMessage: clearAiConnectionMessage
+          ? null
+          : (aiConnectionMessage ?? this.aiConnectionMessage),
+    );
+  }
 }
 
 class SettingsViewModel extends Notifier<SettingsState> {
@@ -33,42 +66,51 @@ class SettingsViewModel extends Notifier<SettingsState> {
 
   Future<void> selectTheme(ui.ThemeMode mode) async {
     await ref.read(settingsRepositoryProvider).saveThemeMode(mode);
-    state = SettingsState(
-      themeMode: mode,
-      locale: state.locale,
-      homeSettings: state.homeSettings,
-      aiSettings: state.aiSettings,
-    );
+    state = state.copyWith(themeMode: mode);
   }
 
   Future<void> selectLocale(Locale locale) async {
     await ref.read(settingsRepositoryProvider).saveLocale(locale);
-    state = SettingsState(
-      themeMode: state.themeMode,
-      locale: locale,
-      homeSettings: state.homeSettings,
-      aiSettings: state.aiSettings,
-    );
+    state = state.copyWith(locale: locale);
   }
 
   Future<void> saveHomeSettings(HomeSettings settings) async {
     await ref.read(settingsRepositoryProvider).saveHomeSettings(settings);
-    state = SettingsState(
-      themeMode: state.themeMode,
-      locale: state.locale,
-      homeSettings: settings,
-      aiSettings: state.aiSettings,
-    );
+    state = state.copyWith(homeSettings: settings);
   }
 
   Future<void> saveAiSettings(AiSettings settings) async {
     await ref.read(settingsRepositoryProvider).saveAiSettings(settings);
-    state = SettingsState(
-      themeMode: state.themeMode,
-      locale: state.locale,
-      homeSettings: state.homeSettings,
+    state = state.copyWith(
       aiSettings: settings,
+      aiConnectionStatus: SettingsAiConnectionStatus.idle,
+      clearAiConnectionMessage: true,
     );
+  }
+
+  Future<void> testAiConnection(AiSettings settings) async {
+    state = state.copyWith(
+      aiConnectionStatus: SettingsAiConnectionStatus.testing,
+      clearAiConnectionMessage: true,
+    );
+
+    try {
+      await ref.read(aiServiceProvider).validateConnection(settings: settings);
+      state = state.copyWith(
+        aiConnectionStatus: SettingsAiConnectionStatus.success,
+        aiConnectionMessage: 'AI 连接测试成功。',
+      );
+    } on OpenAiConfigurationException catch (error) {
+      state = state.copyWith(
+        aiConnectionStatus: SettingsAiConnectionStatus.failure,
+        aiConnectionMessage: error.message,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        aiConnectionStatus: SettingsAiConnectionStatus.failure,
+        aiConnectionMessage: '连接失败：$error',
+      );
+    }
   }
 }
 

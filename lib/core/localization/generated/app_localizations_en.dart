@@ -106,6 +106,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAiSystemPromptLabel => 'System prompt';
 
   @override
+  String get settingsAiTestButton => 'Test connection';
+
+  @override
+  String get settingsAiTestingButton => 'Testing...';
+
+  @override
   String get settingsAiSaveButton => 'Save AI settings';
 
   @override

@@ -294,6 +294,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           Row(
                             children: [
                               Expanded(
+                                child: ui.OutlineButton(
+                                  onPressed: state.aiConnectionStatus ==
+                                          SettingsAiConnectionStatus.testing
+                                      ? null
+                                      : _testAiConnection,
+                                  child: Text(
+                                    state.aiConnectionStatus ==
+                                            SettingsAiConnectionStatus.testing
+                                        ? l10n.settingsAiTestingButton
+                                        : l10n.settingsAiTestButton,
+                                  ),
+                                ),
+                              ),
+                              const Gap(12),
+                              Expanded(
                                 child: ui.PrimaryButton(
                                   onPressed: _saveAiSettings,
                                   child: Text(l10n.settingsAiSaveButton),
@@ -301,6 +316,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                             ],
                           ),
+                          if (state.aiConnectionMessage != null) ...[
+                            const Gap(12),
+                            Text(
+                              state.aiConnectionMessage!,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: switch (state.aiConnectionStatus) {
+                                  SettingsAiConnectionStatus.success =>
+                                    Colors.green.shade700,
+                                  SettingsAiConnectionStatus.failure =>
+                                    Theme.of(context).colorScheme.error,
+                                  _ => Theme.of(context).colorScheme.onSurfaceVariant,
+                                },
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -444,14 +474,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _saveAiSettings() {
-    final current = ref.read(settingsViewModelProvider).aiSettings;
     return ref.read(settingsViewModelProvider.notifier).saveAiSettings(
-          current.copyWith(
-            baseUrl: _aiBaseUrlController.text.trim(),
-            apiKey: _aiApiKeyController.text.trim(),
-            model: _aiModelController.text.trim(),
-            systemPrompt: _aiSystemPromptController.text.trim(),
-          ),
+          _buildDraftAiSettings(),
+        );
+  }
+
+  Future<void> _testAiConnection() {
+    return ref.read(settingsViewModelProvider.notifier).testAiConnection(
+          _buildDraftAiSettings(),
         );
   }
 
@@ -469,6 +499,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     controller.value = TextEditingValue(
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
+    );
+  }
+
+  AiSettings _buildDraftAiSettings() {
+    final current = ref.read(settingsViewModelProvider).aiSettings;
+    return current.copyWith(
+      baseUrl: _aiBaseUrlController.text.trim(),
+      apiKey: _aiApiKeyController.text.trim(),
+      model: _aiModelController.text.trim(),
+      systemPrompt: _aiSystemPromptController.text.trim(),
     );
   }
 }

@@ -99,6 +99,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAiSystemPromptLabel => '系统提示词';
 
   @override
+  String get settingsAiTestButton => '测试连接';
+
+  @override
+  String get settingsAiTestingButton => '测试中...';
+
+  @override
   String get settingsAiSaveButton => '保存 AI 设置';
 
   @override

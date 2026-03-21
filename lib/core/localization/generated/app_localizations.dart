@@ -278,6 +278,18 @@ abstract class AppLocalizations {
   /// **'System prompt'**
   String get settingsAiSystemPromptLabel;
 
+  /// No description provided for @settingsAiTestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test connection'**
+  String get settingsAiTestButton;
+
+  /// No description provided for @settingsAiTestingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get settingsAiTestingButton;
+
   /// No description provided for @settingsAiSaveButton.
   ///
   /// In en, this message translates to:

@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_chat_repository.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_service.dart';
 import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/shared/models/agenda_item.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:openai_dart/openai_dart.dart';
@@ -76,16 +77,7 @@ class OpenAiCompatibleAiService implements AiService {
     required List<AgendaItem> items,
   }) async* {
     final settings = _ref.read(appAiSettingsProvider);
-    if (!settings.isConfigured) {
-      throw const OpenAiConfigurationException('请先在设置页填写 AI 的 API 地址、密钥和模型。');
-    }
-
-    final client = OpenAIClient(
-      config: OpenAIConfig(
-        authProvider: ApiKeyProvider(settings.apiKey.trim()),
-        baseUrl: settings.baseUrl.trim(),
-      ),
-    );
+    final client = _buildClient(settings);
 
     final systemPrompt = _buildSystemPrompt(
       basePrompt: settings.systemPrompt,
@@ -119,6 +111,40 @@ class OpenAiCompatibleAiService implements AiService {
     } finally {
       client.close();
     }
+  }
+
+  @override
+  Future<void> validateConnection({
+    required AiSettings settings,
+  }) async {
+    final client = _buildClient(settings);
+
+    try {
+      await client.chat.completions.create(
+        ChatCompletionCreateRequest(
+          model: settings.model.trim(),
+          messages: [
+            ChatMessage.user('Ping'),
+          ],
+          maxTokens: 1,
+        ),
+      );
+    } finally {
+      client.close();
+    }
+  }
+
+  OpenAIClient _buildClient(AiSettings settings) {
+    if (!settings.isConfigured) {
+      throw const OpenAiConfigurationException('请先填写完整的 AI 地址、密钥和模型。');
+    }
+
+    return OpenAIClient(
+      config: OpenAIConfig(
+        authProvider: ApiKeyProvider(settings.apiKey.trim()),
+        baseUrl: settings.baseUrl.trim(),
+      ),
+    );
   }
 
   String _buildSystemPrompt({

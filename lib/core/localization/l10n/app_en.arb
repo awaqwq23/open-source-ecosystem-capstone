@@ -30,6 +30,8 @@
   "settingsAiApiKeyLabel": "API key",
   "settingsAiModelLabel": "Model",
   "settingsAiSystemPromptLabel": "System prompt",
+  "settingsAiTestButton": "Test connection",
+  "settingsAiTestingButton": "Testing...",
   "settingsAiSaveButton": "Save AI settings",
   "@settingsMinutesValue": {
     "placeholders": {
