@@ -641,10 +641,10 @@ class _TimelineLabel extends StatelessWidget {
               ),
               child: compact
                   ? Align(
-                      alignment: Alignment.centerRight,
+                      alignment: Alignment.center,
                       child: Text(
                         start,
-                        textAlign: TextAlign.right,
+                        textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.clip,
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -657,11 +657,11 @@ class _TimelineLabel extends StatelessWidget {
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           start,
-                          textAlign: TextAlign.right,
+                          textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w700,
@@ -679,7 +679,7 @@ class _TimelineLabel extends StatelessWidget {
                         ),
                         Text(
                           end,
-                          textAlign: TextAlign.right,
+                          textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w600,
