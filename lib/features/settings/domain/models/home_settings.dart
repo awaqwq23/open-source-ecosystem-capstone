@@ -13,6 +13,7 @@ class HomeSettings {
     required this.blockGapMinutes,
     required this.blockCount,
     required this.wideLayoutScope,
+    required this.showDemoData,
   });
 
   const HomeSettings.defaults()
@@ -20,13 +21,15 @@ class HomeSettings {
         blockDurationMinutes = 60,
         blockGapMinutes = 0,
         blockCount = 12,
-        wideLayoutScope = HomeWideLayoutScope.week;
+        wideLayoutScope = HomeWideLayoutScope.week,
+        showDemoData = false;
 
   final TimeOfDay dayStartTime;
   final int blockDurationMinutes;
   final int blockGapMinutes;
   final int blockCount;
   final HomeWideLayoutScope wideLayoutScope;
+  final bool showDemoData;
 
   HomeSettings copyWith({
     TimeOfDay? dayStartTime,
@@ -34,6 +37,7 @@ class HomeSettings {
     int? blockGapMinutes,
     int? blockCount,
     HomeWideLayoutScope? wideLayoutScope,
+    bool? showDemoData,
   }) {
     return HomeSettings(
       dayStartTime: dayStartTime ?? this.dayStartTime,
@@ -41,6 +45,7 @@ class HomeSettings {
       blockGapMinutes: blockGapMinutes ?? this.blockGapMinutes,
       blockCount: blockCount ?? this.blockCount,
       wideLayoutScope: wideLayoutScope ?? this.wideLayoutScope,
+      showDemoData: showDemoData ?? this.showDemoData,
     );
   }
 }

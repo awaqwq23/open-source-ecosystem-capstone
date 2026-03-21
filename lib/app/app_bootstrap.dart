@@ -89,6 +89,7 @@ class AppBootstrapLoader {
           'month' => HomeWideLayoutScope.month,
           _ => HomeWideLayoutScope.week,
         },
+        showDemoData: json['showDemoData'] as bool? ?? false,
       );
     } catch (_) {
       return const HomeSettings.defaults();

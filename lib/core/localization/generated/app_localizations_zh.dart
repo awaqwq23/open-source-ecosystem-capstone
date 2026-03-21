@@ -78,6 +78,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHomeBlockCount => '规划块数量';
 
   @override
+  String get settingsHomeDemoModeTitle => '演示假数据模式';
+
+  @override
+  String get settingsHomeDemoModeDescription => '开启后主页将改为展示内置假数据，便于录屏、演示和走查效果。';
+
+  @override
   String get settingsHomeWideLayout => '超宽屏默认范围';
 
   @override
@@ -219,6 +225,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeScopeMonth => '月';
+
+  @override
+  String get homeDemoBanner => '当前为演示假数据模式，主页展示的是内置示例事项。';
 
   @override
   String get listTabMyDay => '我的一天';

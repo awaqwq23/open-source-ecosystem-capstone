@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
+import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -24,6 +26,7 @@ class HomePage extends ConsumerWidget {
     final width = MediaQuery.sizeOf(context).width;
     final allowMonthLayout = width >= 1360 &&
         ResponsiveBreakpoints.of(context).largerThan(TABLET);
+    final homeSettings = ref.watch(appHomeSettingsProvider);
     final viewData = ref.watch(
       homeViewDataProvider(
         HomeViewQuery(
@@ -117,62 +120,72 @@ class HomePage extends ConsumerWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            child: _HomeGrid(
-              viewData: viewData,
-              onPrevious: () => viewModel.showPrevious(viewData.scope),
-              onNext: () => viewModel.showNext(viewData.scope),
-              onSelectCell: (date, slotIndex) => viewModel.selectCell(date, slotIndex),
-              onOpenItem: (itemId) {
-                context.push(
-                  AppRoutePaths.itemDetail,
-                  extra: ItemDetailArgs(itemId: itemId),
-                );
-              },
-              onEditItem: (item) {
-                context.push(
-                  AppRoutePaths.itemEditor,
-                  extra: ItemEditorArgs(
-                    itemId: item.item.id,
-                    prefill: ItemEditorPrefill(
-                      type: item.item.type,
-                      title: item.item.title,
-                      details: item.item.details,
-                      location: item.item.location,
-                      color: item.item.color,
-                      isAllDay: item.item.isAllDay,
-                      reminder: item.item.reminder,
-                      repeatRule: item.item.repeatRule,
-                      startAt: item.item.startAt,
-                      endAt: item.item.endAt,
-                      deadline: item.item.deadline,
-                      targetDate: item.item.targetDate,
-                      estimatedDuration: item.item.estimatedDuration,
-                      isImportant: item.item.isImportant,
-                    ),
+            child: Column(
+              children: [
+                if (homeSettings.showDemoData) ...[
+                  _DemoModeBanner(message: context.l10n.homeDemoBanner),
+                  const SizedBox(height: 10),
+                ],
+                Expanded(
+                  child: _HomeGrid(
+                    viewData: viewData,
+                    onPrevious: () => viewModel.showPrevious(viewData.scope),
+                    onNext: () => viewModel.showNext(viewData.scope),
+                    onSelectCell: (date, slotIndex) => viewModel.selectCell(date, slotIndex),
+                    onOpenItem: (itemId) {
+                      context.push(
+                        AppRoutePaths.itemDetail,
+                        extra: ItemDetailArgs(itemId: itemId),
+                      );
+                    },
+                    onEditItem: (item) {
+                      context.push(
+                        AppRoutePaths.itemEditor,
+                        extra: ItemEditorArgs(
+                          itemId: item.item.id,
+                          prefill: ItemEditorPrefill(
+                            type: item.item.type,
+                            title: item.item.title,
+                            details: item.item.details,
+                            location: item.item.location,
+                            color: item.item.color,
+                            isAllDay: item.item.isAllDay,
+                            reminder: item.item.reminder,
+                            repeatRule: item.item.repeatRule,
+                            startAt: item.item.startAt,
+                            endAt: item.item.endAt,
+                            deadline: item.item.deadline,
+                            targetDate: item.item.targetDate,
+                            estimatedDuration: item.item.estimatedDuration,
+                            isImportant: item.item.isImportant,
+                          ),
+                        ),
+                      );
+                    },
+                    onCreateFromCell: (date, slot) {
+                      context.push(
+                        AppRoutePaths.itemEditor,
+                        extra: ItemEditorPrefill(
+                          startAt: DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            slot.startMinute ~/ 60,
+                            slot.startMinute % 60,
+                          ),
+                          endAt: DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            slot.endMinute ~/ 60,
+                            slot.endMinute % 60,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-              onCreateFromCell: (date, slot) {
-                context.push(
-                  AppRoutePaths.itemEditor,
-                  extra: ItemEditorPrefill(
-                    startAt: DateTime(
-                      date.year,
-                      date.month,
-                      date.day,
-                      slot.startMinute ~/ 60,
-                      slot.startMinute % 60,
-                    ),
-                    endAt: DateTime(
-                      date.year,
-                      date.month,
-                      date.day,
-                      slot.endMinute ~/ 60,
-                      slot.endMinute % 60,
-                    ),
-                  ),
-                );
-              },
+                ),
+              ],
             ),
           ),
         ),
@@ -207,6 +220,50 @@ class HomePage extends ConsumerWidget {
             },
           ),
         );
+  }
+}
+
+class _DemoModeBanner extends StatelessWidget {
+  const _DemoModeBanner({
+    required this.message,
+  });
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            AppIcons.info,
+            size: 18,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

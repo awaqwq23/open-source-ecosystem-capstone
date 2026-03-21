@@ -208,6 +208,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                           ),
                           const Gap(12),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(context.l10n.settingsHomeDemoModeTitle),
+                            subtitle: Text(context.l10n.settingsHomeDemoModeDescription),
+                            value: state.homeSettings.showDemoData,
+                            onChanged: (value) => _saveHomeSettings(
+                              state.homeSettings.copyWith(showDemoData: value),
+                            ),
+                          ),
+                          const Gap(12),
                           Text(
                             context.l10n.settingsHomeWideLayout,
                             style: Theme.of(context).textTheme.labelLarge,

@@ -84,6 +84,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHomeBlockCount => 'Block count';
 
   @override
+  String get settingsHomeDemoModeTitle => 'Demo data mode';
+
+  @override
+  String get settingsHomeDemoModeDescription =>
+      'When enabled, the home page switches to built-in sample items for demos and walkthroughs.';
+
+  @override
   String get settingsHomeWideLayout => 'Ultra-wide default range';
 
   @override
@@ -229,6 +236,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeScopeMonth => 'Month';
+
+  @override
+  String get homeDemoBanner =>
+      'Demo data mode is enabled. The home page is showing built-in sample items.';
 
   @override
   String get listTabMyDay => 'My Day';

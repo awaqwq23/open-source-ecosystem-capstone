@@ -64,6 +64,7 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'blockGapMinutes': settings.blockGapMinutes,
         'blockCount': settings.blockCount,
         'wideLayoutScope': settings.wideLayoutScope.name,
+        'showDemoData': settings.showDemoData,
       }),
     );
   }

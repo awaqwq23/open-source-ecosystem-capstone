@@ -236,6 +236,18 @@ abstract class AppLocalizations {
   /// **'Block count'**
   String get settingsHomeBlockCount;
 
+  /// No description provided for @settingsHomeDemoModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo data mode'**
+  String get settingsHomeDemoModeTitle;
+
+  /// No description provided for @settingsHomeDemoModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, the home page switches to built-in sample items for demos and walkthroughs.'**
+  String get settingsHomeDemoModeDescription;
+
   /// No description provided for @settingsHomeWideLayout.
   ///
   /// In en, this message translates to:
@@ -517,6 +529,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Month'**
   String get homeScopeMonth;
+
+  /// No description provided for @homeDemoBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo data mode is enabled. The home page is showing built-in sample items.'**
+  String get homeDemoBanner;
 
   /// No description provided for @listTabMyDay.
   ///
