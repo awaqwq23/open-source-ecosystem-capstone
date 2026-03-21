@@ -411,9 +411,13 @@ class _HomeGridState extends State<_HomeGrid> {
   }
 
   _GridHit? _resolveHit(Offset position, _HomeGridLayout layout) {
-    final x = position.dx;
-    final y = position.dy;
-    if (y < layout.headerHeight || x < layout.timelineWidth) {
+    final localPosition = Offset(
+      position.dx - layout.horizontalPadding,
+      position.dy - layout.topPadding,
+    );
+    final x = localPosition.dx;
+    final y = localPosition.dy;
+    if (x < 0 || y < 0 || y < layout.headerHeight || x < layout.timelineWidth) {
       return null;
     }
 
@@ -570,7 +574,10 @@ class _TimelineLabel extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxHeight < 34;
           return Padding(
-            padding: const EdgeInsets.only(right: 2),
+            padding: EdgeInsets.only(
+              left: compact ? 1 : 2,
+              right: compact ? 1 : 2,
+            ),
             child: compact
                 ? Align(
                     alignment: Alignment.centerRight,
@@ -657,10 +664,9 @@ class _HomeGridLayout {
     required int columnCount,
     required int rowCount,
   }) {
-    const horizontalPadding = 4.0;
+    const horizontalPadding = 2.0;
     const topPadding = 6.0;
     const bottomPadding = 12.0;
-    const timelineWidth = 48.0;
     const columnGap = 2.0;
     const rowGap = 2.0;
     const headerHeight = 44.0;
@@ -671,6 +677,11 @@ class _HomeGridLayout {
       constraints.maxWidth - horizontalPadding * 2,
     );
     final safeColumnCount = math.max(1, columnCount);
+    final timelineWidth = switch (safeColumnCount) {
+      <= 7 => 40.0,
+      <= 14 => 38.0,
+      _ => 36.0,
+    };
     final columnWidth = math.max(
       18.0,
       (availableWidth - timelineWidth - columnGap * (safeColumnCount - 1)) / safeColumnCount,
@@ -716,7 +727,7 @@ class _HomeGridLayout {
   final double bottomPadding;
   final double itemInset;
 
-  double get timelineLabelWidth => timelineWidth - 4;
+  double get timelineLabelWidth => timelineWidth;
 
   double columnLeft(int columnIndex) {
     return timelineWidth + columnIndex * (columnWidth + columnGap);
