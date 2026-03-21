@@ -597,6 +597,7 @@ class _ListItemRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _ActionIconButton(
                     onPressed: onToggleComplete,
@@ -605,16 +606,20 @@ class _ListItemRow extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
-                            decoration:
-                                item.isCompleted ? TextDecoration.lineThrough : null,
-                          ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                              decoration:
+                                  item.isCompleted ? TextDecoration.lineThrough : null,
+                              height: 1,
+                            ),
+                      ),
                     ),
                   ),
                   if (dragIndex != null) ...[
@@ -672,6 +677,7 @@ class _CompletedToggleRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(
                   isExpanded ? AppIcons.expandLess : AppIcons.expandMore,
@@ -679,14 +685,20 @@ class _CompletedToggleRow extends StatelessWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
+                          ),
+                    ),
+                  ),
                 ),
               ],
             ),
