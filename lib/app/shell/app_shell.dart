@@ -9,7 +9,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends StatelessWidget {
-  static const _compactNavBarHeight = 72.0;
+  static const _compactNavBarHeight = 84.0;
 
   const AppShell({
     required this.navigationShell,
@@ -34,10 +34,7 @@ class AppShell extends StatelessWidget {
     if (isCompact) {
       return ui.Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        footers: [
-          const ui.Divider(),
-          _buildNavigationBar(context, destinations, current),
-        ],
+        footers: [_buildNavigationBar(context, destinations, current)],
         child: _buildAnimatedContent(current),
       );
     }
@@ -92,7 +89,7 @@ class AppShell extends StatelessWidget {
       labelType: ui.NavigationLabelType.all,
       expanded: true,
       expandedSize: _compactNavBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       spacing: 4,
       selectedKey: ValueKey(current.route),
       onSelected: (key) {
