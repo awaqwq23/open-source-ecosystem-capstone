@@ -702,22 +702,32 @@ class _EmptyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dividerColor = Color.alphaBlend(
+      theme.colorScheme.outline.withValues(alpha: 0.52),
+      theme.colorScheme.surface,
+    );
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
-              width: 1,
-            ),
-            bottom: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
-              width: 1,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              height: 1,
+              color: dividerColor,
             ),
           ),
-        ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: 1,
+              color: dividerColor,
+            ),
+          ),
+        ],
       ),
     );
   }
