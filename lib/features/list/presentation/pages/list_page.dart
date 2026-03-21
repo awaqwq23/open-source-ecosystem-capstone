@@ -87,7 +87,7 @@ class ListPage extends ConsumerWidget {
                       horizontalPadding,
                       topPadding,
                       horizontalPadding,
-                      bottomPadding,
+                      0,
                     ),
                     child: Center(
                       child: ConstrainedBox(
