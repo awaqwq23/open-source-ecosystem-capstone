@@ -566,40 +566,61 @@ class _TimelineLabel extends StatelessWidget {
       top: top,
       width: width,
       height: height,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 2),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              start,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                height: 0.92,
-                fontSize: 10.5,
-              ),
-            ),
-            Container(
-              width: math.min(14, width * 0.34),
-              height: 1,
-              margin: const EdgeInsets.symmetric(vertical: 2),
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
-            ),
-            Text(
-              end,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w600,
-                height: 0.92,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight < 34;
+          return Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: compact
+                ? Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      start,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        height: 0.92,
+                        fontSize: 10,
+                      ),
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        start,
+                        textAlign: TextAlign.right,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          height: 0.92,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                      Container(
+                        width: math.min(14, width * 0.34),
+                        height: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
+                      ),
+                      Text(
+                        end,
+                        textAlign: TextAlign.right,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w600,
+                          height: 0.92,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        },
       ),
     );
   }
@@ -805,6 +826,7 @@ class _AgendaBlock extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final compactHeight = constraints.maxHeight < 36;
+                final ultraCompactHeight = constraints.maxHeight < 28;
                 final showDetails =
                     constraints.maxHeight >= 60 && item.item.details.isNotEmpty;
                 final titleMaxLines = constraints.maxHeight < 34
@@ -826,32 +848,43 @@ class _AgendaBlock extends StatelessWidget {
                     style: theme.textTheme.bodySmall!.copyWith(
                       color: accent.withValues(alpha: 0.96),
                       fontWeight: FontWeight.w700,
-                      height: compactHeight ? 1 : 1.12,
+                      height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                     ),
-                    child: Column(
-                      mainAxisAlignment:
-                          compactHeight ? MainAxisAlignment.center : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.item.title,
-                          maxLines: titleMaxLines,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (showDetails) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            item.item.details,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: accent.withValues(alpha: 0.84),
-                              fontWeight: FontWeight.w600,
+                    child: ultraCompactHeight
+                        ? Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              item.item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: compactHeight
+                                ? MainAxisAlignment.center
+                                : MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.item.title,
+                                maxLines: titleMaxLines,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (showDetails) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.item.details,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: accent.withValues(alpha: 0.84),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ],
-                    ),
                   ),
                 );
               },
