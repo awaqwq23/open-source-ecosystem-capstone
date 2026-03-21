@@ -18,7 +18,7 @@ abstract final class HomeGridMetrics {
     required double minimumColumnWidth,
   }) {
     final safeColumnCount = math.max(1, columnCount);
-    final usableWidth = math.max(0.0, availableWidth - columnGap * (safeColumnCount - 1));
+    final usableWidth = math.max(0.0, availableWidth - columnGap * safeColumnCount);
     final calculatedWidth = usableWidth / (safeColumnCount + timelineWidthFactor);
     return math.max(minimumColumnWidth, calculatedWidth);
   }

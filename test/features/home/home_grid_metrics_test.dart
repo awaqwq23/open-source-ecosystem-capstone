@@ -24,7 +24,7 @@ void main() {
     );
     final timelineWidth = HomeGridMetrics.computeTimelineWidth(cellWidth: columnWidth);
     final occupiedWidth =
-        timelineWidth + columnWidth * columnCount + columnGap * (columnCount - 1);
+        timelineWidth + columnWidth * columnCount + columnGap * columnCount;
 
     expect(occupiedWidth, closeTo(availableWidth, 0.0001));
   });

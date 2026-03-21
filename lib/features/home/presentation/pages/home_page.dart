@@ -461,7 +461,10 @@ class _HomeGridState extends State<_HomeGrid> {
     }
     final columnLeft = layout.columnLeft(columnIndex);
     final rowTop = layout.rowTop(rowIndex);
-    if (x > columnLeft + layout.cellSize || y > rowTop + layout.cellSize) {
+    if (x < columnLeft ||
+        x > columnLeft + layout.cellSize ||
+        y < rowTop ||
+        y > rowTop + layout.cellSize) {
       return null;
     }
     return _CellHit(widget.viewData.columns[columnIndex].date, rowIndex);
@@ -751,7 +754,7 @@ class _HomeGridLayout {
         ? 0.0
         : safeRowCount * cellSize + (safeRowCount - 1) * rowGap;
     final contentWidth =
-        timelineWidth + safeColumnCount * columnWidth + (safeColumnCount - 1) * columnGap;
+        timelineWidth + safeColumnCount * columnWidth + safeColumnCount * columnGap;
 
     return _HomeGridLayout(
       timelineWidth: timelineWidth,
@@ -796,7 +799,7 @@ class _HomeGridLayout {
   }
 
   double columnLeft(int columnIndex) {
-    return timelineWidth + columnIndex * (columnWidth + columnGap);
+    return timelineWidth + columnGap + columnIndex * (columnWidth + columnGap);
   }
 
   double rowTop(int rowIndex) {
@@ -1025,7 +1028,7 @@ abstract final class _HomeGridLayoutSpec {
   static const contentBottomPadding = 6.0;
   static const columnGap = 2.0;
   static const rowGap = 2.0;
-  static const headerHeight = 44.0;
+  static const headerHeight = 40.0;
   static const headerCellHeight = 38.0;
   static const minimumColumnWidth = 18.0;
   static const minimumItemWidth = 16.0;
