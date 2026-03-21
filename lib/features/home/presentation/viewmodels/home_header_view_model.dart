@@ -1,8 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/features/home/data/home_demo_items.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/build_home_grid.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/layout_home_items.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
 class HomeHeaderState {
@@ -35,12 +36,15 @@ enum HomeHeaderScope { week, month }
 class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
   static const _gridBuilder = BuildHomeGridUseCase();
   static const _itemLayoutBuilder = LayoutHomeItemsUseCase();
+  static const _demoItemsSource = HomeDemoItemsSource();
 
   @override
   HomeHeaderState build() {
+    final now = DateUtils.dateOnly(DateTime.now());
     return HomeHeaderState(
-      anchor: DateTime(2026, 3, 20),
+      anchor: now,
       scope: HomeHeaderScope.week,
+      selectedDate: now,
     );
   }
 
@@ -78,12 +82,32 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
     state = state.copyWith(selectedDate: DateTime(date.year, date.month, date.day));
   }
 
+  void jumpToDate(DateTime date) {
+    final normalized = DateUtils.dateOnly(date);
+    state = state.copyWith(
+      anchor: normalized,
+      selectedDate: normalized,
+    );
+  }
+
   DateTimeRangeValue visibleRange() {
     return _gridBuilder.build(
+      localeTag: 'zh',
       anchor: state.anchor,
       scope: state.scope,
+      selectedDate: state.selectedDate,
       items: const [],
     ).visibleRange;
+  }
+
+  List<HomeLaidOutItem> buildLaidOutItems(List<HomeTimeSlot> timeSlots) {
+    final range = visibleRange();
+    final items = _demoItemsSource.buildForWeek(range.start);
+    return _itemLayoutBuilder.build(
+      items: items,
+      visibleRange: range,
+      timeSlots: timeSlots,
+    );
   }
 }
 
@@ -92,17 +116,23 @@ final homeHeaderViewModelProvider =
   HomeHeaderViewModel.new,
 );
 
-final homeViewDataProvider = Provider<HomeViewData>((ref) {
+final homeViewDataProvider = Provider.family<HomeViewData, String>((ref, localeTag) {
   final state = ref.watch(homeHeaderViewModelProvider);
-  final items = ref.watch(agendaItemRepositoryProvider);
-  final range = ref.read(homeHeaderViewModelProvider.notifier).visibleRange();
-  final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
-    items: items,
-    visibleRange: range,
-  );
-  return HomeHeaderViewModel._gridBuilder.build(
+  final previewGrid = HomeHeaderViewModel._gridBuilder.build(
+    localeTag: localeTag,
     anchor: state.anchor,
     scope: state.scope,
+    selectedDate: state.selectedDate,
+    items: const [],
+  );
+  final laidOutItems = ref
+      .read(homeHeaderViewModelProvider.notifier)
+      .buildLaidOutItems(previewGrid.timeSlots);
+  return HomeHeaderViewModel._gridBuilder.build(
+    localeTag: localeTag,
+    anchor: state.anchor,
+    scope: state.scope,
+    selectedDate: state.selectedDate,
     items: laidOutItems,
   );
 });

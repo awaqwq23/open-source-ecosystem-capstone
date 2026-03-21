@@ -11,53 +11,57 @@ class LayoutHomeItemsUseCase {
   List<HomeLaidOutItem> build({
     required List<AgendaItem> items,
     required DateTimeRangeValue visibleRange,
+    required List<HomeTimeSlot> timeSlots,
   }) {
+    if (timeSlots.isEmpty) {
+      return const [];
+    }
+
     final visibleItems = [
       for (final item in items)
         if (_isVisible(item, visibleRange)) item,
     ]..sort((left, right) => left.startAt.compareTo(right.startAt));
 
+    final dayStartMinute = timeSlots.first.startMinute;
+    final totalMinutes = timeSlots.last.endMinute - dayStartMinute;
+    if (totalMinutes <= 0) {
+      return const [];
+    }
+
     return [
       for (final item in visibleItems)
-        HomeLaidOutItem(
-          item: item,
-          startFraction: _startFraction(item, visibleRange),
-          endFraction: _endFraction(item, visibleRange),
-          opacity: _opacity(item, visibleItems),
-        ),
+        () {
+          final start = item.startAt.isBefore(visibleRange.start)
+              ? visibleRange.start
+              : item.startAt;
+          final end = item.endAt.isAfter(visibleRange.end) ? visibleRange.end : item.endAt;
+          final columnIndex = start.difference(visibleRange.start).inDays;
+          final startMinute = start.hour * 60 + start.minute;
+          final endMinute = end.hour * 60 + end.minute;
+          final normalizedStartMinute = math.max(dayStartMinute, startMinute);
+          final normalizedEndMinute = math.min(dayStartMinute + totalMinutes, endMinute);
+          final top = (normalizedStartMinute - dayStartMinute) / totalMinutes;
+          final height = math.max(
+            0.06,
+            (normalizedEndMinute - normalizedStartMinute) / totalMinutes,
+          );
+          return HomeLaidOutItem(
+            item: item,
+            columnIndex: columnIndex,
+            startMinute: normalizedStartMinute,
+            endMinute: normalizedEndMinute,
+            top: top,
+            height: height,
+            opacity: _opacity(item, visibleItems),
+          );
+        }(),
     ];
   }
 
   bool _isVisible(AgendaItem item, DateTimeRangeValue visibleRange) {
-    if (item.type == ItemType.memo) {
-      return !item.targetDate.isBefore(visibleRange.start) &&
-          item.targetDate.isBefore(visibleRange.end);
-    }
-    return item.endAt.isAfter(visibleRange.start) && item.startAt.isBefore(visibleRange.end);
-  }
-
-  double _startFraction(AgendaItem item, DateTimeRangeValue visibleRange) {
-    final total = visibleRange.end.difference(visibleRange.start).inMinutes;
-    if (total <= 0) {
-      return 0;
-    }
-    final normalized = math.max(
-      0,
-      item.startAt.difference(visibleRange.start).inMinutes,
-    );
-    return normalized / total;
-  }
-
-  double _endFraction(AgendaItem item, DateTimeRangeValue visibleRange) {
-    final total = visibleRange.end.difference(visibleRange.start).inMinutes;
-    if (total <= 0) {
-      return 1;
-    }
-    final normalized = math.min(
-      total,
-      item.endAt.difference(visibleRange.start).inMinutes,
-    );
-    return normalized / total;
+    return item.type != ItemType.memo &&
+        item.endAt.isAfter(visibleRange.start) &&
+        item.startAt.isBefore(visibleRange.end);
   }
 
   double _opacity(AgendaItem target, List<AgendaItem> items) {
