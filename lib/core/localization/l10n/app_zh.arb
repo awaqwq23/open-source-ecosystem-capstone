@@ -17,6 +17,21 @@
   "settingsTitle": "设置",
   "settingsDescription": "这里将承载全局、主页、列表页和 AI 的设置入口。",
   "settingsQuickActionsTitle": "快捷定位",
+  "settingsHomeSectionTitle": "主页设置",
+  "settingsHomeSectionDescription": "配置主页的时间块切分规则，以及超宽屏默认显示的时间范围。",
+  "settingsHomeDayStart": "每天开始规划时间",
+  "settingsHomeBlockDuration": "单个规划块时长",
+  "settingsHomeBlockGap": "规划块间隔",
+  "settingsHomeBlockCount": "规划块数量",
+  "settingsHomeWideLayout": "超宽屏默认范围",
+  "@settingsMinutesValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsMinutesValue": "{value} 分钟",
   "detailTitle": "事项详情",
   "detailDescription": "展示单个事项的完整信息与快捷操作。",
   "detailMissing": "没有找到这个事项，可能已经被删除。",

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
-import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:intl/intl.dart';
 
@@ -10,34 +10,57 @@ class BuildHomeGridUseCase {
   HomeViewData build({
     required String localeTag,
     required DateTime anchor,
-    required HomeHeaderScope scope,
+    required HomeDisplayScope scope,
     required DateTime? selectedDate,
+    required HomeCellSelection? selectedCell,
+    required HomeSettings settings,
     required List<HomeLaidOutItem> items,
   }) {
-    final visibleRange = _visibleRange(anchor, scope);
-    final timeSlots = _buildTimeSlots(anchor);
+    final visibleRange = visibleDateRange(anchor, scope);
+    final periodSelection = HomePeriodSelection(
+      anchor: visibleRange.start,
+      scope: scope,
+    );
+    final timeSlots = _buildTimeSlots(
+      anchor: visibleRange.start,
+      localeTag: localeTag,
+      settings: settings,
+    );
     final columns = _buildColumns(
       visibleRange,
       selectedDate: selectedDate,
       localeTag: localeTag,
     );
-    final metrics = _buildMetrics(timeSlots);
+    final metrics = _buildMetrics(timeSlots, dayCount: columns.length);
     return HomeViewData(
-      periodLabel: _formatPeriodLabel(anchor, localeTag),
-      periodSubtitle: _formatPeriodSubtitle(anchor, localeTag),
+      scope: scope,
+      periodLabel: _formatPeriodLabel(
+        visibleRange: visibleRange,
+        scope: scope,
+        localeTag: localeTag,
+      ),
+      periodSubtitle: _formatPeriodSubtitle(
+        visibleRange: visibleRange,
+        scope: scope,
+        localeTag: localeTag,
+      ),
       metrics: metrics,
       visibleRange: visibleRange,
+      periodSelection: periodSelection,
+      selectedCell: selectedCell,
       columns: columns,
       timeSlots: timeSlots,
       items: items,
     );
   }
 
-  DateTimeRangeValue _visibleRange(DateTime anchor, HomeHeaderScope scope) {
-    if (scope == HomeHeaderScope.month) {
+  DateTimeRangeValue visibleDateRange(DateTime anchor, HomeDisplayScope scope) {
+    if (scope == HomeDisplayScope.month) {
       final start = DateTime(anchor.year, anchor.month, 1);
-      final end = DateTime(anchor.year, anchor.month + 1, 1);
-      return DateTimeRangeValue(start: start, end: end);
+      return DateTimeRangeValue(
+        start: start,
+        end: DateTime(anchor.year, anchor.month + 1, 1),
+      );
     }
 
     final weekdayOffset = anchor.weekday - DateTime.monday;
@@ -48,22 +71,63 @@ class BuildHomeGridUseCase {
     );
   }
 
+  List<HomeTimeSlot> _buildTimeSlots({
+    required DateTime anchor,
+    required String localeTag,
+    required HomeSettings settings,
+  }) {
+    final base = DateUtils.dateOnly(anchor);
+    final startMinute = settings.dayStartTime.hour * 60 + settings.dayStartTime.minute;
+    final localeIsChinese = localeTag.startsWith('zh');
+
+    return [
+      for (var index = 0; index < settings.blockCount; index++)
+        () {
+          final slotStartMinute = startMinute +
+              index * (settings.blockDurationMinutes + settings.blockGapMinutes);
+          final slotEndMinute = slotStartMinute + settings.blockDurationMinutes;
+          final start = DateTime(
+            base.year,
+            base.month,
+            base.day,
+            slotStartMinute ~/ 60,
+            slotStartMinute % 60,
+          );
+          final end = DateTime(
+            base.year,
+            base.month,
+            base.day,
+            slotEndMinute ~/ 60,
+            slotEndMinute % 60,
+          );
+          final startLabel = _formatMinute(slotStartMinute);
+          final endLabel = _formatMinute(slotEndMinute);
+          return HomeTimeSlot(
+            label: '$startLabel~$endLabel',
+            shortLabel: localeIsChinese ? '第${index + 1}块' : 'Block ${index + 1}',
+            start: start,
+            end: end,
+            startMinute: slotStartMinute,
+            endMinute: slotEndMinute,
+            index: index,
+          );
+        }(),
+    ];
+  }
+
   List<HomeDayColumn> _buildColumns(
-    DateTimeRangeValue visibleRange,
-    {
+    DateTimeRangeValue visibleRange, {
     required DateTime? selectedDate,
     required String localeTag,
-  }
-  ) {
+  }) {
     final dayCount = visibleRange.end.difference(visibleRange.start).inDays;
     final today = DateUtils.dateOnly(DateTime.now());
-    final normalizedSelected = selectedDate == null
-        ? null
-        : DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    final weekdayFormatter = localeTag.startsWith('zh')
-        ? DateFormat('E', localeTag)
-        : DateFormat('EEE', localeTag);
-    final dateFormatter = DateFormat('M-d', localeTag);
+    final normalizedSelected = selectedDate == null ? null : DateUtils.dateOnly(selectedDate);
+    final weekdayFormatter =
+        localeTag.startsWith('zh') ? DateFormat('E', localeTag) : DateFormat('EEE', localeTag);
+    final dateFormatter = localeTag.startsWith('zh')
+        ? DateFormat('M/d', localeTag)
+        : DateFormat('M/d', localeTag);
 
     return [
       for (var index = 0; index < dayCount; index++)
@@ -79,92 +143,89 @@ class BuildHomeGridUseCase {
             dateLabel: dateFormatter.format(date),
             isToday: normalizedDate == today,
             isSelected: normalizedSelected == normalizedDate,
-            emphasize: date.weekday == DateTime.saturday,
+            emphasize: date.weekday == DateTime.saturday || date.weekday == DateTime.sunday,
           );
         }(),
     ];
   }
 
-  List<HomeTimeSlot> _buildTimeSlots(DateTime anchor) {
-    final base = DateTime(anchor.year, anchor.month, anchor.day);
-    const slots = <({int startHour, int startMinute, int endHour, int endMinute})>[
-      (startHour: 8, startMinute: 0, endHour: 8, endMinute: 45),
-      (startHour: 8, startMinute: 50, endHour: 9, endMinute: 35),
-      (startHour: 9, startMinute: 50, endHour: 10, endMinute: 35),
-      (startHour: 10, startMinute: 40, endHour: 11, endMinute: 25),
-      (startHour: 11, startMinute: 30, endHour: 12, endMinute: 15),
-      (startHour: 14, startMinute: 5, endHour: 14, endMinute: 50),
-      (startHour: 14, startMinute: 55, endHour: 15, endMinute: 40),
-      (startHour: 15, startMinute: 45, endHour: 16, endMinute: 30),
-      (startHour: 16, startMinute: 40, endHour: 17, endMinute: 25),
-      (startHour: 17, startMinute: 30, endHour: 18, endMinute: 15),
-      (startHour: 18, startMinute: 30, endHour: 19, endMinute: 15),
-      (startHour: 19, startMinute: 20, endHour: 20, endMinute: 5),
-      (startHour: 20, startMinute: 10, endHour: 20, endMinute: 55),
-    ];
-
-    return [
-      for (final slot in slots)
-        HomeTimeSlot(
-          label:
-              '${_pad(slot.startHour)}:${_pad(slot.startMinute)}\n${_pad(slot.endHour)}:${_pad(slot.endMinute)}',
-          start: DateTime(
-            base.year,
-            base.month,
-            base.day,
-            slot.startHour,
-            slot.startMinute,
-          ),
-          end: DateTime(
-            base.year,
-            base.month,
-            base.day,
-            slot.endHour,
-            slot.endMinute,
-          ),
-          startMinute: slot.startHour * 60 + slot.startMinute,
-          endMinute: slot.endHour * 60 + slot.endMinute,
-        ),
-    ];
-  }
-
-  HomeLayoutMetrics _buildMetrics(List<HomeTimeSlot> timeSlots) {
-    final totalMinutes = timeSlots.last.endMinute - timeSlots.first.startMinute;
+  HomeLayoutMetrics _buildMetrics(List<HomeTimeSlot> timeSlots, {required int dayCount}) {
+    if (timeSlots.isEmpty) {
+      return const HomeLayoutMetrics(
+        startMinuteOfDay: 0,
+        totalMinutes: 0,
+        endMinuteOfDay: 0,
+        dayCount: 0,
+        blockCount: 0,
+      );
+    }
+    final startMinute = timeSlots.first.startMinute;
+    final endMinute = timeSlots.last.endMinute;
     return HomeLayoutMetrics(
-      columnWidth: 72,
-      columnGap: 8,
-      timelineWidth: 44,
-      startMinuteOfDay: timeSlots.first.startMinute,
-      totalMinutes: totalMinutes,
+      startMinuteOfDay: startMinute,
+      totalMinutes: endMinute - startMinute,
+      endMinuteOfDay: endMinute,
+      dayCount: dayCount,
+      blockCount: timeSlots.length,
     );
   }
 
-  String _formatPeriodLabel(DateTime anchor, String localeTag) {
-    final monday = DateUtils.dateOnly(
-      anchor.subtract(Duration(days: anchor.weekday - DateTime.monday)),
-    );
-    final weekNumber = _weekOfYear(monday);
-    if (localeTag.startsWith('zh')) {
-      return '第$weekNumber周';
+  String _formatPeriodLabel({
+    required DateTimeRangeValue visibleRange,
+    required HomeDisplayScope scope,
+    required String localeTag,
+  }) {
+    if (scope == HomeDisplayScope.month) {
+      return localeTag.startsWith('zh')
+          ? '${visibleRange.start.year}年${visibleRange.start.month}月'
+          : DateFormat.yMMMM(localeTag).format(visibleRange.start);
     }
-    return 'Week $weekNumber';
+
+    final weekStart = visibleRange.start;
+    final weekEnd = visibleRange.end.subtract(const Duration(days: 1));
+    if (localeTag.startsWith('zh')) {
+      if (weekStart.month == weekEnd.month) {
+        return '${weekStart.year}年${weekStart.month}月第${_weekOfMonth(weekStart)}周';
+      }
+      return '${weekStart.year}年第${_weekOfYear(weekStart)}周';
+    }
+    if (weekStart.month == weekEnd.month) {
+      return 'Week ${_weekOfMonth(weekStart)} of ${DateFormat.yMMMM(localeTag).format(weekStart)}';
+    }
+    return 'Week ${_weekOfYear(weekStart)} of ${weekStart.year}';
   }
 
-  String _formatPeriodSubtitle(DateTime anchor, String localeTag) {
-    final monday = DateUtils.dateOnly(
-      anchor.subtract(Duration(days: anchor.weekday - DateTime.monday)),
-    );
+  String _formatPeriodSubtitle({
+    required DateTimeRangeValue visibleRange,
+    required HomeDisplayScope scope,
+    required String localeTag,
+  }) {
     final formatter = DateFormat('M/d', localeTag);
-    final sunday = monday.add(const Duration(days: 6));
-    final isCurrentWeek = _isSameWeek(monday, DateTime.now());
-    if (localeTag.startsWith('zh')) {
-      return isCurrentWeek
-          ? '本周 · ${formatter.format(monday)}-${formatter.format(sunday)}'
-          : '${formatter.format(monday)}-${formatter.format(sunday)}';
+    if (scope == HomeDisplayScope.month) {
+      return localeTag.startsWith('zh')
+          ? '${visibleRange.start.day}-${visibleRange.end.subtract(const Duration(days: 1)).day}日'
+          : formatter.format(visibleRange.start);
     }
-    return isCurrentWeek
-        ? 'This week · ${formatter.format(monday)}-${formatter.format(sunday)}'
-        : '${formatter.format(monday)}-${formatter.format(sunday)}';
+
+    final end = visibleRange.end.subtract(const Duration(days: 1));
+    if (localeTag.startsWith('zh')) {
+      return '${formatter.format(visibleRange.start)}-${formatter.format(end)}';
+    }
+    return '${formatter.format(visibleRange.start)}-${formatter.format(end)}';
+  }
+
+  String _formatMinute(int minute) {
+    final normalizedHour = minute ~/ 60;
+    final normalizedMinute = minute % 60;
+    final hourText = normalizedHour.toString().padLeft(2, '0');
+    final minuteText = normalizedMinute.toString().padLeft(2, '0');
+    return '$hourText:$minuteText';
+  }
+
+  int _weekOfMonth(DateTime date) {
+    final firstDay = DateTime(date.year, date.month, 1);
+    final offset = firstDay.weekday - DateTime.monday;
+    return ((date.day + offset - 1) ~/ 7) + 1;
   }
 
   int _weekOfYear(DateTime date) {
@@ -173,18 +234,6 @@ class BuildHomeGridUseCase {
     final dayOfYear = date.difference(firstDay).inDays + 1;
     return ((dayOfYear + offset - 1) ~/ 7) + 1;
   }
-
-  bool _isSameWeek(DateTime left, DateTime right) {
-    final leftMonday = DateUtils.dateOnly(
-      left.subtract(Duration(days: left.weekday - DateTime.monday)),
-    );
-    final rightMonday = DateUtils.dateOnly(
-      right.subtract(Duration(days: right.weekday - DateTime.monday)),
-    );
-    return leftMonday == rightMonday;
-  }
-
-  String _pad(int value) => value.toString().padLeft(2, '0');
 
   String _weekdayLabel(int weekday) {
     return switch (weekday) {

@@ -200,6 +200,22 @@ abstract class AppLocalizations {
   /// **'Quick access'**
   String get settingsQuickActionsTitle;
 
+  String get settingsHomeSectionTitle;
+
+  String get settingsHomeSectionDescription;
+
+  String get settingsHomeDayStart;
+
+  String get settingsHomeBlockDuration;
+
+  String get settingsHomeBlockGap;
+
+  String get settingsHomeBlockCount;
+
+  String get settingsHomeWideLayout;
+
+  String settingsMinutesValue(int value);
+
   /// No description provided for @detailTitle.
   ///
   /// In en, this message translates to:

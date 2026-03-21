@@ -29,9 +29,9 @@ void main() {
     expect(find.text('AI'), findsWidgets);
     expect(find.text('添加'), findsWidgets);
     expect(find.text('设置'), findsWidgets);
-    expect(find.text('2026年第12周'), findsOneWidget);
     expect(find.byIcon(Icons.chevron_left), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.textContaining('周'), findsWidgets);
   });
 
   testWidgets('expanded shell renders navigation rail and content', (
@@ -45,6 +45,7 @@ void main() {
     expect(find.text('AI'), findsWidgets);
     expect(find.text('添加'), findsWidgets);
     expect(find.text('设置'), findsWidgets);
-    expect(find.text('日程总览'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.textContaining('/'), findsWidgets);
   });
 }

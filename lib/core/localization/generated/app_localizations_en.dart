@@ -65,6 +65,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsQuickActionsTitle => 'Quick access';
 
   @override
+  String get settingsHomeSectionTitle => 'Home settings';
+
+  @override
+  String get settingsHomeSectionDescription =>
+      'Configure the home grid time blocks and the default range on ultra-wide screens.';
+
+  @override
+  String get settingsHomeDayStart => 'Day start time';
+
+  @override
+  String get settingsHomeBlockDuration => 'Block duration';
+
+  @override
+  String get settingsHomeBlockGap => 'Gap between blocks';
+
+  @override
+  String get settingsHomeBlockCount => 'Block count';
+
+  @override
+  String get settingsHomeWideLayout => 'Ultra-wide default range';
+
+  @override
+  String settingsMinutesValue(int value) => '$value min';
+
+  @override
   String get detailTitle => 'Item Detail';
 
   @override

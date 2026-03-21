@@ -60,6 +60,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsQuickActionsTitle => '快捷定位';
 
   @override
+  String get settingsHomeSectionTitle => '主页设置';
+
+  @override
+  String get settingsHomeSectionDescription => '配置主页的时间块切分规则，以及超宽屏默认显示的时间范围。';
+
+  @override
+  String get settingsHomeDayStart => '每天开始规划时间';
+
+  @override
+  String get settingsHomeBlockDuration => '单个规划块时长';
+
+  @override
+  String get settingsHomeBlockGap => '规划块间隔';
+
+  @override
+  String get settingsHomeBlockCount => '规划块数量';
+
+  @override
+  String get settingsHomeWideLayout => '超宽屏默认范围';
+
+  @override
+  String settingsMinutesValue(int value) => '$value 分钟';
+
+  @override
   String get detailTitle => '事项详情';
 
   @override

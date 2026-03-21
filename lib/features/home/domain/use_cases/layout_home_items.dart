@@ -23,38 +23,42 @@ class LayoutHomeItemsUseCase {
     ]..sort((left, right) => left.startAt.compareTo(right.startAt));
 
     final dayStartMinute = timeSlots.first.startMinute;
-    final totalMinutes = timeSlots.last.endMinute - dayStartMinute;
-    if (totalMinutes <= 0) {
+    final dayEndMinute = timeSlots.last.endMinute;
+    if (dayEndMinute <= dayStartMinute) {
       return const [];
     }
 
+    final segments = <_ItemSegment>[];
+    for (final item in visibleItems) {
+      segments.addAll(
+        _segmentsForItem(
+          item: item,
+          visibleRange: visibleRange,
+          dayStartMinute: dayStartMinute,
+          dayEndMinute: dayEndMinute,
+        ),
+      );
+    }
+
+    final overlapsBySegment = _maxOverlapBySegment(segments);
+
     return [
-      for (final item in visibleItems)
-        () {
-          final start = item.startAt.isBefore(visibleRange.start)
-              ? visibleRange.start
-              : item.startAt;
-          final end = item.endAt.isAfter(visibleRange.end) ? visibleRange.end : item.endAt;
-          final columnIndex = start.difference(visibleRange.start).inDays;
-          final startMinute = start.hour * 60 + start.minute;
-          final endMinute = end.hour * 60 + end.minute;
-          final normalizedStartMinute = math.max(dayStartMinute, startMinute);
-          final normalizedEndMinute = math.min(dayStartMinute + totalMinutes, endMinute);
-          final top = (normalizedStartMinute - dayStartMinute) / totalMinutes;
-          final height = math.max(
-            0.06,
-            (normalizedEndMinute - normalizedStartMinute) / totalMinutes,
-          );
-          return HomeLaidOutItem(
-            item: item,
-            columnIndex: columnIndex,
-            startMinute: normalizedStartMinute,
-            endMinute: normalizedEndMinute,
-            top: top,
-            height: height,
-            opacity: _opacity(item, visibleItems),
-          );
-        }(),
+      for (final segment in segments)
+        HomeLaidOutItem(
+          item: segment.item,
+          columnIndex: segment.columnIndex,
+          startMinute: segment.startMinute,
+          endMinute: segment.endMinute,
+          top: (segment.startMinute - dayStartMinute) / (dayEndMinute - dayStartMinute),
+          height: math.max(
+            0.04,
+            (segment.endMinute - segment.startMinute) / (dayEndMinute - dayStartMinute),
+          ),
+          opacity: 1 / (overlapsBySegment[segment.key] ?? 1),
+          left: 0,
+          width: 1,
+          maxOverlap: overlapsBySegment[segment.key] ?? 1,
+        ),
     ];
   }
 
@@ -64,24 +68,94 @@ class LayoutHomeItemsUseCase {
         item.startAt.isBefore(visibleRange.end);
   }
 
-  double _opacity(AgendaItem target, List<AgendaItem> items) {
-    var maxOverlap = 1;
-    for (final current in items) {
-      if (!_overlaps(target, current)) {
+  List<_ItemSegment> _segmentsForItem({
+    required AgendaItem item,
+    required DateTimeRangeValue visibleRange,
+    required int dayStartMinute,
+    required int dayEndMinute,
+  }) {
+    final clippedStart = item.startAt.isBefore(visibleRange.start)
+        ? visibleRange.start
+        : item.startAt;
+    final clippedEnd = item.endAt.isAfter(visibleRange.end) ? visibleRange.end : item.endAt;
+    final firstDate = DateTime(clippedStart.year, clippedStart.month, clippedStart.day);
+    final lastMoment = clippedEnd.subtract(const Duration(milliseconds: 1));
+    final lastDate = DateTime(lastMoment.year, lastMoment.month, lastMoment.day);
+    final totalDays = lastDate.difference(firstDate).inDays;
+
+    final segments = <_ItemSegment>[];
+    for (var index = 0; index <= totalDays; index++) {
+      final currentDate = firstDate.add(Duration(days: index));
+      final dayStart = DateTime(currentDate.year, currentDate.month, currentDate.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      final segmentStart = clippedStart.isAfter(dayStart) ? clippedStart : dayStart;
+      final segmentEnd = clippedEnd.isBefore(dayEnd) ? clippedEnd : dayEnd;
+      final startMinute = math.max(dayStartMinute, segmentStart.hour * 60 + segmentStart.minute);
+      final endMinute = math.min(dayEndMinute, segmentEnd.hour * 60 + segmentEnd.minute);
+      if (endMinute <= dayStartMinute || startMinute >= dayEndMinute || endMinute <= startMinute) {
         continue;
       }
-      var overlapCount = 0;
-      for (final other in items) {
-        if (_overlaps(current, other)) {
-          overlapCount += 1;
-        }
-      }
-      maxOverlap = math.max(maxOverlap, overlapCount);
+      segments.add(
+        _ItemSegment(
+          item: item,
+          columnIndex: currentDate.difference(visibleRange.start).inDays,
+          startMinute: startMinute,
+          endMinute: endMinute,
+        ),
+      );
     }
-    return 1 / maxOverlap;
+    return segments;
   }
 
-  bool _overlaps(AgendaItem left, AgendaItem right) {
-    return left.startAt.isBefore(right.endAt) && right.startAt.isBefore(left.endAt);
+  Map<String, int> _maxOverlapBySegment(List<_ItemSegment> segments) {
+    final grouped = <int, List<_ItemSegment>>{};
+    for (final segment in segments) {
+      grouped.putIfAbsent(segment.columnIndex, () => []).add(segment);
+    }
+
+    final overlapByItem = <String, int>{};
+    for (final entry in grouped.entries) {
+      final daySegments = entry.value;
+      final breakpoints = <int>{};
+      for (final segment in daySegments) {
+        breakpoints
+          ..add(segment.startMinute)
+          ..add(segment.endMinute);
+      }
+      final sortedPoints = breakpoints.toList()..sort();
+      for (var index = 0; index < sortedPoints.length - 1; index++) {
+        final probeMinute = sortedPoints[index];
+        final active = [
+          for (final segment in daySegments)
+            if (segment.startMinute <= probeMinute && probeMinute < segment.endMinute) segment,
+        ];
+        if (active.isEmpty) {
+          continue;
+        }
+        for (final segment in active) {
+          overlapByItem[segment.key] = math.max(
+            overlapByItem[segment.key] ?? 1,
+            active.length,
+          );
+        }
+      }
+    }
+    return overlapByItem;
   }
+}
+
+class _ItemSegment {
+  const _ItemSegment({
+    required this.item,
+    required this.columnIndex,
+    required this.startMinute,
+    required this.endMinute,
+  });
+
+  final AgendaItem item;
+  final int columnIndex;
+  final int startMinute;
+  final int endMinute;
+
+  String get key => '${item.id}_${columnIndex}_${startMinute}_$endMinute';
 }

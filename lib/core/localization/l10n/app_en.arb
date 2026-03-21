@@ -17,6 +17,21 @@
   "settingsTitle": "Settings",
   "settingsDescription": "Global, list, home and AI settings will be grouped here.",
   "settingsQuickActionsTitle": "Quick access",
+  "settingsHomeSectionTitle": "Home settings",
+  "settingsHomeSectionDescription": "Configure the home grid time blocks and the default range on ultra-wide screens.",
+  "settingsHomeDayStart": "Day start time",
+  "settingsHomeBlockDuration": "Block duration",
+  "settingsHomeBlockGap": "Gap between blocks",
+  "settingsHomeBlockCount": "Block count",
+  "settingsHomeWideLayout": "Ultra-wide default range",
+  "@settingsMinutesValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsMinutesValue": "{value} min",
   "detailTitle": "Item Detail",
   "detailDescription": "Shows a full item profile with quick actions.",
   "detailMissing": "This item could not be found. It may have been deleted.",

@@ -118,7 +118,7 @@ class _AiPageState extends ConsumerState<AiPage> {
                             ),
                             ui.GhostButton(
                               onPressed: () async {
-                                final result = await context.push<DateTime>(
+                                final result = await context.push<TimePickerSelection>(
                                   AppRoutePaths.timePicker,
                                   extra: TimePickerArgs(
                                     mode: switch (state.period) {
@@ -132,7 +132,7 @@ class _AiPageState extends ConsumerState<AiPage> {
                                 if (result != null && mounted) {
                                   ref
                                       .read(aiHeaderViewModelProvider.notifier)
-                                      .selectAnchor(result);
+                                      .selectAnchor(result.anchor);
                                 }
                               },
                               child: Text(context.l10n.timePickerTitle),

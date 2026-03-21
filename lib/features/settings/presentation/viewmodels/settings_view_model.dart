@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsState {
   const SettingsState({
     required this.themeMode,
     required this.locale,
+    required this.homeSettings,
   });
 
   final ui.ThemeMode themeMode;
   final Locale locale;
+  final HomeSettings homeSettings;
 }
 
 class SettingsViewModel extends Notifier<SettingsState> {
@@ -20,6 +23,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
     return SettingsState(
       themeMode: repository.themeMode,
       locale: repository.locale,
+      homeSettings: ref.watch(appHomeSettingsProvider),
     );
   }
 
@@ -28,6 +32,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
     state = SettingsState(
       themeMode: mode,
       locale: state.locale,
+      homeSettings: state.homeSettings,
     );
   }
 
@@ -36,6 +41,16 @@ class SettingsViewModel extends Notifier<SettingsState> {
     state = SettingsState(
       themeMode: state.themeMode,
       locale: locale,
+      homeSettings: state.homeSettings,
+    );
+  }
+
+  Future<void> saveHomeSettings(HomeSettings settings) async {
+    await ref.read(settingsRepositoryProvider).saveHomeSettings(settings);
+    state = SettingsState(
+      themeMode: state.themeMode,
+      locale: state.locale,
+      homeSettings: settings,
     );
   }
 }
