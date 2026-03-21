@@ -734,7 +734,7 @@ class _CompletedToggleRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(
-                  isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_left,
+                  isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
                   size: 18,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
