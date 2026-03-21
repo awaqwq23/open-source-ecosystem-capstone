@@ -87,7 +87,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHomeWideLayout => 'Ultra-wide default range';
 
   @override
-  String settingsMinutesValue(int value) => '$value min';
+  String get settingsAiSectionTitle => 'AI settings';
+
+  @override
+  String get settingsAiSectionDescription =>
+      'Configure the OpenAI-compatible base URL, API key, model, and system prompt.';
+
+  @override
+  String get settingsAiBaseUrlLabel => 'API URL';
+
+  @override
+  String get settingsAiApiKeyLabel => 'API key';
+
+  @override
+  String get settingsAiModelLabel => 'Model';
+
+  @override
+  String get settingsAiSystemPromptLabel => 'System prompt';
+
+  @override
+  String get settingsAiSaveButton => 'Save AI settings';
+
+  @override
+  String settingsMinutesValue(int value) {
+    return '$value min';
+  }
 
   @override
   String get detailTitle => 'Item Detail';
@@ -97,7 +121,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Shows a full item profile with quick actions.';
 
   @override
-  String get detailMissing => 'This item could not be found. It may have been deleted.';
+  String get detailMissing =>
+      'This item could not be found. It may have been deleted.';
 
   @override
   String get detailTimeLabel => 'Time';
@@ -236,13 +261,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listSettingsMore => 'More settings';
 
   @override
-  String listSummary(int pending, int completed) => '$pending pending, $completed completed';
+  String listSummary(int pending, int completed) {
+    return '$pending pending, $completed completed';
+  }
 
   @override
-  String listPendingSection(int count) => 'Pending $count';
+  String listPendingSection(int count) {
+    return 'Pending $count';
+  }
 
   @override
-  String listCompletedSection(int count) => 'Completed $count';
+  String listCompletedSection(int count) {
+    return 'Completed $count';
+  }
 
   @override
   String get listCompletedExpand => 'Expand completed items';
@@ -289,7 +320,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listSortManual => 'Manual order';
 
   @override
-  String get listThemeComingSoon => 'Tab themes are out of scope for this pass.';
+  String get listThemeComingSoon =>
+      'Tab themes are out of scope for this pass.';
 
   @override
   String get listStatusPending => 'Pending';
@@ -307,6 +339,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiPeriodPickerTitle => 'Select time range';
 
   @override
+  String aiPeriodSummary(Object period, int count) {
+    return 'Chat history grouped by $period. Current groups: $count.';
+  }
+
+  @override
   String get aiPeriodDay => 'Day';
 
   @override
@@ -314,6 +351,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiPeriodMonth => 'Month';
+
+  @override
+  String get aiInputHint =>
+      'Write a message for AI to create an item or answer a schedule question';
+
+  @override
+  String get aiSendButton => 'Send';
+
+  @override
+  String get aiSendingButton => 'Sending...';
+
+  @override
+  String get aiEmptyState => 'No chat history in the current time range.';
 
   @override
   String get editorTypePickerTitle => 'Switch item type';
@@ -548,12 +598,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String detailRangeDate(String start, String end) {
+  String detailRangeDate(Object start, Object end) {
     return '$start to $end';
   }
 
   @override
-  String detailMemoDate(String date, String duration) {
+  String detailMemoDate(Object date, Object duration) {
     return '$date · est. $duration';
   }
 

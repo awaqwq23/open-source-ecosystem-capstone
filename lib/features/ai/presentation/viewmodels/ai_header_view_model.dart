@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
@@ -16,6 +17,7 @@ class AiHeaderState {
     required this.anchor,
     this.input = '',
     this.isSending = false,
+    this.streamingReply,
     this.lastError,
   });
 
@@ -23,6 +25,7 @@ class AiHeaderState {
   final DateTime anchor;
   final String input;
   final bool isSending;
+  final String? streamingReply;
   final String? lastError;
 
   AiHeaderState copyWith({
@@ -30,7 +33,9 @@ class AiHeaderState {
     DateTime? anchor,
     String? input,
     bool? isSending,
+    String? streamingReply,
     String? lastError,
+    bool clearStreamingReply = false,
     bool clearError = false,
   }) {
     return AiHeaderState(
@@ -38,6 +43,8 @@ class AiHeaderState {
       anchor: anchor ?? this.anchor,
       input: input ?? this.input,
       isSending: isSending ?? this.isSending,
+      streamingReply:
+          clearStreamingReply ? null : (streamingReply ?? this.streamingReply),
       lastError: clearError ? null : (lastError ?? this.lastError),
     );
   }
@@ -85,19 +92,59 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
 
     try {
-      final reply = await service.sendMessage(
+      state = state.copyWith(
+        isSending: true,
+        streamingReply: '',
+        clearError: true,
+      );
+
+      await for (final event in service.sendMessage(
         message: content,
         items: ref.read(agendaItemRepositoryProvider),
-      );
-      await repository.append(reply);
+      )) {
+        switch (event) {
+          case AiStreamStarted():
+            state = state.copyWith(streamingReply: '', isSending: true);
+          case AiStreamDelta(:final text):
+            state = state.copyWith(
+              streamingReply: '${state.streamingReply ?? ''}$text',
+              isSending: true,
+            );
+          case AiStreamCompleted(:final text):
+            final reply = text.trim();
+            if (reply.isNotEmpty) {
+              await repository.append(
+                AiChatMessage(
+                  id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
+                  content: reply,
+                  createdAt: DateTime.now(),
+                  role: AiChatRole.assistant,
+                ),
+              );
+            }
+            state = state.copyWith(
+              input: '',
+              isSending: false,
+              clearStreamingReply: true,
+            );
+        }
+      }
       state = state.copyWith(
         input: '',
         isSending: false,
+        clearStreamingReply: true,
+      );
+    } on OpenAiConfigurationException catch (error) {
+      state = state.copyWith(
+        isSending: false,
+        clearStreamingReply: true,
+        lastError: error.message,
       );
     } catch (_) {
       state = state.copyWith(
         isSending: false,
-        lastError: 'AI 服务暂不可用',
+        clearStreamingReply: true,
+        lastError: 'AI 服务暂不可用，请检查接口地址和密钥。',
       );
     }
   }
@@ -134,11 +181,27 @@ final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
     return !message.createdAt.isBefore(range.start) && message.createdAt.isBefore(range.end);
   }).toList()
     ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
-  return [
-    AiConversationGroup(
-      label: '${range.start.year}/${range.start.month}/${range.start.day}',
-      range: range,
-      messages: messages,
-    ),
-  ];
+
+  final groups = <DateTime, List<AiChatMessage>>{};
+  for (final message in messages) {
+    final day = DateTime(
+      message.createdAt.year,
+      message.createdAt.month,
+      message.createdAt.day,
+    );
+    groups.putIfAbsent(day, () => <AiChatMessage>[]).add(message);
+  }
+
+  return groups.entries.map((entry) {
+    final day = entry.key;
+    return AiConversationGroup(
+      label: '${day.year}/${day.month}/${day.day}',
+      range: DateTimeRangeValue(
+        start: day,
+        end: day.add(const Duration(days: 1)),
+      ),
+      messages: entry.value,
+    );
+  }).toList()
+    ..sort((left, right) => left.range.start.compareTo(right.range.start));
 });

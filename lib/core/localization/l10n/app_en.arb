@@ -24,6 +24,13 @@
   "settingsHomeBlockGap": "Gap between blocks",
   "settingsHomeBlockCount": "Block count",
   "settingsHomeWideLayout": "Ultra-wide default range",
+  "settingsAiSectionTitle": "AI settings",
+  "settingsAiSectionDescription": "Configure the OpenAI-compatible base URL, API key, model, and system prompt.",
+  "settingsAiBaseUrlLabel": "API URL",
+  "settingsAiApiKeyLabel": "API key",
+  "settingsAiModelLabel": "Model",
+  "settingsAiSystemPromptLabel": "System prompt",
+  "settingsAiSaveButton": "Save AI settings",
   "@settingsMinutesValue": {
     "placeholders": {
       "value": {
@@ -127,9 +134,22 @@
   "listImportantEnabled": "Important",
   "listImportantDisabled": "Normal",
   "aiPeriodPickerTitle": "Select time range",
+  "@aiPeriodSummary": {
+    "placeholders": {
+      "period": {},
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPeriodSummary": "Chat history grouped by {period}. Current groups: {count}.",
   "aiPeriodDay": "Day",
   "aiPeriodWeek": "Week",
   "aiPeriodMonth": "Month",
+  "aiInputHint": "Write a message for AI to create an item or answer a schedule question",
+  "aiSendButton": "Send",
+  "aiSendingButton": "Sending...",
+  "aiEmptyState": "No chat history in the current time range.",
   "editorTypePickerTitle": "Switch item type",
   "editorTypeTask": "Task",
   "editorTypeSchedule": "Schedule",

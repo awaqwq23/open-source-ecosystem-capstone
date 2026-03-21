@@ -81,7 +81,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHomeWideLayout => '超宽屏默认范围';
 
   @override
-  String settingsMinutesValue(int value) => '$value 分钟';
+  String get settingsAiSectionTitle => 'AI 设置';
+
+  @override
+  String get settingsAiSectionDescription => '配置兼容 OpenAI 的接口地址、密钥、模型和系统提示词。';
+
+  @override
+  String get settingsAiBaseUrlLabel => 'API 地址';
+
+  @override
+  String get settingsAiApiKeyLabel => 'API 密钥';
+
+  @override
+  String get settingsAiModelLabel => '模型';
+
+  @override
+  String get settingsAiSystemPromptLabel => '系统提示词';
+
+  @override
+  String get settingsAiSaveButton => '保存 AI 设置';
+
+  @override
+  String settingsMinutesValue(int value) {
+    return '$value 分钟';
+  }
 
   @override
   String get detailTitle => '事项详情';
@@ -228,13 +251,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listSettingsMore => '更多设置';
 
   @override
-  String listSummary(int pending, int completed) => '未完成 $pending 项，已完成 $completed 项';
+  String listSummary(int pending, int completed) {
+    return '未完成 $pending 项，已完成 $completed 项';
+  }
 
   @override
-  String listPendingSection(int count) => '待处理 $count';
+  String listPendingSection(int count) {
+    return '待处理 $count';
+  }
 
   @override
-  String listCompletedSection(int count) => '已完成 $count';
+  String listCompletedSection(int count) {
+    return '已完成 $count';
+  }
 
   @override
   String get listCompletedExpand => '展开已完成事项';
@@ -297,6 +326,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiPeriodPickerTitle => '选择时间范围';
 
   @override
+  String aiPeriodSummary(Object period, int count) {
+    return '按 $period 聚合聊天记录。当前分组 $count 个。';
+  }
+
+  @override
   String get aiPeriodDay => '按日';
 
   @override
@@ -304,6 +338,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiPeriodMonth => '按月';
+
+  @override
+  String get aiInputHint => '输入一句话，让 AI 帮你创建事项或查询日程';
+
+  @override
+  String get aiSendButton => '发送';
+
+  @override
+  String get aiSendingButton => '发送中...';
+
+  @override
+  String get aiEmptyState => '当前时间范围内还没有聊天记录。';
 
   @override
   String get editorTypePickerTitle => '切换事项类型';
@@ -534,12 +580,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String detailRangeDate(String start, String end) {
+  String detailRangeDate(Object start, Object end) {
     return '$start 至 $end';
   }
 
   @override
-  String detailMemoDate(String date, String duration) {
+  String detailMemoDate(Object date, Object duration) {
     return '$date · 预计 $duration';
   }
 

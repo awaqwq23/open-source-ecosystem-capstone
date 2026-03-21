@@ -96,7 +96,10 @@ class _AiPageState extends ConsumerState<AiPage> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  '按 ${_periodLabel(context, state)} 聚合聊天记录。当前分组 ${groups.length} 个。',
+                                  context.l10n.aiPeriodSummary(
+                                    _periodLabel(context, state),
+                                    groups.length,
+                                  ),
                                   style: theme.textTheme.titleMedium,
                                 ),
                               ],
@@ -141,7 +144,10 @@ class _AiPageState extends ConsumerState<AiPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _ConversationList(groups: groups),
+                      _ConversationList(
+                        groups: groups,
+                        streamingReply: state.streamingReply,
+                      ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _controller,
@@ -149,7 +155,7 @@ class _AiPageState extends ConsumerState<AiPage> {
                         minLines: 2,
                         maxLines: 4,
                         decoration: InputDecoration(
-                          hintText: '输入一句话，让 AI 帮你创建事项或查询日程',
+                          hintText: context.l10n.aiInputHint,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -165,7 +171,11 @@ class _AiPageState extends ConsumerState<AiPage> {
                                   : () => ref
                                       .read(aiHeaderViewModelProvider.notifier)
                                       .sendMessage(),
-                              child: Text(state.isSending ? '发送中...' : '发送'),
+                              child: Text(
+                                state.isSending
+                                    ? context.l10n.aiSendingButton
+                                    : context.l10n.aiSendButton,
+                              ),
                             ),
                           ),
                         ],
@@ -272,15 +282,20 @@ class _AiPageState extends ConsumerState<AiPage> {
 class _ConversationList extends StatelessWidget {
   const _ConversationList({
     required this.groups,
+    required this.streamingReply,
   });
 
   final List<AiConversationGroup> groups;
+  final String? streamingReply;
 
   @override
   Widget build(BuildContext context) {
-    if (groups.isEmpty || groups.every((group) => group.messages.isEmpty)) {
-      return const Text('当前时间范围内还没有聊天记录。');
+    final hasHistory = groups.isNotEmpty && groups.any((group) => group.messages.isNotEmpty);
+    final hasStreamingReply = (streamingReply ?? '').isNotEmpty;
+    if (!hasHistory && !hasStreamingReply) {
+      return Text(context.l10n.aiEmptyState);
     }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -309,7 +324,33 @@ class _ConversationList extends StatelessWidget {
                 child: Text(message.content),
               ),
             ),
+          if (identical(group, groups.last) && hasStreamingReply)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(streamingReply!),
+              ),
+            ),
         ],
+        if (!hasHistory && hasStreamingReply)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(streamingReply!),
+            ),
+          ),
       ],
     );
   }

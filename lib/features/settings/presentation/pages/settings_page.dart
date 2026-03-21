@@ -5,6 +5,7 @@ import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/features/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -21,10 +22,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final GlobalKey _appearanceSectionKey = GlobalKey();
   final GlobalKey _languageSectionKey = GlobalKey();
   final GlobalKey _homeSectionKey = GlobalKey();
+  final GlobalKey _aiSectionKey = GlobalKey();
+  late final TextEditingController _aiBaseUrlController;
+  late final TextEditingController _aiApiKeyController;
+  late final TextEditingController _aiModelController;
+  late final TextEditingController _aiSystemPromptController;
+
+  @override
+  void initState() {
+    super.initState();
+    _aiBaseUrlController = TextEditingController();
+    _aiApiKeyController = TextEditingController();
+    _aiModelController = TextEditingController();
+    _aiSystemPromptController = TextEditingController();
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _aiBaseUrlController.dispose();
+    _aiApiKeyController.dispose();
+    _aiModelController.dispose();
+    _aiSystemPromptController.dispose();
     super.dispose();
   }
 
@@ -32,6 +51,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(settingsViewModelProvider);
     final l10n = context.l10n;
+    _syncAiControllers(state.aiSettings);
 
     return ui.Scaffold(
       headers: [
@@ -224,6 +244,68 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     const Gap(16),
                     ui.Card(
+                      key: _aiSectionKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsAiSectionTitle,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Gap(8),
+                          Text(
+                            l10n.settingsAiSectionDescription,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const Gap(16),
+                          TextField(
+                            controller: _aiBaseUrlController,
+                            decoration: InputDecoration(
+                              labelText: l10n.settingsAiBaseUrlLabel,
+                              hintText: 'https://api.openai.com/v1',
+                            ),
+                          ),
+                          const Gap(12),
+                          TextField(
+                            controller: _aiApiKeyController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: l10n.settingsAiApiKeyLabel,
+                            ),
+                          ),
+                          const Gap(12),
+                          TextField(
+                            controller: _aiModelController,
+                            decoration: InputDecoration(
+                              labelText: l10n.settingsAiModelLabel,
+                              hintText: 'gpt-4o-mini',
+                            ),
+                          ),
+                          const Gap(12),
+                          TextField(
+                            controller: _aiSystemPromptController,
+                            minLines: 3,
+                            maxLines: 5,
+                            decoration: InputDecoration(
+                              labelText: l10n.settingsAiSystemPromptLabel,
+                            ),
+                          ),
+                          const Gap(16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ui.PrimaryButton(
+                                  onPressed: _saveAiSettings,
+                                  child: Text(l10n.settingsAiSaveButton),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Gap(16),
+                    ui.Card(
                       key: _languageSectionKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,6 +390,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   },
                 ),
                 ListTile(
+                  leading: const Icon(AppIcons.aiOutlined),
+                  title: Text(l10n.settingsAiSectionTitle),
+                  onTap: () {
+                    ui.closeDrawer(sheetContext);
+                    _scrollToSection(_aiSectionKey);
+                  },
+                ),
+                ListTile(
                   leading: const Icon(AppIcons.languageChinese),
                   title: Text(l10n.languageSectionTitle),
                   onTap: () {
@@ -351,6 +441,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _saveHomeSettings(HomeSettings settings) {
     return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
+  }
+
+  Future<void> _saveAiSettings() {
+    final current = ref.read(settingsViewModelProvider).aiSettings;
+    return ref.read(settingsViewModelProvider.notifier).saveAiSettings(
+          current.copyWith(
+            baseUrl: _aiBaseUrlController.text.trim(),
+            apiKey: _aiApiKeyController.text.trim(),
+            model: _aiModelController.text.trim(),
+            systemPrompt: _aiSystemPromptController.text.trim(),
+          ),
+        );
+  }
+
+  void _syncAiControllers(AiSettings settings) {
+    _syncController(_aiBaseUrlController, settings.baseUrl);
+    _syncController(_aiApiKeyController, settings.apiKey);
+    _syncController(_aiModelController, settings.model);
+    _syncController(_aiSystemPromptController, settings.systemPrompt);
+  }
+
+  void _syncController(TextEditingController controller, String value) {
+    if (controller.text == value) {
+      return;
+    }
+    controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
   }
 }
 

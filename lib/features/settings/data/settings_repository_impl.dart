@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 final appHomeSettingsProvider = StateProvider<HomeSettings>((ref) {
   return const HomeSettings.defaults();
+});
+
+final appAiSettingsProvider = StateProvider<AiSettings>((ref) {
+  return const AiSettings.defaults();
 });
 
 class RiverpodSettingsRepository implements SettingsRepository {
@@ -25,6 +30,9 @@ class RiverpodSettingsRepository implements SettingsRepository {
   HomeSettings get homeSettings => _ref.read(appHomeSettingsProvider);
 
   @override
+  AiSettings get aiSettings => _ref.read(appAiSettingsProvider);
+
+  @override
   Future<void> saveLocale(Locale locale) async {
     _ref.read(appLocaleProvider.notifier).state = locale;
   }
@@ -37,6 +45,11 @@ class RiverpodSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveHomeSettings(HomeSettings settings) async {
     _ref.read(appHomeSettingsProvider.notifier).state = settings;
+  }
+
+  @override
+  Future<void> saveAiSettings(AiSettings settings) async {
+    _ref.read(appAiSettingsProvider.notifier).state = settings;
   }
 }
 

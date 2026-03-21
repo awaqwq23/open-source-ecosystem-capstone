@@ -200,20 +200,94 @@ abstract class AppLocalizations {
   /// **'Quick access'**
   String get settingsQuickActionsTitle;
 
+  /// No description provided for @settingsHomeSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home settings'**
   String get settingsHomeSectionTitle;
 
+  /// No description provided for @settingsHomeSectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure the home grid time blocks and the default range on ultra-wide screens.'**
   String get settingsHomeSectionDescription;
 
+  /// No description provided for @settingsHomeDayStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Day start time'**
   String get settingsHomeDayStart;
 
+  /// No description provided for @settingsHomeBlockDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Block duration'**
   String get settingsHomeBlockDuration;
 
+  /// No description provided for @settingsHomeBlockGap.
+  ///
+  /// In en, this message translates to:
+  /// **'Gap between blocks'**
   String get settingsHomeBlockGap;
 
+  /// No description provided for @settingsHomeBlockCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Block count'**
   String get settingsHomeBlockCount;
 
+  /// No description provided for @settingsHomeWideLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Ultra-wide default range'**
   String get settingsHomeWideLayout;
 
+  /// No description provided for @settingsAiSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI settings'**
+  String get settingsAiSectionTitle;
+
+  /// No description provided for @settingsAiSectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure the OpenAI-compatible base URL, API key, model, and system prompt.'**
+  String get settingsAiSectionDescription;
+
+  /// No description provided for @settingsAiBaseUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API URL'**
+  String get settingsAiBaseUrlLabel;
+
+  /// No description provided for @settingsAiApiKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get settingsAiApiKeyLabel;
+
+  /// No description provided for @settingsAiModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get settingsAiModelLabel;
+
+  /// No description provided for @settingsAiSystemPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'System prompt'**
+  String get settingsAiSystemPromptLabel;
+
+  /// No description provided for @settingsAiSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save AI settings'**
+  String get settingsAiSaveButton;
+
+  /// No description provided for @settingsMinutesValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} min'**
   String settingsMinutesValue(int value);
 
   /// No description provided for @detailTitle.
@@ -228,28 +302,76 @@ abstract class AppLocalizations {
   /// **'Shows a full item profile with quick actions.'**
   String get detailDescription;
 
+  /// No description provided for @detailMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This item could not be found. It may have been deleted.'**
   String get detailMissing;
 
+  /// No description provided for @detailTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
   String get detailTimeLabel;
 
+  /// No description provided for @detailDeadlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
   String get detailDeadlineLabel;
 
+  /// No description provided for @detailLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
   String get detailLocationLabel;
 
+  /// No description provided for @detailNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
   String get detailNotesLabel;
 
+  /// No description provided for @detailReminderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder'**
   String get detailReminderLabel;
 
+  /// No description provided for @detailRepeatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
   String get detailRepeatLabel;
 
+  /// No description provided for @detailMarkComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark complete'**
   String get detailMarkComplete;
 
+  /// No description provided for @detailMarkIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark incomplete'**
   String get detailMarkIncomplete;
 
+  /// No description provided for @detailMarkImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark important'**
   String get detailMarkImportant;
 
+  /// No description provided for @detailUnmarkImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove importance'**
   String get detailUnmarkImportant;
 
+  /// No description provided for @detailDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete item'**
   String get detailDelete;
 
   /// No description provided for @timePickerTitle.
@@ -456,48 +578,136 @@ abstract class AppLocalizations {
   /// **'More settings'**
   String get listSettingsMore;
 
+  /// No description provided for @listSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{pending} pending, {completed} completed'**
   String listSummary(int pending, int completed);
 
+  /// No description provided for @listPendingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending {count}'**
   String listPendingSection(int count);
 
+  /// No description provided for @listCompletedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed {count}'**
   String listCompletedSection(int count);
 
+  /// No description provided for @listCompletedExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand completed items'**
   String get listCompletedExpand;
 
+  /// No description provided for @listCompletedCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse completed items'**
   String get listCompletedCollapse;
 
+  /// No description provided for @listEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No items yet'**
   String get listEmptyTitle;
 
+  /// No description provided for @listEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the add button to create your first task, schedule, or memo.'**
   String get listEmptyDescription;
 
+  /// No description provided for @listReorderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual order is enabled. Drag the handle on each task to rearrange it.'**
   String get listReorderHint;
 
+  /// No description provided for @listStaticItemsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other items'**
   String get listStaticItemsLabel;
 
+  /// No description provided for @listActionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
   String get listActionEdit;
 
+  /// No description provided for @listActionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
   String get listActionDelete;
 
+  /// No description provided for @listSortImportance.
+  ///
+  /// In en, this message translates to:
+  /// **'Importance'**
   String get listSortImportance;
 
+  /// No description provided for @listSortDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Due date'**
   String get listSortDueDate;
 
+  /// No description provided for @listSortTodayFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Today focus'**
   String get listSortTodayFocus;
 
+  /// No description provided for @listSortAlphabetical.
+  ///
+  /// In en, this message translates to:
+  /// **'Alphabetical'**
   String get listSortAlphabetical;
 
+  /// No description provided for @listSortCreatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Created date'**
   String get listSortCreatedDate;
 
+  /// No description provided for @listSortManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual order'**
   String get listSortManual;
 
+  /// No description provided for @listThemeComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab themes are out of scope for this pass.'**
   String get listThemeComingSoon;
 
+  /// No description provided for @listStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
   String get listStatusPending;
 
+  /// No description provided for @listStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
   String get listStatusCompleted;
 
+  /// No description provided for @listImportantEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
   String get listImportantEnabled;
 
+  /// No description provided for @listImportantDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
   String get listImportantDisabled;
 
   /// No description provided for @aiPeriodPickerTitle.
@@ -505,6 +715,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select time range'**
   String get aiPeriodPickerTitle;
+
+  /// No description provided for @aiPeriodSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat history grouped by {period}. Current groups: {count}.'**
+  String aiPeriodSummary(Object period, int count);
 
   /// No description provided for @aiPeriodDay.
   ///
@@ -523,6 +739,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Month'**
   String get aiPeriodMonth;
+
+  /// No description provided for @aiInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message for AI to create an item or answer a schedule question'**
+  String get aiInputHint;
+
+  /// No description provided for @aiSendButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get aiSendButton;
+
+  /// No description provided for @aiSendingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending...'**
+  String get aiSendingButton;
+
+  /// No description provided for @aiEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'No chat history in the current time range.'**
+  String get aiEmptyState;
 
   /// No description provided for @editorTypePickerTitle.
   ///
@@ -566,10 +806,22 @@ abstract class AppLocalizations {
   /// **'Create memo'**
   String get editorCreateMemo;
 
+  /// No description provided for @editorEditTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit task'**
   String get editorEditTask;
 
+  /// No description provided for @editorEditSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit schedule'**
   String get editorEditSchedule;
 
+  /// No description provided for @editorEditMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit memo'**
   String get editorEditMemo;
 
   /// No description provided for @editorSectionBasic.
@@ -698,6 +950,10 @@ abstract class AppLocalizations {
   /// **'Estimated duration'**
   String get editorFieldEstimatedDuration;
 
+  /// No description provided for @editorFieldImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important item'**
   String get editorFieldImportant;
 
   /// No description provided for @editorHintTitle.
@@ -952,9 +1208,17 @@ abstract class AppLocalizations {
   /// **'{hours} h {minutes} min'**
   String editorDurationHourMinute(int hours, int minutes);
 
-  String detailRangeDate(String start, String end);
+  /// No description provided for @detailRangeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} to {end}'**
+  String detailRangeDate(Object start, Object end);
 
-  String detailMemoDate(String date, String duration);
+  /// No description provided for @detailMemoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · est. {duration}'**
+  String detailMemoDate(Object date, Object duration);
 
   /// No description provided for @placeholderOpenPicker.
   ///

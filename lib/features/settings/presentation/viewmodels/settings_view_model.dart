@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -9,11 +10,13 @@ class SettingsState {
     required this.themeMode,
     required this.locale,
     required this.homeSettings,
+    required this.aiSettings,
   });
 
   final ui.ThemeMode themeMode;
   final Locale locale;
   final HomeSettings homeSettings;
+  final AiSettings aiSettings;
 }
 
 class SettingsViewModel extends Notifier<SettingsState> {
@@ -24,6 +27,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       themeMode: repository.themeMode,
       locale: repository.locale,
       homeSettings: ref.watch(appHomeSettingsProvider),
+      aiSettings: ref.watch(appAiSettingsProvider),
     );
   }
 
@@ -33,6 +37,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       themeMode: mode,
       locale: state.locale,
       homeSettings: state.homeSettings,
+      aiSettings: state.aiSettings,
     );
   }
 
@@ -42,6 +47,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       themeMode: state.themeMode,
       locale: locale,
       homeSettings: state.homeSettings,
+      aiSettings: state.aiSettings,
     );
   }
 
@@ -51,6 +57,17 @@ class SettingsViewModel extends Notifier<SettingsState> {
       themeMode: state.themeMode,
       locale: state.locale,
       homeSettings: settings,
+      aiSettings: state.aiSettings,
+    );
+  }
+
+  Future<void> saveAiSettings(AiSettings settings) async {
+    await ref.read(settingsRepositoryProvider).saveAiSettings(settings);
+    state = SettingsState(
+      themeMode: state.themeMode,
+      locale: state.locale,
+      homeSettings: state.homeSettings,
+      aiSettings: settings,
     );
   }
 }
