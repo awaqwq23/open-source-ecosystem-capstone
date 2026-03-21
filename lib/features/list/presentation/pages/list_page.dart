@@ -599,10 +599,10 @@ class _ListItemRow extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
     final cardColor = Color.alphaBlend(
-      theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.94),
+      theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
       theme.colorScheme.surface,
     );
-    final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
+    final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.18);
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
@@ -893,9 +893,9 @@ class _CompletedHeaderRow extends _ListVisualRow {
 }
 
 abstract final class _ListRowMetrics {
-  static const rowHeight = 66.0;
+  static const rowHeight = 62.0;
   static const horizontalPadding = 4.0;
   static const cardHorizontalPadding = 8.0;
-  static const cardVerticalInset = 5.0;
-  static const cardRadius = 8.0;
+  static const cardVerticalInset = 3.0;
+  static const cardRadius = 4.0;
 }
