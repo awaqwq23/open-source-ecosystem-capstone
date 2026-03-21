@@ -681,10 +681,10 @@ class _TimelineLabel extends StatelessWidget {
                           end,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
                             height: HomeGridMetrics.timelineLineHeight,
-                            fontSize: HomeGridMetrics.timelineCompactFontSize,
+                            fontSize: HomeGridMetrics.timelineFontSize,
                           ),
                         ),
                       ],
@@ -699,7 +699,7 @@ class _TimelineLabel extends StatelessWidget {
   String _formatMinute(int minute) {
     final normalizedHour = minute ~/ 60;
     final normalizedMinute = minute % 60;
-    final hourText = normalizedHour.toString().padLeft(2, '0');
+    final hourText = normalizedHour.toString();
     final minuteText = normalizedMinute.toString().padLeft(2, '0');
     return '$hourText:$minuteText';
   }
