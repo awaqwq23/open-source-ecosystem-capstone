@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
+import 'package:huajuan_agenda/features/home/presentation/layout/home_grid_metrics.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
@@ -119,7 +120,7 @@ class HomePage extends ConsumerWidget {
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
             child: Column(
               children: [
                 if (homeSettings.showDemoData) ...[
@@ -343,6 +344,10 @@ class _HomeGridState extends State<_HomeGrid> {
                   height: layout.contentHeight,
                   child: Stack(
                     children: [
+                      _TimelineHeaderCell(
+                        width: layout.timelineLabelWidth,
+                        height: layout.headerCellHeight,
+                      ),
                       for (var columnIndex = 0;
                           columnIndex < widget.viewData.columns.length;
                           columnIndex++)
@@ -562,6 +567,33 @@ class _HeaderCell extends StatelessWidget {
   }
 }
 
+class _TimelineHeaderCell extends StatelessWidget {
+  const _TimelineHeaderCell({
+    required this.width,
+    required this.height,
+  });
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Positioned(
+      left: 0,
+      top: 0,
+      width: width,
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.headerCellRadius),
+        ),
+      ),
+    );
+  }
+}
+
 class _TimelineLabel extends StatelessWidget {
   const _TimelineLabel({
     required this.slot,
@@ -580,76 +612,83 @@ class _TimelineLabel extends StatelessWidget {
     final theme = Theme.of(context);
     final start = _formatMinute(slot.startMinute);
     final end = _formatMinute(slot.endMinute);
+    final backgroundColor = theme.colorScheme.surfaceContainerLow;
 
     return Positioned(
       left: 0,
       top: top,
       width: width,
       height: height,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxHeight < _HomeGridLayoutSpec.timelineCompactHeight;
-          return Padding(
-            padding: EdgeInsets.only(
-              left: compact
-                  ? _HomeGridLayoutSpec.timelineCompactHorizontalPadding
-                  : _HomeGridLayoutSpec.timelineHorizontalPadding,
-              right: compact
-                  ? _HomeGridLayoutSpec.timelineCompactHorizontalPadding
-                  : _HomeGridLayoutSpec.timelineHorizontalPadding,
-            ),
-            child: compact
-                ? Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      start,
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                        height: _HomeGridLayoutSpec.timelineCompactLineHeight,
-                        fontSize: _HomeGridLayoutSpec.timelineCompactFontSize,
-                      ),
-                    ),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < HomeGridMetrics.timelineCompactHeight;
+            return Padding(
+              padding: EdgeInsets.only(
+                left: compact
+                    ? HomeGridMetrics.timelineCompactHorizontalPadding
+                    : HomeGridMetrics.timelineHorizontalPadding,
+                right: compact
+                    ? HomeGridMetrics.timelineCompactHorizontalPadding
+                    : HomeGridMetrics.timelineHorizontalPadding,
+              ),
+              child: compact
+                  ? Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
                         start,
                         textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w700,
-                          height: _HomeGridLayoutSpec.timelineLineHeight,
-                          fontSize: _HomeGridLayoutSpec.timelineFontSize,
+                          height: HomeGridMetrics.timelineCompactLineHeight,
+                          fontSize: HomeGridMetrics.timelineCompactFontSize,
                         ),
                       ),
-                      Container(
-                        width: math.min(_HomeGridLayoutSpec.timelineDividerWidth, width * 0.34),
-                        height: 1,
-                        margin: const EdgeInsets.symmetric(
-                          vertical: _HomeGridLayoutSpec.timelineDividerMargin,
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          start,
+                          textAlign: TextAlign.right,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            height: HomeGridMetrics.timelineLineHeight,
+                            fontSize: HomeGridMetrics.timelineFontSize,
+                          ),
                         ),
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
-                      ),
-                      Text(
-                        end,
-                        textAlign: TextAlign.right,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                          height: _HomeGridLayoutSpec.timelineLineHeight,
-                          fontSize: _HomeGridLayoutSpec.timelineCompactFontSize,
+                        Container(
+                          width: math.min(HomeGridMetrics.timelineDividerWidth, width * 0.34),
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(
+                            vertical: _HomeGridLayoutSpec.timelineDividerMargin,
+                          ),
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
                         ),
-                      ),
-                    ],
-                  ),
-          );
-        },
+                        Text(
+                          end,
+                          textAlign: TextAlign.right,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+                            fontWeight: FontWeight.w600,
+                            height: HomeGridMetrics.timelineLineHeight,
+                            fontSize: HomeGridMetrics.timelineCompactFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -699,11 +738,13 @@ class _HomeGridLayout {
       constraints.maxWidth - horizontalPadding * 2,
     );
     final safeColumnCount = math.max(1, columnCount);
-    final timelineWidth = _HomeGridLayoutSpec.timelineWidthForColumnCount(safeColumnCount);
-    final columnWidth = math.max(
-      _HomeGridLayoutSpec.minimumColumnWidth,
-      (availableWidth - timelineWidth - columnGap * (safeColumnCount - 1)) / safeColumnCount,
+    final columnWidth = HomeGridMetrics.computeColumnWidth(
+      availableWidth: availableWidth,
+      columnCount: safeColumnCount,
+      columnGap: columnGap,
+      minimumColumnWidth: _HomeGridLayoutSpec.minimumColumnWidth,
     );
+    final timelineWidth = HomeGridMetrics.computeTimelineWidth(cellWidth: columnWidth);
     final cellSize = columnWidth;
     final safeRowCount = math.max(0, rowCount);
     final gridHeight = safeRowCount == 0
@@ -979,9 +1020,9 @@ abstract final class _HomeGridLayoutSpec {
   static const headerCellRadius = 8.0;
   static const itemRadius = 8.0;
 
-  static const contentHorizontalPadding = 2.0;
-  static const contentTopPadding = 6.0;
-  static const contentBottomPadding = 12.0;
+  static const contentHorizontalPadding = 0.0;
+  static const contentTopPadding = 4.0;
+  static const contentBottomPadding = 6.0;
   static const columnGap = 2.0;
   static const rowGap = 2.0;
   static const headerHeight = 44.0;
@@ -997,14 +1038,6 @@ abstract final class _HomeGridLayoutSpec {
   static const headerCompactHorizontalPadding = 2.0;
   static const headerCompactVerticalPadding = 3.0;
 
-  static const timelineCompactHeight = 34.0;
-  static const timelineHorizontalPadding = 2.0;
-  static const timelineCompactHorizontalPadding = 1.0;
-  static const timelineCompactFontSize = 10.0;
-  static const timelineFontSize = 10.5;
-  static const timelineLineHeight = 0.92;
-  static const timelineCompactLineHeight = 0.92;
-  static const timelineDividerWidth = 14.0;
   static const timelineDividerMargin = 2.0;
 
   static const itemUltraCompactHeight = 28.0;
@@ -1019,23 +1052,16 @@ abstract final class _HomeGridLayoutSpec {
   static const itemVerticalPadding = 6.0;
   static const itemDetailsSpacing = 4.0;
 
-  static const minMonthColumnWidth = 34.0;
+  static const minMonthColumnWidth = 40.0;
   static const maxMonthColumnCount = 31;
 
   static bool canFitMonthLayout(double viewportWidth) {
     final requiredWidth =
         maxMonthColumnCount * minMonthColumnWidth +
         (maxMonthColumnCount - 1) * columnGap +
-        timelineWidthForColumnCount(maxMonthColumnCount) +
+        HomeGridMetrics.computeTimelineWidth(cellWidth: minMonthColumnWidth) +
         contentHorizontalPadding * 2;
     return viewportWidth >= requiredWidth;
   }
 
-  static double timelineWidthForColumnCount(int columnCount) {
-    return switch (columnCount) {
-      <= 7 => 40.0,
-      <= 14 => 38.0,
-      _ => 36.0,
-    };
-  }
 }
