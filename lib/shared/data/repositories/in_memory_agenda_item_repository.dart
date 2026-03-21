@@ -173,6 +173,22 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     await _persist();
   }
 
+  Future<void> replaceItemsByIdPrefix({
+    required String idPrefix,
+    required List<AgendaItem> items,
+  }) async {
+    final preservedItems = [
+      for (final item in state)
+        if (!item.id.startsWith(idPrefix)) item,
+    ];
+    state = [
+      ...preservedItems,
+      ...items,
+    ];
+    _idSeed = state.length;
+    await _persist();
+  }
+
   Future<void> _persist() {
     final prefs = ref.read(sharedPreferencesProvider);
     return prefs?.setString(

@@ -241,6 +241,24 @@ class ListPage extends ConsumerWidget {
     };
   }
 
+  String _debugAddDemoItemsLabel(BuildContext context) {
+    return _isChinese(context) ? '调试：填充假数据' : 'Debug: Fill sample items';
+  }
+
+  String _debugAddDemoItemsDescription(BuildContext context) {
+    return _isChinese(context)
+        ? '向列表页写入一批内置示例事项，便于查看排版和交互效果。'
+        : 'Insert built-in sample items into the list page for layout and interaction review.';
+  }
+
+  String _debugAddDemoItemsDoneLabel(BuildContext context) {
+    return _isChinese(context) ? '已填充列表页假数据。' : 'List demo items added.';
+  }
+
+  bool _isChinese(BuildContext context) {
+    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+  }
+
   Future<void> _showTabSwitcher(BuildContext context, WidgetRef ref) {
     final state = ref.read(listHeaderViewModelProvider);
     final l10n = context.l10n;
@@ -330,6 +348,22 @@ class ListPage extends ConsumerWidget {
                   leading: const Icon(AppIcons.appearanceSection),
                   title: Text(l10n.listSettingsTheme),
                   subtitle: Text(l10n.listThemeComingSoon),
+                ),
+                ListTile(
+                  leading: const Icon(AppIcons.info),
+                  title: Text(_debugAddDemoItemsLabel(context)),
+                  subtitle: Text(_debugAddDemoItemsDescription(context)),
+                  onTap: () async {
+                    ui.closeDrawer(sheetContext);
+                    await ref.read(listHeaderViewModelProvider.notifier).injectDemoItems();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(_debugAddDemoItemsDoneLabel(context)),
+                        ),
+                      );
+                    }
+                  },
                 ),
                 ListTile(
                   leading: const Icon(AppIcons.settingsOutlined),
