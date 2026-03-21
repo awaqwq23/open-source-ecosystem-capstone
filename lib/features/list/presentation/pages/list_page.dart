@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
@@ -575,7 +577,7 @@ class _PendingTaskRowList extends ConsumerWidget {
   }
 }
 
-class _ListItemRow extends StatelessWidget {
+class _ListItemRow extends StatefulWidget {
   const _ListItemRow({
     required this.item,
     required this.dragIndex,
@@ -595,7 +597,57 @@ class _ListItemRow extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_ListItemRow> createState() => _ListItemRowState();
+}
+
+class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderStateMixin {
+  static const _reboundDuration = Duration(milliseconds: 160);
+
+  late final SlidableController _slidableController;
+  bool _swipeActionTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _slidableController = SlidableController(this)
+      ..endGesture.addListener(_handleEndGestureChanged)
+      ..animation.addListener(_handleSlideAnimationChanged);
+  }
+
+  @override
+  void dispose() {
+    _slidableController.endGesture.removeListener(_handleEndGestureChanged);
+    _slidableController.animation.removeListener(_handleSlideAnimationChanged);
+    _slidableController.dispose();
+    super.dispose();
+  }
+
+  void _handleSlideAnimationChanged() {
+    if (_swipeActionTriggered && _slidableController.ratio.abs() < 0.01) {
+      _swipeActionTriggered = false;
+    }
+  }
+
+  void _handleEndGestureChanged() {
+    if (_swipeActionTriggered) {
+      return;
+    }
+    final ratio = _slidableController.ratio;
+    if (ratio.abs() < _SwipeStageMetrics.commitThreshold) {
+      return;
+    }
+    _swipeActionTriggered = true;
+    _slidableController.close(duration: _reboundDuration);
+    if (ratio.isNegative) {
+      widget.onDelete();
+      return;
+    }
+    widget.onEdit();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
     final cardColor = Color.alphaBlend(
@@ -606,28 +658,37 @@ class _ListItemRow extends StatelessWidget {
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
-      child: Dismissible(
+      child: Slidable(
         key: ValueKey('swipe-${item.id}'),
-        direction: DismissDirection.horizontal,
-        confirmDismiss: (direction) async {
-          if (direction == DismissDirection.startToEnd) {
-            onEdit();
-            return false;
-          }
-          onDelete();
-          return false;
-        },
-        background: _SwipeBackground(
-          alignment: Alignment.centerLeft,
-          color: accent.withValues(alpha: 0.16),
-          icon: AppIcons.edit,
-          label: context.l10n.listActionEdit,
+        controller: _slidableController,
+        closeOnScroll: true,
+        startActionPane: ActionPane(
+          extentRatio: 1,
+          openThreshold: 0.999,
+          closeThreshold: 0.999,
+          motion: _PhasedSwipeMotion(
+            controller: _slidableController,
+            backgroundColor: accent.withValues(alpha: 0.16),
+            actionColor: const Color(0xFF3E73DB),
+            icon: AppIcons.edit,
+            alignment: Alignment.centerLeft,
+            iconBackgroundColor: const Color(0xFF2F66D6),
+          ),
+          children: const [SizedBox.expand()],
         ),
-        secondaryBackground: _SwipeBackground(
-          alignment: Alignment.centerRight,
-          color: theme.colorScheme.errorContainer,
-          icon: AppIcons.delete,
-          label: context.l10n.listActionDelete,
+        endActionPane: ActionPane(
+          extentRatio: 1,
+          openThreshold: 0.999,
+          closeThreshold: 0.999,
+          motion: _PhasedSwipeMotion(
+            controller: _slidableController,
+            backgroundColor: theme.colorScheme.errorContainer.withValues(alpha: 0.72),
+            actionColor: theme.colorScheme.error,
+            icon: AppIcons.delete,
+            alignment: Alignment.centerRight,
+            iconBackgroundColor: theme.colorScheme.error.withValues(alpha: 0.92),
+          ),
+          children: const [SizedBox.expand()],
         ),
         child: Material(
           color: Colors.transparent,
@@ -636,7 +697,7 @@ class _ListItemRow extends StatelessWidget {
               vertical: _ListRowMetrics.cardVerticalInset,
             ),
             child: InkWell(
-              onTap: onOpenDetail,
+              onTap: widget.onOpenDetail,
               borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
               child: Ink(
                 decoration: BoxDecoration(
@@ -652,7 +713,7 @@ class _ListItemRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _ActionIconButton(
-                        onPressed: onToggleComplete,
+                        onPressed: widget.onToggleComplete,
                         icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
                         color: item.isCompleted ? theme.colorScheme.primary : accent,
                       ),
@@ -674,10 +735,10 @@ class _ListItemRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (dragIndex != null) ...[
+                      if (widget.dragIndex != null) ...[
                         const SizedBox(width: 8),
                         ReorderableDragStartListener(
-                          index: dragIndex!,
+                          index: widget.dragIndex!,
                           child: Icon(
                             AppIcons.drag,
                             size: 20,
@@ -687,7 +748,7 @@ class _ListItemRow extends StatelessWidget {
                       ],
                       const SizedBox(width: 4),
                       _ActionIconButton(
-                        onPressed: onToggleImportant,
+                        onPressed: widget.onToggleImportant,
                         icon: item.isImportant
                             ? AppIcons.importantFilled
                             : AppIcons.importantOutlined,
@@ -820,38 +881,144 @@ class _EmptyRowsBottomLine extends StatelessWidget {
   }
 }
 
-class _SwipeBackground extends StatelessWidget {
-  const _SwipeBackground({
-    required this.alignment,
-    required this.color,
+class _PhasedSwipeMotion extends StatelessWidget {
+  const _PhasedSwipeMotion({
+    required this.controller,
+    required this.backgroundColor,
+    required this.actionColor,
     required this.icon,
-    required this.label,
+    required this.alignment,
+    required this.iconBackgroundColor,
   });
 
-  final Alignment alignment;
-  final Color color;
+  final SlidableController controller;
+  final Color backgroundColor;
+  final Color actionColor;
   final IconData icon;
-  final String label;
+  final Alignment alignment;
+  final Color iconBackgroundColor;
+
+  bool get _isFromStart => alignment.x < 0;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(color: color),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
-        child: Align(
-          alignment: alignment,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18),
-              const SizedBox(width: 6),
-              Text(label),
-            ],
+    return AnimatedBuilder(
+      animation: controller.animation,
+      builder: (context, child) {
+        final progress = controller.ratio.abs().clamp(0.0, 1.0);
+        final stageBlockProgress = _progressBetween(
+          progress,
+          _SwipeStageMetrics.commitThreshold,
+          _SwipeStageMetrics.stageFiveThreshold,
+        );
+        final actionWidth = lerpDouble(
+              _SwipeStageMetrics.minActionWidth,
+              _SwipeStageMetrics.maxActionWidth,
+              Curves.easeOutCubic.transform(stageBlockProgress),
+            ) ??
+            _SwipeStageMetrics.minActionWidth;
+        final iconScale = lerpDouble(
+              0.82,
+              1,
+              Curves.easeOutBack.transform(
+                _progressBetween(
+                  progress,
+                  _SwipeStageMetrics.previewThreshold,
+                  _SwipeStageMetrics.stageFourThreshold,
+                ),
+              ),
+            ) ??
+            1;
+        final iconBubbleSize = lerpDouble(
+              _SwipeStageMetrics.minBubbleSize,
+              _SwipeStageMetrics.maxBubbleSize,
+              Curves.easeOut.transform(
+                _progressBetween(
+                  progress,
+                  _SwipeStageMetrics.previewThreshold,
+                  _SwipeStageMetrics.commitThreshold,
+                ),
+              ),
+            ) ??
+            _SwipeStageMetrics.maxBubbleSize;
+        final blockVisible = progress >= _SwipeStageMetrics.commitThreshold;
+        final previewAlpha = _previewAlpha(progress);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: _ListRowMetrics.cardVerticalInset,
           ),
-        ),
-      ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: backgroundColor.withValues(alpha: previewAlpha)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (blockVisible)
+                    Align(
+                      alignment: alignment,
+                      child: Container(
+                        width: actionWidth,
+                        decoration: BoxDecoration(color: actionColor),
+                      ),
+                    ),
+                  Align(
+                    alignment: _isFromStart ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _SwipeStageMetrics.horizontalInset,
+                      ),
+                      child: Transform.scale(
+                        scale: iconScale,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: iconBackgroundColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: SizedBox(
+                            width: iconBubbleSize,
+                            height: iconBubbleSize,
+                            child: Icon(
+                              icon,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  double _progressBetween(double value, double start, double end) {
+    if (end <= start) {
+      return 1;
+    }
+    return ((value - start) / (end - start)).clamp(0.0, 1.0);
+  }
+
+  double _previewAlpha(double progress) {
+    final previewProgress = _progressBetween(
+      progress,
+      _SwipeStageMetrics.previewThreshold,
+      _SwipeStageMetrics.commitThreshold,
+    );
+    return lerpDouble(0.16, 1, Curves.easeOut.transform(previewProgress)) ?? 1;
   }
 }
 
@@ -907,8 +1074,19 @@ class _CompletedHeaderRow extends _ListVisualRow {
 
 abstract final class _ListRowMetrics {
   static const rowHeight = 62.0;
-  static const horizontalPadding = 4.0;
   static const cardHorizontalPadding = 8.0;
   static const cardVerticalInset = 3.0;
   static const cardRadius = 4.0;
+}
+
+abstract final class _SwipeStageMetrics {
+  static const previewThreshold = 0.08;
+  static const commitThreshold = 0.18;
+  static const stageFourThreshold = 0.42;
+  static const stageFiveThreshold = 0.58;
+  static const horizontalInset = 18.0;
+  static const minBubbleSize = 28.0;
+  static const maxBubbleSize = 34.0;
+  static const minActionWidth = 60.0;
+  static const maxActionWidth = 156.0;
 }
