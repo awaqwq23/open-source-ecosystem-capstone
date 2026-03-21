@@ -330,6 +330,7 @@ class _HomeGridState extends State<_HomeGrid> {
                   layout.bottomPadding,
                 ),
                 child: SizedBox(
+                  width: layout.contentWidth,
                   height: layout.contentHeight,
                   child: Stack(
                     children: [
@@ -623,6 +624,7 @@ class _HomeGridLayout {
     required this.cellSize,
     required this.gridHeight,
     required this.contentHeight,
+    required this.contentWidth,
     required this.horizontalPadding,
     required this.topPadding,
     required this.bottomPadding,
@@ -643,7 +645,10 @@ class _HomeGridLayout {
     const headerHeight = 44.0;
     const headerCellHeight = 38.0;
     const itemInset = 1.0;
-    final availableWidth = math.max(320.0, constraints.maxWidth);
+    final availableWidth = math.max(
+      0.0,
+      constraints.maxWidth - horizontalPadding * 2,
+    );
     final safeColumnCount = math.max(1, columnCount);
     final columnWidth = math.max(
       18.0,
@@ -654,6 +659,8 @@ class _HomeGridLayout {
     final gridHeight = safeRowCount == 0
         ? 0.0
         : safeRowCount * cellSize + (safeRowCount - 1) * rowGap;
+    final contentWidth =
+        timelineWidth + safeColumnCount * columnWidth + (safeColumnCount - 1) * columnGap;
 
     return _HomeGridLayout(
       timelineWidth: timelineWidth,
@@ -665,6 +672,7 @@ class _HomeGridLayout {
       cellSize: cellSize,
       gridHeight: gridHeight,
       contentHeight: headerHeight + gridHeight,
+      contentWidth: contentWidth,
       horizontalPadding: horizontalPadding,
       topPadding: topPadding,
       bottomPadding: bottomPadding,
@@ -681,6 +689,7 @@ class _HomeGridLayout {
   final double cellSize;
   final double gridHeight;
   final double contentHeight;
+  final double contentWidth;
   final double horizontalPadding;
   final double topPadding;
   final double bottomPadding;
@@ -775,6 +784,7 @@ class _AgendaBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
+    final opacity = item.opacity.clamp(0.25, 1.0).toDouble();
 
     return Positioned(
       left: left,
@@ -783,7 +793,7 @@ class _AgendaBlock extends StatelessWidget {
       height: height,
       child: IgnorePointer(
         child: Opacity(
-          opacity: item.opacity.clamp(0.25, 1),
+          opacity: opacity,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.24),
@@ -792,37 +802,59 @@ class _AgendaBlock extends StatelessWidget {
                 color: accent.withValues(alpha: 0.24),
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-              child: DefaultTextStyle(
-                style: theme.textTheme.bodySmall!.copyWith(
-                  color: accent.withValues(alpha: 0.96),
-                  fontWeight: FontWeight.w700,
-                  height: 1.12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.item.title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compactHeight = constraints.maxHeight < 36;
+                final showDetails =
+                    constraints.maxHeight >= 60 && item.item.details.isNotEmpty;
+                final titleMaxLines = constraints.maxHeight < 34
+                    ? 1
+                    : constraints.maxHeight < 56
+                        ? 2
+                        : 3;
+                final horizontalPadding = constraints.maxWidth < 56 ? 5.0 : 8.0;
+                final verticalPadding = compactHeight ? 3.0 : 6.0;
+
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    verticalPadding,
+                    horizontalPadding,
+                    verticalPadding,
+                  ),
+                  child: DefaultTextStyle(
+                    style: theme.textTheme.bodySmall!.copyWith(
+                      color: accent.withValues(alpha: 0.96),
+                      fontWeight: FontWeight.w700,
+                      height: compactHeight ? 1 : 1.12,
                     ),
-                    if (height > 44 && item.item.details.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        item.item.details,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: accent.withValues(alpha: 0.84),
-                          fontWeight: FontWeight.w600,
+                    child: Column(
+                      mainAxisAlignment:
+                          compactHeight ? MainAxisAlignment.center : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.item.title,
+                          maxLines: titleMaxLines,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                        if (showDetails) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            item.item.details,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: accent.withValues(alpha: 0.84),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
