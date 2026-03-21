@@ -1,9 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
@@ -55,8 +56,8 @@ class ListPage extends ConsumerWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFFE9F8F1),
               theme.colorScheme.surface,
+              theme.colorScheme.surfaceContainerLowest,
             ],
           ),
         ),
@@ -64,72 +65,77 @@ class ListPage extends ConsumerWidget {
           children: [
             SafeArea(
               top: false,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  isCompact ? 16 : 24,
-                  12,
-                  isCompact ? 16 : 24,
-                  112,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 920),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppEntrance(
-                          child: _ListHeroCard(
-                            tabLabel: _tabLabel(l10n, state.currentTab),
-                            summary: _summaryLabel(l10n, section),
-                            sortLabel: _sortLabel(l10n, state),
-                            reorderEnabled: state.isReorderEnabled,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final horizontalPadding = isCompact ? 16.0 : 24.0;
+                  final topPadding = 8.0;
+                  final bottomPadding = 112.0;
+                  final rows = _buildRows(
+                    pendingItems: section.pendingItems,
+                    completedItems: section.completedItems,
+                    isCompletedExpanded: state.isCompletedExpanded,
+                  );
+                  final availableHeight =
+                      math.max(0.0, constraints.maxHeight - topPadding - bottomPadding);
+                  final emptyRowCount = _calculateEmptyRowCount(
+                    existingRowCount: _rowCount(rows),
+                    availableHeight: availableHeight,
+                  );
+
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      topPadding,
+                      horizontalPadding,
+                      bottomPadding,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 920,
+                          minHeight: math.max(0.0, constraints.maxHeight - topPadding),
+                        ),
+                        child: AppEntrance(
+                          child: Column(
+                            children: [
+                              for (final row in rows)
+                                switch (row) {
+                                  _PendingTaskRows(:final items) => _PendingTaskRowList(
+                                    items: items,
+                                    state: state,
+                                  ),
+                                  _StaticItemRow(:final item) => _ListItemRow(
+                                    item: item,
+                                    dragIndex: null,
+                                    onToggleComplete: () => ref
+                                        .read(listHeaderViewModelProvider.notifier)
+                                        .toggleCompleted(item.id),
+                                    onToggleImportant: () => ref
+                                        .read(listHeaderViewModelProvider.notifier)
+                                        .toggleImportant(item.id),
+                                    onOpenDetail: () => _openDetail(context, item),
+                                    onEdit: () => _openEditor(context, item: item),
+                                    onDelete: () => ref
+                                        .read(listHeaderViewModelProvider.notifier)
+                                        .deleteItem(item.id),
+                                  ),
+                                  _CompletedHeaderRow(:final count) => _CompletedToggleRow(
+                                    title: l10n.listCompletedSection(count),
+                                    isExpanded: state.isCompletedExpanded,
+                                    onToggle: () => ref
+                                        .read(listHeaderViewModelProvider.notifier)
+                                        .toggleCompletedExpanded(),
+                                  ),
+                                },
+                              for (var index = 0; index < emptyRowCount; index++)
+                                const _EmptyRow(),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        if (section.pendingItems.isEmpty && section.completedItems.isEmpty)
-                          AppEntrance(
-                            delay: AppMotion.fast,
-                            offset: AppMotion.sectionOffset,
-                            child: _EmptyListCard(
-                              title: l10n.listEmptyTitle,
-                              description: l10n.listEmptyDescription,
-                            ),
-                          )
-                        else ...[
-                          AppEntrance(
-                            delay: AppMotion.fast,
-                            offset: AppMotion.sectionOffset,
-                            child: _buildPendingSection(context, ref, section.pendingItems, state),
-                          ),
-                          const SizedBox(height: 16),
-                          AppEntrance(
-                            delay: AppMotion.fast * 2,
-                            offset: AppMotion.sectionOffset,
-                            child: _CompletedSection(
-                              title: l10n.listCompletedSection(section.completedItems.length),
-                              isExpanded: state.isCompletedExpanded,
-                              items: section.completedItems,
-                              onToggle: () => ref
-                                  .read(listHeaderViewModelProvider.notifier)
-                                  .toggleCompletedExpanded(),
-                              onToggleComplete: (itemId) => ref
-                                  .read(listHeaderViewModelProvider.notifier)
-                                  .toggleCompleted(itemId),
-                              onToggleImportant: (itemId) => ref
-                                  .read(listHeaderViewModelProvider.notifier)
-                                  .toggleImportant(itemId),
-                              onOpenDetail: (item) => _openDetail(context, item),
-                              onEdit: (item) => _openEditor(context, item: item),
-                              onDelete: (itemId) => ref
-                                  .read(listHeaderViewModelProvider.notifier)
-                                  .deleteItem(itemId),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
             Positioned(
@@ -143,8 +149,8 @@ class ListPage extends ConsumerWidget {
                       .read(listHeaderViewModelProvider.notifier)
                       .createPrefillForCurrentTab(),
                 ),
-                backgroundColor: const Color(0xFF2E7D59),
-                foregroundColor: Colors.white,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 child: const Icon(AppIcons.add),
               ),
             ),
@@ -154,122 +160,57 @@ class ListPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingSection(
-    BuildContext context,
-    WidgetRef ref,
-    List<AgendaItem> items,
-    ListHeaderState state,
-  ) {
-    final l10n = context.l10n;
-    final canReorder = state.isReorderEnabled &&
-        (state.currentTab == ListHeaderTab.tasks || state.currentTab == ListHeaderTab.allItems) &&
-        items.where((item) => item.type == ItemType.task).length > 1;
+  List<_ListVisualRow> _buildRows({
+    required List<AgendaItem> pendingItems,
+    required List<AgendaItem> completedItems,
+    required bool isCompletedExpanded,
+  }) {
+    final rows = <_ListVisualRow>[];
+    final reorderableTasks = <AgendaItem>[];
 
-    if (!canReorder) {
-      return _ListSectionCard(
-        title: l10n.listPendingSection(items.length),
-        child: Column(
-          children: [
-            for (final item in items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _SwipeableListItem(
-                  item: item,
-                  dragIndex: null,
-                  onToggleComplete: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .toggleCompleted(item.id),
-                  onToggleImportant: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .toggleImportant(item.id),
-                  onOpenDetail: () => _openDetail(context, item),
-                  onEdit: () => _openEditor(context, item: item),
-                  onDelete: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .deleteItem(item.id),
-                ),
-              ),
-          ],
-        ),
-      );
+    for (final item in pendingItems) {
+      if (item.type == ItemType.task) {
+        reorderableTasks.add(item);
+      } else {
+        if (reorderableTasks.isNotEmpty) {
+          rows.add(_PendingTaskRows(reorderableTasks.toList(growable: false)));
+          reorderableTasks.clear();
+        }
+        rows.add(_StaticItemRow(item));
+      }
     }
+    if (reorderableTasks.isNotEmpty) {
+      rows.add(_PendingTaskRows(reorderableTasks.toList(growable: false)));
+    }
+    if (completedItems.isNotEmpty) {
+      rows.add(_CompletedHeaderRow(completedItems.length));
+      if (isCompletedExpanded) {
+        rows.addAll(completedItems.map(_StaticItemRow.new));
+      }
+    }
+    return rows;
+  }
 
-    final taskItems = items.where((item) => item.type == ItemType.task).toList();
-    final otherItems = items.where((item) => item.type != ItemType.task).toList();
+  int _calculateEmptyRowCount({
+    required int existingRowCount,
+    required double availableHeight,
+  }) {
+    final occupiedHeight = existingRowCount * _ListRowMetrics.rowHeight;
+    if (occupiedHeight >= availableHeight) {
+      return 0;
+    }
+    return ((availableHeight - occupiedHeight) / _ListRowMetrics.rowHeight).ceil();
+  }
 
-    return _ListSectionCard(
-      title: l10n.listPendingSection(items.length),
-      subtitle: l10n.listReorderHint,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (taskItems.isNotEmpty)
-            Theme(
-              data: Theme.of(context).copyWith(canvasColor: Colors.transparent),
-              child: ReorderableListView.builder(
-                buildDefaultDragHandles: false,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: taskItems.length,
-                onReorder: (oldIndex, newIndex) => ref
-                    .read(listHeaderViewModelProvider.notifier)
-                    .reorderPendingTasks(oldIndex, newIndex),
-                itemBuilder: (context, index) {
-                  final item = taskItems[index];
-                  return Padding(
-                    key: ValueKey(item.id),
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _SwipeableListItem(
-                      item: item,
-                      dragIndex: index,
-                      onToggleComplete: () => ref
-                          .read(listHeaderViewModelProvider.notifier)
-                          .toggleCompleted(item.id),
-                      onToggleImportant: () => ref
-                          .read(listHeaderViewModelProvider.notifier)
-                          .toggleImportant(item.id),
-                      onOpenDetail: () => _openDetail(context, item),
-                      onEdit: () => _openEditor(context, item: item),
-                      onDelete: () => ref
-                          .read(listHeaderViewModelProvider.notifier)
-                          .deleteItem(item.id),
-                    ),
-                  );
-                },
-              ),
-            ),
-          if (otherItems.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              l10n.listStaticItemsLabel,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            for (final item in otherItems)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _SwipeableListItem(
-                  item: item,
-                  dragIndex: null,
-                  onToggleComplete: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .toggleCompleted(item.id),
-                  onToggleImportant: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .toggleImportant(item.id),
-                  onOpenDetail: () => _openDetail(context, item),
-                  onEdit: () => _openEditor(context, item: item),
-                  onDelete: () => ref
-                      .read(listHeaderViewModelProvider.notifier)
-                      .deleteItem(item.id),
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
+  int _rowCount(List<_ListVisualRow> rows) {
+    var count = 0;
+    for (final row in rows) {
+      count += switch (row) {
+        _PendingTaskRows(:final items) => items.length,
+        _StaticItemRow() || _CompletedHeaderRow() => 1,
+      };
+    }
+    return count;
   }
 
   String _tabLabel(AppLocalizations l10n, ListHeaderTab tab) {
@@ -297,10 +238,6 @@ class ListPage extends ConsumerWidget {
       ListSortMode.createdDate => l10n.listSortCreatedDate,
       ListSortMode.manual => l10n.listSortManual,
     };
-  }
-
-  String _summaryLabel(AppLocalizations l10n, ListPageSection section) {
-    return l10n.listSummary(section.pendingItems.length, section.completedItems.length);
   }
 
   Future<void> _showTabSwitcher(BuildContext context, WidgetRef ref) {
@@ -491,235 +428,120 @@ class ListPage extends ConsumerWidget {
   }
 }
 
-class _ListHeroCard extends StatelessWidget {
-  const _ListHeroCard({
-    required this.tabLabel,
-    required this.summary,
-    required this.sortLabel,
-    required this.reorderEnabled,
-  });
-
-  final String tabLabel;
-  final String summary;
-  final String sortLabel;
-  final bool reorderEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFEEF9F0),
-            Color(0xFFD9F0E4),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            tabLabel,
-            style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF173B2D),
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            summary,
-            style: theme.textTheme.titleMedium?.copyWith(
-                  color: const Color(0xFF406757),
-                ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeroChip(
-                icon: Icons.sort,
-                label: sortLabel,
-              ),
-              if (reorderEnabled)
-                _HeroChip(
-                  icon: AppIcons.drag,
-                  label: context.l10n.listSortManual,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFF2E7D59)),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
-      ),
-    );
-  }
-}
-
-class _ListSectionCard extends StatelessWidget {
-  const _ListSectionCard({
-    required this.title,
-    required this.child,
-    this.subtitle,
-  });
-
-  final String title;
-  final String? subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ui.Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              subtitle!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _CompletedSection extends StatelessWidget {
-  const _CompletedSection({
-    required this.title,
-    required this.isExpanded,
+class _PendingTaskRowList extends ConsumerWidget {
+  const _PendingTaskRowList({
     required this.items,
-    required this.onToggle,
-    required this.onToggleComplete,
-    required this.onToggleImportant,
-    required this.onOpenDetail,
-    required this.onEdit,
-    required this.onDelete,
+    required this.state,
   });
 
-  final String title;
-  final bool isExpanded;
   final List<AgendaItem> items;
-  final VoidCallback onToggle;
-  final ValueChanged<String> onToggleComplete;
-  final ValueChanged<String> onToggleImportant;
-  final ValueChanged<AgendaItem> onOpenDetail;
-  final ValueChanged<AgendaItem> onEdit;
-  final ValueChanged<String> onDelete;
+  final ListHeaderState state;
 
   @override
-  Widget build(BuildContext context) {
-    return _ListSectionCard(
-      title: title,
-      child: Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canReorder = state.isReorderEnabled &&
+        (state.currentTab == ListHeaderTab.tasks || state.currentTab == ListHeaderTab.allItems) &&
+        items.length > 1;
+
+    if (!canReorder) {
+      return Column(
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(isExpanded ? AppIcons.expandLess : AppIcons.expandMore),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isExpanded
-                          ? context.l10n.listCompletedCollapse
-                          : context.l10n.listCompletedExpand,
-                    ),
-                  ),
-                ],
-              ),
+          for (final item in items)
+            _ListItemRow(
+              item: item,
+              dragIndex: null,
+              onToggleComplete: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .toggleCompleted(item.id),
+              onToggleImportant: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .toggleImportant(item.id),
+              onOpenDetail: () => _openDetail(context, item),
+              onEdit: () => _openEditor(context, item: item),
+              onDelete: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .deleteItem(item.id),
             ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Column(
-                children: [
-                  for (final item in items)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _SwipeableListItem(
-                        item: item,
-                        dragIndex: null,
-                        onToggleComplete: () => onToggleComplete(item.id),
-                        onToggleImportant: () => onToggleImportant(item.id),
-                        onOpenDetail: () => onOpenDetail(item),
-                        onEdit: () => onEdit(item),
-                        onDelete: () => onDelete(item.id),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            crossFadeState:
-                isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            duration: AppMotion.fast,
-          ),
         ],
+      );
+    }
+
+    return Theme(
+      data: Theme.of(context).copyWith(canvasColor: Colors.transparent),
+      child: ReorderableListView.builder(
+        buildDefaultDragHandles: false,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        onReorder: (oldIndex, newIndex) => ref
+            .read(listHeaderViewModelProvider.notifier)
+            .reorderPendingTasks(oldIndex, newIndex),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return KeyedSubtree(
+            key: ValueKey(item.id),
+            child: _ListItemRow(
+              item: item,
+              dragIndex: index,
+              onToggleComplete: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .toggleCompleted(item.id),
+              onToggleImportant: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .toggleImportant(item.id),
+              onOpenDetail: () => _openDetail(context, item),
+              onEdit: () => _openEditor(context, item: item),
+              onDelete: () => ref
+                  .read(listHeaderViewModelProvider.notifier)
+                  .deleteItem(item.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openDetail(BuildContext context, AgendaItem item) {
+    context.push(
+      AppRoutePaths.itemDetail,
+      extra: ItemDetailArgs(itemId: item.id),
+    );
+  }
+
+  void _openEditor(
+    BuildContext context, {
+    AgendaItem? item,
+  }) {
+    if (item == null) {
+      return;
+    }
+    context.push(
+      AppRoutePaths.itemEditor,
+      extra: ItemEditorArgs(
+        itemId: item.id,
+        prefill: ItemEditorPrefill(
+          type: item.type,
+          title: item.title,
+          details: item.details,
+          location: item.location,
+          color: item.color,
+          isAllDay: item.isAllDay,
+          reminder: item.reminder,
+          repeatRule: item.repeatRule,
+          startAt: item.startAt,
+          endAt: item.endAt,
+          deadline: item.deadline,
+          targetDate: item.targetDate,
+          estimatedDuration: item.estimatedDuration,
+          isImportant: item.isImportant,
+        ),
       ),
     );
   }
 }
 
-class _SwipeableListItem extends StatelessWidget {
-  const _SwipeableListItem({
+class _ListItemRow extends StatelessWidget {
+  const _ListItemRow({
     required this.item,
     required this.dragIndex,
     required this.onToggleComplete,
@@ -742,107 +564,128 @@ class _SwipeableListItem extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
 
-    return Dismissible(
-      key: ValueKey('swipe-${item.id}'),
-      direction: DismissDirection.horizontal,
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          onEdit();
+    return SizedBox(
+      height: _ListRowMetrics.rowHeight,
+      child: Dismissible(
+        key: ValueKey('swipe-${item.id}'),
+        direction: DismissDirection.horizontal,
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            onEdit();
+            return false;
+          }
+          onDelete();
           return false;
-        }
-        onDelete();
-        return false;
-      },
-      background: _SwipeBackground(
-        alignment: Alignment.centerLeft,
-        color: accent.withValues(alpha: 0.18),
-        icon: AppIcons.edit,
-        label: context.l10n.listActionEdit,
-      ),
-      secondaryBackground: _SwipeBackground(
-        alignment: Alignment.centerRight,
-        color: theme.colorScheme.errorContainer,
-        icon: AppIcons.delete,
-        label: context.l10n.listActionDelete,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onOpenDetail,
-          child: AnimatedContainer(
-            duration: AppMotion.fast,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.16),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: onToggleComplete,
-                  icon: Icon(
-                    item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                    color: item.isCompleted ? const Color(0xFF2E7D59) : accent,
+        },
+        background: _SwipeBackground(
+          alignment: Alignment.centerLeft,
+          color: accent.withValues(alpha: 0.16),
+          icon: AppIcons.edit,
+          label: context.l10n.listActionEdit,
+        ),
+        secondaryBackground: _SwipeBackground(
+          alignment: Alignment.centerRight,
+          color: theme.colorScheme.errorContainer,
+          icon: AppIcons.delete,
+          label: context.l10n.listActionDelete,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onOpenDetail,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
+              child: Row(
+                children: [
+                  _ActionIconButton(
+                    onPressed: onToggleComplete,
+                    icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                    color: item.isCompleted ? theme.colorScheme.primary : accent,
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              decoration:
-                                  item.isCompleted ? TextDecoration.lineThrough : null,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _subtitle(context, item),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (dragIndex != null)
-                  ReorderableDragStartListener(
-                    index: dragIndex!,
-                    child: const Padding(
-                      padding: EdgeInsets.only(right: 8),
-                      child: Icon(AppIcons.drag),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                            decoration:
+                                item.isCompleted ? TextDecoration.lineThrough : null,
+                          ),
                     ),
                   ),
-                IconButton(
-                  onPressed: onToggleImportant,
-                  icon: Icon(
-                    item.isImportant
+                  if (dragIndex != null) ...[
+                    const SizedBox(width: 8),
+                    ReorderableDragStartListener(
+                      index: dragIndex!,
+                      child: Icon(
+                        AppIcons.drag,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 4),
+                  _ActionIconButton(
+                    onPressed: onToggleImportant,
+                    icon: item.isImportant
                         ? AppIcons.importantFilled
                         : AppIcons.importantOutlined,
                     color: item.isImportant
                         ? const Color(0xFFF4A63E)
                         : theme.colorScheme.onSurfaceVariant,
                   ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompletedToggleRow extends StatelessWidget {
+  const _CompletedToggleRow({
+    required this.title,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  final String title;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: _ListRowMetrics.rowHeight,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
+            child: Row(
+              children: [
+                Icon(
+                  isExpanded ? AppIcons.expandLess : AppIcons.expandMore,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ],
             ),
@@ -851,20 +694,32 @@ class _SwipeableListItem extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _subtitle(BuildContext context, AgendaItem item) {
-    final l10n = context.l10n;
-    final localizations = MaterialLocalizations.of(context);
-    final date = item.type == ItemType.memo
-        ? item.targetDate
-        : (item.type == ItemType.task ? (item.deadline ?? item.startAt) : item.startAt);
-    final dateLabel = localizations.formatShortDate(date);
-    final typeLabel = switch (item.type) {
-      ItemType.task => l10n.listTabTasks,
-      ItemType.schedule => l10n.listTabSchedules,
-      ItemType.memo => l10n.listTabMemos,
-    };
-    return '$typeLabel · $dateLabel';
+class _EmptyRow extends StatelessWidget {
+  const _EmptyRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: _ListRowMetrics.rowHeight,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+              width: 1,
+            ),
+            bottom: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+              width: 1,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -883,53 +738,77 @@ class _SwipeBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      alignment: alignment,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
+    return DecoratedBox(
+      decoration: BoxDecoration(color: color),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
+        child: Align(
+          alignment: alignment,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18),
+              const SizedBox(width: 6),
+              Text(label),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _EmptyListCard extends StatelessWidget {
-  const _EmptyListCard({
-    required this.title,
-    required this.description,
+class _ActionIconButton extends StatelessWidget {
+  const _ActionIconButton({
+    required this.onPressed,
+    required this.icon,
+    required this.color,
   });
 
-  final String title;
-  final String description;
+  final VoidCallback onPressed;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return ui.Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ],
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: IconButton(
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        visualDensity: VisualDensity.compact,
+        iconSize: 22,
+        splashRadius: 20,
+        icon: Icon(icon, color: color),
       ),
     );
   }
+}
+
+sealed class _ListVisualRow {
+  const _ListVisualRow();
+}
+
+class _PendingTaskRows extends _ListVisualRow {
+  const _PendingTaskRows(this.items);
+
+  final List<AgendaItem> items;
+}
+
+class _StaticItemRow extends _ListVisualRow {
+  const _StaticItemRow(this.item);
+
+  final AgendaItem item;
+}
+
+class _CompletedHeaderRow extends _ListVisualRow {
+  const _CompletedHeaderRow(this.count);
+
+  final int count;
+}
+
+abstract final class _ListRowMetrics {
+  static const rowHeight = 56.0;
+  static const horizontalPadding = 4.0;
 }
