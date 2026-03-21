@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -15,6 +17,7 @@ class AppBootstrapData {
     required this.homeSettings,
     required this.aiSettings,
     required this.aiMessages,
+    required this.agendaItems,
   });
 
   final Locale locale;
@@ -22,6 +25,7 @@ class AppBootstrapData {
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
   final List<AiChatMessage> aiMessages;
+  final List<AgendaItem> agendaItems;
 }
 
 abstract final class AppBootstrapStorageKeys {
@@ -30,6 +34,7 @@ abstract final class AppBootstrapStorageKeys {
   static const homeSettings = 'settings.home';
   static const aiSettings = 'settings.ai';
   static const aiMessages = 'ai.messages';
+  static const agendaItems = 'agenda.items';
 }
 
 class AppBootstrapLoader {
@@ -42,6 +47,7 @@ class AppBootstrapLoader {
       homeSettings: _readHomeSettings(preferences),
       aiSettings: _readAiSettings(preferences),
       aiMessages: _readAiMessages(preferences),
+      agendaItems: _readAgendaItems(preferences),
     );
   }
 
@@ -132,6 +138,24 @@ class AppBootstrapLoader {
             ),
           )
           .where((message) => message.id.isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static List<AgendaItem> _readAgendaItems(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.agendaItems);
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final json = jsonDecode(raw) as List<dynamic>;
+      return json
+          .whereType<Map<String, dynamic>>()
+          .map(AgendaItemStorageMapper.fromJson)
+          .whereType<AgendaItem>()
           .toList(growable: false);
     } catch (_) {
       return const [];

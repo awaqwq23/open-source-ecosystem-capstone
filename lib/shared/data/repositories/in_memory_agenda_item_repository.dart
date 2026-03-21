@@ -1,9 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_bootstrap.dart';
+import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 import 'package:huajuan_agenda/shared/domain/repositories/agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+
+final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
+  return const [];
+});
 
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
@@ -11,7 +20,9 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   @override
   List<AgendaItem> build() {
-    return const [];
+    final items = ref.read(agendaItemsBootstrapProvider);
+    _idSeed = items.length;
+    return items;
   }
 
   @override
@@ -55,6 +66,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       isImportant: isImportant,
     );
     state = [...state, item];
+    await _persist();
     return item;
   }
 
@@ -89,12 +101,14 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       updated,
       ...state.skip(index + 1),
     ];
+    await _persist();
     return updated;
   }
 
   @override
   Future<void> deleteItem(String id) async {
     state = state.where((item) => item.id != id).toList(growable: false);
+    await _persist();
   }
 
   @override
@@ -117,6 +131,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       updated,
       ...state.skip(index + 1),
     ];
+    await _persist();
     return updated;
   }
 
@@ -137,6 +152,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       updated,
       ...state.skip(index + 1),
     ];
+    await _persist();
     return updated;
   }
 
@@ -154,6 +170,18 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
           updatedAt: DateTime.now(),
         ),
     ];
+    await _persist();
+  }
+
+  Future<void> _persist() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    return prefs?.setString(
+          AppBootstrapStorageKeys.agendaItems,
+          jsonEncode([
+            for (final item in state) AgendaItemStorageMapper.toJson(item),
+          ]),
+        ) ??
+        Future<void>.value();
   }
 
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {
