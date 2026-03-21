@@ -668,11 +668,10 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
           closeThreshold: 0.999,
           motion: _PhasedSwipeMotion(
             controller: _slidableController,
-            backgroundColor: accent.withValues(alpha: 0.16),
+            backgroundColor: const Color(0xFFBEC8C2),
             actionColor: const Color(0xFF3E73DB),
             icon: AppIcons.edit,
             alignment: Alignment.centerLeft,
-            iconBackgroundColor: const Color(0xFF2F66D6),
           ),
           children: const [SizedBox.expand()],
         ),
@@ -682,11 +681,10 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
           closeThreshold: 0.999,
           motion: _PhasedSwipeMotion(
             controller: _slidableController,
-            backgroundColor: theme.colorScheme.errorContainer.withValues(alpha: 0.72),
-            actionColor: theme.colorScheme.error,
+            backgroundColor: const Color(0xFFBEC8C2),
+            actionColor: const Color(0xFFD95052),
             icon: AppIcons.delete,
             alignment: Alignment.centerRight,
-            iconBackgroundColor: theme.colorScheme.error.withValues(alpha: 0.92),
           ),
           children: const [SizedBox.expand()],
         ),
@@ -888,7 +886,6 @@ class _PhasedSwipeMotion extends StatelessWidget {
     required this.actionColor,
     required this.icon,
     required this.alignment,
-    required this.iconBackgroundColor,
   });
 
   final SlidableController controller;
@@ -896,7 +893,6 @@ class _PhasedSwipeMotion extends StatelessWidget {
   final Color actionColor;
   final IconData icon;
   final Alignment alignment;
-  final Color iconBackgroundColor;
 
   bool get _isFromStart => alignment.x < 0;
 
@@ -906,43 +902,25 @@ class _PhasedSwipeMotion extends StatelessWidget {
       animation: controller.animation,
       builder: (context, child) {
         final progress = controller.ratio.abs().clamp(0.0, 1.0);
-        final stageBlockProgress = _progressBetween(
+        final iconProgress = _progressBetween(
           progress,
-          _SwipeStageMetrics.commitThreshold,
-          _SwipeStageMetrics.stageFiveThreshold,
+          0,
+          _SwipeStageMetrics.coverThreshold,
         );
-        final actionWidth = lerpDouble(
-              _SwipeStageMetrics.minActionWidth,
-              _SwipeStageMetrics.maxActionWidth,
-              Curves.easeOutCubic.transform(stageBlockProgress),
-            ) ??
-            _SwipeStageMetrics.minActionWidth;
-        final iconScale = lerpDouble(
-              0.82,
-              1,
-              Curves.easeOutBack.transform(
-                _progressBetween(
-                  progress,
-                  _SwipeStageMetrics.previewThreshold,
-                  _SwipeStageMetrics.stageFourThreshold,
-                ),
-              ),
-            ) ??
-            1;
         final iconBubbleSize = lerpDouble(
               _SwipeStageMetrics.minBubbleSize,
               _SwipeStageMetrics.maxBubbleSize,
-              Curves.easeOut.transform(
-                _progressBetween(
-                  progress,
-                  _SwipeStageMetrics.previewThreshold,
-                  _SwipeStageMetrics.commitThreshold,
-                ),
-              ),
+              Curves.easeOut.transform(iconProgress),
             ) ??
             _SwipeStageMetrics.maxBubbleSize;
-        final blockVisible = progress >= _SwipeStageMetrics.commitThreshold;
-        final previewAlpha = _previewAlpha(progress);
+        final iconScale = lerpDouble(
+              0.92,
+              1,
+              Curves.easeOut.transform(iconProgress),
+            ) ??
+            1;
+        final showCircle = progress >= _SwipeStageMetrics.commitThreshold;
+        final iconColor = showCircle ? Colors.white : const Color(0xFF60716B);
 
         return Padding(
           padding: const EdgeInsets.symmetric(
@@ -950,54 +928,75 @@ class _PhasedSwipeMotion extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: backgroundColor.withValues(alpha: previewAlpha)),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (blockVisible)
-                    Align(
-                      alignment: alignment,
-                      child: Container(
-                        width: actionWidth,
-                        decoration: BoxDecoration(color: actionColor),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final paneSize = Size(constraints.maxWidth, constraints.maxHeight);
+                final revealWidth = paneSize.width * progress;
+                final contentGap = _SwipeStageMetrics.contentGap;
+                final iconRadius = iconBubbleSize / 2;
+                final iconCenterX = _isFromStart
+                    ? math.max(
+                        iconRadius + contentGap,
+                        revealWidth - contentGap - iconRadius,
+                      )
+                    : math.min(
+                        paneSize.width - iconRadius - contentGap,
+                        paneSize.width - revealWidth + contentGap + iconRadius,
+                      );
+                final iconCenter = Offset(iconCenterX, paneSize.height / 2);
+                final coverRadius = _coverRadius(
+                  size: paneSize,
+                  revealWidth: revealWidth,
+                  center: iconCenter,
+                );
+                final circleRadius = showCircle
+                    ? lerpDouble(
+                          iconRadius,
+                          coverRadius,
+                          Curves.easeOut.transform(
+                            _progressBetween(
+                              progress,
+                              _SwipeStageMetrics.commitThreshold,
+                              _SwipeStageMetrics.coverThreshold,
+                            ),
+                          ),
+                        ) ??
+                        coverRadius
+                    : 0.0;
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CustomPaint(
+                      painter: _SwipeRevealPainter(
+                        revealWidth: revealWidth,
+                        isFromStart: _isFromStart,
+                        backgroundColor: backgroundColor,
+                        actionColor: actionColor,
+                        showSolidAction: progress >= _SwipeStageMetrics.coverThreshold,
+                        circleCenter: iconCenter,
+                        circleRadius: circleRadius,
                       ),
                     ),
-                  Align(
-                    alignment: _isFromStart ? Alignment.centerLeft : Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _SwipeStageMetrics.horizontalInset,
-                      ),
+                    Positioned(
+                      left: iconCenter.dx - iconRadius,
+                      top: iconCenter.dy - iconRadius,
                       child: Transform.scale(
                         scale: iconScale,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: iconBackgroundColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: SizedBox(
-                            width: iconBubbleSize,
-                            height: iconBubbleSize,
-                            child: Icon(
-                              icon,
-                              size: 18,
-                              color: Colors.white,
-                            ),
+                        child: SizedBox(
+                          width: iconBubbleSize,
+                          height: iconBubbleSize,
+                          child: Icon(
+                            icon,
+                            size: 18,
+                            color: iconColor,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -1012,13 +1011,83 @@ class _PhasedSwipeMotion extends StatelessWidget {
     return ((value - start) / (end - start)).clamp(0.0, 1.0);
   }
 
-  double _previewAlpha(double progress) {
-    final previewProgress = _progressBetween(
-      progress,
-      _SwipeStageMetrics.previewThreshold,
-      _SwipeStageMetrics.commitThreshold,
-    );
-    return lerpDouble(0.16, 1, Curves.easeOut.transform(previewProgress)) ?? 1;
+  double _coverRadius({
+    required Size size,
+    required double revealWidth,
+    required Offset center,
+  }) {
+    final left = _isFromStart ? 0.0 : size.width - revealWidth;
+    final right = _isFromStart ? revealWidth : size.width;
+    final topLeft = Offset(left, 0);
+    final topRight = Offset(right, 0);
+    final bottomLeft = Offset(left, size.height);
+    final bottomRight = Offset(right, size.height);
+
+    return [
+      (topLeft - center).distance,
+      (topRight - center).distance,
+      (bottomLeft - center).distance,
+      (bottomRight - center).distance,
+    ].reduce(math.max);
+  }
+}
+
+class _SwipeRevealPainter extends CustomPainter {
+  const _SwipeRevealPainter({
+    required this.revealWidth,
+    required this.isFromStart,
+    required this.backgroundColor,
+    required this.actionColor,
+    required this.showSolidAction,
+    required this.circleCenter,
+    required this.circleRadius,
+  });
+
+  final double revealWidth;
+  final bool isFromStart;
+  final Color backgroundColor;
+  final Color actionColor;
+  final bool showSolidAction;
+  final Offset circleCenter;
+  final double circleRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (revealWidth <= 0) {
+      return;
+    }
+
+    final left = isFromStart ? 0.0 : size.width - revealWidth;
+    final revealRect = Rect.fromLTWH(left, 0, revealWidth, size.height);
+    final grayPaint = Paint()..color = backgroundColor;
+    canvas.drawRect(revealRect, grayPaint);
+
+    if (showSolidAction) {
+      final solidPaint = Paint()..color = actionColor;
+      canvas.drawRect(revealRect, solidPaint);
+      return;
+    }
+
+    if (circleRadius <= 0) {
+      return;
+    }
+
+    canvas.save();
+    canvas.clipRect(revealRect);
+    final circlePaint = Paint()..color = actionColor;
+    canvas.drawCircle(circleCenter, circleRadius, circlePaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SwipeRevealPainter oldDelegate) {
+    return oldDelegate.revealWidth != revealWidth ||
+        oldDelegate.isFromStart != isFromStart ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.actionColor != actionColor ||
+        oldDelegate.showSolidAction != showSolidAction ||
+        oldDelegate.circleCenter != circleCenter ||
+        oldDelegate.circleRadius != circleRadius;
   }
 }
 
@@ -1080,13 +1149,9 @@ abstract final class _ListRowMetrics {
 }
 
 abstract final class _SwipeStageMetrics {
-  static const previewThreshold = 0.08;
   static const commitThreshold = 0.18;
-  static const stageFourThreshold = 0.42;
-  static const stageFiveThreshold = 0.58;
-  static const horizontalInset = 18.0;
-  static const minBubbleSize = 28.0;
-  static const maxBubbleSize = 34.0;
-  static const minActionWidth = 60.0;
-  static const maxActionWidth = 156.0;
+  static const coverThreshold = 4 / 7;
+  static const contentGap = 18.0;
+  static const minBubbleSize = 24.0;
+  static const maxBubbleSize = 30.0;
 }
