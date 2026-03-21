@@ -726,35 +726,48 @@ class _CompletedToggleRow extends StatelessWidget {
       height: _ListRowMetrics.rowHeight,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _ListRowMetrics.horizontalPadding),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: _ListRowMetrics.cardVerticalInset,
+          ),
+          child: InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _ListRowMetrics.cardHorizontalPadding,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                            height: 1,
-                          ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                                height: 1,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
