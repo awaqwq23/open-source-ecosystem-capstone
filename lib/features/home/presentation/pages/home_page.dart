@@ -296,25 +296,16 @@ class _HomeGridState extends State<_HomeGrid> {
     final theme = Theme.of(context);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         color: theme.colorScheme.surfaceContainerLowest,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            const timelineWidth = 74.0;
-            const columnGap = 6.0;
-            const rowGap = 6.0;
-            const headerHeight = 60.0;
-            final availableWidth = math.max(320.0, constraints.maxWidth);
-            final columnWidth = math.max(
-              26.0,
-              (availableWidth - timelineWidth - columnGap * (widget.viewData.columns.length - 1)) /
-                  widget.viewData.columns.length,
+            final layout = _HomeGridLayout.fromConstraints(
+              constraints: constraints,
+              columnCount: widget.viewData.columns.length,
+              rowCount: widget.viewData.timeSlots.length,
             );
-            final cellSize = columnWidth;
-            final gridHeight = widget.viewData.timeSlots.length * cellSize +
-                (widget.viewData.timeSlots.length - 1) * rowGap;
-            final contentHeight = headerHeight + gridHeight;
 
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -326,17 +317,20 @@ class _HomeGridState extends State<_HomeGrid> {
                   widget.onPrevious();
                 }
               },
-              onTapUp: (details) => _handleTap(details.localPosition, cellSize, rowGap, columnGap),
+              onTapUp: (details) => _handleTap(details.localPosition, layout),
               onLongPressStart: (details) => _handleLongPress(
                 details.localPosition,
-                cellSize,
-                rowGap,
-                columnGap,
+                layout,
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(8, 12, 8, 20),
+                padding: EdgeInsets.fromLTRB(
+                  layout.horizontalPadding,
+                  layout.topPadding,
+                  layout.horizontalPadding,
+                  layout.bottomPadding,
+                ),
                 child: SizedBox(
-                  height: contentHeight,
+                  height: layout.contentHeight,
                   child: Stack(
                     children: [
                       for (var columnIndex = 0;
@@ -344,25 +338,25 @@ class _HomeGridState extends State<_HomeGrid> {
                           columnIndex++)
                         _HeaderCell(
                           column: widget.viewData.columns[columnIndex],
-                          left: timelineWidth + columnIndex * (columnWidth + columnGap),
-                          width: columnWidth,
-                          height: headerHeight - 8,
+                          left: layout.columnLeft(columnIndex),
+                          width: layout.columnWidth,
+                          height: layout.headerCellHeight,
                         ),
                       for (final slot in widget.viewData.timeSlots)
                         _TimelineLabel(
                           slot: slot,
-                          top: headerHeight + slot.index * (cellSize + rowGap),
-                          width: timelineWidth - 12,
-                          height: cellSize,
+                          top: layout.rowTop(slot.index),
+                          width: layout.timelineLabelWidth,
+                          height: layout.cellSize,
                         ),
                       for (var columnIndex = 0;
                           columnIndex < widget.viewData.columns.length;
                           columnIndex++)
                         for (final slot in widget.viewData.timeSlots)
                           _GridSlot(
-                            left: timelineWidth + columnIndex * (columnWidth + columnGap),
-                            top: headerHeight + slot.index * (cellSize + rowGap),
-                            size: cellSize,
+                            left: layout.columnLeft(columnIndex),
+                            top: layout.rowTop(slot.index),
+                            size: layout.cellSize,
                             highlight: DateUtils.isSameDay(
                                   widget.viewData.selectedCell?.date,
                                   widget.viewData.columns[columnIndex].date,
@@ -373,13 +367,10 @@ class _HomeGridState extends State<_HomeGrid> {
                       for (final item in widget.viewData.items)
                         _AgendaBlock(
                           item: item,
-                          left: timelineWidth +
-                              item.columnIndex * (columnWidth + columnGap) +
-                              item.left * columnWidth +
-                              2,
-                          top: headerHeight + item.top * gridHeight + 2,
-                          width: math.max(18, columnWidth * item.width - 4),
-                          height: math.max(26, item.height * gridHeight - 4),
+                          left: layout.itemLeft(item),
+                          top: layout.itemTop(item),
+                          width: layout.itemWidth(item),
+                          height: layout.itemHeight(item),
                         ),
                     ],
                   ),
@@ -392,8 +383,8 @@ class _HomeGridState extends State<_HomeGrid> {
     );
   }
 
-  void _handleTap(Offset position, double cellSize, double rowGap, double columnGap) {
-    final hit = _resolveHit(position, cellSize, rowGap, columnGap);
+  void _handleTap(Offset position, _HomeGridLayout layout) {
+    final hit = _resolveHit(position, layout);
     if (hit == null) {
       return;
     }
@@ -405,8 +396,8 @@ class _HomeGridState extends State<_HomeGrid> {
     }
   }
 
-  void _handleLongPress(Offset position, double cellSize, double rowGap, double columnGap) {
-    final hit = _resolveHit(position, cellSize, rowGap, columnGap);
+  void _handleLongPress(Offset position, _HomeGridLayout layout) {
+    final hit = _resolveHit(position, layout);
     if (hit == null) {
       return;
     }
@@ -418,30 +409,19 @@ class _HomeGridState extends State<_HomeGrid> {
     }
   }
 
-  _GridHit? _resolveHit(Offset position, double cellSize, double rowGap, double columnGap) {
-    const timelineWidth = 74.0;
-    const headerHeight = 60.0;
+  _GridHit? _resolveHit(Offset position, _HomeGridLayout layout) {
     final x = position.dx;
     final y = position.dy;
-    if (y < headerHeight || x < timelineWidth) {
+    if (y < layout.headerHeight || x < layout.timelineWidth) {
       return null;
     }
 
     final itemHits = <HomeLaidOutItem>[];
     for (final item in widget.viewData.items) {
-      final left = timelineWidth + item.columnIndex * (cellSize + columnGap) + item.left * cellSize;
-      final top = headerHeight +
-          item.top *
-              (widget.viewData.timeSlots.length * cellSize +
-                  (widget.viewData.timeSlots.length - 1) * rowGap);
-      final width = cellSize * item.width;
-      final height = math.max(
-        26,
-        item.height *
-                (widget.viewData.timeSlots.length * cellSize +
-                    (widget.viewData.timeSlots.length - 1) * rowGap) -
-            4,
-      );
+      final left = layout.itemLeft(item);
+      final top = layout.itemTop(item);
+      final width = layout.itemWidth(item);
+      final height = layout.itemHeight(item);
       if (x >= left && x <= left + width && y >= top && y <= top + height) {
         itemHits.add(item);
       }
@@ -450,19 +430,19 @@ class _HomeGridState extends State<_HomeGrid> {
       return _ItemHit(_resolveOverlappedItems(itemHits));
     }
 
-    final columnExtent = cellSize + columnGap;
-    final rowExtent = cellSize + rowGap;
-    final columnIndex = ((x - timelineWidth) / columnExtent).floor();
-    final rowIndex = ((y - headerHeight) / rowExtent).floor();
+    final columnExtent = layout.columnWidth + layout.columnGap;
+    final rowExtent = layout.cellSize + layout.rowGap;
+    final columnIndex = ((x - layout.timelineWidth) / columnExtent).floor();
+    final rowIndex = ((y - layout.headerHeight) / rowExtent).floor();
     if (columnIndex < 0 ||
         columnIndex >= widget.viewData.columns.length ||
         rowIndex < 0 ||
         rowIndex >= widget.viewData.timeSlots.length) {
       return null;
     }
-    final columnLeft = timelineWidth + columnIndex * columnExtent;
-    final rowTop = headerHeight + rowIndex * rowExtent;
-    if (x > columnLeft + cellSize || y > rowTop + cellSize) {
+    final columnLeft = layout.columnLeft(columnIndex);
+    final rowTop = layout.rowTop(rowIndex);
+    if (x > columnLeft + layout.cellSize || y > rowTop + layout.cellSize) {
       return null;
     }
     return _CellHit(widget.viewData.columns[columnIndex].date, rowIndex);
@@ -520,12 +500,12 @@ class _HeaderCell extends StatelessWidget {
               color: column.isToday
                   ? theme.colorScheme.primary.withValues(alpha: 0.14)
                   : theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 2 : 6,
-                vertical: compact ? 4 : 6,
+                horizontal: compact ? 1.5 : 4,
+                vertical: compact ? 3 : 4,
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -542,7 +522,7 @@ class _HeaderCell extends StatelessWidget {
                       ),
                     ),
                     if (!compact) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         column.dateLabel,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -577,23 +557,159 @@ class _TimelineLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final start = _formatMinute(slot.startMinute);
+    final end = _formatMinute(slot.endMinute);
+
     return Positioned(
       left: 0,
       top: top,
       width: width,
       height: height,
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Text(
-          slot.label,
-          textAlign: TextAlign.right,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              start,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                height: 0.92,
+                fontSize: 10.5,
+              ),
+            ),
+            Container(
+              width: math.min(14, width * 0.34),
+              height: 1,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.85),
+            ),
+            Text(
+              end,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+                fontWeight: FontWeight.w600,
+                height: 0.92,
+                fontSize: 10,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  String _formatMinute(int minute) {
+    final normalizedHour = minute ~/ 60;
+    final normalizedMinute = minute % 60;
+    final hourText = normalizedHour.toString().padLeft(2, '0');
+    final minuteText = normalizedMinute.toString().padLeft(2, '0');
+    return '$hourText:$minuteText';
+  }
+}
+
+class _HomeGridLayout {
+  const _HomeGridLayout({
+    required this.timelineWidth,
+    required this.columnGap,
+    required this.rowGap,
+    required this.headerHeight,
+    required this.headerCellHeight,
+    required this.columnWidth,
+    required this.cellSize,
+    required this.gridHeight,
+    required this.contentHeight,
+    required this.horizontalPadding,
+    required this.topPadding,
+    required this.bottomPadding,
+    required this.itemInset,
+  });
+
+  factory _HomeGridLayout.fromConstraints({
+    required BoxConstraints constraints,
+    required int columnCount,
+    required int rowCount,
+  }) {
+    const horizontalPadding = 4.0;
+    const topPadding = 6.0;
+    const bottomPadding = 12.0;
+    const timelineWidth = 48.0;
+    const columnGap = 2.0;
+    const rowGap = 2.0;
+    const headerHeight = 44.0;
+    const headerCellHeight = 38.0;
+    const itemInset = 1.0;
+    final availableWidth = math.max(320.0, constraints.maxWidth);
+    final safeColumnCount = math.max(1, columnCount);
+    final columnWidth = math.max(
+      18.0,
+      (availableWidth - timelineWidth - columnGap * (safeColumnCount - 1)) / safeColumnCount,
+    );
+    final cellSize = columnWidth;
+    final safeRowCount = math.max(0, rowCount);
+    final gridHeight = safeRowCount == 0
+        ? 0.0
+        : safeRowCount * cellSize + (safeRowCount - 1) * rowGap;
+
+    return _HomeGridLayout(
+      timelineWidth: timelineWidth,
+      columnGap: columnGap,
+      rowGap: rowGap,
+      headerHeight: headerHeight,
+      headerCellHeight: headerCellHeight,
+      columnWidth: columnWidth,
+      cellSize: cellSize,
+      gridHeight: gridHeight,
+      contentHeight: headerHeight + gridHeight,
+      horizontalPadding: horizontalPadding,
+      topPadding: topPadding,
+      bottomPadding: bottomPadding,
+      itemInset: itemInset,
+    );
+  }
+
+  final double timelineWidth;
+  final double columnGap;
+  final double rowGap;
+  final double headerHeight;
+  final double headerCellHeight;
+  final double columnWidth;
+  final double cellSize;
+  final double gridHeight;
+  final double contentHeight;
+  final double horizontalPadding;
+  final double topPadding;
+  final double bottomPadding;
+  final double itemInset;
+
+  double get timelineLabelWidth => timelineWidth - 4;
+
+  double columnLeft(int columnIndex) {
+    return timelineWidth + columnIndex * (columnWidth + columnGap);
+  }
+
+  double rowTop(int rowIndex) {
+    return headerHeight + rowIndex * (cellSize + rowGap);
+  }
+
+  double itemLeft(HomeLaidOutItem item) {
+    return columnLeft(item.columnIndex) + item.left * columnWidth + itemInset;
+  }
+
+  double itemTop(HomeLaidOutItem item) {
+    return headerHeight + item.top * gridHeight + itemInset;
+  }
+
+  double itemWidth(HomeLaidOutItem item) {
+    return math.max(16, columnWidth * item.width - itemInset * 2);
+  }
+
+  double itemHeight(HomeLaidOutItem item) {
+    return math.max(24, item.height * gridHeight - itemInset * 2);
   }
 }
 
@@ -627,11 +743,12 @@ class _GridSlot extends StatelessWidget {
               : today
                   ? theme.colorScheme.primary.withValues(alpha: 0.08)
                   : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: highlight
                 ? theme.colorScheme.primary.withValues(alpha: 0.5)
                 : Colors.transparent,
+            width: 1,
           ),
         ),
       ),
@@ -670,7 +787,7 @@ class _AgendaBlock extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.24),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: accent.withValues(alpha: 0.24),
               ),
