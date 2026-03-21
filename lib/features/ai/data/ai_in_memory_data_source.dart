@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
@@ -7,12 +10,17 @@ import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.d
 import 'package:huajuan_agenda/shared/models/agenda_item.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:openai_dart/openai_dart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final aiChatBootstrapMessagesProvider = Provider<List<AiChatMessage>>((ref) {
+  return const [];
+});
 
 class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
     implements AiChatRepository {
   @override
   List<AiChatMessage> build() {
-    return const [];
+    return ref.read(aiChatBootstrapMessagesProvider);
   }
 
   @override
@@ -31,7 +39,21 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
   @override
   Future<void> append(AiChatMessage message) async {
     state = [...state, message];
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.aiMessages,
+      jsonEncode([
+        for (final item in state)
+          {
+            'id': item.id,
+            'content': item.content,
+            'createdAt': item.createdAt.toIso8601String(),
+            'role': item.role.name,
+          },
+      ]),
+    );
   }
+
+  SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);
 }
 
 class OpenAiConfigurationException implements Exception {

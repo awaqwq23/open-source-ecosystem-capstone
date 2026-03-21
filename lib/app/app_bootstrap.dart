@@ -1,0 +1,140 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:huajuan_agenda/core/localization/locale_controller.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+
+class AppBootstrapData {
+  const AppBootstrapData({
+    required this.locale,
+    required this.themeMode,
+    required this.homeSettings,
+    required this.aiSettings,
+    required this.aiMessages,
+  });
+
+  final Locale locale;
+  final ui.ThemeMode themeMode;
+  final HomeSettings homeSettings;
+  final AiSettings aiSettings;
+  final List<AiChatMessage> aiMessages;
+}
+
+abstract final class AppBootstrapStorageKeys {
+  static const locale = 'settings.locale';
+  static const themeMode = 'settings.themeMode';
+  static const homeSettings = 'settings.home';
+  static const aiSettings = 'settings.ai';
+  static const aiMessages = 'ai.messages';
+}
+
+class AppBootstrapLoader {
+  const AppBootstrapLoader._();
+
+  static Future<AppBootstrapData> load(SharedPreferences preferences) async {
+    return AppBootstrapData(
+      locale: _readLocale(preferences),
+      themeMode: _readThemeMode(preferences),
+      homeSettings: _readHomeSettings(preferences),
+      aiSettings: _readAiSettings(preferences),
+      aiMessages: _readAiMessages(preferences),
+    );
+  }
+
+  static Locale _readLocale(SharedPreferences preferences) {
+    final code = preferences.getString(AppBootstrapStorageKeys.locale);
+    return switch (code) {
+      'en' => AppLocale.english.locale,
+      'zh' => AppLocale.chinese.locale,
+      _ => AppLocale.chinese.locale,
+    };
+  }
+
+  static ui.ThemeMode _readThemeMode(SharedPreferences preferences) {
+    final value = preferences.getString(AppBootstrapStorageKeys.themeMode);
+    return switch (value) {
+      'light' => ui.ThemeMode.light,
+      'dark' => ui.ThemeMode.dark,
+      _ => ui.ThemeMode.system,
+    };
+  }
+
+  static HomeSettings _readHomeSettings(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.homeSettings);
+    if (raw == null || raw.isEmpty) {
+      return const HomeSettings.defaults();
+    }
+
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return HomeSettings(
+        dayStartTime: TimeOfDay(
+          hour: json['startHour'] as int? ?? 8,
+          minute: json['startMinute'] as int? ?? 0,
+        ),
+        blockDurationMinutes: json['blockDurationMinutes'] as int? ?? 60,
+        blockGapMinutes: json['blockGapMinutes'] as int? ?? 0,
+        blockCount: json['blockCount'] as int? ?? 12,
+        wideLayoutScope: switch (json['wideLayoutScope']) {
+          'month' => HomeWideLayoutScope.month,
+          _ => HomeWideLayoutScope.week,
+        },
+      );
+    } catch (_) {
+      return const HomeSettings.defaults();
+    }
+  }
+
+  static AiSettings _readAiSettings(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.aiSettings);
+    if (raw == null || raw.isEmpty) {
+      return const AiSettings.defaults();
+    }
+
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return AiSettings(
+        baseUrl: json['baseUrl'] as String? ?? '',
+        apiKey: json['apiKey'] as String? ?? '',
+        model: json['model'] as String? ?? 'gpt-4o-mini',
+        systemPrompt: json['systemPrompt'] as String? ??
+            const AiSettings.defaults().systemPrompt,
+      );
+    } catch (_) {
+      return const AiSettings.defaults();
+    }
+  }
+
+  static List<AiChatMessage> _readAiMessages(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.aiMessages);
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final json = jsonDecode(raw) as List<dynamic>;
+      return json
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => AiChatMessage(
+              id: item['id'] as String? ?? '',
+              content: item['content'] as String? ?? '',
+              createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0),
+              role: switch (item['role']) {
+                'assistant' => AiChatRole.assistant,
+                _ => AiChatRole.user,
+              },
+            ),
+          )
+          .where((message) => message.id.isNotEmpty)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+}

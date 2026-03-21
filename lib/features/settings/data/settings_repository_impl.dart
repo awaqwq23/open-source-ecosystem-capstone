@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 final appHomeSettingsProvider = StateProvider<HomeSettings>((ref) {
@@ -13,6 +17,10 @@ final appHomeSettingsProvider = StateProvider<HomeSettings>((ref) {
 
 final appAiSettingsProvider = StateProvider<AiSettings>((ref) {
   return const AiSettings.defaults();
+});
+
+final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) {
+  return null;
 });
 
 class RiverpodSettingsRepository implements SettingsRepository {
@@ -35,22 +43,46 @@ class RiverpodSettingsRepository implements SettingsRepository {
   @override
   Future<void> saveLocale(Locale locale) async {
     _ref.read(appLocaleProvider.notifier).state = locale;
+    await _prefs?.setString(AppBootstrapStorageKeys.locale, locale.languageCode);
   }
 
   @override
   Future<void> saveThemeMode(ui.ThemeMode mode) async {
     _ref.read(appThemeModeProvider.notifier).state = mode;
+    await _prefs?.setString(AppBootstrapStorageKeys.themeMode, mode.name);
   }
 
   @override
   Future<void> saveHomeSettings(HomeSettings settings) async {
     _ref.read(appHomeSettingsProvider.notifier).state = settings;
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.homeSettings,
+      jsonEncode({
+        'startHour': settings.dayStartTime.hour,
+        'startMinute': settings.dayStartTime.minute,
+        'blockDurationMinutes': settings.blockDurationMinutes,
+        'blockGapMinutes': settings.blockGapMinutes,
+        'blockCount': settings.blockCount,
+        'wideLayoutScope': settings.wideLayoutScope.name,
+      }),
+    );
   }
 
   @override
   Future<void> saveAiSettings(AiSettings settings) async {
     _ref.read(appAiSettingsProvider.notifier).state = settings;
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.aiSettings,
+      jsonEncode({
+        'baseUrl': settings.baseUrl,
+        'apiKey': settings.apiKey,
+        'model': settings.model,
+        'systemPrompt': settings.systemPrompt,
+      }),
+    );
   }
+
+  SharedPreferences? get _prefs => _ref.read(sharedPreferencesProvider);
 }
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
