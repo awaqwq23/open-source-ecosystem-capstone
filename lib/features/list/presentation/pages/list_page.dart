@@ -84,6 +84,10 @@ class ListPage extends ConsumerWidget {
                     availableHeight: availableHeight,
                   );
 
+                  final hasCompletedSection = rows.any(
+                    (row) => row is _CompletedHeaderRow,
+                  );
+
                   return SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
@@ -130,7 +134,9 @@ class ListPage extends ConsumerWidget {
                                   ),
                                 },
                               for (var index = 0; index < emptyRowCount; index++)
-                                const _EmptyRow(),
+                                _EmptyRow(
+                                  showTopDivider: hasCompletedSection || index > 0,
+                                ),
                               if (emptyRowCount > 0) const _EmptyRowsBottomLine(),
                             ],
                           ),
@@ -836,7 +842,11 @@ class _CompletedToggleRow extends StatelessWidget {
 }
 
 class _EmptyRow extends StatelessWidget {
-  const _EmptyRow();
+  const _EmptyRow({
+    this.showTopDivider = true,
+  });
+
+  final bool showTopDivider;
 
   @override
   Widget build(BuildContext context) {
@@ -851,10 +861,12 @@ class _EmptyRow extends StatelessWidget {
       width: double.infinity,
       child: Align(
         alignment: Alignment.topCenter,
-        child: Container(
-          height: 1,
-          color: dividerColor,
-        ),
+        child: showTopDivider
+            ? Container(
+                height: 1,
+                color: dividerColor,
+              )
+            : null,
       ),
     );
   }
