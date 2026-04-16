@@ -140,6 +140,8 @@ class AppShell extends ConsumerWidget {
     AppShellDestination current,
     bool showLabels,
   ) {
+    final navIconSize = showLabels ? 24.0 : 28.0;
+
     return ui.NavigationSidebar(
       selectedKey: ValueKey(current.route),
       labelType: showLabels
