@@ -9,6 +9,7 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
@@ -677,8 +678,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
           closeThreshold: 0.999,
           motion: _PhasedSwipeMotion(
             controller: _slidableController,
-            backgroundColor: const Color(0xFFBEC8C2),
-            actionColor: const Color(0xFF3E73DB),
+            backgroundColor: AppSemanticColors.listSwipeBackground(theme),
+            actionColor: AppSemanticColors.listSwipeEditAction(theme),
+            committedIconColor: theme.colorScheme.onPrimary,
             icon: AppIcons.edit,
             alignment: Alignment.centerLeft,
           ),
@@ -690,8 +692,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
           closeThreshold: 0.999,
           motion: _PhasedSwipeMotion(
             controller: _slidableController,
-            backgroundColor: const Color(0xFFBEC8C2),
-            actionColor: const Color(0xFFD95052),
+            backgroundColor: AppSemanticColors.listSwipeBackground(theme),
+            actionColor: AppSemanticColors.listSwipeDeleteAction(theme),
+            committedIconColor: theme.colorScheme.onError,
             icon: AppIcons.delete,
             alignment: Alignment.centerRight,
           ),
@@ -760,7 +763,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                             ? AppIcons.importantFilled
                             : AppIcons.importantOutlined,
                         color: item.isImportant
-                            ? const Color(0xFFF4A63E)
+                            ? AppSemanticColors.listImportantStar(theme)
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                     ],
@@ -899,6 +902,7 @@ class _PhasedSwipeMotion extends StatelessWidget {
     required this.controller,
     required this.backgroundColor,
     required this.actionColor,
+    required this.committedIconColor,
     required this.icon,
     required this.alignment,
   });
@@ -906,6 +910,7 @@ class _PhasedSwipeMotion extends StatelessWidget {
   final SlidableController controller;
   final Color backgroundColor;
   final Color actionColor;
+  final Color committedIconColor;
   final IconData icon;
   final Alignment alignment;
 
@@ -935,7 +940,10 @@ class _PhasedSwipeMotion extends StatelessWidget {
             ) ??
             1;
         final showCircle = progress >= _SwipeStageMetrics.commitThreshold;
-        final iconColor = showCircle ? Colors.white : const Color(0xFF60716B);
+        final theme = Theme.of(context);
+        final iconColor = showCircle
+            ? committedIconColor
+            : AppSemanticColors.listSwipePassiveIcon(theme);
 
         return Padding(
           padding: const EdgeInsets.symmetric(

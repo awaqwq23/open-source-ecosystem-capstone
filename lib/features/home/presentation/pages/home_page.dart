@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/presentation/layout/home_grid_metrics.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
@@ -874,7 +875,7 @@ class _AgendaBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
     final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
-    final textBaseColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+    final textBaseColor = AppSemanticColors.onAgendaAccent(theme, accent);
 
     return Positioned(
       left: left,

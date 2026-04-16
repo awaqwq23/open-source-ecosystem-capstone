@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:huajuan_agenda/features/settings/presentation/widgets/settings_flat_list.dart';
@@ -135,7 +136,8 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
                         state.aiConnectionMessage!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: switch (state.aiConnectionStatus) {
-                            SettingsAiConnectionStatus.success => Colors.green.shade700,
+                            SettingsAiConnectionStatus.success =>
+                              AppSemanticColors.aiConnectionSuccessText(Theme.of(context)),
                             SettingsAiConnectionStatus.failure =>
                               Theme.of(context).colorScheme.error,
                             _ => Theme.of(context).colorScheme.onSurfaceVariant,
