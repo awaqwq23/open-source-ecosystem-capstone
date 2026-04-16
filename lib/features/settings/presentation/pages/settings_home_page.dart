@@ -93,31 +93,40 @@ class SettingsHomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            SettingsFlatSwitchRow(
-              title: context.l10n.settingsHomeDemoModeTitle,
-              subtitle: context.l10n.settingsHomeDemoModeDescription,
+            SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              title: Text(context.l10n.settingsHomeDemoModeTitle),
               value: settings.showDemoData,
               onChanged: (value) => _saveHomeSettings(
                 ref,
                 settings.copyWith(showDemoData: value),
               ),
             ),
-            SettingsFlatChoiceRow<HomeWideLayoutScope>(
-              label: context.l10n.settingsHomeWideLayout,
-              value: settings.wideLayoutScope,
-              options: [
-                SettingsFlatChoiceOption(
-                  value: HomeWideLayoutScope.week,
-                  label: context.l10n.homeScopeWeek,
+            SettingsFlatTile(
+              title: context.l10n.settingsHomeWideLayout,
+              leading: const Icon(AppIcons.homeOutlined),
+              trailing: DropdownButtonHideUnderline(
+                child: DropdownButton<HomeWideLayoutScope>(
+                  value: settings.wideLayoutScope,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _saveHomeSettings(
+                        ref,
+                        settings.copyWith(wideLayoutScope: value),
+                      );
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(
+                      value: HomeWideLayoutScope.week,
+                      child: Text(context.l10n.homeScopeWeek),
+                    ),
+                    DropdownMenuItem(
+                      value: HomeWideLayoutScope.month,
+                      child: Text(context.l10n.homeScopeMonth),
+                    ),
+                  ],
                 ),
-                SettingsFlatChoiceOption(
-                  value: HomeWideLayoutScope.month,
-                  label: context.l10n.homeScopeMonth,
-                ),
-              ],
-              onChanged: (value) => _saveHomeSettings(
-                ref,
-                settings.copyWith(wideLayoutScope: value),
               ),
             ),
           ],
