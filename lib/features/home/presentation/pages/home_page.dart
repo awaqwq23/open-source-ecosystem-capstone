@@ -927,14 +927,15 @@ class _AgendaBlock extends StatelessWidget {
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
               final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
-              final titleMaxLines = isCourseItem
-                  ? 1
-                  : switch (contentHeight) {
-                      < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
-                      < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
-                      _ when showDetails => 2,
-                      _ => 3,
-                    };
+              final titleMaxLines = switch (contentHeight) {
+                < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
+                _ when isCourseItem &&
+                    contentHeight < _HomeGridLayoutSpec.itemCourseTitleTwoLineMinContentHeight =>
+                  1,
+                < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
+                _ when showDetails => 2,
+                _ => 3,
+              };
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -1114,6 +1115,7 @@ abstract final class _HomeGridLayoutSpec {
   static const itemDetailsSpacing = 4.0;
   static const itemTitleSingleLineContentHeight = 24.0;
   static const itemTitleTwoLineContentHeight = 42.0;
+  static const itemCourseTitleTwoLineMinContentHeight = 34.0;
   static const itemDetailsMinContentHeight = 58.0;
   static const itemCourseDetailsMinContentHeight = 42.0;
   static const itemDetailsTwoLineContentHeight = 72.0;
