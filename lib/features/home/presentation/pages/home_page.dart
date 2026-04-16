@@ -1034,10 +1034,10 @@ abstract final class _HomeGridLayoutSpec {
   static const itemUltraCompactHeight = 28.0;
   static const itemCompactHeight = 36.0;
   static const itemCompactWidth = 56.0;
-  static const itemCompactHorizontalPadding = 5.0;
-  static const itemHorizontalPadding = 8.0;
-  static const itemCompactVerticalPadding = 3.0;
-  static const itemVerticalPadding = 6.0;
+  static const itemCompactHorizontalPadding = 3.0;
+  static const itemHorizontalPadding = 5.0;
+  static const itemCompactVerticalPadding = 2.0;
+  static const itemVerticalPadding = 4.0;
   static const itemDetailsSpacing = 4.0;
   static const itemTitleSingleLineContentHeight = 24.0;
   static const itemTitleTwoLineContentHeight = 42.0;
