@@ -56,11 +56,19 @@ class AgendaItemStorageMapper {
       return null;
     }
 
+    final details = json['details'] as String? ?? '';
+    final type = _enumByName(ItemType.values, json['type'] as String?) ?? ItemType.task;
+    final normalizedCourseDetails = type == ItemType.course &&
+            courseDetails.instructor.trim().isEmpty &&
+            _extractLegacyInstructor(details).isNotEmpty
+        ? courseDetails.copyWith(instructor: _extractLegacyInstructor(details))
+        : courseDetails;
+
     return AgendaItem(
       id: id,
-      type: _enumByName(ItemType.values, json['type'] as String?) ?? ItemType.task,
+      type: type,
       title: title,
-      details: json['details'] as String? ?? '',
+      details: details,
       location: json['location'] as String? ?? '',
       color: _enumByName(ItemColorOption.values, json['color'] as String?) ??
           ItemColorOption.sky,
@@ -71,7 +79,7 @@ class AgendaItemStorageMapper {
       scheduleDetails: scheduleDetails,
       taskDetails: taskDetails,
       memoDetails: memoDetails,
-      courseDetails: courseDetails,
+      courseDetails: normalizedCourseDetails,
       isCompleted: json['isCompleted'] as bool? ?? false,
       isImportant: json['isImportant'] as bool? ?? false,
       createdAt: createdAt,
@@ -159,6 +167,7 @@ class AgendaItemStorageMapper {
       'timetableId': details.timetableId,
       'sourceKind': details.sourceKind.name,
       'sourceCourseId': details.sourceCourseId,
+      'courseNature': details.courseNature,
       'instructor': details.instructor,
       'classroomRaw': details.classroomRaw,
       'weekMeta': details.weekMeta,
@@ -177,6 +186,7 @@ class AgendaItemStorageMapper {
           ) ??
           CourseItemSourceKind.manual,
       sourceCourseId: value['sourceCourseId'] as String? ?? '',
+      courseNature: value['courseNature'] as String? ?? '',
       instructor: value['instructor'] as String? ?? '',
       classroomRaw: value['classroomRaw'] as String? ?? '',
       weekMeta: value['weekMeta'] as String? ?? '',
@@ -193,5 +203,16 @@ class AgendaItemStorageMapper {
       }
     }
     return null;
+  }
+
+  static String _extractLegacyInstructor(String details) {
+    final text = details.trim();
+    if (text.startsWith('教师：')) {
+      return text.substring('教师：'.length).trim();
+    }
+    if (text.startsWith('Teacher:')) {
+      return text.substring('Teacher:'.length).trim();
+    }
+    return '';
   }
 }

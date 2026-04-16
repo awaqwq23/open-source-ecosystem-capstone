@@ -41,6 +41,7 @@ abstract final class AppBootstrapStorageKeys {
   static const agendaItems = 'agenda.items';
   static const courseTimetables = 'course.timetables';
   static const activeCourseTimetableId = 'course.activeTimetableId';
+  static const whuCourseCookieHeader = 'course.whu.cookieHeader';
 }
 
 class AppBootstrapLoader {

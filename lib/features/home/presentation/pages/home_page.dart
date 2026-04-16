@@ -892,15 +892,6 @@ class _AgendaBlock extends StatelessWidget {
                   constraints.maxHeight < _HomeGridLayoutSpec.itemCompactHeight;
               final ultraCompactHeight =
                   constraints.maxHeight < _HomeGridLayoutSpec.itemUltraCompactHeight;
-              final showDetails =
-                  constraints.maxHeight >= _HomeGridLayoutSpec.itemDetailsHeight &&
-                      item.item.details.isNotEmpty;
-              final titleMaxLines = constraints.maxHeight <
-                      _HomeGridLayoutSpec.itemSingleLineHeight
-                  ? 1
-                  : constraints.maxHeight < _HomeGridLayoutSpec.itemTwoLineHeight
-                      ? 2
-                      : 3;
               final horizontalPadding =
                   constraints.maxWidth < _HomeGridLayoutSpec.itemCompactWidth
                       ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
@@ -908,6 +899,22 @@ class _AgendaBlock extends StatelessWidget {
               final verticalPadding = compactHeight
                   ? _HomeGridLayoutSpec.itemCompactVerticalPadding
                   : _HomeGridLayoutSpec.itemVerticalPadding;
+              final contentHeight = math.max(
+                0.0,
+                constraints.maxHeight - verticalPadding * 2,
+              );
+              final showDetails = item.item.details.isNotEmpty &&
+                  contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
+              final detailsMaxLines = contentHeight >=
+                      _HomeGridLayoutSpec.itemDetailsTwoLineContentHeight
+                  ? 2
+                  : 1;
+              final titleMaxLines = switch (contentHeight) {
+                < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
+                < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
+                _ when showDetails => 2,
+                _ => 3,
+              };
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -932,29 +939,35 @@ class _AgendaBlock extends StatelessWidget {
                           ),
                         )
                       : Column(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisSize: MainAxisSize.max,
                           mainAxisAlignment: compactHeight
                               ? MainAxisAlignment.center
                               : MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              item.item.title,
-                              maxLines: titleMaxLines,
-                              overflow: TextOverflow.ellipsis,
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: Text(
+                                item.item.title,
+                                maxLines: titleMaxLines,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             if (showDetails) ...[
                               const SizedBox(height: _HomeGridLayoutSpec.itemDetailsSpacing),
-                              Text(
-                                item.item.details,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: accent.withValues(alpha: 0.84),
-                                  fontWeight: FontWeight.w600,
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Text(
+                                  item.item.details,
+                                  maxLines: detailsMaxLines,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: accent.withValues(alpha: 0.84),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ],
+                            ]
                           ],
                         ),
                 ),
@@ -1012,15 +1025,16 @@ abstract final class _HomeGridLayoutSpec {
 
   static const itemUltraCompactHeight = 28.0;
   static const itemCompactHeight = 36.0;
-  static const itemSingleLineHeight = 34.0;
-  static const itemTwoLineHeight = 56.0;
-  static const itemDetailsHeight = 60.0;
   static const itemCompactWidth = 56.0;
   static const itemCompactHorizontalPadding = 5.0;
   static const itemHorizontalPadding = 8.0;
   static const itemCompactVerticalPadding = 3.0;
   static const itemVerticalPadding = 6.0;
   static const itemDetailsSpacing = 4.0;
+  static const itemTitleSingleLineContentHeight = 24.0;
+  static const itemTitleTwoLineContentHeight = 42.0;
+  static const itemDetailsMinContentHeight = 58.0;
+  static const itemDetailsTwoLineContentHeight = 72.0;
 
   static const minMonthColumnWidth = 40.0;
   static const maxMonthColumnCount = 31;

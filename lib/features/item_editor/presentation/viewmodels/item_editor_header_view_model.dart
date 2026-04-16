@@ -74,9 +74,15 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
 
     _args = args;
     final prefill = args?.prefill;
+    var draft = _buildDraft(prefill);
+    if (draft.type == ItemType.course &&
+        draft.location.trim().isEmpty &&
+        draft.courseDetails.classroomRaw.trim().isNotEmpty) {
+      draft = draft.copyWith(location: draft.courseDetails.classroomRaw.trim());
+    }
     state = ItemEditorPageState(
       itemId: args?.itemId,
-      draft: _buildDraft(prefill),
+      draft: draft,
       isImportant: prefill?.isImportant ?? false,
     );
   }
@@ -94,7 +100,32 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateLocation(String value) {
+    if (state.draft.type == ItemType.course) {
+      _updateDraft(
+        state.draft.copyWith(
+          location: value,
+          courseDetails: state.draft.courseDetails.copyWith(classroomRaw: value),
+        ),
+      );
+      return;
+    }
     _updateDraft(state.draft.copyWith(location: value));
+  }
+
+  void updateCourseNature(String value) {
+    _updateDraft(
+      state.draft.copyWith(
+        courseDetails: state.draft.courseDetails.copyWith(courseNature: value),
+      ),
+    );
+  }
+
+  void updateCourseInstructor(String value) {
+    _updateDraft(
+      state.draft.copyWith(
+        courseDetails: state.draft.courseDetails.copyWith(instructor: value),
+      ),
+    );
   }
 
   void selectColor(ItemColorOption color) {
@@ -315,6 +346,16 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     final repository = ref.read(itemEditorRepositoryProvider);
     final saveDraft = SaveItemDraftUseCase(repository);
     var draft = state.draft;
+    if (draft.type == ItemType.course) {
+      draft = draft.copyWith(
+        details: '',
+        reminder: ReminderOption.none,
+        repeatRule: RepeatRule.none,
+        courseDetails: draft.courseDetails.copyWith(
+          classroomRaw: draft.location.trim(),
+        ),
+      );
+    }
     if (draft.type == ItemType.course && draft.courseDetails.timetableId.isEmpty) {
       final timetableRepo = ref.read(courseTimetableRepositoryProvider.notifier);
       var activeId = ref.read(courseTimetableRepositoryProvider).activeTimetableId;
@@ -329,10 +370,11 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
         courseDetails: draft.courseDetails.copyWith(timetableId: activeId),
       );
     }
+    final isImportant = draft.type == ItemType.course ? false : state.isImportant;
     await saveDraft(
       itemId: state.itemId,
       draft: draft,
-      isImportant: state.isImportant,
+      isImportant: isImportant,
     );
     state = state.copyWith(
       isSubmitting: false,

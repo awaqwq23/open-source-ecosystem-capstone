@@ -58,6 +58,7 @@ abstract final class AppIcons {
   static const IconData expandMore = Icons.expand_more;
   static const IconData drag = Icons.drag_indicator;
   static const IconData info = Icons.info_outline;
+  static const IconData person = Icons.person_outline;
   static const IconData calendar = Icons.event_outlined;
   static const IconData clock = Icons.schedule_outlined;
   static const IconData location = Icons.location_on_outlined;

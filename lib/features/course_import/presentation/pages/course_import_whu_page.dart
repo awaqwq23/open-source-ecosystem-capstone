@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/course_import/data/whu_course_import_service.dart';
 import 'package:huajuan_agenda/features/course_import/presentation/pages/whu_login_webview_page.dart';
@@ -20,23 +21,50 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   final _service = WhuCourseImportService();
   final _nameController = TextEditingController();
   final _termController = TextEditingController();
-  final _yearController = TextEditingController(text: '${DateTime.now().year}');
   DateTime? _weekOneMonday;
-  int _semester = 2;
   String _cookieHeader = '';
   bool _submitting = false;
+  String? _statusText;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedCookie();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _termController.dispose();
-    _yearController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCachedCookie() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final cached = prefs?.getString(AppBootstrapStorageKeys.whuCourseCookieHeader) ?? '';
+    if (!mounted || cached.trim().isEmpty) {
+      return;
+    }
+    setState(() => _cookieHeader = cached.trim());
+  }
+
+  Future<void> _persistCookie(String cookieHeader) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs?.setString(AppBootstrapStorageKeys.whuCourseCookieHeader, cookieHeader);
+  }
+
+  Future<void> _clearPersistedCookie() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs?.remove(AppBootstrapStorageKeys.whuCourseCookieHeader);
+    if (mounted) {
+      setState(() => _cookieHeader = '');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isZh = _isChinese(context);
+    final inferredTerm = _inferCurrentTerm(DateTime.now());
     return ui.Scaffold(
       headers: [
         ui.AppBar(
@@ -70,30 +98,15 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             ),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _yearController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: isZh ? '学年起始年份' : 'Start Year',
-              hintText: isZh ? '例如：2025' : 'e.g. 2025',
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(AppIcons.calendar),
+            title: Text(isZh ? '自动识别学期' : 'Detected Term'),
+            subtitle: Text(
+              isZh
+                  ? '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} 学年 第${inferredTerm.semester}学期'
+                  : '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} Semester ${inferredTerm.semester}',
             ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int>(
-            value: _semester,
-            decoration: InputDecoration(labelText: isZh ? '学期' : 'Semester'),
-            items: [
-              DropdownMenuItem(value: 1, child: Text(isZh ? '第一学期' : 'Semester 1')),
-              DropdownMenuItem(value: 2, child: Text(isZh ? '第二学期' : 'Semester 2')),
-              DropdownMenuItem(value: 3, child: Text(isZh ? '第三学期' : 'Semester 3')),
-            ],
-            onChanged: _submitting
-                ? null
-                : (value) {
-                    if (value != null) {
-                      setState(() => _semester = value);
-                    }
-                  },
           ),
           const SizedBox(height: 12),
           ListTile(
@@ -128,6 +141,13 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
                 : const Icon(AppIcons.web),
             child: Text(isZh ? '开始导入' : 'Start Import'),
           ),
+          if (_statusText != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _statusText!,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ],
       ),
     );
@@ -143,17 +163,19 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       _showMessage(isZh ? '请选择第1周周一日期。' : 'Please select Week-1 Monday.');
       return;
     }
-    final year = int.tryParse(_yearController.text.trim());
-    if (year == null || year < 2000 || year > 2100) {
-      _showMessage(isZh ? '请输入有效学年年份。' : 'Please enter a valid year.');
-      return;
-    }
-    setState(() => _submitting = true);
+    final inferredTerm = _inferCurrentTerm(DateTime.now());
+    setState(() {
+      _submitting = true;
+      _statusText = isZh ? '正在校验并建立教务会话...' : 'Verifying and establishing education session...';
+    });
     try {
+      setState(() {
+        _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
+      });
       final payload = await _service.loadCourses(
         cookieHeader: _cookieHeader,
-        year: year,
-        semester: _semester,
+        year: inferredTerm.academicYearStart,
+        semester: inferredTerm.semester,
         weekOneMonday: _weekOneMonday!,
         homeSettings: ref.read(appHomeSettingsProvider),
       );
@@ -182,15 +204,34 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       if (!mounted) {
         return;
       }
+      final today = DateUtils.dateOnly(DateTime.now());
+      final currentWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
+      final currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
+      final currentWeekCount = payload.items.where((item) {
+        final startAt = item.startAt;
+        final endAt = item.endAt;
+        return endAt.isAfter(currentWeekStart) && startAt.isBefore(currentWeekEnd);
+      }).length;
       _showMessage(
         isZh
-            ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
-            : 'Imported ${payload.items.length} course items to "$tableName".',
+            ? '导入完成：新增 ${payload.items.length} 条课程事项，当前周命中 $currentWeekCount 条，课程表「$tableName」。'
+            : 'Imported ${payload.items.length} items ($currentWeekCount in current week) to "$tableName".',
       );
+      setState(() {
+        _statusText = isZh
+            ? '导入完成：新增 ${payload.items.length} 条，当前周命中 $currentWeekCount 条。'
+            : 'Import finished: ${payload.items.length} items, $currentWeekCount in current week.';
+      });
     } catch (error) {
       if (!mounted) {
         return;
       }
+      if (error is WhuSessionInvalidException) {
+        await _clearPersistedCookie();
+      }
+      setState(() {
+        _statusText = isZh ? '导入失败：$error' : 'Import failed: $error';
+      });
       _showMessage(isZh ? '导入失败：$error' : 'Import failed: $error');
     } finally {
       if (mounted) {
@@ -221,7 +262,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     if (!mounted || cookieHeader == null || cookieHeader.trim().isEmpty) {
       return;
     }
-    setState(() => _cookieHeader = cookieHeader.trim());
+    final normalized = cookieHeader.trim();
+    setState(() => _cookieHeader = normalized);
+    await _persistCookie(normalized);
     _showMessage(
       _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
     );
@@ -255,4 +298,28 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   bool _isChinese(BuildContext context) {
     return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
   }
+
+  _InferredTerm _inferCurrentTerm(DateTime now) {
+    final month = now.month;
+    if (month >= 9) {
+      return _InferredTerm(academicYearStart: now.year, semester: 1);
+    }
+    if (month == 8) {
+      return _InferredTerm(academicYearStart: now.year - 1, semester: 3);
+    }
+    if (month == 1) {
+      return _InferredTerm(academicYearStart: now.year - 1, semester: 1);
+    }
+    return _InferredTerm(academicYearStart: now.year - 1, semester: 2);
+  }
+}
+
+class _InferredTerm {
+  const _InferredTerm({
+    required this.academicYearStart,
+    required this.semester,
+  });
+
+  final int academicYearStart;
+  final int semester;
 }

@@ -79,17 +79,27 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
 
   Future<void> _confirmCookies() async {
     final isZh = _isChinese(context);
-    final cookies = await _cookieManager.getCookies('https://jwgl.whu.edu.cn');
+    final jwglCookies = await _cookieManager.getCookies('https://jwgl.whu.edu.cn');
+    final jwglCookieMap = <String, String>{};
+    for (final cookie in jwglCookies) {
+      if (cookie.name.isEmpty) {
+        continue;
+      }
+      jwglCookieMap[cookie.name] = cookie.value;
+    }
     if (!mounted) {
       return;
     }
-    if (cookies.isEmpty) {
+    if (jwglCookieMap.isEmpty) {
       _showMessage(
-        isZh ? '未读取到教务会话，请先完成登录后再确认。' : 'No session cookie found. Please login first.',
+        isZh
+            ? '未读取到教务会话，请先完成登录后再确认。'
+            : 'No education session cookie found. Please login first.',
       );
       return;
     }
-    final cookieHeader = cookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+    final cookieHeader =
+        jwglCookieMap.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
     Navigator.of(context).pop(cookieHeader);
   }
 

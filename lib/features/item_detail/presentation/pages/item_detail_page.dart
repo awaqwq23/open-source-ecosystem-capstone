@@ -175,34 +175,55 @@ class _ItemDetailContent extends ConsumerWidget {
             label: l10n.detailTimeLabel,
             value: _dateSummary(context, item),
           ),
-          if (item.deadline != null)
+          if (item.type == ItemType.course) ...[
+            if (item.courseDetails.courseNature.trim().isNotEmpty)
+              _DetailRow(
+                icon: AppIcons.info,
+                label: _isChinese(l10n) ? '性质' : 'Nature',
+                value: item.courseDetails.courseNature.trim(),
+              ),
+            if (item.courseDetails.instructor.trim().isNotEmpty)
+              _DetailRow(
+                icon: AppIcons.person,
+                label: _isChinese(l10n) ? '教师' : 'Instructor',
+                value: item.courseDetails.instructor.trim(),
+              ),
+            if (_courseLocation(item).isNotEmpty)
+              _DetailRow(
+                icon: AppIcons.location,
+                label: _isChinese(l10n) ? '地点' : 'Location',
+                value: _courseLocation(item),
+              ),
+          ] else ...[
+            if (item.deadline != null)
+              _DetailRow(
+                icon: AppIcons.clock,
+                label: l10n.detailDeadlineLabel,
+                value: _formatDateTime(context, item.deadline!, allDay: item.isAllDay),
+              ),
+            if (item.location.isNotEmpty)
+              _DetailRow(
+                icon: AppIcons.location,
+                label: l10n.detailLocationLabel,
+                value: item.location,
+              ),
+            if (item.details.isNotEmpty)
+              _DetailRow(
+                icon: AppIcons.info,
+                label: l10n.detailNotesLabel,
+                value: item.details,
+              ),
             _DetailRow(
               icon: AppIcons.clock,
-              label: l10n.detailDeadlineLabel,
-              value: _formatDateTime(context, item.deadline!, allDay: item.isAllDay),
+              label: l10n.detailReminderLabel,
+              value: _reminderLabel(l10n, item),
             ),
-          if (item.location.isNotEmpty)
             _DetailRow(
-              icon: AppIcons.location,
-              label: l10n.detailLocationLabel,
-              value: item.location,
+              icon: AppIcons.calendar,
+              label: l10n.detailRepeatLabel,
+              value: _repeatLabel(l10n, item),
             ),
-          if (item.details.isNotEmpty)
-            _DetailRow(
-              icon: AppIcons.info,
-              label: l10n.detailNotesLabel,
-              value: item.details,
-            ),
-          _DetailRow(
-            icon: AppIcons.clock,
-            label: l10n.detailReminderLabel,
-            value: _reminderLabel(l10n, item),
-          ),
-          _DetailRow(
-            icon: AppIcons.calendar,
-            label: l10n.detailRepeatLabel,
-            value: _repeatLabel(l10n, item),
-          ),
+          ],
           const SizedBox(height: 24),
           Wrap(
             spacing: 12,
@@ -290,8 +311,16 @@ class _ItemDetailContent extends ConsumerWidget {
       ItemType.task => l10n.listTabTasks,
       ItemType.schedule => l10n.listTabSchedules,
       ItemType.memo => l10n.listTabMemos,
-      ItemType.course => _isChinese(l10n) ? '课程列表' : 'Courses',
+      ItemType.course => _isChinese(l10n) ? '课程' : 'Course',
     };
+  }
+
+  String _courseLocation(AgendaItem item) {
+    final fromCourse = item.courseDetails.classroomRaw.trim();
+    if (fromCourse.isNotEmpty) {
+      return fromCourse;
+    }
+    return item.location.trim();
   }
 
   String _reminderLabel(AppLocalizations l10n, AgendaItem item) {

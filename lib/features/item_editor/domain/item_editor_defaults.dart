@@ -68,6 +68,9 @@ class ItemEditorDefaults {
     return draft.copyWith(
       type: type,
       isAllDay: type == ItemType.memo ? false : draft.isAllDay,
+      reminder: type == ItemType.course ? ReminderOption.none : draft.reminder,
+      repeatRule: type == ItemType.course ? RepeatRule.none : draft.repeatRule,
+      details: type == ItemType.course ? '' : draft.details,
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
       targetDate: type == ItemType.memo ? _dateOnly(draft.targetDate) : draft.targetDate,
