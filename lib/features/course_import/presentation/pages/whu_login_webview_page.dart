@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
-import 'package:webview_cookie_manager/webview_cookie_manager.dart';
+import 'package:webview_cookie_manager_flutter/webview_cookie_manager_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class WhuLoginWebViewPage extends StatefulWidget {
