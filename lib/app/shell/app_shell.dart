@@ -12,7 +12,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends ConsumerWidget {
   static const _compactNavBarHeightWithLabels = 84.0;
-  static const _compactNavBarHeightIconsOnly = 64.0;
+  static const _compactNavBarHeightIconsOnly = 72.0;
 
   const AppShell({
     required this.navigationShell,
@@ -96,6 +96,7 @@ class AppShell extends ConsumerWidget {
   ) {
     final compactNavBarHeight =
         showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
+    final navIconSize = showLabels ? 24.0 : 28.0;
     final compactNavBarPadding = showLabels
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
         : const EdgeInsets.symmetric(horizontal: 8, vertical: 8);
@@ -126,6 +127,7 @@ class AppShell extends ConsumerWidget {
               destination.route == current.route
                   ? destination.selectedIcon
                   : destination.icon,
+              size: navIconSize,
             ),
           ),
       ],
@@ -160,6 +162,7 @@ class AppShell extends ConsumerWidget {
               destination.route == current.route
                   ? destination.selectedIcon
                   : destination.icon,
+              size: navIconSize,
             ),
           ),
       ],
