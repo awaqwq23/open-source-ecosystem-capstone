@@ -11,7 +11,8 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AppShell extends ConsumerWidget {
-  static const _compactNavBarHeight = 84.0;
+  static const _compactNavBarHeightWithLabels = 84.0;
+  static const _compactNavBarHeightIconsOnly = 64.0;
 
   const AppShell({
     required this.navigationShell,
@@ -93,12 +94,15 @@ class AppShell extends ConsumerWidget {
     AppShellDestination current,
     bool showLabels,
   ) {
+    final compactNavBarHeight =
+        showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
+
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
       labelType:
           showLabels ? ui.NavigationLabelType.all : ui.NavigationLabelType.none,
       expanded: true,
-      expandedSize: _compactNavBarHeight,
+      expandedSize: compactNavBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       spacing: 4,
       selectedKey: ValueKey(current.route),
