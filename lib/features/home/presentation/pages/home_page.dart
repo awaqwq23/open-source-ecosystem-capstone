@@ -14,6 +14,7 @@ import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_ar
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
+import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -909,8 +910,15 @@ class _AgendaBlock extends StatelessWidget {
                 0.0,
                 constraints.maxHeight - verticalPadding * 2,
               );
-              final showDetails = item.item.details.isNotEmpty &&
-                  contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
+              final isCourseItem = item.item.type == ItemType.course;
+              final detailsText = _buildDetailsText(isCourseItem);
+              final ultraCompactText = isCourseItem
+                  ? _buildUltraCompactCourseText()
+                  : item.item.title;
+              final showDetails = isCourseItem
+                  ? !ultraCompactHeight
+                  : detailsText.isNotEmpty &&
+                      contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
               final detailsMaxLines = contentHeight >=
                       _HomeGridLayoutSpec.itemDetailsTwoLineContentHeight
                   ? 2
@@ -932,14 +940,14 @@ class _AgendaBlock extends StatelessWidget {
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
                     color: textBaseColor,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
                   child: ultraCompactHeight
                       ? Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            item.item.title,
+                            ultraCompactText,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -964,7 +972,7 @@ class _AgendaBlock extends StatelessWidget {
                               Flexible(
                                 fit: FlexFit.loose,
                                 child: Text(
-                                  item.item.details,
+                                  detailsText,
                                   maxLines: detailsMaxLines,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
@@ -985,6 +993,33 @@ class _AgendaBlock extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _buildDetailsText(bool isCourseItem) {
+    if (!isCourseItem) {
+      return item.item.details;
+    }
+    final instructor = item.item.courseDetails.instructor.trim();
+    final location = _resolveCourseLocation();
+    final displayInstructor = instructor.isEmpty ? '-' : instructor;
+    final displayLocation = location.isEmpty ? '-' : location;
+    return '教师：$displayInstructor  地点：$displayLocation';
+  }
+
+  String _buildUltraCompactCourseText() {
+    final instructor = item.item.courseDetails.instructor.trim();
+    final location = _resolveCourseLocation();
+    final displayInstructor = instructor.isEmpty ? '-' : instructor;
+    final displayLocation = location.isEmpty ? '-' : location;
+    return '${item.item.title}｜$displayInstructor｜$displayLocation';
+  }
+
+  String _resolveCourseLocation() {
+    final location = item.item.location.trim();
+    if (location.isNotEmpty) {
+      return location;
+    }
+    return item.item.courseDetails.classroomRaw.trim();
   }
 }
 
