@@ -944,7 +944,7 @@ class _AgendaBlock extends StatelessWidget {
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
                     color: textBaseColor,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.normal,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
                   child: ultraCompactHeight && !isCourseItem
@@ -954,7 +954,7 @@ class _AgendaBlock extends StatelessWidget {
                             ultraCompactText,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w800),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
                       : Column(
@@ -970,7 +970,7 @@ class _AgendaBlock extends StatelessWidget {
                                 item.item.title,
                                 maxLines: titleMaxLines,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w800),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
                             if (showDetails) ...[
@@ -989,7 +989,7 @@ class _AgendaBlock extends StatelessWidget {
                                             style: theme.textTheme.labelSmall?.copyWith(
                                               color: textBaseColor.withValues(alpha: 0.9),
                                               height: 1.0,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.normal,
                                             ),
                                           ),
                                           Text(
@@ -1000,7 +1000,7 @@ class _AgendaBlock extends StatelessWidget {
                                             style: theme.textTheme.labelSmall?.copyWith(
                                               color: textBaseColor.withValues(alpha: 0.9),
                                               height: 1.0,
-                                              fontWeight: FontWeight.w600,
+                                              fontWeight: FontWeight.normal,
                                             ),
                                           ),
                                         ],
@@ -1014,7 +1014,7 @@ class _AgendaBlock extends StatelessWidget {
                                             alpha: 0.9,
                                           ),
                                           height: isCourseItem ? 1.0 : null,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.normal,
                                         ),
                                       ),
                                 
