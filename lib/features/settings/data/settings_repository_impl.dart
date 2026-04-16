@@ -7,21 +7,10 @@ import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
-
-final appHomeSettingsProvider = StateProvider<HomeSettings>((ref) {
-  return const HomeSettings.defaults();
-});
-
-final appAiSettingsProvider = StateProvider<AiSettings>((ref) {
-  return const AiSettings.defaults();
-});
-
-final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) {
-  return null;
-});
 
 class RiverpodSettingsRepository implements SettingsRepository {
   const RiverpodSettingsRepository(this._ref);

@@ -1,34 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/list/data/list_demo_items.dart';
+import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
 import 'package:huajuan_agenda/features/list/domain/use_cases/build_list_prefill.dart';
 import 'package:huajuan_agenda/features/list/domain/use_cases/filter_list_items.dart';
 import 'package:huajuan_agenda/features/list/domain/use_cases/sort_list_items.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
-
-enum ListHeaderTab {
-  myDay,
-  allItems,
-  tasks,
-  schedules,
-  memos,
-  important,
-}
-
-enum ListSortMode {
-  importance,
-  dueDate,
-  todayFocus,
-  alphabetical,
-  createdDate,
-  manual,
-}
-
-extension ListHeaderTabLabelX on ListHeaderTab {
-  String get key => name;
-}
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 
 class ListPageSection {
   const ListPageSection({
@@ -210,3 +189,4 @@ final listPageViewDataProvider = Provider<ListPageViewData>((ref) {
     section: section,
   );
 });
+

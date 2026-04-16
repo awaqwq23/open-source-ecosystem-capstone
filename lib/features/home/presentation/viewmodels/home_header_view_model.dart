@@ -4,9 +4,9 @@ import 'package:huajuan_agenda/features/home/data/home_demo_items.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/build_home_grid.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/layout_home_items.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
@@ -190,3 +190,4 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     items: laidOutItems,
   );
 });
+

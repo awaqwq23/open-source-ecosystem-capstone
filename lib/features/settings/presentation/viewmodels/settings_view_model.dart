@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
+import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 enum SettingsAiConnectionStatus {

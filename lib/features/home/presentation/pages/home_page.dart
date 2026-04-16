@@ -12,7 +12,7 @@ import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
 enum AiHeaderPeriod {
@@ -205,3 +205,4 @@ final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
   }).toList()
     ..sort((left, right) => left.range.start.compareTo(right.range.start));
 });
+

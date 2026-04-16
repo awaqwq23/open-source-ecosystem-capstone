@@ -1,13 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
+import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 
 class BuildListPrefillUseCase {
   const BuildListPrefillUseCase();
 
   ItemEditorPrefill call(ListHeaderTab tab, DateTime now) {
-    final today = DateUtils.dateOnly(now);
+    final today = DateTime(now.year, now.month, now.day);
     return switch (tab) {
       ListHeaderTab.myDay => ItemEditorPrefill(
           startAt: today.add(const Duration(hours: 9)),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/item_editor/data/item_editor_repository.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_defaults.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/repositories/item_editor_repository_provider.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/use_cases/build_item_editor_draft.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/use_cases/save_item_draft.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/item_editor_validator.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/item_draft.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
@@ -343,3 +343,4 @@ final itemEditorPageControllerProvider =
     NotifierProvider.autoDispose<ItemEditorPageController, ItemEditorPageState>(
   ItemEditorPageController.new,
 );
+

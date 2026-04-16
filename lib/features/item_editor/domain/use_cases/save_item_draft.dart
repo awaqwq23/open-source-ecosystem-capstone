@@ -1,5 +1,5 @@
-import 'package:huajuan_agenda/features/item_editor/data/item_editor_repository.dart';
-import 'package:huajuan_agenda/shared/models/item_draft.dart';
+import 'package:huajuan_agenda/features/item_editor/domain/repositories/item_editor_repository.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 
 class SaveItemDraftUseCase {
   const SaveItemDraftUseCase(this._repository);
@@ -22,3 +22,4 @@ class SaveItemDraftUseCase {
     );
   }
 }
+

@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
+import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 
 class SortListItemsUseCase {
   const SortListItemsUseCase();
@@ -90,8 +89,9 @@ class SortListItemsUseCase {
   }
 
   int _todayFocusScore(AgendaItem item, DateTime now) {
-    final today = DateUtils.dateOnly(now);
-    final target = DateUtils.dateOnly(_primaryDateOf(item));
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDate = _primaryDateOf(item);
+    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final distance = target.difference(today).inDays.abs();
     final dateScore = math.max(0, 100 - distance * 10);
     final importantScore = item.isImportant ? 40 : 0;
@@ -120,3 +120,4 @@ class SortListItemsUseCase {
     return result != 0 ? result : fallback();
   }
 }
+

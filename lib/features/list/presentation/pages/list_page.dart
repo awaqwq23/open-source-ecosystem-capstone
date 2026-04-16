@@ -12,9 +12,10 @@ import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
 import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -1167,3 +1168,4 @@ abstract final class _SwipeStageMetrics {
   static const minBubbleSize = 24.0;
   static const maxBubbleSize = 30.0;
 }
+

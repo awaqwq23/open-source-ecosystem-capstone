@@ -5,7 +5,7 @@ import 'package:huajuan_agenda/app/app.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
 enum HomeDisplayScope {
@@ -131,3 +131,4 @@ class HomeViewData {
   final List<HomeTimeSlot> timeSlots;
   final List<HomeLaidOutItem> items;
 }
+

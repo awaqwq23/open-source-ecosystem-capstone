@@ -4,7 +4,7 @@ import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dar
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/item_draft.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
@@ -81,3 +81,4 @@ class ItemEditorDefaults {
     return DateUtils.dateOnly(dateTime);
   }
 }
+

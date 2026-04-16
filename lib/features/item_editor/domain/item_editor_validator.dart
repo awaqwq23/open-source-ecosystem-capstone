@@ -1,6 +1,6 @@
 import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/item_draft.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 
 class ItemEditorValidationErrors {
   const ItemEditorValidationErrors({
@@ -62,3 +62,4 @@ class ItemEditorValidator {
     );
   }
 }
+

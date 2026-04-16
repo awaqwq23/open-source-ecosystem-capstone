@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';

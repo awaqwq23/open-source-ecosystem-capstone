@@ -26,3 +26,15 @@
 
 当前应用层与页面框架统一建立在 `shadcn_flutter` 组件体系上。
 项目不再维护私有页面骨架、私有顶部栏、私有弹层脚手架；页面应直接组合组件库公开组件，并只保留必要的业务型 UI 代码。
+
+### 目录维护约束
+
+- 不再维护模板化空目录；目录在首次落地代码时再创建。
+- 不使用 `.gitkeep` 保存占位目录。
+- 新增目录前先确认是否已有可复用目录，避免“同义目录”并存。
+
+### 导入白名单（强约束）
+
+- `domain` 层禁止导入任意 `presentation/*` 和 `data/*`。
+- `presentation` 层优先导入 `domain` 的类型/接口；跨 feature 访问优先走 `domain` 暴露入口。
+- `shared` 统一使用 `shared/domain/entities/*` 与 `shared/domain/repositories/*`，不再增加并行别名入口。

@@ -6,9 +6,9 @@ import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.
 import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_chat_repository.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_service.dart';
-import 'package:huajuan_agenda/features/settings/data/settings_repository_impl.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:openai_dart/openai_dart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -188,3 +188,4 @@ final aiChatRepositoryNotifierProvider = Provider<AiChatRepository>((ref) {
 final aiServiceProvider = Provider<AiService>((ref) {
   return OpenAiCompatibleAiService(ref);
 });
+

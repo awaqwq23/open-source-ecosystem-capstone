@@ -9,9 +9,9 @@ import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_ar
 import 'package:huajuan_agenda/features/item_detail/presentation/viewmodels/item_detail_view_model.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -415,3 +415,4 @@ class _EmptyDetailState extends StatelessWidget {
     );
   }
 }
+

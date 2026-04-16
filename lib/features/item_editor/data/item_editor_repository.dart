@@ -1,19 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/shared/data/agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
-import 'package:huajuan_agenda/shared/models/item_draft.dart';
-
-abstract class ItemEditorRepository {
-  Future<AgendaItem> createItem(
-    ItemDraft draft, {
-    bool isImportant = false,
-  });
-  Future<AgendaItem?> updateItem(
-    String id,
-    ItemDraft draft, {
-    bool? isImportant,
-  });
-}
+import 'package:huajuan_agenda/features/item_editor/domain/repositories/item_editor_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 
 class SharedItemEditorRepository implements ItemEditorRepository {
   const SharedItemEditorRepository(this._repository);
@@ -42,3 +31,4 @@ final itemEditorRepositoryProvider = Provider<ItemEditorRepository>((ref) {
   final repository = ref.read(agendaItemRepositoryProvider.notifier);
   return SharedItemEditorRepository(repository);
 });
+

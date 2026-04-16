@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/list/presentation/viewmodels/list_header_view_model.dart';
+import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/models/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 
 class FilterListItemsUseCase {
   const FilterListItemsUseCase();
@@ -23,13 +22,15 @@ class FilterListItemsUseCase {
   }
 
   bool _isInMyDay(AgendaItem item, DateTime now) {
-    final today = DateUtils.dateOnly(now);
+    final today = DateTime(now.year, now.month, now.day);
     if (item.type == ItemType.memo) {
-      return DateUtils.isSameDay(item.targetDate, today);
+      final target = item.targetDate;
+      return target.year == today.year && target.month == today.month && target.day == today.day;
     }
 
-    final startDay = DateUtils.dateOnly(item.startAt);
-    final endDay = DateUtils.dateOnly(item.endAt);
+    final startDay = DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
+    final endDay = DateTime(item.endAt.year, item.endAt.month, item.endAt.day);
     return !today.isBefore(startDay) && !today.isAfter(endDay);
   }
 }
+
