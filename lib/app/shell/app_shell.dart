@@ -99,7 +99,7 @@ class AppShell extends ConsumerWidget {
     final navIconSize = showLabels ? 24.0 : 28.0;
     final compactNavBarPadding = showLabels
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
-        : const EdgeInsets.symmetric(horizontal: 8, vertical: 8);
+        : const EdgeInsets.fromLTRB(8, 8, 8, 12);
 
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
