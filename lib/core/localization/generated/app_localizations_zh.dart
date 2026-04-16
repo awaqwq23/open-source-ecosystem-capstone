@@ -535,10 +535,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorHintCourseTitle => '课程名称';
 
   @override
-  String get editorHintDetails => '补充更多说明';
+  String get editorHintDetails => '备注';
 
   @override
-  String get editorHintLocation => '发生地点或执行地点';
+  String get editorHintLocation => '地点';
 
   @override
   String get editorColorSky => '天蓝';

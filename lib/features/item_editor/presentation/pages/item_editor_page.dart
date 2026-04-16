@@ -150,15 +150,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             onPressed: () => _showColorPicker(context, ref),
                           ),
                         ),
-                        const Gap(12),
-                        if (state.draft.type != ItemType.memo && !isCourse)
-                          _SwitchRow(
-                            rowKey: const ValueKey('item-editor-row-all-day'),
-                            label: l10n.editorAllDayTitle,
-                            value: state.draft.isAllDay,
-                            onChanged: notifier.toggleAllDay,
-                          ),
                         if (state.draft.type == ItemType.memo) ...[
+                          const Gap(12),
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-target-date'),
                             label: l10n.editorFieldTargetDate,
@@ -181,6 +174,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                 _openReminderSettings(context, ref, state.draft.reminder),
                           ),
                         ] else ...[
+                          const Gap(12),
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-start'),
                             labelKey: const ValueKey('item-editor-row-start-label'),
@@ -204,6 +198,13 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             errorText: state.errors.estimatedDuration,
                             onTap: () => _showDurationPicker(context, ref),
                           ),
+                          if (!isCourse)
+                            _SwitchRow(
+                              rowKey: const ValueKey('item-editor-row-all-day'),
+                              label: l10n.editorAllDayTitle,
+                              value: state.draft.isAllDay,
+                              onChanged: notifier.toggleAllDay,
+                            ),
                           if (state.draft.type != ItemType.course)
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-repeat'),
