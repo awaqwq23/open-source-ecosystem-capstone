@@ -28,7 +28,7 @@ class ItemEditorDefaults {
     final targetDate = _dateOnly(prefill?.targetDate ?? start);
 
     return ItemDraft(
-      type: prefill?.type ?? ItemType.task,
+      type: prefill?.type ?? ItemType.schedule,
       title: prefill?.title ?? '',
       details: prefill?.details ?? '',
       location: prefill?.location ?? '',

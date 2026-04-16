@@ -708,28 +708,55 @@ class _TypeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color =
-        selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+    final color = selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
 
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        minimumSize: const Size.fromHeight(64),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const Gap(8),
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: color,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          constraints: const BoxConstraints(minHeight: 72),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+              width: selected ? 2 : 1,
             ),
+            color: selected
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.55)
+                : theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.45),
           ),
-        ],
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const Gap(8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (selected) ...[
+                    Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: color,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
