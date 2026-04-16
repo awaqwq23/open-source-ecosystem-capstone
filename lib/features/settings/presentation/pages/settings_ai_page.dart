@@ -57,7 +57,7 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
         ),
       ],
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: Column(
           children: [
             SettingsFlatSection(
@@ -100,27 +100,33 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
             SettingsFlatSection(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
                   child: Row(
                     children: [
                       Expanded(
-                        child: ui.OutlineButton(
-                          onPressed:
+                        child: SizedBox(
+                          height: 44,
+                          child: ui.OutlineButton(
+                            onPressed:
+                                state.aiConnectionStatus == SettingsAiConnectionStatus.testing
+                                ? null
+                                : _testAiConnection,
+                            child: Text(
                               state.aiConnectionStatus == SettingsAiConnectionStatus.testing
-                              ? null
-                              : _testAiConnection,
-                          child: Text(
-                            state.aiConnectionStatus == SettingsAiConnectionStatus.testing
-                                ? l10n.settingsAiTestingButton
-                                : l10n.settingsAiTestButton,
+                                  ? l10n.settingsAiTestingButton
+                                  : l10n.settingsAiTestButton,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ui.PrimaryButton(
-                          onPressed: _saveAiSettings,
-                          child: Text(l10n.settingsAiSaveButton),
+                        child: SizedBox(
+                          height: 44,
+                          child: ui.PrimaryButton(
+                            onPressed: _saveAiSettings,
+                            child: Text(l10n.settingsAiSaveButton),
+                          ),
                         ),
                       ),
                     ],
@@ -128,20 +134,10 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
                 ),
                 if (state.aiConnectionMessage != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        state.aiConnectionMessage!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: switch (state.aiConnectionStatus) {
-                            SettingsAiConnectionStatus.success => Colors.green.shade700,
-                            SettingsAiConnectionStatus.failure =>
-                              Theme.of(context).colorScheme.error,
-                            _ => Theme.of(context).colorScheme.onSurfaceVariant,
-                          },
-                        ),
-                      ),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: _AiStatusBanner(
+                      status: state.aiConnectionStatus,
+                      message: state.aiConnectionMessage!,
                     ),
                   ),
               ],
@@ -188,6 +184,79 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
       apiKey: _aiApiKeyController.text.trim(),
       model: _aiModelController.text.trim(),
       systemPrompt: _aiSystemPromptController.text.trim(),
+    );
+  }
+}
+
+class _AiStatusBanner extends StatelessWidget {
+  const _AiStatusBanner({
+    required this.status,
+    required this.message,
+  });
+
+  final SettingsAiConnectionStatus status;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final (icon, foreground, background) = switch (status) {
+      SettingsAiConnectionStatus.success => (
+        Icons.check_circle_outline,
+        Colors.green.shade700,
+        Colors.green.shade100.withOpacity(0.55),
+      ),
+      SettingsAiConnectionStatus.failure => (
+        Icons.error_outline,
+        theme.colorScheme.error,
+        theme.colorScheme.errorContainer.withOpacity(0.38),
+      ),
+      SettingsAiConnectionStatus.testing => (
+        Icons.hourglass_top_rounded,
+        theme.colorScheme.primary,
+        theme.colorScheme.primaryContainer.withOpacity(0.36),
+      ),
+      SettingsAiConnectionStatus.idle => (
+        Icons.info_outline,
+        theme.colorScheme.onSurfaceVariant,
+        theme.colorScheme.surface,
+      ),
+    };
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: background,
+        border: Border.all(
+          color: foreground.withOpacity(0.34),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(
+              icon,
+              size: 18,
+              color: foreground,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

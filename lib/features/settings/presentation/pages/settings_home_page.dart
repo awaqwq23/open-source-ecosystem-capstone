@@ -28,7 +28,7 @@ class SettingsHomePage extends ConsumerWidget {
         ),
       ],
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: SettingsFlatSection(
           children: [
             SettingsFlatTile(
@@ -93,40 +93,31 @@ class SettingsHomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              title: Text(context.l10n.settingsHomeDemoModeTitle),
+            SettingsFlatSwitchRow(
+              title: context.l10n.settingsHomeDemoModeTitle,
+              subtitle: context.l10n.settingsHomeDemoModeDescription,
               value: settings.showDemoData,
               onChanged: (value) => _saveHomeSettings(
                 ref,
                 settings.copyWith(showDemoData: value),
               ),
             ),
-            SettingsFlatTile(
-              title: context.l10n.settingsHomeWideLayout,
-              leading: const Icon(AppIcons.homeOutlined),
-              trailing: DropdownButtonHideUnderline(
-                child: DropdownButton<HomeWideLayoutScope>(
-                  value: settings.wideLayoutScope,
-                  onChanged: (value) {
-                    if (value != null) {
-                      _saveHomeSettings(
-                        ref,
-                        settings.copyWith(wideLayoutScope: value),
-                      );
-                    }
-                  },
-                  items: [
-                    DropdownMenuItem(
-                      value: HomeWideLayoutScope.week,
-                      child: Text(context.l10n.homeScopeWeek),
-                    ),
-                    DropdownMenuItem(
-                      value: HomeWideLayoutScope.month,
-                      child: Text(context.l10n.homeScopeMonth),
-                    ),
-                  ],
+            SettingsFlatChoiceRow<HomeWideLayoutScope>(
+              label: context.l10n.settingsHomeWideLayout,
+              value: settings.wideLayoutScope,
+              options: [
+                SettingsFlatChoiceOption(
+                  value: HomeWideLayoutScope.week,
+                  label: context.l10n.homeScopeWeek,
                 ),
+                SettingsFlatChoiceOption(
+                  value: HomeWideLayoutScope.month,
+                  label: context.l10n.homeScopeMonth,
+                ),
+              ],
+              onChanged: (value) => _saveHomeSettings(
+                ref,
+                settings.copyWith(wideLayoutScope: value),
               ),
             ),
           ],

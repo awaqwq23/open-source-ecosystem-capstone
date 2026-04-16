@@ -24,7 +24,7 @@ class SettingsAboutPage extends StatelessWidget {
         ),
       ],
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: SettingsFlatSection(
           children: [
             SettingsFlatTile(
