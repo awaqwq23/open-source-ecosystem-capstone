@@ -194,6 +194,120 @@ abstract class AppLocalizations {
   /// **'Global, list, home and AI settings will be grouped here.'**
   String get settingsDescription;
 
+  /// No description provided for @settingsSearchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get settingsSearchTooltip;
+
+  /// No description provided for @settingsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get settingsSearchHint;
+
+  /// No description provided for @settingsSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching settings found'**
+  String get settingsSearchEmpty;
+
+  /// No description provided for @settingsGeneralEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get settingsGeneralEntryTitle;
+
+  /// No description provided for @settingsGeneralEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme, language, sync, notifications and widgets'**
+  String get settingsGeneralEntrySubtitle;
+
+  /// No description provided for @settingsHomeEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home time blocks and wide-screen range'**
+  String get settingsHomeEntrySubtitle;
+
+  /// No description provided for @settingsListEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List settings'**
+  String get settingsListEntryTitle;
+
+  /// No description provided for @settingsListEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort, reorder and list display preferences'**
+  String get settingsListEntrySubtitle;
+
+  /// No description provided for @settingsAiEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'API URL, key, model and system prompt'**
+  String get settingsAiEntrySubtitle;
+
+  /// No description provided for @settingsAboutEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAboutEntryTitle;
+
+  /// No description provided for @settingsAboutEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App info, version and license'**
+  String get settingsAboutEntrySubtitle;
+
+  /// No description provided for @settingsGeneralCapabilitiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform capabilities'**
+  String get settingsGeneralCapabilitiesTitle;
+
+  /// No description provided for @settingsGeneralSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Data sync'**
+  String get settingsGeneralSyncTitle;
+
+  /// No description provided for @settingsGeneralNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsGeneralNotificationTitle;
+
+  /// No description provided for @settingsGeneralWidgetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home-screen widgets'**
+  String get settingsGeneralWidgetsTitle;
+
+  /// No description provided for @settingsGeneralComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'This capability will be available in a future release.'**
+  String get settingsGeneralComingSoon;
+
+  /// No description provided for @settingsAboutProductSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid-based planning at a glance with AI assistance'**
+  String get settingsAboutProductSubtitle;
+
+  /// No description provided for @settingsAboutVersionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get settingsAboutVersionTitle;
+
+  /// No description provided for @settingsAboutLicenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source license'**
+  String get settingsAboutLicenseTitle;
+
   /// No description provided for @settingsQuickActionsTitle.
   ///
   /// In en, this message translates to:

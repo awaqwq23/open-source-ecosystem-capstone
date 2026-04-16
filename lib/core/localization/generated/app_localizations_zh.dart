@@ -57,6 +57,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDescription => '这里将承载全局、主页、列表页和 AI 的设置入口。';
 
   @override
+  String get settingsSearchTooltip => '搜索设置';
+
+  @override
+  String get settingsSearchHint => '搜索设置项';
+
+  @override
+  String get settingsSearchEmpty => '没有找到匹配的设置项';
+
+  @override
+  String get settingsGeneralEntryTitle => '通用设置';
+
+  @override
+  String get settingsGeneralEntrySubtitle => '主题、语言、同步、通知与小组件';
+
+  @override
+  String get settingsHomeEntrySubtitle => '主页时间块与宽屏显示范围';
+
+  @override
+  String get settingsListEntryTitle => '列表页设置';
+
+  @override
+  String get settingsListEntrySubtitle => '列表排序、重排与展示偏好';
+
+  @override
+  String get settingsAiEntrySubtitle => 'API 地址、密钥、模型与提示词';
+
+  @override
+  String get settingsAboutEntryTitle => '关于';
+
+  @override
+  String get settingsAboutEntrySubtitle => '应用信息、版本与许可';
+
+  @override
+  String get settingsGeneralCapabilitiesTitle => '平台能力';
+
+  @override
+  String get settingsGeneralSyncTitle => '数据同步';
+
+  @override
+  String get settingsGeneralNotificationTitle => '通知';
+
+  @override
+  String get settingsGeneralWidgetsTitle => '桌面小组件';
+
+  @override
+  String get settingsGeneralComingSoon => '该能力将在后续版本开放。';
+
+  @override
+  String get settingsAboutProductSubtitle => '全屏纵览表格化规划与 AI 辅助管理';
+
+  @override
+  String get settingsAboutVersionTitle => '版本';
+
+  @override
+  String get settingsAboutLicenseTitle => '开源许可';
+
+  @override
   String get settingsQuickActionsTitle => '快捷定位';
 
   @override

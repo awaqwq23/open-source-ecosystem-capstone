@@ -1,628 +1,186 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/features/settings/presentation/viewmodels/settings_view_model.dart';
+import 'package:huajuan_agenda/features/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class SettingsPage extends ConsumerStatefulWidget {
+class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
-  ConsumerState<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends ConsumerState<SettingsPage> {
-  final ScrollController _scrollController = ScrollController();
-  final GlobalKey _appearanceSectionKey = GlobalKey();
-  final GlobalKey _languageSectionKey = GlobalKey();
-  final GlobalKey _homeSectionKey = GlobalKey();
-  final GlobalKey _aiSectionKey = GlobalKey();
-  late final TextEditingController _aiBaseUrlController;
-  late final TextEditingController _aiApiKeyController;
-  late final TextEditingController _aiModelController;
-  late final TextEditingController _aiSystemPromptController;
-
-  @override
-  void initState() {
-    super.initState();
-    _aiBaseUrlController = TextEditingController();
-    _aiApiKeyController = TextEditingController();
-    _aiModelController = TextEditingController();
-    _aiSystemPromptController = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _aiBaseUrlController.dispose();
-    _aiApiKeyController.dispose();
-    _aiModelController.dispose();
-    _aiSystemPromptController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final state = ref.watch(settingsViewModelProvider);
-    final l10n = context.l10n;
-    _syncAiControllers(state.aiSettings);
+    final entries = _buildEntries(context);
 
     return ui.Scaffold(
       headers: [
         ui.AppBar(
-          title: Text(l10n.settingsTitle),
+          title: Text(context.l10n.settingsTitle),
           trailing: [
             ui.Tooltip(
-              tooltip: (context) => Text(l10n.settingsQuickActionsTitle),
+              tooltip: (context) => Text(context.l10n.settingsSearchTooltip),
               child: ui.IconButton.ghost(
-                icon: const Icon(AppIcons.quickActions),
-                onPressed: () => _showQuickActions(context),
+                icon: const Icon(AppIcons.search),
+                onPressed: () => _openSearch(context, entries),
               ),
             ),
           ],
         ),
       ],
-      child: Center(
-        child: SizedBox.expand(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 820),
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-              child: AppEntrance(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.settingsDescription,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const Gap(24),
-                    ui.Card(
-                      key: _appearanceSectionKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.themeSectionTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Gap(16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _OptionButton<ui.ThemeMode>(
-                                label: l10n.themeSystem,
-                                icon: AppIcons.themeSystem,
-                                value: ui.ThemeMode.system,
-                                selected: state.themeMode == ui.ThemeMode.system,
-                                onTap: (value) {
-                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
-                                },
-                              ),
-                              _OptionButton<ui.ThemeMode>(
-                                label: l10n.themeLight,
-                                icon: AppIcons.themeLight,
-                                value: ui.ThemeMode.light,
-                                selected: state.themeMode == ui.ThemeMode.light,
-                                onTap: (value) {
-                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
-                                },
-                              ),
-                              _OptionButton<ui.ThemeMode>(
-                                label: l10n.themeDark,
-                                icon: AppIcons.themeDark,
-                                value: ui.ThemeMode.dark,
-                                selected: state.themeMode == ui.ThemeMode.dark,
-                                onTap: (value) {
-                                  ref.read(settingsViewModelProvider.notifier).selectTheme(value);
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Gap(16),
-                    ui.Card(
-                      key: _homeSectionKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.l10n.settingsHomeSectionTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Gap(8),
-                          Text(
-                            context.l10n.settingsHomeSectionDescription,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const Gap(16),
-                          _SettingsActionRow(
-                            label: context.l10n.settingsHomeDayStart,
-                            value: MaterialLocalizations.of(context)
-                                .formatTimeOfDay(state.homeSettings.dayStartTime),
-                            onTap: () => _pickHomeStartTime(context),
-                          ),
-                          _StepperRow(
-                            label: context.l10n.settingsHomeBlockDuration,
-                            value: context.l10n.settingsMinutesValue(
-                              state.homeSettings.blockDurationMinutes,
-                            ),
-                            onDecrease: state.homeSettings.blockDurationMinutes > 15
-                                ? () => _saveHomeSettings(
-                                      state.homeSettings.copyWith(
-                                        blockDurationMinutes:
-                                            state.homeSettings.blockDurationMinutes - 15,
-                                      ),
-                                    )
-                                : null,
-                            onIncrease: () => _saveHomeSettings(
-                              state.homeSettings.copyWith(
-                                blockDurationMinutes:
-                                    state.homeSettings.blockDurationMinutes + 15,
-                              ),
-                            ),
-                          ),
-                          _StepperRow(
-                            label: context.l10n.settingsHomeBlockGap,
-                            value: context.l10n.settingsMinutesValue(
-                              state.homeSettings.blockGapMinutes,
-                            ),
-                            onDecrease: state.homeSettings.blockGapMinutes > 0
-                                ? () => _saveHomeSettings(
-                                      state.homeSettings.copyWith(
-                                        blockGapMinutes:
-                                            state.homeSettings.blockGapMinutes - 5,
-                                      ),
-                                    )
-                                : null,
-                            onIncrease: () => _saveHomeSettings(
-                              state.homeSettings.copyWith(
-                                blockGapMinutes: state.homeSettings.blockGapMinutes + 5,
-                              ),
-                            ),
-                          ),
-                          _StepperRow(
-                            label: context.l10n.settingsHomeBlockCount,
-                            value: '${state.homeSettings.blockCount}',
-                            onDecrease: state.homeSettings.blockCount > 1
-                                ? () => _saveHomeSettings(
-                                      state.homeSettings.copyWith(
-                                        blockCount: state.homeSettings.blockCount - 1,
-                                      ),
-                                    )
-                                : null,
-                            onIncrease: () => _saveHomeSettings(
-                              state.homeSettings.copyWith(
-                                blockCount: state.homeSettings.blockCount + 1,
-                              ),
-                            ),
-                          ),
-                          const Gap(12),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(context.l10n.settingsHomeDemoModeTitle),
-                            subtitle: Text(context.l10n.settingsHomeDemoModeDescription),
-                            value: state.homeSettings.showDemoData,
-                            onChanged: (value) => _saveHomeSettings(
-                              state.homeSettings.copyWith(showDemoData: value),
-                            ),
-                          ),
-                          const Gap(12),
-                          Text(
-                            context.l10n.settingsHomeWideLayout,
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const Gap(12),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _OptionButton<HomeWideLayoutScope>(
-                                label: context.l10n.homeScopeWeek,
-                                icon: AppIcons.homeOutlined,
-                                value: HomeWideLayoutScope.week,
-                                selected: state.homeSettings.wideLayoutScope ==
-                                    HomeWideLayoutScope.week,
-                                onTap: (value) => _saveHomeSettings(
-                                  state.homeSettings.copyWith(wideLayoutScope: value),
-                                ),
-                              ),
-                              _OptionButton<HomeWideLayoutScope>(
-                                label: context.l10n.homeScopeMonth,
-                                icon: AppIcons.openTimePicker,
-                                value: HomeWideLayoutScope.month,
-                                selected: state.homeSettings.wideLayoutScope ==
-                                    HomeWideLayoutScope.month,
-                                onTap: (value) => _saveHomeSettings(
-                                  state.homeSettings.copyWith(wideLayoutScope: value),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Gap(16),
-                    ui.Card(
-                      key: _aiSectionKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.settingsAiSectionTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Gap(8),
-                          Text(
-                            l10n.settingsAiSectionDescription,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const Gap(16),
-                          TextField(
-                            controller: _aiBaseUrlController,
-                            decoration: InputDecoration(
-                              labelText: l10n.settingsAiBaseUrlLabel,
-                              hintText: 'https://api.openai.com/v1',
-                            ),
-                          ),
-                          const Gap(12),
-                          TextField(
-                            controller: _aiApiKeyController,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: l10n.settingsAiApiKeyLabel,
-                            ),
-                          ),
-                          const Gap(12),
-                          TextField(
-                            controller: _aiModelController,
-                            decoration: InputDecoration(
-                              labelText: l10n.settingsAiModelLabel,
-                              hintText: 'gpt-4o-mini',
-                            ),
-                          ),
-                          const Gap(12),
-                          TextField(
-                            controller: _aiSystemPromptController,
-                            minLines: 3,
-                            maxLines: 5,
-                            decoration: InputDecoration(
-                              labelText: l10n.settingsAiSystemPromptLabel,
-                            ),
-                          ),
-                          const Gap(16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ui.OutlineButton(
-                                  onPressed: state.aiConnectionStatus ==
-                                          SettingsAiConnectionStatus.testing
-                                      ? null
-                                      : _testAiConnection,
-                                  child: Text(
-                                    state.aiConnectionStatus ==
-                                            SettingsAiConnectionStatus.testing
-                                        ? l10n.settingsAiTestingButton
-                                        : l10n.settingsAiTestButton,
-                                  ),
-                                ),
-                              ),
-                              const Gap(12),
-                              Expanded(
-                                child: ui.PrimaryButton(
-                                  onPressed: _saveAiSettings,
-                                  child: Text(l10n.settingsAiSaveButton),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (state.aiConnectionMessage != null) ...[
-                            const Gap(12),
-                            Text(
-                              state.aiConnectionMessage!,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: switch (state.aiConnectionStatus) {
-                                  SettingsAiConnectionStatus.success =>
-                                    Colors.green.shade700,
-                                  SettingsAiConnectionStatus.failure =>
-                                    Theme.of(context).colorScheme.error,
-                                  _ => Theme.of(context).colorScheme.onSurfaceVariant,
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const Gap(16),
-                    ui.Card(
-                      key: _languageSectionKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.languageSectionTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Gap(16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _OptionButton<Locale>(
-                                label: l10n.languageChinese,
-                                icon: AppIcons.languageChinese,
-                                value: AppLocale.chinese.locale,
-                                selected: state.locale == AppLocale.chinese.locale,
-                                onTap: (value) {
-                                  ref.read(settingsViewModelProvider.notifier).selectLocale(value);
-                                },
-                              ),
-                              _OptionButton<Locale>(
-                                label: l10n.languageEnglish,
-                                icon: AppIcons.languageEnglish,
-                                value: AppLocale.english.locale,
-                                selected: state.locale == AppLocale.english.locale,
-                                onTap: (value) {
-                                  ref.read(settingsViewModelProvider.notifier).selectLocale(value);
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: SettingsFlatSection(
+          children: entries
+              .map(
+                (entry) => SettingsFlatTile(
+                  title: entry.title,
+                  subtitle: entry.subtitle,
+                  leading: Icon(entry.icon),
+                  onTap: () => context.push(entry.route),
                 ),
-              ),
-            ),
-          ),
+              )
+              .toList(growable: false),
         ),
       ),
     );
   }
 
-  Future<void> _showQuickActions(BuildContext context) {
-    final l10n = context.l10n;
-
-    return ui.openSheet<void>(
+  Future<void> _openSearch(BuildContext context, List<_SettingsEntry> entries) async {
+    final result = await showSearch<_SettingsEntry?>(
       context: context,
-      position: ui.OverlayPosition.bottom,
-      builder: (sheetContext) {
-        return AppSheetEntrance(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.settingsQuickActionsTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(AppIcons.appearanceSection),
-                  title: Text(l10n.themeSectionTitle),
-                  onTap: () {
-                    ui.closeDrawer(sheetContext);
-                    _scrollToSection(_appearanceSectionKey);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(AppIcons.homeOutlined),
-                  title: Text(l10n.settingsHomeSectionTitle),
-                  onTap: () {
-                    ui.closeDrawer(sheetContext);
-                    _scrollToSection(_homeSectionKey);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(AppIcons.aiOutlined),
-                  title: Text(l10n.settingsAiSectionTitle),
-                  onTap: () {
-                    ui.closeDrawer(sheetContext);
-                    _scrollToSection(_aiSectionKey);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(AppIcons.languageChinese),
-                  title: Text(l10n.languageSectionTitle),
-                  onTap: () {
-                    ui.closeDrawer(sheetContext);
-                    _scrollToSection(_languageSectionKey);
-                  },
-                ),
-              ],
-            ),
-          ),
+      delegate: _SettingsSearchDelegate(
+        entries: entries,
+        searchFieldLabel: context.l10n.settingsSearchHint,
+      ),
+    );
+    if (result != null && context.mounted) {
+      context.push(result.route);
+    }
+  }
+
+  List<_SettingsEntry> _buildEntries(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      _SettingsEntry(
+        title: l10n.settingsGeneralEntryTitle,
+        subtitle: l10n.settingsGeneralEntrySubtitle,
+        route: AppRoutePaths.settingsGeneral,
+        icon: AppIcons.settingsOutlined,
+      ),
+      _SettingsEntry(
+        title: l10n.settingsHomeSectionTitle,
+        subtitle: l10n.settingsHomeEntrySubtitle,
+        route: AppRoutePaths.settingsHome,
+        icon: AppIcons.homeOutlined,
+      ),
+      _SettingsEntry(
+        title: l10n.settingsListEntryTitle,
+        subtitle: l10n.settingsListEntrySubtitle,
+        route: AppRoutePaths.settingsList,
+        icon: AppIcons.listOutlined,
+      ),
+      _SettingsEntry(
+        title: l10n.settingsAiSectionTitle,
+        subtitle: l10n.settingsAiEntrySubtitle,
+        route: AppRoutePaths.settingsAi,
+        icon: AppIcons.aiOutlined,
+      ),
+      _SettingsEntry(
+        title: l10n.settingsAboutEntryTitle,
+        subtitle: l10n.settingsAboutEntrySubtitle,
+        route: AppRoutePaths.settingsAbout,
+        icon: AppIcons.info,
+      ),
+    ];
+  }
+}
+
+class _SettingsSearchDelegate extends SearchDelegate<_SettingsEntry?> {
+  _SettingsSearchDelegate({
+    required this.entries,
+    required String searchFieldLabel,
+  }) : super(searchFieldLabel: searchFieldLabel);
+
+  final List<_SettingsEntry> entries;
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          onPressed: () => query = '',
+          icon: const Icon(Icons.close),
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: () => close(context, null),
+      icon: const Icon(AppIcons.back),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildList(context, _filteredEntries);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildList(context, _filteredEntries);
+  }
+
+  List<_SettingsEntry> get _filteredEntries {
+    final keyword = query.trim().toLowerCase();
+    if (keyword.isEmpty) {
+      return entries;
+    }
+    return entries
+        .where(
+          (entry) =>
+              entry.title.toLowerCase().contains(keyword) ||
+              entry.subtitle.toLowerCase().contains(keyword),
+        )
+        .toList(growable: false);
+  }
+
+  Widget _buildList(BuildContext context, List<_SettingsEntry> results) {
+    if (results.isEmpty) {
+      return Center(
+        child: Text(context.l10n.settingsSearchEmpty),
+      );
+    }
+
+    return ListView.separated(
+      itemCount: results.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final entry = results[index];
+        return ListTile(
+          leading: Icon(entry.icon),
+          title: Text(entry.title),
+          subtitle: Text(entry.subtitle),
+          trailing: const Icon(AppIcons.drillIn, size: 18),
+          onTap: () => close(context, entry),
         );
       },
     );
   }
-
-  void _scrollToSection(GlobalKey sectionKey) {
-    final sectionContext = sectionKey.currentContext;
-    if (sectionContext == null) {
-      return;
-    }
-
-    Scrollable.ensureVisible(
-      sectionContext,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      alignment: 0.08,
-    );
-  }
-
-  Future<void> _pickHomeStartTime(BuildContext context) async {
-    final settings = ref.read(settingsViewModelProvider).homeSettings;
-    final result = await showTimePicker(
-      context: context,
-      initialTime: settings.dayStartTime,
-    );
-    if (result == null) {
-      return;
-    }
-    await _saveHomeSettings(settings.copyWith(dayStartTime: result));
-  }
-
-  Future<void> _saveHomeSettings(HomeSettings settings) {
-    return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
-  }
-
-  Future<void> _saveAiSettings() {
-    return ref.read(settingsViewModelProvider.notifier).saveAiSettings(
-          _buildDraftAiSettings(),
-        );
-  }
-
-  Future<void> _testAiConnection() {
-    return ref.read(settingsViewModelProvider.notifier).testAiConnection(
-          _buildDraftAiSettings(),
-        );
-  }
-
-  void _syncAiControllers(AiSettings settings) {
-    _syncController(_aiBaseUrlController, settings.baseUrl);
-    _syncController(_aiApiKeyController, settings.apiKey);
-    _syncController(_aiModelController, settings.model);
-    _syncController(_aiSystemPromptController, settings.systemPrompt);
-  }
-
-  void _syncController(TextEditingController controller, String value) {
-    if (controller.text == value) {
-      return;
-    }
-    controller.value = TextEditingValue(
-      text: value,
-      selection: TextSelection.collapsed(offset: value.length),
-    );
-  }
-
-  AiSettings _buildDraftAiSettings() {
-    final current = ref.read(settingsViewModelProvider).aiSettings;
-    return current.copyWith(
-      baseUrl: _aiBaseUrlController.text.trim(),
-      apiKey: _aiApiKeyController.text.trim(),
-      model: _aiModelController.text.trim(),
-      systemPrompt: _aiSystemPromptController.text.trim(),
-    );
-  }
 }
 
-class _OptionButton<T> extends StatelessWidget {
-  const _OptionButton({
-    required this.label,
+class _SettingsEntry {
+  const _SettingsEntry({
+    required this.title,
+    required this.subtitle,
+    required this.route,
     required this.icon,
-    required this.value,
-    required this.selected,
-    required this.onTap,
   });
 
-  final String label;
+  final String title;
+  final String subtitle;
+  final String route;
   final IconData icon;
-  final T value;
-  final bool selected;
-  final ValueChanged<T> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (selected) {
-      return ui.PrimaryButton(
-        onPressed: () => onTap(value),
-        leading: Icon(icon),
-        child: Text(label),
-      );
-    }
-
-    return ui.OutlineButton(
-      onPressed: () => onTap(value),
-      leading: Icon(icon),
-      child: Text(label),
-    );
-  }
-}
-
-class _SettingsActionRow extends StatelessWidget {
-  const _SettingsActionRow({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      subtitle: Text(value),
-      trailing: const Icon(AppIcons.drillIn),
-      onTap: onTap,
-    );
-  }
-}
-
-class _StepperRow extends StatelessWidget {
-  const _StepperRow({
-    required this.label,
-    required this.value,
-    required this.onDecrease,
-    required this.onIncrease,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback? onDecrease;
-  final VoidCallback onIncrease;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ui.IconButton.ghost(
-            icon: const Icon(Icons.remove),
-            onPressed: onDecrease,
-          ),
-          ui.IconButton.ghost(
-            icon: const Icon(Icons.add),
-            onPressed: onIncrease,
-          ),
-        ],
-      ),
-    );
-  }
 }

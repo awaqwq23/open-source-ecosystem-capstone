@@ -31,6 +31,7 @@ abstract final class AppIcons {
   static const IconData openListTabs = Icons.menu;
   static const IconData moreActions = Icons.more_horiz;
   static const IconData quickActions = Icons.tune;
+  static const IconData search = Icons.search;
 
   static const IconData themeSystem = Icons.brightness_auto_outlined;
   static const IconData themeLight = Icons.light_mode_outlined;

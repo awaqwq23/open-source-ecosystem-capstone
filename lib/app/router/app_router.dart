@@ -14,6 +14,11 @@ import 'package:huajuan_agenda/features/item_editor/presentation/pages/item_edit
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/reminder_settings_page.dart';
 import 'package:huajuan_agenda/features/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:huajuan_agenda/features/list/presentation/pages/list_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_about_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_ai_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_general_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_home_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_list_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_page.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:huajuan_agenda/features/time_picker/presentation/pages/time_picker_page.dart';
@@ -72,6 +77,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.settings,
                 builder: (context, state) => const SettingsPage(),
+                routes: [
+                  GoRoute(
+                    path: 'general',
+                    builder: (context, state) => const SettingsGeneralPage(),
+                  ),
+                  GoRoute(
+                    path: 'home',
+                    builder: (context, state) => const SettingsHomePage(),
+                  ),
+                  GoRoute(
+                    path: 'list',
+                    builder: (context, state) => const SettingsListPage(),
+                  ),
+                  GoRoute(
+                    path: 'ai',
+                    builder: (context, state) => const SettingsAiPage(),
+                  ),
+                  GoRoute(
+                    path: 'about',
+                    builder: (context, state) => const SettingsAboutPage(),
+                  ),
+                ],
               ),
             ],
           ),

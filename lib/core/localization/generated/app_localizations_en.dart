@@ -62,6 +62,68 @@ class AppLocalizationsEn extends AppLocalizations {
       'Global, list, home and AI settings will be grouped here.';
 
   @override
+  String get settingsSearchTooltip => 'Search settings';
+
+  @override
+  String get settingsSearchHint => 'Search settings';
+
+  @override
+  String get settingsSearchEmpty => 'No matching settings found';
+
+  @override
+  String get settingsGeneralEntryTitle => 'General';
+
+  @override
+  String get settingsGeneralEntrySubtitle =>
+      'Theme, language, sync, notifications and widgets';
+
+  @override
+  String get settingsHomeEntrySubtitle =>
+      'Home time blocks and wide-screen range';
+
+  @override
+  String get settingsListEntryTitle => 'List settings';
+
+  @override
+  String get settingsListEntrySubtitle =>
+      'Sort, reorder and list display preferences';
+
+  @override
+  String get settingsAiEntrySubtitle => 'API URL, key, model and system prompt';
+
+  @override
+  String get settingsAboutEntryTitle => 'About';
+
+  @override
+  String get settingsAboutEntrySubtitle => 'App info, version and license';
+
+  @override
+  String get settingsGeneralCapabilitiesTitle => 'Platform capabilities';
+
+  @override
+  String get settingsGeneralSyncTitle => 'Data sync';
+
+  @override
+  String get settingsGeneralNotificationTitle => 'Notifications';
+
+  @override
+  String get settingsGeneralWidgetsTitle => 'Home-screen widgets';
+
+  @override
+  String get settingsGeneralComingSoon =>
+      'This capability will be available in a future release.';
+
+  @override
+  String get settingsAboutProductSubtitle =>
+      'Grid-based planning at a glance with AI assistance';
+
+  @override
+  String get settingsAboutVersionTitle => 'Version';
+
+  @override
+  String get settingsAboutLicenseTitle => 'Open-source license';
+
+  @override
   String get settingsQuickActionsTitle => 'Quick access';
 
   @override
