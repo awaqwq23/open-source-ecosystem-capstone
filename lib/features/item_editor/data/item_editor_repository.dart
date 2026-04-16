@@ -3,6 +3,7 @@ import 'package:huajuan_agenda/features/item_editor/domain/repositories/item_edi
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:huajuan_agenda/shared/domain/repositories/agenda_item_repository.dart';
 
 class SharedItemEditorRepository implements ItemEditorRepository {
   const SharedItemEditorRepository(this._repository);
