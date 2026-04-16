@@ -101,12 +101,37 @@ class _CourseImportWakeupPageState extends ConsumerState<CourseImportWakeupPage>
               source: _adapter.source,
             );
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+      _showMessage(result.message);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  Future<void> _showMessage(String message) async {
+    if (!mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_isChinese(dialogContext) ? '确定' : 'OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   bool _isChinese(BuildContext context) {

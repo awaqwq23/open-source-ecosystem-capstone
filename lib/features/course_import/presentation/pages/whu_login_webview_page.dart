@@ -84,12 +84,8 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
       return;
     }
     if (cookies.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isZh ? '未读取到教务会话，请先完成登录后再确认。' : 'No session cookie found. Please login first.',
-          ),
-        ),
+      _showMessage(
+        isZh ? '未读取到教务会话，请先完成登录后再确认。' : 'No session cookie found. Please login first.',
       );
       return;
     }
@@ -99,5 +95,30 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
 
   bool _isChinese(BuildContext context) {
     return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+  }
+
+  Future<void> _showMessage(String message) async {
+    if (!mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_isChinese(dialogContext) ? '确定' : 'OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

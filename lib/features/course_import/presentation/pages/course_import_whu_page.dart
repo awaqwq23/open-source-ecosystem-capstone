@@ -136,22 +136,16 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   Future<void> _submit() async {
     final isZh = _isChinese(context);
     if (_cookieHeader.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isZh ? '请先完成教务登录授权。' : 'Please login first.')),
-      );
+      _showMessage(isZh ? '请先完成教务登录授权。' : 'Please login first.');
       return;
     }
     if (_weekOneMonday == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isZh ? '请选择第1周周一日期。' : 'Please select Week-1 Monday.')),
-      );
+      _showMessage(isZh ? '请选择第1周周一日期。' : 'Please select Week-1 Monday.');
       return;
     }
     final year = int.tryParse(_yearController.text.trim());
     if (year == null || year < 2000 || year > 2100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isZh ? '请输入有效学年年份。' : 'Please enter a valid year.')),
-      );
+      _showMessage(isZh ? '请输入有效学年年份。' : 'Please enter a valid year.');
       return;
     }
     setState(() => _submitting = true);
@@ -188,24 +182,16 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isZh
-                ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
-                : 'Imported ${payload.items.length} course items to "$tableName".',
-          ),
-        ),
+      _showMessage(
+        isZh
+            ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
+            : 'Imported ${payload.items.length} course items to "$tableName".',
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isZh ? '导入失败：$error' : 'Import failed: $error'),
-        ),
-      );
+      _showMessage(isZh ? '导入失败：$error' : 'Import failed: $error');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -236,10 +222,33 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       return;
     }
     setState(() => _cookieHeader = cookieHeader.trim());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.'),
-      ),
+    _showMessage(
+      _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
+    );
+  }
+
+  Future<void> _showMessage(String message) async {
+    if (!mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(_isChinese(dialogContext) ? '确定' : 'OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 
