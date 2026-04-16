@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/course_import/data/whu_course_import_adapter.dart';
-import 'package:huajuan_agenda/features/course_import/domain/models/course_import_models.dart';
+import 'package:huajuan_agenda/features/course_import/data/whu_course_import_service.dart';
+import 'package:huajuan_agenda/features/course_import/presentation/pages/whu_login_webview_page.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CourseImportWhuPage extends ConsumerStatefulWidget {
@@ -14,15 +17,20 @@ class CourseImportWhuPage extends ConsumerStatefulWidget {
 }
 
 class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
-  final _adapter = const WhuCourseImportAdapter();
+  final _service = WhuCourseImportService();
   final _nameController = TextEditingController();
   final _termController = TextEditingController();
+  final _yearController = TextEditingController(text: '${DateTime.now().year}');
+  DateTime? _weekOneMonday;
+  int _semester = 2;
+  String _cookieHeader = '';
   bool _submitting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _termController.dispose();
+    _yearController.dispose();
     super.dispose();
   }
 
@@ -45,11 +53,15 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           Text(
-            isZh
-                ? '首版先提供导入流程与课程表管理链路，解析器仍在接入。'
-                : 'V1 provides import flow and timetable management. Parser is not connected yet.',
+            isZh ? '请先登录教务获取会话，再导入学期课表。' : 'Login first to get session, then import timetable.',
           ),
           const SizedBox(height: 16),
+          ui.PrimaryButton(
+            onPressed: _submitting ? null : _openLoginPage,
+            leading: const Icon(AppIcons.web),
+            child: Text(_cookieHeader.isEmpty ? (isZh ? '登录教务并授权' : 'Login to WHU') : (isZh ? '已获取会话，重新登录' : 'Session acquired, relogin')),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
@@ -58,6 +70,45 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             ),
           ),
           const SizedBox(height: 12),
+          TextField(
+            controller: _yearController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: isZh ? '学年起始年份' : 'Start Year',
+              hintText: isZh ? '例如：2025' : 'e.g. 2025',
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            value: _semester,
+            decoration: InputDecoration(labelText: isZh ? '学期' : 'Semester'),
+            items: [
+              DropdownMenuItem(value: 1, child: Text(isZh ? '第一学期' : 'Semester 1')),
+              DropdownMenuItem(value: 2, child: Text(isZh ? '第二学期' : 'Semester 2')),
+              DropdownMenuItem(value: 3, child: Text(isZh ? '第三学期' : 'Semester 3')),
+            ],
+            onChanged: _submitting
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _semester = value);
+                    }
+                  },
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(AppIcons.calendar),
+            title: Text(isZh ? '第1周周一日期' : 'Week-1 Monday'),
+            subtitle: Text(
+              _weekOneMonday == null
+                  ? (isZh ? '点击选择' : 'Tap to select')
+                  : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
+            ),
+            trailing: const Icon(AppIcons.drillIn),
+            onTap: _submitting ? null : () => _pickWeekOneMonday(context),
+          ),
+          const SizedBox(height: 4),
           TextField(
             controller: _termController,
             decoration: InputDecoration(
@@ -83,33 +134,76 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   }
 
   Future<void> _submit() async {
+    final isZh = _isChinese(context);
+    if (_cookieHeader.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isZh ? '请先完成教务登录授权。' : 'Please login first.')),
+      );
+      return;
+    }
+    if (_weekOneMonday == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isZh ? '请选择第1周周一日期。' : 'Please select Week-1 Monday.')),
+      );
+      return;
+    }
+    final year = int.tryParse(_yearController.text.trim());
+    if (year == null || year < 2000 || year > 2100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isZh ? '请输入有效学年年份。' : 'Please enter a valid year.')),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
-      final isZh = _isChinese(context);
-      final request = CourseImportRequest(
-        timetableName: _nameController.text.trim(),
-        termLabel: _termController.text.trim(),
+      final payload = await _service.loadCourses(
+        cookieHeader: _cookieHeader,
+        year: year,
+        semester: _semester,
+        weekOneMonday: _weekOneMonday!,
+        homeSettings: ref.read(appHomeSettingsProvider),
       );
-      final result = await _adapter.import(request);
+      final tableName = _nameController.text.trim().isEmpty
+          ? (isZh ? '武大导入 ${DateTime.now().toLocal()}' : 'WHU Import ${DateTime.now().toLocal()}')
+          : _nameController.text.trim();
+      final termLabel = _termController.text.trim().isEmpty
+          ? payload.termLabel
+          : _termController.text.trim();
+      final timetable = await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
+            name: tableName,
+            source: CourseTimetableSource.whuJw,
+            termLabel: termLabel,
+          );
+      await ref.read(courseTimetableRepositoryProvider.notifier).setActiveTimetable(timetable.id);
+
+      final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
+      for (final draft in payload.items) {
+        await agendaRepo.createItem(
+          draft.copyWith(
+            courseDetails: draft.courseDetails.copyWith(timetableId: timetable.id),
+          ),
+        );
+      }
+
       if (!mounted) {
         return;
       }
-      if (result.success) {
-        await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
-              name: request.timetableName,
-              source: _adapter.source,
-              termLabel: request.termLabel,
-            );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isZh
+                ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
+                : 'Imported ${payload.items.length} course items to "$tableName".',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.message),
-          action: result.success
-              ? null
-              : SnackBarAction(
-                  label: isZh ? '知道了' : 'OK',
-                  onPressed: () {},
-                ),
+          content: Text(isZh ? '导入失败：$error' : 'Import failed: $error'),
         ),
       );
     } finally {
@@ -117,6 +211,36 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  Future<void> _pickWeekOneMonday(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _weekOneMonday ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _weekOneMonday = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  Future<void> _openLoginPage() async {
+    final cookieHeader = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const WhuLoginWebViewPage()),
+    );
+    if (!mounted || cookieHeader == null || cookieHeader.trim().isEmpty) {
+      return;
+    }
+    setState(() => _cookieHeader = cookieHeader.trim());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.'),
+      ),
+    );
   }
 
   bool _isChinese(BuildContext context) {
