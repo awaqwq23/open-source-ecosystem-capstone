@@ -918,7 +918,7 @@ class _AgendaBlock extends StatelessWidget {
               final courseInstructor = item.item.courseDetails.instructor.trim();
               final courseLocation = _resolveCourseLocation();
               final showDetails = isCourseItem
-                  ? contentHeight >= _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
+                  ? !ultraCompactHeight
                   : detailsText.isNotEmpty &&
                       contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
               final detailsMaxLines = contentHeight >=
@@ -926,15 +926,13 @@ class _AgendaBlock extends StatelessWidget {
                   ? 2
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
-              final detailsSpacing = isCourseItem ? 3.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
-              final titleMaxLines = isCourseItem
-                  ? 1
-                  : switch (contentHeight) {
-                      < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
-                      < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
-                      _ when showDetails => 2,
-                      _ => 3,
-                    };
+              final detailsSpacing = isCourseItem ? 2.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
+              final titleMaxLines = switch (contentHeight) {
+                < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
+                < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
+                _ when showDetails => 2,
+                _ => 3,
+              };
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -992,19 +990,16 @@ class _AgendaBlock extends StatelessWidget {
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(height: 2.0),
-                                          Flexible(
-                                            fit: FlexFit.loose,
-                                            child: Text(
-                                              courseLocation.isEmpty ? '-' : courseLocation,
-                                              maxLines: 2,
-                                              softWrap: true,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.labelSmall?.copyWith(
-                                                color: textBaseColor.withValues(alpha: 0.9),
-                                                height: 1.0,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                          const SizedBox(height: 1.0),
+                                          Text(
+                                            courseLocation.isEmpty ? '-' : courseLocation,
+                                            maxLines: 2,
+                                            softWrap: true,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              color: textBaseColor.withValues(alpha: 0.9),
+                                              height: 1.0,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
@@ -1117,7 +1112,6 @@ abstract final class _HomeGridLayoutSpec {
   static const itemTitleSingleLineContentHeight = 24.0;
   static const itemTitleTwoLineContentHeight = 42.0;
   static const itemDetailsMinContentHeight = 58.0;
-  static const itemCourseDetailsMinContentHeight = 34.0;
   static const itemDetailsTwoLineContentHeight = 72.0;
 
   static const minMonthColumnWidth = 40.0;
