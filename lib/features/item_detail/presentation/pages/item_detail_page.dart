@@ -87,6 +87,7 @@ class ItemDetailPage extends ConsumerWidget {
           deadline: item.deadline,
           targetDate: item.targetDate,
           estimatedDuration: item.estimatedDuration,
+          courseDetails: item.courseDetails,
           isImportant: item.isImportant,
         ),
       ),
@@ -289,6 +290,7 @@ class _ItemDetailContent extends ConsumerWidget {
       ItemType.task => l10n.listTabTasks,
       ItemType.schedule => l10n.listTabSchedules,
       ItemType.memo => l10n.listTabMemos,
+      ItemType.course => _isChinese(l10n) ? '课程列表' : 'Courses',
     };
   }
 
@@ -319,7 +321,12 @@ class _ItemDetailContent extends ConsumerWidget {
       ItemType.task => AppIcons.itemTypeTask,
       ItemType.schedule => AppIcons.itemTypeSchedule,
       ItemType.memo => AppIcons.itemTypeMemo,
+      ItemType.course => AppIcons.itemTypeCourse,
     };
+  }
+
+  bool _isChinese(AppLocalizations l10n) {
+    return l10n.localeName.toLowerCase().startsWith('zh');
   }
 }
 

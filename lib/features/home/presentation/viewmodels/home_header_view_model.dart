@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/features/home/domain/use_cases/layout_home_items.
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
@@ -144,6 +145,8 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
   final repositoryItems = ref.watch(agendaItemRepositoryProvider);
+  final timetableStore = ref.watch(courseTimetableRepositoryProvider);
+  final activeTimetableId = timetableStore.activeTimetableId;
   final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
       ? HomeDisplayScope.month
       : HomeDisplayScope.week;
@@ -160,7 +163,12 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       ? HomeHeaderViewModel._demoItemsSource.buildForRange(previewGrid.visibleRange)
       : [
           for (final item in repositoryItems)
-            if (item.type == ItemType.task || item.type == ItemType.schedule) item,
+            if (item.type == ItemType.task ||
+                item.type == ItemType.schedule ||
+                (item.type == ItemType.course &&
+                    activeTimetableId != null &&
+                    item.courseDetails.timetableId == activeTimetableId))
+              item,
         ];
   final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
     items: visibleItems,

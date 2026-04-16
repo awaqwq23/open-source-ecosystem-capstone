@@ -1,4 +1,5 @@
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
@@ -19,6 +20,7 @@ class ItemDraft {
     required this.scheduleDetails,
     required this.taskDetails,
     required this.memoDetails,
+    this.courseDetails = const ItemCourseDetails(),
   });
 
   final ItemType type;
@@ -31,6 +33,7 @@ class ItemDraft {
   final ItemScheduleDetails scheduleDetails;
   final ItemTaskDetails taskDetails;
   final ItemMemoDetails memoDetails;
+  final ItemCourseDetails courseDetails;
 
   bool get isAllDay => activeScheduleDetails.isAllDay;
   DateTime get startAt => activeScheduleDetails.range.start;
@@ -44,6 +47,7 @@ class ItemDraft {
       ItemType.task => taskDetails.schedule,
       ItemType.schedule => scheduleDetails,
       ItemType.memo => scheduleDetails,
+      ItemType.course => scheduleDetails,
     };
   }
 
@@ -65,6 +69,7 @@ class ItemDraft {
     ItemScheduleDetails? scheduleDetails,
     ItemTaskDetails? taskDetails,
     ItemMemoDetails? memoDetails,
+    ItemCourseDetails? courseDetails,
   }) {
     final nextScheduleDetails = scheduleDetails ??
         this.scheduleDetails.copyWith(
@@ -106,6 +111,7 @@ class ItemDraft {
       scheduleDetails: nextScheduleDetails,
       taskDetails: nextTaskDetails,
       memoDetails: nextMemoDetails,
+      courseDetails: courseDetails ?? this.courseDetails,
     );
   }
 }

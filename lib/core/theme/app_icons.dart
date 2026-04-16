@@ -43,6 +43,9 @@ abstract final class AppIcons {
   static const IconData itemTypeTask = Icons.check_circle_outline;
   static const IconData itemTypeSchedule = Icons.calendar_month_outlined;
   static const IconData itemTypeMemo = Icons.sticky_note_2_outlined;
+  static const IconData itemTypeCourse = Icons.school_outlined;
+  static const IconData import = Icons.file_download_outlined;
+  static const IconData web = Icons.public_outlined;
   static const IconData submitCreate = Icons.add_circle_outline;
   static const IconData add = Icons.add;
   static const IconData complete = Icons.check_circle;

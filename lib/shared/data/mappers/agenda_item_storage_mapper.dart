@@ -1,4 +1,5 @@
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
@@ -24,6 +25,7 @@ class AgendaItemStorageMapper {
       'scheduleDetails': _scheduleToJson(item.scheduleDetails),
       'taskDetails': _taskToJson(item.taskDetails),
       'memoDetails': _memoToJson(item.memoDetails),
+      'courseDetails': _courseToJson(item.courseDetails),
       'isCompleted': item.isCompleted,
       'isImportant': item.isImportant,
       'createdAt': item.createdAt.toIso8601String(),
@@ -46,7 +48,11 @@ class AgendaItemStorageMapper {
     final scheduleDetails = _scheduleFromJson(json['scheduleDetails']);
     final taskDetails = _taskFromJson(json['taskDetails']);
     final memoDetails = _memoFromJson(json['memoDetails']);
-    if (scheduleDetails == null || taskDetails == null || memoDetails == null) {
+    final courseDetails = _courseFromJson(json['courseDetails']);
+    if (scheduleDetails == null ||
+        taskDetails == null ||
+        memoDetails == null ||
+        courseDetails == null) {
       return null;
     }
 
@@ -65,6 +71,7 @@ class AgendaItemStorageMapper {
       scheduleDetails: scheduleDetails,
       taskDetails: taskDetails,
       memoDetails: memoDetails,
+      courseDetails: courseDetails,
       isCompleted: json['isCompleted'] as bool? ?? false,
       isImportant: json['isImportant'] as bool? ?? false,
       createdAt: createdAt,
@@ -144,6 +151,35 @@ class AgendaItemStorageMapper {
       estimatedDuration: Duration(
         minutes: value['estimatedDurationMinutes'] as int? ?? 0,
       ),
+    );
+  }
+
+  static Map<String, dynamic> _courseToJson(ItemCourseDetails details) {
+    return {
+      'timetableId': details.timetableId,
+      'sourceKind': details.sourceKind.name,
+      'sourceCourseId': details.sourceCourseId,
+      'instructor': details.instructor,
+      'classroomRaw': details.classroomRaw,
+      'weekMeta': details.weekMeta,
+    };
+  }
+
+  static ItemCourseDetails? _courseFromJson(Object? value) {
+    if (value is! Map) {
+      return const ItemCourseDetails();
+    }
+    return ItemCourseDetails(
+      timetableId: value['timetableId'] as String? ?? '',
+      sourceKind: _enumByName(
+            CourseItemSourceKind.values,
+            value['sourceKind'] as String?,
+          ) ??
+          CourseItemSourceKind.manual,
+      sourceCourseId: value['sourceCourseId'] as String? ?? '',
+      instructor: value['instructor'] as String? ?? '',
+      classroomRaw: value['classroomRaw'] as String? ?? '',
+      weekMeta: value['weekMeta'] as String? ?? '',
     );
   }
 

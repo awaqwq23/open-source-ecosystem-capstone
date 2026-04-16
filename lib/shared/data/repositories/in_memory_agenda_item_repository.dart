@@ -93,6 +93,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       scheduleDetails: draft.scheduleDetails,
       taskDetails: draft.taskDetails,
       memoDetails: draft.memoDetails,
+      courseDetails: draft.courseDetails,
       isImportant: isImportant ?? current.isImportant,
       updatedAt: DateTime.now(),
     );

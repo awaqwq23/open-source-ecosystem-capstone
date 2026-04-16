@@ -5,7 +5,9 @@ import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
+import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -18,6 +20,7 @@ class AppBootstrapData {
     required this.aiSettings,
     required this.aiMessages,
     required this.agendaItems,
+    required this.courseTimetableStore,
   });
 
   final Locale locale;
@@ -26,6 +29,7 @@ class AppBootstrapData {
   final AiSettings aiSettings;
   final List<AiChatMessage> aiMessages;
   final List<AgendaItem> agendaItems;
+  final CourseTimetableStore courseTimetableStore;
 }
 
 abstract final class AppBootstrapStorageKeys {
@@ -35,6 +39,8 @@ abstract final class AppBootstrapStorageKeys {
   static const aiSettings = 'settings.ai';
   static const aiMessages = 'ai.messages';
   static const agendaItems = 'agenda.items';
+  static const courseTimetables = 'course.timetables';
+  static const activeCourseTimetableId = 'course.activeTimetableId';
 }
 
 class AppBootstrapLoader {
@@ -48,6 +54,7 @@ class AppBootstrapLoader {
       aiSettings: _readAiSettings(preferences),
       aiMessages: _readAiMessages(preferences),
       agendaItems: _readAgendaItems(preferences),
+      courseTimetableStore: _readCourseTimetableStore(preferences),
     );
   }
 
@@ -160,6 +167,37 @@ class AppBootstrapLoader {
           .toList(growable: false);
     } catch (_) {
       return const [];
+    }
+  }
+
+  static CourseTimetableStore _readCourseTimetableStore(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.courseTimetables);
+    final rawActiveId = preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId);
+    if (raw == null || raw.isEmpty) {
+      return CourseTimetableStore(
+        timetables: const [],
+        activeTimetableId: (rawActiveId == null || rawActiveId.isEmpty) ? null : rawActiveId,
+      );
+    }
+
+    try {
+      final json = jsonDecode(raw) as List<dynamic>;
+      final timetables = json
+          .whereType<Map<String, dynamic>>()
+          .map(CourseTimetableStorageMapper.fromJson)
+          .whereType<CourseTimetable>()
+          .toList(growable: false);
+      final activeId = (rawActiveId == null || rawActiveId.isEmpty) ? null : rawActiveId;
+      final normalizedActiveId = activeId != null &&
+              timetables.any((timetable) => timetable.id == activeId)
+          ? activeId
+          : (timetables.isEmpty ? null : timetables.first.id);
+      return CourseTimetableStore(
+        timetables: timetables,
+        activeTimetableId: normalizedActiveId,
+      );
+    } catch (_) {
+      return const CourseTimetableStore(timetables: []);
     }
   }
 }

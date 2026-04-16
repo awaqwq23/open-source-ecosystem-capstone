@@ -125,6 +125,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     taskLabel: l10n.editorTypeTask,
                     scheduleLabel: l10n.editorTypeSchedule,
                     memoLabel: l10n.editorTypeMemo,
+                    courseLabel: _courseLabel(context),
                   ),
                   const Gap(20),
                   AppSwitchingContent(
@@ -536,6 +537,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
         ItemType.task => l10n.editorEditTask,
         ItemType.schedule => l10n.editorEditSchedule,
         ItemType.memo => l10n.editorEditMemo,
+        ItemType.course => _isChinese(context) ? '编辑课程' : 'Edit course',
       };
     }
 
@@ -543,6 +545,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       ItemType.task => l10n.editorCreateTask,
       ItemType.schedule => l10n.editorCreateSchedule,
       ItemType.memo => l10n.editorCreateMemo,
+      ItemType.course => _isChinese(context) ? '创建课程' : 'Create course',
     };
   }
 
@@ -614,6 +617,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
     return l10n.editorDurationMinutes(value.inMinutes);
   }
+
+  String _courseLabel(BuildContext context) {
+    return _isChinese(context) ? '课程' : 'Course';
+  }
+
+  bool _isChinese(BuildContext context) {
+    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+  }
 }
 
 class _TypeSelectorRow extends StatelessWidget {
@@ -623,6 +634,7 @@ class _TypeSelectorRow extends StatelessWidget {
     required this.taskLabel,
     required this.scheduleLabel,
     required this.memoLabel,
+    required this.courseLabel,
   });
 
   final ItemType selectedType;
@@ -630,6 +642,7 @@ class _TypeSelectorRow extends StatelessWidget {
   final String taskLabel;
   final String scheduleLabel;
   final String memoLabel;
+  final String courseLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -659,6 +672,15 @@ class _TypeSelectorRow extends StatelessWidget {
             icon: AppIcons.itemTypeMemo,
             label: memoLabel,
             onPressed: () => onSelected(ItemType.memo),
+          ),
+        ),
+        const Gap(12),
+        Expanded(
+          child: _TypeButton(
+            selected: selectedType == ItemType.course,
+            icon: AppIcons.itemTypeCourse,
+            label: courseLabel,
+            onPressed: () => onSelected(ItemType.course),
           ),
         ),
       ],

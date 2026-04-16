@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -24,6 +25,7 @@ Future<void> main() async {
         appAiSettingsProvider.overrideWith((ref) => bootstrap.aiSettings),
         aiChatBootstrapMessagesProvider.overrideWithValue(bootstrap.aiMessages),
         agendaItemsBootstrapProvider.overrideWithValue(bootstrap.agendaItems),
+        courseTimetableBootstrapProvider.overrideWithValue(bootstrap.courseTimetableStore),
       ],
       child: const HuaJuanAgendaApp(),
     ),

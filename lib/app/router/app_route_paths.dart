@@ -7,6 +7,9 @@ abstract final class AppRoutePaths {
   static const settingsGeneral = '/settings/general';
   static const settingsHome = '/settings/home';
   static const settingsList = '/settings/list';
+  static const settingsCourseTimetables = '/settings/course-timetables';
+  static const settingsCourseImportWhu = '/settings/course-import-whu';
+  static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
   static const settingsAi = '/settings/ai';
   static const settingsAbout = '/settings/about';
   static const itemDetail = '/item-detail';

@@ -1,4 +1,5 @@
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
@@ -18,6 +19,7 @@ class ItemEditorPrefill {
     this.deadline,
     this.targetDate,
     this.estimatedDuration,
+    this.courseDetails,
     this.isImportant,
   });
 
@@ -34,5 +36,6 @@ class ItemEditorPrefill {
   final DateTime? deadline;
   final DateTime? targetDate;
   final Duration? estimatedDuration;
+  final ItemCourseDetails? courseDetails;
   final bool? isImportant;
 }

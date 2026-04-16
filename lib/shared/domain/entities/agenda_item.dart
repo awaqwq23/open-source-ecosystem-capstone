@@ -1,5 +1,6 @@
 import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
@@ -20,6 +21,7 @@ class AgendaItem {
     required this.scheduleDetails,
     required this.taskDetails,
     required this.memoDetails,
+    this.courseDetails = const ItemCourseDetails(),
     required this.isCompleted,
     required this.isImportant,
     required this.createdAt,
@@ -41,6 +43,7 @@ class AgendaItem {
   final ItemScheduleDetails scheduleDetails;
   final ItemTaskDetails taskDetails;
   final ItemMemoDetails memoDetails;
+  final ItemCourseDetails courseDetails;
   final bool isCompleted;
   final bool isImportant;
   final DateTime createdAt;
@@ -62,6 +65,7 @@ class AgendaItem {
       ItemType.task => taskDetails.schedule,
       ItemType.schedule => scheduleDetails,
       ItemType.memo => scheduleDetails,
+      ItemType.course => scheduleDetails,
     };
   }
 
@@ -77,6 +81,7 @@ class AgendaItem {
     ItemScheduleDetails? scheduleDetails,
     ItemTaskDetails? taskDetails,
     ItemMemoDetails? memoDetails,
+    ItemCourseDetails? courseDetails,
     bool? isCompleted,
     bool? isImportant,
     DateTime? createdAt,
@@ -100,6 +105,7 @@ class AgendaItem {
       scheduleDetails: scheduleDetails ?? this.scheduleDetails,
       taskDetails: taskDetails ?? this.taskDetails,
       memoDetails: memoDetails ?? this.memoDetails,
+      courseDetails: courseDetails ?? this.courseDetails,
       isCompleted: isCompleted ?? this.isCompleted,
       isImportant: isImportant ?? this.isImportant,
       createdAt: createdAt ?? this.createdAt,
@@ -123,6 +129,7 @@ class AgendaItem {
       scheduleDetails: scheduleDetails,
       taskDetails: taskDetails,
       memoDetails: memoDetails,
+      courseDetails: courseDetails,
     );
   }
 
@@ -147,6 +154,7 @@ class AgendaItem {
       scheduleDetails: draft.scheduleDetails,
       taskDetails: draft.taskDetails,
       memoDetails: draft.memoDetails,
+      courseDetails: draft.courseDetails,
       isCompleted: isCompleted,
       isImportant: isImportant,
       createdAt: createdAt,

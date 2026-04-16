@@ -77,6 +77,7 @@ class SortListItemsUseCase {
       ItemType.memo => item.targetDate,
       ItemType.task => item.deadline ?? item.startAt,
       ItemType.schedule => item.startAt,
+      ItemType.course => item.startAt,
     };
   }
 
@@ -85,6 +86,7 @@ class SortListItemsUseCase {
       ItemType.memo => item.targetDate,
       ItemType.task => item.deadline ?? item.endAt,
       ItemType.schedule => item.startAt,
+      ItemType.course => item.startAt,
     };
   }
 

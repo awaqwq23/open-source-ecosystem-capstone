@@ -5,6 +5,9 @@ import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/app/shell/app_shell.dart';
 import 'package:huajuan_agenda/core/motion/app_route_transitions.dart';
 import 'package:huajuan_agenda/features/ai/presentation/pages/ai_page.dart';
+import 'package:huajuan_agenda/features/course_import/presentation/pages/course_import_wakeup_page.dart';
+import 'package:huajuan_agenda/features/course_import/presentation/pages/course_import_whu_page.dart';
+import 'package:huajuan_agenda/features/course_import/presentation/pages/course_timetables_page.dart';
 import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
@@ -89,6 +92,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'list',
                     builder: (context, state) => const SettingsListPage(),
+                  ),
+                  GoRoute(
+                    path: 'course-timetables',
+                    builder: (context, state) => const CourseTimetablesPage(),
+                  ),
+                  GoRoute(
+                    path: 'course-import-whu',
+                    builder: (context, state) => const CourseImportWhuPage(),
+                  ),
+                  GoRoute(
+                    path: 'course-import-wakeup',
+                    builder: (context, state) => const CourseImportWakeupPage(),
                   ),
                   GoRoute(
                     path: 'ai',

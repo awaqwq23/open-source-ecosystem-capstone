@@ -81,6 +81,12 @@ class SettingsPage extends StatelessWidget {
         icon: AppIcons.listOutlined,
       ),
       _SettingsEntry(
+        title: _isChinese(context) ? '课程表与导入' : 'Course Tables & Import',
+        subtitle: _isChinese(context) ? '管理课程表、导入课程数据' : 'Manage timetables and import courses',
+        route: AppRoutePaths.settingsCourseTimetables,
+        icon: AppIcons.itemTypeCourse,
+      ),
+      _SettingsEntry(
         title: l10n.settingsAiSectionTitle,
         subtitle: l10n.settingsAiEntrySubtitle,
         route: AppRoutePaths.settingsAi,
@@ -93,6 +99,10 @@ class SettingsPage extends StatelessWidget {
         icon: AppIcons.info,
       ),
     ];
+  }
+
+  bool _isChinese(BuildContext context) {
+    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
   }
 }
 

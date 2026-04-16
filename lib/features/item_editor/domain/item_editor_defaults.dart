@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
@@ -55,6 +56,7 @@ class ItemEditorDefaults {
         targetDate: targetDate,
         estimatedDuration: prefill?.estimatedDuration ?? const Duration(hours: 1),
       ),
+      courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
     );
   }
 
