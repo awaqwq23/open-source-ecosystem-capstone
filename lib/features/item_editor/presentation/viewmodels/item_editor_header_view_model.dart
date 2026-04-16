@@ -82,7 +82,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     }
     state = ItemEditorPageState(
       itemId: args?.itemId,
-      draft: draft,
+      draft: _normalizeDraft(draft),
       isImportant: prefill?.isImportant ?? false,
     );
   }
@@ -134,6 +134,56 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
 
   void toggleAllDay(bool value) {
     if (state.draft.type == ItemType.memo) {
+      return;
+    }
+
+    if (_shouldDeriveEndFromDuration(state.draft)) {
+      if (value) {
+        final normalizedStart = DateTime(
+          state.draft.startAt.year,
+          state.draft.startAt.month,
+          state.draft.startAt.day,
+        );
+        final normalizedDeadline = state.draft.deadline == null
+            ? null
+            : DateTime(
+                state.draft.deadline!.year,
+                state.draft.deadline!.month,
+                state.draft.deadline!.day,
+                23,
+                59,
+              );
+        _updateDraft(
+          state.draft.copyWith(
+            isAllDay: true,
+            startAt: normalizedStart,
+            deadline: normalizedDeadline,
+          ),
+        );
+        return;
+      }
+
+      final start = DateTime(
+        state.draft.startAt.year,
+        state.draft.startAt.month,
+        state.draft.startAt.day,
+        9,
+      );
+      final deadline = state.draft.deadline == null
+          ? null
+          : DateTime(
+              state.draft.deadline!.year,
+              state.draft.deadline!.month,
+              state.draft.deadline!.day,
+              18,
+            );
+      _updateDraft(
+        state.draft.copyWith(
+          isAllDay: false,
+          startAt: start,
+          deadline: deadline,
+        ),
+      );
       return;
     }
 
@@ -263,6 +313,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateEndDate(DateTime date) {
+    if (_shouldDeriveEndFromDuration(state.draft)) {
+      return;
+    }
     final end = DateTime(
       date.year,
       date.month,
@@ -274,6 +327,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateEndTime(int hour, int minute) {
+    if (_shouldDeriveEndFromDuration(state.draft)) {
+      return;
+    }
     final end = DateTime(
       state.draft.endAt.year,
       state.draft.endAt.month,
@@ -285,6 +341,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateEndDateTime(DateTime dateTime) {
+    if (_shouldDeriveEndFromDuration(state.draft)) {
+      return;
+    }
     _updateDraft(state.draft.copyWith(endAt: dateTime));
   }
 
@@ -390,11 +449,30 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void _updateDraft(ItemDraft draft) {
+    final normalizedDraft = _normalizeDraft(draft);
     state = state.copyWith(
-      draft: draft,
+      draft: normalizedDraft,
       errors: const ItemEditorValidationErrors(),
       submitSucceeded: false,
     );
+  }
+
+  ItemDraft _normalizeDraft(ItemDraft draft) {
+    if (!_shouldDeriveEndFromDuration(draft)) {
+      return draft;
+    }
+    final duration = draft.estimatedDuration > Duration.zero
+        ? draft.estimatedDuration
+        : const Duration(hours: 1);
+    final derivedEndAt = draft.startAt.add(duration);
+    return draft.copyWith(
+      estimatedDuration: duration,
+      endAt: derivedEndAt,
+    );
+  }
+
+  bool _shouldDeriveEndFromDuration(ItemDraft draft) {
+    return draft.type == ItemType.task || draft.type == ItemType.schedule;
   }
 }
 

@@ -74,7 +74,9 @@ class ItemEditorDefaults {
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
       targetDate: type == ItemType.memo ? _dateOnly(draft.targetDate) : draft.targetDate,
-      estimatedDuration: type == ItemType.memo
+      estimatedDuration: (type == ItemType.memo ||
+              type == ItemType.task ||
+              type == ItemType.schedule)
           ? (draft.estimatedDuration > Duration.zero
               ? draft.estimatedDuration
               : const Duration(hours: 1))

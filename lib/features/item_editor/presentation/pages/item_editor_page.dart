@@ -132,7 +132,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     taskLabel: l10n.editorTypeTask,
                     scheduleLabel: l10n.editorTypeSchedule,
                     memoLabel: l10n.editorTypeMemo,
-                    courseLabel: _courseLabel(context),
                   ),
                   const Gap(20),
                   AppSwitchingContent(
@@ -192,15 +191,11 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             onTap: () => _pickStartDateTime(context, ref, state),
                           ),
                           _PlainActionRow(
-                            rowKey: const ValueKey('item-editor-row-end'),
-                            label: l10n.editorFieldEnd,
-                            value: _formatDateTimeSummary(
-                              context,
-                              state.draft.endAt,
-                              allDay: state.draft.isAllDay,
-                            ),
-                            errorText: state.errors.timeRange,
-                            onTap: () => _pickEndDateTime(context, ref, state),
+                            rowKey: const ValueKey('item-editor-row-estimated-duration'),
+                            label: l10n.editorFieldEstimatedDuration,
+                            value: _formatDuration(context, state.draft.estimatedDuration),
+                            errorText: state.errors.estimatedDuration,
+                            onTap: () => _showDurationPicker(context, ref),
                           ),
                           if (state.draft.type != ItemType.course)
                             _PlainActionRow(
@@ -248,15 +243,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     const Gap(12),
                   ] else ...[
                     const Gap(20),
-                    _SwitchRow(
-                      rowKey: const ValueKey('item-editor-row-important'),
-                      label: l10n.editorFieldImportant,
-                      value: state.isImportant,
-                      onChanged: notifier.toggleImportant,
-                    ),
-                    const Gap(20),
-                    const Divider(),
-                    const Gap(8),
                     _PlainActionRow(
                       rowKey: const ValueKey('item-editor-row-reminder'),
                       label: l10n.editorSectionReminder,
@@ -415,27 +401,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       ref
           .read(itemEditorPageControllerProvider.notifier)
           .updateStartDateTime(normalized);
-    }
-  }
-
-  Future<void> _pickEndDateTime(
-    BuildContext context,
-    WidgetRef ref,
-    ItemEditorPageState state,
-  ) async {
-    final picked = await _showDateTimePicker(
-      context: context,
-      initialDateTime: state.draft.endAt,
-      mode: state.draft.isAllDay
-          ? DateTimeFieldPickerMode.date
-          : DateTimeFieldPickerMode.dateAndTime,
-    );
-
-    if (picked != null && mounted) {
-      final normalized = state.draft.isAllDay
-          ? DateTime(picked.year, picked.month, picked.day, 23, 59)
-          : picked;
-      ref.read(itemEditorPageControllerProvider.notifier).updateEndDateTime(normalized);
     }
   }
 
@@ -660,10 +625,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     return l10n.editorDurationMinutes(value.inMinutes);
   }
 
-  String _courseLabel(BuildContext context) {
-    return _isChinese(context) ? '课程' : 'Course';
-  }
-
   String _courseNatureHint(BuildContext context) {
     return _isChinese(context) ? '课程性质（如：必修/选修）' : 'Course nature';
   }
@@ -688,7 +649,6 @@ class _TypeSelectorRow extends StatelessWidget {
     required this.taskLabel,
     required this.scheduleLabel,
     required this.memoLabel,
-    required this.courseLabel,
   });
 
   final ItemType selectedType;
@@ -696,21 +656,11 @@ class _TypeSelectorRow extends StatelessWidget {
   final String taskLabel;
   final String scheduleLabel;
   final String memoLabel;
-  final String courseLabel;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _TypeButton(
-            selected: selectedType == ItemType.task,
-            icon: AppIcons.itemTypeTask,
-            label: taskLabel,
-            onPressed: () => onSelected(ItemType.task),
-          ),
-        ),
-        const Gap(12),
         Expanded(
           child: _TypeButton(
             selected: selectedType == ItemType.schedule,
@@ -722,19 +672,19 @@ class _TypeSelectorRow extends StatelessWidget {
         const Gap(12),
         Expanded(
           child: _TypeButton(
-            selected: selectedType == ItemType.memo,
-            icon: AppIcons.itemTypeMemo,
-            label: memoLabel,
-            onPressed: () => onSelected(ItemType.memo),
+            selected: selectedType == ItemType.task,
+            icon: AppIcons.itemTypeTask,
+            label: taskLabel,
+            onPressed: () => onSelected(ItemType.task),
           ),
         ),
         const Gap(12),
         Expanded(
           child: _TypeButton(
-            selected: selectedType == ItemType.course,
-            icon: AppIcons.itemTypeCourse,
-            label: courseLabel,
-            onPressed: () => onSelected(ItemType.course),
+            selected: selectedType == ItemType.memo,
+            icon: AppIcons.itemTypeMemo,
+            label: memoLabel,
+            onPressed: () => onSelected(ItemType.memo),
           ),
         ),
       ],
