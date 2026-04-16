@@ -889,7 +889,7 @@ class _AgendaBlock extends StatelessWidget {
             color: accent.withValues(alpha: effectiveOpacity),
             borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
             border: Border.all(
-              color: accent.withValues(alpha: effectiveOpacity),
+              color: accent,
             ),
           ),
           child: LayoutBuilder(
@@ -931,7 +931,7 @@ class _AgendaBlock extends StatelessWidget {
                 ),
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
-                    color: textBaseColor.withValues(alpha: effectiveOpacity),
+                    color: textBaseColor,
                     fontWeight: FontWeight.w700,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
@@ -969,7 +969,7 @@ class _AgendaBlock extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: textBaseColor.withValues(
-                                      alpha: 0.9 * effectiveOpacity,
+                                      alpha: 0.9,
                                     ),
                                     fontWeight: FontWeight.w600,
                                   ),
