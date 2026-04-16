@@ -350,6 +350,12 @@ abstract class AppLocalizations {
   /// **'Block count'**
   String get settingsHomeBlockCount;
 
+  /// No description provided for @settingsHomeItemOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Home item block opacity'**
+  String get settingsHomeItemOpacity;
+
   /// No description provided for @settingsHomeDemoModeTitle.
   ///
   /// In en, this message translates to:
@@ -427,6 +433,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value} min'**
   String settingsMinutesValue(int value);
+
+  /// No description provided for @settingsPercentValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}%'**
+  String settingsPercentValue(int value);
 
   /// No description provided for @detailTitle.
   ///

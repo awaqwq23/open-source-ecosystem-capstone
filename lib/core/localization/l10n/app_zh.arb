@@ -42,6 +42,7 @@
   "settingsHomeBlockDuration": "单个规划块时长",
   "settingsHomeBlockGap": "规划块间隔",
   "settingsHomeBlockCount": "规划块数量",
+  "settingsHomeItemOpacity": "主页事项方块不透明度",
   "settingsHomeDemoModeTitle": "演示假数据模式",
   "settingsHomeDemoModeDescription": "开启后主页将改为展示内置假数据，便于录屏、演示和走查效果。",
   "settingsHomeWideLayout": "超宽屏默认范围",
@@ -62,6 +63,14 @@
     }
   },
   "settingsMinutesValue": "{value} 分钟",
+  "@settingsPercentValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsPercentValue": "{value}%",
   "detailTitle": "事项详情",
   "detailDescription": "展示单个事项的完整信息与快捷操作。",
   "detailMissing": "没有找到这个事项，可能已经被删除。",

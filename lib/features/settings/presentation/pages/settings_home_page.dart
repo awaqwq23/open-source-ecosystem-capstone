@@ -93,6 +93,26 @@ class SettingsHomePage extends ConsumerWidget {
                 ),
               ),
             ),
+            _HomeStepperTile(
+              title: context.l10n.settingsHomeItemOpacity,
+              value: context.l10n.settingsPercentValue(settings.itemOpacityPercent),
+              onDecrease: settings.itemOpacityPercent > 0
+                  ? () => _saveHomeSettings(
+                        ref,
+                        settings.copyWith(
+                          itemOpacityPercent: settings.itemOpacityPercent - 5,
+                        ),
+                      )
+                  : null,
+              onIncrease: settings.itemOpacityPercent < 100
+                  ? () => _saveHomeSettings(
+                        ref,
+                        settings.copyWith(
+                          itemOpacityPercent: settings.itemOpacityPercent + 5,
+                        ),
+                      )
+                  : null,
+            ),
             SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               title: Text(context.l10n.settingsHomeDemoModeTitle),
@@ -166,7 +186,7 @@ class _HomeStepperTile extends StatelessWidget {
   final String title;
   final String value;
   final VoidCallback? onDecrease;
-  final VoidCallback onIncrease;
+  final VoidCallback? onIncrease;
 
   @override
   Widget build(BuildContext context) {

@@ -42,6 +42,7 @@
   "settingsHomeBlockDuration": "Block duration",
   "settingsHomeBlockGap": "Gap between blocks",
   "settingsHomeBlockCount": "Block count",
+  "settingsHomeItemOpacity": "Home item block opacity",
   "settingsHomeDemoModeTitle": "Demo data mode",
   "settingsHomeDemoModeDescription": "When enabled, the home page switches to built-in sample items for demos and walkthroughs.",
   "settingsHomeWideLayout": "Ultra-wide default range",
@@ -62,6 +63,14 @@
     }
   },
   "settingsMinutesValue": "{value} min",
+  "@settingsPercentValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsPercentValue": "{value}%",
   "detailTitle": "Item Detail",
   "detailDescription": "Shows a full item profile with quick actions.",
   "detailMissing": "This item could not be found. It may have been deleted.",

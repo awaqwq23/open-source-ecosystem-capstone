@@ -54,6 +54,7 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'blockCount': settings.blockCount,
         'wideLayoutScope': settings.wideLayoutScope.name,
         'showDemoData': settings.showDemoData,
+        'itemOpacityPercent': settings.itemOpacityPercent,
       }),
     );
   }

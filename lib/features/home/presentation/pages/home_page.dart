@@ -130,6 +130,7 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
+                    itemOpacityFactor: (homeSettings.itemOpacityPercent.clamp(0, 100) as int) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),
                     onSelectCell: (date, slotIndex) => viewModel.selectCell(date, slotIndex),
@@ -272,6 +273,7 @@ class _DemoModeBanner extends StatelessWidget {
 class _HomeGrid extends StatefulWidget {
   const _HomeGrid({
     required this.viewData,
+    required this.itemOpacityFactor,
     required this.onPrevious,
     required this.onNext,
     required this.onSelectCell,
@@ -281,6 +283,7 @@ class _HomeGrid extends StatefulWidget {
   });
 
   final HomeViewData viewData;
+  final double itemOpacityFactor;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final void Function(DateTime date, int slotIndex) onSelectCell;
@@ -382,6 +385,7 @@ class _HomeGridState extends State<_HomeGrid> {
                       for (final item in widget.viewData.items)
                         _AgendaBlock(
                           item: item,
+                          opacityFactor: widget.itemOpacityFactor,
                           left: layout.itemLeft(item),
                           top: layout.itemTop(item),
                           width: layout.itemWidth(item),
@@ -850,6 +854,7 @@ class _GridSlot extends StatelessWidget {
 class _AgendaBlock extends StatelessWidget {
   const _AgendaBlock({
     required this.item,
+    required this.opacityFactor,
     required this.left,
     required this.top,
     required this.width,
@@ -857,6 +862,7 @@ class _AgendaBlock extends StatelessWidget {
   });
 
   final HomeLaidOutItem item;
+  final double opacityFactor;
   final double left;
   final double top;
   final double width;
@@ -866,6 +872,7 @@ class _AgendaBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
+    final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
 
     return Positioned(
       left: left,
@@ -875,10 +882,10 @@ class _AgendaBlock extends StatelessWidget {
       child: IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.24),
+            color: accent.withValues(alpha: 0.24 * effectiveOpacity),
             borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
             border: Border.all(
-              color: accent.withValues(alpha: 0.24),
+              color: accent.withValues(alpha: 0.24 * effectiveOpacity),
             ),
           ),
           child: LayoutBuilder(
@@ -920,7 +927,7 @@ class _AgendaBlock extends StatelessWidget {
                 ),
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
-                    color: accent.withValues(alpha: 0.96),
+                    color: accent.withValues(alpha: 0.96 * effectiveOpacity),
                     fontWeight: FontWeight.w700,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
@@ -957,7 +964,7 @@ class _AgendaBlock extends StatelessWidget {
                                   maxLines: detailsMaxLines,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: accent.withValues(alpha: 0.84),
+                                    color: accent.withValues(alpha: 0.84 * effectiveOpacity),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

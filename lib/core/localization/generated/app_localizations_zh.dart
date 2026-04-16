@@ -135,6 +135,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHomeBlockCount => '规划块数量';
 
   @override
+  String get settingsHomeItemOpacity => '主页事项方块不透明度';
+
+  @override
   String get settingsHomeDemoModeTitle => '演示假数据模式';
 
   @override
@@ -173,6 +176,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String settingsMinutesValue(int value) {
     return '$value 分钟';
+  }
+
+  @override
+  String settingsPercentValue(int value) {
+    return '$value%';
   }
 
   @override

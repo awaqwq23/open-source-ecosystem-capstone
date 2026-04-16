@@ -98,6 +98,8 @@ class AppBootstrapLoader {
           _ => HomeWideLayoutScope.week,
         },
         showDemoData: json['showDemoData'] as bool? ?? false,
+        itemOpacityPercent:
+            ((json['itemOpacityPercent'] as int? ?? 100).clamp(0, 100) as int),
       );
     } catch (_) {
       return const HomeSettings.defaults();

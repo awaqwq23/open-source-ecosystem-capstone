@@ -146,6 +146,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHomeBlockCount => 'Block count';
 
   @override
+  String get settingsHomeItemOpacity => 'Home item block opacity';
+
+  @override
   String get settingsHomeDemoModeTitle => 'Demo data mode';
 
   @override
@@ -186,6 +189,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String settingsMinutesValue(int value) {
     return '$value min';
+  }
+
+  @override
+  String settingsPercentValue(int value) {
+    return '$value%';
   }
 
   @override
