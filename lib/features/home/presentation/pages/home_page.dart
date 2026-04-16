@@ -378,7 +378,6 @@ class _HomeGridState extends State<_HomeGrid> {
                                   widget.viewData.columns[columnIndex].date,
                                 ) &&
                                 widget.viewData.selectedCell?.slot.index == slot.index,
-                            today: widget.viewData.columns[columnIndex].isToday,
                           ),
                       for (final item in widget.viewData.items)
                         _AgendaBlock(
@@ -494,14 +493,14 @@ class _HeaderCell extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < _HomeGridLayoutSpec.headerCompactWidth;
           final textColor = column.isToday
-              ? theme.colorScheme.primary
+              ? theme.colorScheme.onSecondaryContainer
               : column.emphasize
                   ? theme.colorScheme.onSurface
                   : theme.colorScheme.onSurfaceVariant;
           return DecoratedBox(
             decoration: BoxDecoration(
               color: column.isToday
-                  ? theme.colorScheme.primary.withValues(alpha: 0.14)
+                  ? theme.colorScheme.secondaryContainer
                   : theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.headerCellRadius),
             ),
@@ -815,14 +814,12 @@ class _GridSlot extends StatelessWidget {
     required this.top,
     required this.size,
     required this.highlight,
-    required this.today,
   });
 
   final double left;
   final double top;
   final double size;
   final bool highlight;
-  final bool today;
 
   @override
   Widget build(BuildContext context) {
@@ -836,9 +833,7 @@ class _GridSlot extends StatelessWidget {
         decoration: BoxDecoration(
           color: highlight
               ? theme.colorScheme.primary.withValues(alpha: 0.18)
-              : today
-                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                  : theme.colorScheme.surfaceContainerLow,
+              : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
           border: Border.all(
             color: highlight
