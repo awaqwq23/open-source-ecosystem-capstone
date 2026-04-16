@@ -242,7 +242,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     ),
                     const Gap(12),
                   ] else ...[
-                    const Gap(20),
+                    const Gap(8),
+                    const Divider(),
+                    const Gap(8),
                     _PlainActionRow(
                       rowKey: const ValueKey('item-editor-row-reminder'),
                       label: l10n.editorSectionReminder,
@@ -250,9 +252,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                       onTap: () =>
                           _openReminderSettings(context, ref, state.draft.reminder),
                     ),
-                    const Gap(20),
+                    const Gap(12),
                     const Divider(),
-                    const Gap(20),
+                    const Gap(12),
                   ],
                   _RoundedInputField(
                     containerKey: const ValueKey('item-editor-field-location'),
