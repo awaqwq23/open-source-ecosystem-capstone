@@ -873,6 +873,10 @@ class _AgendaBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
     final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
+    final textBaseColor =
+        ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+            ? Colors.white
+            : Colors.black;
 
     return Positioned(
       left: left,
@@ -927,7 +931,7 @@ class _AgendaBlock extends StatelessWidget {
                 ),
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
-                    color: accent.withValues(alpha: effectiveOpacity),
+                    color: textBaseColor.withValues(alpha: effectiveOpacity),
                     fontWeight: FontWeight.w700,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
@@ -964,7 +968,9 @@ class _AgendaBlock extends StatelessWidget {
                                   maxLines: detailsMaxLines,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: accent.withValues(alpha: 0.92 * effectiveOpacity),
+                                    color: textBaseColor.withValues(
+                                      alpha: 0.9 * effectiveOpacity,
+                                    ),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
