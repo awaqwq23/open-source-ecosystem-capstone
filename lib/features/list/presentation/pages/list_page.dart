@@ -230,7 +230,8 @@ class ListPage extends ConsumerWidget {
       ListHeaderTab.tasks => l10n.listTabTasks,
       ListHeaderTab.schedules => l10n.listTabSchedules,
       ListHeaderTab.memos => l10n.listTabMemos,
-      ListHeaderTab.courses => _isChinese(context) ? '课程列表' : 'Courses',
+      ListHeaderTab.courses =>
+        l10n.localeName.toLowerCase().startsWith('zh') ? '课程列表' : 'Courses',
       ListHeaderTab.important => l10n.listTabImportant,
     };
   }
