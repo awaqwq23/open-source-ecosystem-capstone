@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsFlatSection extends StatelessWidget {
   const SettingsFlatSection({
@@ -185,16 +184,10 @@ class SettingsFlatChoiceRow<T> extends StatelessWidget {
             runSpacing: 8,
             children: options
                 .map(
-                  (option) => ui.SelectedButton(
-                    value: option.value == value,
-                    onChanged: (selected) {
-                      if (selected) {
-                        onChanged(option.value);
-                      }
-                    },
-                    style: const ui.ButtonStyle.ghost(),
-                    selectedStyle: const ui.ButtonStyle.secondary(),
-                    child: Text(option.label),
+                  (option) => _ChoicePill(
+                    label: option.label,
+                    selected: option.value == value,
+                    onTap: () => onChanged(option.value),
                   ),
                 )
                 .toList(growable: false),
@@ -250,11 +243,62 @@ class SettingsFlatSwitchRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          ui.Switch(
+          Switch.adaptive(
             value: value,
             onChanged: onChanged,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChoicePill extends StatelessWidget {
+  const _ChoicePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: selected
+                ? theme.colorScheme.primary.withOpacity(0.14)
+                : theme.colorScheme.surface,
+            border: Border.all(
+              color: selected
+                  ? theme.colorScheme.primary.withOpacity(0.44)
+                  : theme.colorScheme.outlineVariant.withOpacity(0.5),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
