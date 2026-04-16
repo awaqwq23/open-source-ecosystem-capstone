@@ -96,15 +96,18 @@ class AppShell extends ConsumerWidget {
   ) {
     final compactNavBarHeight =
         showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
+    final compactNavBarPadding = showLabels
+        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+        : const EdgeInsets.symmetric(horizontal: 8, vertical: 8);
 
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
       labelType:
           showLabels ? ui.NavigationLabelType.all : ui.NavigationLabelType.none,
-      expanded: true,
+      expanded: showLabels,
       expandedSize: compactNavBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      spacing: 4,
+      padding: compactNavBarPadding,
+      spacing: showLabels ? 4 : 0,
       selectedKey: ValueKey(current.route),
       onSelected: (key) {
         final index = destinations.indexWhere(
