@@ -8,6 +8,7 @@ import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dar
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
@@ -166,8 +167,8 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
             if (item.type == ItemType.task ||
                 item.type == ItemType.schedule ||
                 (item.type == ItemType.course &&
-                    activeTimetableId != null &&
-                    item.courseDetails.timetableId == activeTimetableId))
+                    (activeTimetableId == null ||
+                        item.courseDetails.timetableId == activeTimetableId)))
               item,
         ];
   final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
@@ -188,7 +189,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
           );
         }();
 
-  return HomeHeaderViewModel._gridBuilder.build(
+  final baseViewData = HomeHeaderViewModel._gridBuilder.build(
     localeTag: query.localeTag,
     anchor: state.anchor,
     scope: scope,
@@ -197,5 +198,81 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: laidOutItems,
   );
+  final semesterWeekLabel = _buildSemesterWeekLabel(
+    localeTag: query.localeTag,
+    scope: scope,
+    visibleRangeStart: baseViewData.visibleRange.start,
+    activeTimetableId: activeTimetableId,
+    timetabledCourseItems: [
+      for (final item in repositoryItems)
+        if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
+    ],
+  );
+  if (semesterWeekLabel == null) {
+    return baseViewData;
+  }
+
+  return HomeViewData(
+    scope: baseViewData.scope,
+    periodLabel: semesterWeekLabel,
+    periodSubtitle: baseViewData.periodSubtitle,
+    metrics: baseViewData.metrics,
+    visibleRange: baseViewData.visibleRange,
+    periodSelection: baseViewData.periodSelection,
+    selectedCell: baseViewData.selectedCell,
+    columns: baseViewData.columns,
+    timeSlots: baseViewData.timeSlots,
+    items: baseViewData.items,
+  );
 });
+
+String? _buildSemesterWeekLabel({
+  required String localeTag,
+  required HomeDisplayScope scope,
+  required DateTime visibleRangeStart,
+  required String? activeTimetableId,
+  required List<AgendaItem> timetabledCourseItems,
+}) {
+  if (scope != HomeDisplayScope.week || timetabledCourseItems.isEmpty) {
+    return null;
+  }
+
+  final String? targetTimetableId = () {
+    if (activeTimetableId != null && activeTimetableId.isNotEmpty) {
+      return activeTimetableId;
+    }
+    final ids = <String>{
+      for (final item in timetabledCourseItems) item.courseDetails.timetableId,
+    };
+    return ids.length == 1 ? ids.first : null;
+  }();
+  if (targetTimetableId == null) {
+    return null;
+  }
+
+  DateTime? semesterFirstDay;
+  for (final item in timetabledCourseItems) {
+    if (item.courseDetails.timetableId != targetTimetableId) {
+      continue;
+    }
+    final startDate = DateUtils.dateOnly(item.startAt);
+    if (semesterFirstDay == null || startDate.isBefore(semesterFirstDay)) {
+      semesterFirstDay = startDate;
+    }
+  }
+  if (semesterFirstDay == null) {
+    return null;
+  }
+
+  final semesterWeekOneMonday =
+      semesterFirstDay.subtract(Duration(days: semesterFirstDay.weekday - DateTime.monday));
+  final currentMonday = DateUtils.dateOnly(visibleRangeStart)
+      .subtract(Duration(days: visibleRangeStart.weekday - DateTime.monday));
+  final weekIndex = currentMonday.difference(semesterWeekOneMonday).inDays ~/ 7 + 1;
+  if (weekIndex <= 0) {
+    return null;
+  }
+
+  return localeTag.startsWith('zh') ? '第 $weekIndex 周' : 'Week $weekIndex';
+}
 
