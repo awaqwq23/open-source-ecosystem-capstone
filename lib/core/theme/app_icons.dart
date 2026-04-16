@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 ///
 /// 当前统一映射到 Material Icons；后续若切换图标库，只调整这里。
 abstract final class AppIcons {
-  static const IconData homeOutlined = Icons.calendar_view_week_outlined;
-  static const IconData homeFilled = Icons.calendar_view_week;
+  static const IconData homeOutlined = Icons.home_outlined;
+  static const IconData homeFilled = Icons.home;
 
   static const IconData listOutlined = Icons.checklist_rtl_outlined;
   static const IconData listFilled = Icons.checklist_rtl;

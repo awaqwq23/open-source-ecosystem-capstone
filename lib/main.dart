@@ -25,6 +25,7 @@ Future<void> main() async {
         appHomeSettingsProvider.overrideWith((ref) => bootstrap.homeSettings),
         appAiSettingsProvider.overrideWith((ref) => bootstrap.aiSettings),
         appWidgetSettingsProvider.overrideWith((ref) => bootstrap.widgetSettings),
+        appNavigationSettingsProvider.overrideWith((ref) => bootstrap.navigationSettings),
         aiChatBootstrapMessagesProvider.overrideWithValue(bootstrap.aiMessages),
         agendaItemsBootstrapProvider.overrideWithValue(bootstrap.agendaItems),
         courseTimetableBootstrapProvider.overrideWithValue(bootstrap.courseTimetableStore),

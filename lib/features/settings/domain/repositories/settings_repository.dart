@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -10,9 +11,11 @@ abstract class SettingsRepository {
   HomeSettings get homeSettings;
   AiSettings get aiSettings;
   WidgetSettings get widgetSettings;
+  NavigationSettings get navigationSettings;
   Future<void> saveThemeMode(ui.ThemeMode mode);
   Future<void> saveLocale(Locale locale);
   Future<void> saveHomeSettings(HomeSettings settings);
   Future<void> saveAiSettings(AiSettings settings);
   Future<void> saveWidgetSettings(WidgetSettings settings);
+  Future<void> saveNavigationSettings(NavigationSettings settings);
 }

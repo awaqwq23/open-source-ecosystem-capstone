@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +15,10 @@ final appAiSettingsProvider = StateProvider<AiSettings>((ref) {
 
 final appWidgetSettingsProvider = StateProvider<WidgetSettings>((ref) {
   return const WidgetSettings.defaults();
+});
+
+final appNavigationSettingsProvider = StateProvider<NavigationSettings>((ref) {
+  return const NavigationSettings.defaults();
 });
 
 final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) {

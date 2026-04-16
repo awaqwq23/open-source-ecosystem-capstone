@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:huajuan_agenda/features/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -50,6 +51,19 @@ class SettingsGeneralPage extends ConsumerWidget {
                   trailing: _LanguageDropdown(
                     value: state.locale,
                     onChanged: (value) => viewModel.selectLocale(value),
+                  ),
+                ),
+                SettingsFlatTile(
+                  title: _isChinese(context) ? '导航栏显示文字' : 'Show navigation labels',
+                  subtitle: _isChinese(context)
+                      ? '关闭后仅显示图标（默认）'
+                      : 'When off, only icons are shown (default).',
+                  leading: const Icon(Icons.subtitles_outlined),
+                  trailing: Switch(
+                    value: state.navigationSettings.showLabels,
+                    onChanged: (value) => viewModel.saveNavigationSettings(
+                      NavigationSettings(showLabels: value),
+                    ),
                   ),
                 ),
               ],

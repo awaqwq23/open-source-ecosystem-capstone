@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository.dart';
@@ -32,6 +33,9 @@ class RiverpodSettingsRepository implements SettingsRepository {
 
   @override
   WidgetSettings get widgetSettings => _ref.read(appWidgetSettingsProvider);
+
+  @override
+  NavigationSettings get navigationSettings => _ref.read(appNavigationSettingsProvider);
 
   @override
   Future<void> saveLocale(Locale locale) async {
@@ -89,6 +93,17 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'listShowTodayAndPending': settings.listShowTodayAndPending,
         'followAppLanguage': settings.followAppLanguage,
         'followAppTheme': settings.followAppTheme,
+      }),
+    );
+  }
+
+  @override
+  Future<void> saveNavigationSettings(NavigationSettings settings) async {
+    _ref.read(appNavigationSettingsProvider.notifier).state = settings;
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.navigationSettings,
+      jsonEncode({
+        'showLabels': settings.showLabels,
       }),
     );
   }

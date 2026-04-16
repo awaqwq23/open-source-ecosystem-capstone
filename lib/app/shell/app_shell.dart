@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart'
     hide AppBar, NavigationBar, NavigationRail, Scaffold;
 import 'package:animations/animations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/shell/app_shell_destination.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   static const _compactNavBarHeight = 84.0;
 
   const AppShell({
@@ -26,15 +28,16 @@ class AppShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final destinations = AppShellDestination.values;
     final current = destinations[navigationShell.currentIndex];
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
+    final showLabels = ref.watch(appNavigationSettingsProvider).showLabels;
 
     if (isCompact) {
       return ui.Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        footers: [_buildNavigationBar(context, destinations, current)],
+        footers: [_buildNavigationBar(context, destinations, current, showLabels)],
         child: _buildAnimatedContent(current),
       );
     }
@@ -45,7 +48,12 @@ class AppShell extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildNavigationSidebar(context, destinations, current),
+            child: _buildNavigationSidebar(
+              context,
+              destinations,
+              current,
+              showLabels,
+            ),
           ),
           const VerticalDivider(width: 1),
           Expanded(
@@ -83,10 +91,12 @@ class AppShell extends StatelessWidget {
     BuildContext context,
     List<AppShellDestination> destinations,
     AppShellDestination current,
+    bool showLabels,
   ) {
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
-      labelType: ui.NavigationLabelType.all,
+      labelType:
+          showLabels ? ui.NavigationLabelType.all : ui.NavigationLabelType.none,
       expanded: true,
       expandedSize: _compactNavBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -119,10 +129,13 @@ class AppShell extends StatelessWidget {
     BuildContext context,
     List<AppShellDestination> destinations,
     AppShellDestination current,
+    bool showLabels,
   ) {
     return ui.NavigationSidebar(
       selectedKey: ValueKey(current.route),
-      labelType: ui.NavigationLabelType.expanded,
+      labelType: showLabels
+          ? ui.NavigationLabelType.expanded
+          : ui.NavigationLabelType.none,
       onSelected: (key) {
         final index = destinations.indexWhere(
           (destination) => ValueKey(destination.route) == key,

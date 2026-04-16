@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository_provider.dart';
@@ -22,6 +23,7 @@ class SettingsState {
     required this.homeSettings,
     required this.aiSettings,
     required this.widgetSettings,
+    required this.navigationSettings,
     this.aiConnectionStatus = SettingsAiConnectionStatus.idle,
     this.aiConnectionMessage,
   });
@@ -31,6 +33,7 @@ class SettingsState {
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
   final WidgetSettings widgetSettings;
+  final NavigationSettings navigationSettings;
   final SettingsAiConnectionStatus aiConnectionStatus;
   final String? aiConnectionMessage;
 
@@ -40,6 +43,7 @@ class SettingsState {
     HomeSettings? homeSettings,
     AiSettings? aiSettings,
     WidgetSettings? widgetSettings,
+    NavigationSettings? navigationSettings,
     SettingsAiConnectionStatus? aiConnectionStatus,
     String? aiConnectionMessage,
     bool clearAiConnectionMessage = false,
@@ -50,6 +54,7 @@ class SettingsState {
       homeSettings: homeSettings ?? this.homeSettings,
       aiSettings: aiSettings ?? this.aiSettings,
       widgetSettings: widgetSettings ?? this.widgetSettings,
+      navigationSettings: navigationSettings ?? this.navigationSettings,
       aiConnectionStatus: aiConnectionStatus ?? this.aiConnectionStatus,
       aiConnectionMessage: clearAiConnectionMessage
           ? null
@@ -68,6 +73,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       homeSettings: ref.watch(appHomeSettingsProvider),
       aiSettings: ref.watch(appAiSettingsProvider),
       widgetSettings: ref.watch(appWidgetSettingsProvider),
+      navigationSettings: ref.watch(appNavigationSettingsProvider),
     );
   }
 
@@ -98,6 +104,11 @@ class SettingsViewModel extends Notifier<SettingsState> {
   Future<void> saveWidgetSettings(WidgetSettings settings) async {
     await ref.read(settingsRepositoryProvider).saveWidgetSettings(settings);
     state = state.copyWith(widgetSettings: settings);
+  }
+
+  Future<void> saveNavigationSettings(NavigationSettings settings) async {
+    await ref.read(settingsRepositoryProvider).saveNavigationSettings(settings);
+    state = state.copyWith(navigationSettings: settings);
   }
 
   Future<void> testAiConnection(AiSettings settings) async {

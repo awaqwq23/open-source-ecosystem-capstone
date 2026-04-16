@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
@@ -20,6 +21,7 @@ class AppBootstrapData {
     required this.homeSettings,
     required this.aiSettings,
     required this.widgetSettings,
+    required this.navigationSettings,
     required this.aiMessages,
     required this.agendaItems,
     required this.courseTimetableStore,
@@ -30,6 +32,7 @@ class AppBootstrapData {
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
   final WidgetSettings widgetSettings;
+  final NavigationSettings navigationSettings;
   final List<AiChatMessage> aiMessages;
   final List<AgendaItem> agendaItems;
   final CourseTimetableStore courseTimetableStore;
@@ -41,6 +44,7 @@ abstract final class AppBootstrapStorageKeys {
   static const homeSettings = 'settings.home';
   static const aiSettings = 'settings.ai';
   static const widgetSettings = 'settings.widget';
+  static const navigationSettings = 'settings.navigation';
   static const aiMessages = 'ai.messages';
   static const agendaItems = 'agenda.items';
   static const courseTimetables = 'course.timetables';
@@ -58,6 +62,7 @@ class AppBootstrapLoader {
       homeSettings: _readHomeSettings(preferences),
       aiSettings: _readAiSettings(preferences),
       widgetSettings: _readWidgetSettings(preferences),
+      navigationSettings: _readNavigationSettings(preferences),
       aiMessages: _readAiMessages(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
@@ -153,6 +158,21 @@ class AppBootstrapLoader {
       );
     } catch (_) {
       return const WidgetSettings.defaults();
+    }
+  }
+
+  static NavigationSettings _readNavigationSettings(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.navigationSettings);
+    if (raw == null || raw.isEmpty) {
+      return const NavigationSettings.defaults();
+    }
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return NavigationSettings(
+        showLabels: json['showLabels'] as bool? ?? false,
+      );
+    } catch (_) {
+      return const NavigationSettings.defaults();
     }
   }
 
