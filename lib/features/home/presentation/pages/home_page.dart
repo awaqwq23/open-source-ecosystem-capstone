@@ -918,7 +918,7 @@ class _AgendaBlock extends StatelessWidget {
               final courseInstructor = item.item.courseDetails.instructor.trim();
               final courseLocation = _resolveCourseLocation();
               final showDetails = isCourseItem
-                  ? !ultraCompactHeight
+                  ? contentHeight >= _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
                   : detailsText.isNotEmpty &&
                       contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
               final detailsMaxLines = contentHeight >=
@@ -927,12 +927,14 @@ class _AgendaBlock extends StatelessWidget {
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
               final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
-              final titleMaxLines = switch (contentHeight) {
-                < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
-                < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
-                _ when showDetails => 2,
-                _ => 3,
-              };
+              final titleMaxLines = isCourseItem
+                  ? 1
+                  : switch (contentHeight) {
+                      < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
+                      < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
+                      _ when showDetails => 2,
+                      _ => 3,
+                    };
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -947,7 +949,7 @@ class _AgendaBlock extends StatelessWidget {
                     fontWeight: FontWeight.normal,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
-                  child: ultraCompactHeight && !isCourseItem
+                  child: ultraCompactHeight
                       ? Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
@@ -1113,6 +1115,7 @@ abstract final class _HomeGridLayoutSpec {
   static const itemTitleSingleLineContentHeight = 24.0;
   static const itemTitleTwoLineContentHeight = 42.0;
   static const itemDetailsMinContentHeight = 58.0;
+  static const itemCourseDetailsMinContentHeight = 42.0;
   static const itemDetailsTwoLineContentHeight = 72.0;
 
   static const minMonthColumnWidth = 40.0;
