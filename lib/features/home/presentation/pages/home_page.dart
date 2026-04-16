@@ -923,6 +923,7 @@ class _AgendaBlock extends StatelessWidget {
                       _HomeGridLayoutSpec.itemDetailsTwoLineContentHeight
                   ? 2
                   : 1;
+              final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
               final titleMaxLines = switch (contentHeight) {
                 < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
                 < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
@@ -943,7 +944,7 @@ class _AgendaBlock extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
-                  child: ultraCompactHeight
+                  child: ultraCompactHeight && !isCourseItem
                       ? Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
@@ -973,7 +974,7 @@ class _AgendaBlock extends StatelessWidget {
                                 fit: FlexFit.loose,
                                 child: Text(
                                   detailsText,
-                                  maxLines: detailsMaxLines,
+                                  maxLines: effectiveDetailsMaxLines,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: textBaseColor.withValues(
@@ -1003,7 +1004,7 @@ class _AgendaBlock extends StatelessWidget {
     final location = _resolveCourseLocation();
     final displayInstructor = instructor.isEmpty ? '-' : instructor;
     final displayLocation = location.isEmpty ? '-' : location;
-    return '教师：$displayInstructor  地点：$displayLocation';
+    return '$displayInstructor\n$displayLocation';
   }
 
   String _buildUltraCompactCourseText() {
