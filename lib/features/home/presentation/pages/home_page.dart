@@ -882,10 +882,10 @@ class _AgendaBlock extends StatelessWidget {
       child: IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.24 * effectiveOpacity),
+            color: accent.withValues(alpha: effectiveOpacity),
             borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
             border: Border.all(
-              color: accent.withValues(alpha: 0.24 * effectiveOpacity),
+              color: accent.withValues(alpha: effectiveOpacity),
             ),
           ),
           child: LayoutBuilder(
@@ -927,7 +927,7 @@ class _AgendaBlock extends StatelessWidget {
                 ),
                 child: DefaultTextStyle(
                   style: theme.textTheme.bodySmall!.copyWith(
-                    color: accent.withValues(alpha: 0.96 * effectiveOpacity),
+                    color: accent.withValues(alpha: effectiveOpacity),
                     fontWeight: FontWeight.w700,
                     height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
                   ),
@@ -964,7 +964,7 @@ class _AgendaBlock extends StatelessWidget {
                                   maxLines: detailsMaxLines,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: accent.withValues(alpha: 0.84 * effectiveOpacity),
+                                    color: accent.withValues(alpha: 0.92 * effectiveOpacity),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
