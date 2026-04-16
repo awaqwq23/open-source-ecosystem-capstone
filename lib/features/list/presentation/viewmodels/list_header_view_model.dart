@@ -166,6 +166,10 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
     final completed = <AgendaItem>[];
 
     for (final item in filtered) {
+      if (item.type == ItemType.course) {
+        pending.add(item);
+        continue;
+      }
       if (item.isCompleted) {
         completed.add(item);
       } else {

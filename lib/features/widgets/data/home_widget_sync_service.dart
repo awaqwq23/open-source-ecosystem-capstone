@@ -225,6 +225,7 @@ Map<String, dynamic> _buildListPayload({
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final pending = items.where((item) => !item.isCompleted).toList()
+    ..removeWhere((item) => item.type == ItemType.course)
     ..sort((a, b) {
       final aToday = _sameDay(a.startAt, today) ? 0 : 1;
       final bToday = _sameDay(b.startAt, today) ? 0 : 1;

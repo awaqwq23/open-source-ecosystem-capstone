@@ -107,6 +107,8 @@ class _ItemDetailContent extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final repository = ref.read(agendaItemRepositoryProvider.notifier);
+    final isCompletable = item.type != ItemType.course;
+    final isCompleted = isCompletable && item.isCompleted;
 
     return ui.Card(
       child: Column(
@@ -136,7 +138,7 @@ class _ItemDetailContent extends ConsumerWidget {
                       item.title,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -144,12 +146,13 @@ class _ItemDetailContent extends ConsumerWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _MetaChip(
-                          icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                          label: item.isCompleted
-                              ? l10n.listStatusCompleted
-                              : l10n.listStatusPending,
-                        ),
+                        if (isCompletable)
+                          _MetaChip(
+                            icon: isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                            label: isCompleted
+                                ? l10n.listStatusCompleted
+                                : l10n.listStatusPending,
+                          ),
                         _MetaChip(
                           icon: item.isImportant
                               ? AppIcons.importantFilled
@@ -229,15 +232,16 @@ class _ItemDetailContent extends ConsumerWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              ui.PrimaryButton(
-                onPressed: () => repository.toggleCompleted(item.id),
-                leading: Icon(item.isCompleted ? AppIcons.incomplete : AppIcons.complete),
-                child: Text(
-                  item.isCompleted
-                      ? l10n.detailMarkIncomplete
-                      : l10n.detailMarkComplete,
+              if (isCompletable)
+                ui.PrimaryButton(
+                  onPressed: () => repository.toggleCompleted(item.id),
+                  leading: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
+                  child: Text(
+                    isCompleted
+                        ? l10n.detailMarkIncomplete
+                        : l10n.detailMarkComplete,
+                  ),
                 ),
-              ),
               ui.OutlineButton(
                 onPressed: () => repository.toggleImportant(item.id),
                 leading: Icon(

@@ -659,6 +659,8 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final isCompletable = item.type != ItemType.course;
+    final isCompleted = isCompletable && item.isCompleted;
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
     final cardColor = Color.alphaBlend(
@@ -722,9 +724,13 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _ActionIconButton(
-                        onPressed: widget.onToggleComplete,
-                        icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                        color: item.isCompleted ? theme.colorScheme.primary : accent,
+                        onPressed: isCompletable ? widget.onToggleComplete : null,
+                        icon: isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                        color: isCompleted
+                            ? theme.colorScheme.primary
+                            : isCompletable
+                                ? accent
+                                : theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -738,7 +744,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
                                   decoration:
-                                      item.isCompleted ? TextDecoration.lineThrough : null,
+                                      isCompleted ? TextDecoration.lineThrough : null,
                                   height: 1,
                                 ),
                           ),
@@ -1115,7 +1121,7 @@ class _ActionIconButton extends StatelessWidget {
     required this.color,
   });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final IconData icon;
   final Color color;
 
