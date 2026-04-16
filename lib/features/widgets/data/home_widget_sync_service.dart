@@ -224,34 +224,36 @@ Map<String, dynamic> _buildListPayload({
   required bool darkMode,
 }) {
   final today = DateTime(now.year, now.month, now.day);
-  final pending = items.where((item) => !item.isCompleted).toList()
-    ..removeWhere((item) => item.type == ItemType.course)
-    ..sort((a, b) {
-      final aToday = _sameDay(a.startAt, today) ? 0 : 1;
-      final bToday = _sameDay(b.startAt, today) ? 0 : 1;
-      if (aToday != bToday) {
-        return aToday.compareTo(bToday);
-      }
-      final byStart = a.startAt.compareTo(b.startAt);
-      if (byStart != 0) {
-        return byStart;
+  final todayCourses = [
+    for (final item in items)
+      if (item.type == ItemType.course && _isItemInDay(item, today)) item,
+  ];
+  final showTomorrow = todayCourses.isNotEmpty &&
+      todayCourses.every((item) => !item.endAt.isAfter(now));
+  final targetDay = showTomorrow ? today.add(const Duration(days: 1)) : today;
+  final dayItems = [
+    for (final item in items)
+      if (_isItemInDay(item, targetDay)) item,
+  ]..sort((a, b) {
+      final byTime = _sortKeyInDay(a, targetDay).compareTo(_sortKeyInDay(b, targetDay));
+      if (byTime != 0) {
+        return byTime;
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
 
-  final lines = [
-    for (final item in pending.take(6))
-      '• ${item.title.isEmpty ? (locale.languageCode.startsWith('zh') ? '未命名事项' : 'Untitled') : item.title}',
+  final blocks = [
+    for (final item in dayItems.take(4)) _buildListItemBlock(item, targetDay, locale),
   ];
+  final zh = locale.languageCode.startsWith('zh');
+  final dayLabel = '${targetDay.month}/${targetDay.day}';
 
   return {
-    'title': locale.languageCode.startsWith('zh') ? '今天与未完成' : 'Today & Pending',
-    'subtitle': locale.languageCode.startsWith('zh')
-        ? '未完成 ${pending.length} 条'
-        : '${pending.length} pending',
-    'content': lines.isEmpty
-        ? (locale.languageCode.startsWith('zh') ? '暂无事项' : 'No items')
-        : lines.join('\n'),
+    'title': showTomorrow
+        ? (zh ? '明日课程与事项' : 'Tomorrow Classes & Agenda')
+        : (zh ? '今日课程与事项' : 'Today Classes & Agenda'),
+    'subtitle': zh ? '$dayLabel  共 ${dayItems.length} 条' : '$dayLabel  ${dayItems.length} items',
+    'content': blocks.isEmpty ? (zh ? '暂无事项' : 'No items') : blocks.join('\n\n'),
     'darkMode': darkMode,
     'updatedAt': now.toIso8601String(),
   };
@@ -307,4 +309,83 @@ String _weekdayLabel(Locale locale, int weekday) {
     DateTime.saturday => 'Sat',
     _ => 'Sun',
   };
+}
+
+bool _isItemInDay(AgendaItem item, DateTime day) {
+  final dayStart = DateTime(day.year, day.month, day.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  if (item.type == ItemType.memo) {
+    return _sameDay(item.targetDate, dayStart);
+  }
+  return item.endAt.isAfter(dayStart) && item.startAt.isBefore(dayEnd);
+}
+
+DateTime _sortKeyInDay(AgendaItem item, DateTime day) {
+  if (item.type == ItemType.memo) {
+    return DateTime(day.year, day.month, day.day, 23, 59);
+  }
+  final dayStart = DateTime(day.year, day.month, day.day);
+  return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
+}
+
+String _buildListItemBlock(AgendaItem item, DateTime day, Locale locale) {
+  final zh = locale.languageCode.startsWith('zh');
+  final title = item.title.trim().isEmpty ? (zh ? '未命名事项' : 'Untitled') : item.title.trim();
+  final timeText = _buildItemTimeText(item, day, zh);
+  final detailText = _buildItemDetailText(item, zh);
+  if (detailText.isEmpty) {
+    return '$title\n$timeText';
+  }
+  return '$title\n$timeText\n$detailText';
+}
+
+String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
+  if (item.type == ItemType.memo) {
+    final minutes = item.estimatedDuration.inMinutes;
+    return zh ? '全天 · 预计 ${minutes} 分钟' : 'All day · Est. ${minutes} min';
+  }
+  if (item.isAllDay) {
+    return zh ? '全天' : 'All day';
+  }
+  final dayStart = DateTime(day.year, day.month, day.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
+  final effectiveEnd = item.endAt.isAfter(dayEnd) ? dayEnd : item.endAt;
+  return '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
+}
+
+String _buildItemDetailText(AgendaItem item, bool zh) {
+  if (item.type == ItemType.course) {
+    final teacher = item.courseDetails.instructor.trim();
+    final location = item.location.trim().isNotEmpty
+        ? item.location.trim()
+        : item.courseDetails.classroomRaw.trim();
+    final teacherText = teacher.isEmpty ? (zh ? '教师待定' : 'Teacher TBD') : teacher;
+    final locationText = location.isEmpty ? (zh ? '地点待定' : 'Location TBD') : location;
+    return zh ? '教师: $teacherText · 地点: $locationText' : 'Teacher: $teacherText · Location: $locationText';
+  }
+  if (item.type == ItemType.task && item.deadline != null) {
+    return zh ? '截止: ${_formatMdHm(item.deadline!)}' : 'Due: ${_formatMdHm(item.deadline!)}';
+  }
+  final location = item.location.trim();
+  if (location.isNotEmpty) {
+    return zh ? '地点: $location' : 'Location: $location';
+  }
+  final details = item.details.trim();
+  if (details.isNotEmpty) {
+    return details;
+  }
+  return '';
+}
+
+String _formatHm(DateTime time) {
+  final h = time.hour.toString().padLeft(2, '0');
+  final m = time.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
+String _formatMdHm(DateTime time) {
+  final mm = time.month.toString().padLeft(2, '0');
+  final dd = time.day.toString().padLeft(2, '0');
+  return '$mm/$dd ${_formatHm(time)}';
 }

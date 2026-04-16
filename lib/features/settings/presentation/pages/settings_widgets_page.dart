@@ -93,8 +93,8 @@ class SettingsWidgetsPage extends ConsumerWidget {
                 SettingsFlatTile(
                   title: _isChinese(context) ? '列表大组件' : 'List widget',
                   subtitle: _isChinese(context)
-                      ? '默认展示今天与未完成事项'
-                      : 'Shows today and pending items',
+                      ? '默认按时间展示今日课程与事项（课程结束后切明日）'
+                      : 'Shows today classes and agenda by time (switches to tomorrow when classes end)',
                   leading: const Icon(Icons.view_list_outlined),
                 ),
               ],
