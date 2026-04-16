@@ -204,7 +204,7 @@
   "editorFieldDeadlineDate": "截止日期",
   "editorFieldDeadlineTime": "截止时刻",
   "editorFieldTargetDate": "目标日期",
-  "editorFieldEstimatedDuration": "预计完成时长",
+  "editorFieldEstimatedDuration": "预计时长",
   "editorFieldImportant": "重要事项",
   "editorHintTitle": "这件事叫什么？",
   "editorHintTaskTitle": "任务名称",

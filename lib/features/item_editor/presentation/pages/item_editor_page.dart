@@ -173,6 +173,13 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             errorText: state.errors.estimatedDuration,
                             onTap: () => _showDurationPicker(context, ref),
                           ),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-reminder'),
+                            label: l10n.editorSectionReminder,
+                            value: _reminderLabel(l10n, state.draft.reminder),
+                            onTap: () =>
+                                _openReminderSettings(context, ref, state.draft.reminder),
+                          ),
                         ] else ...[
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-start'),
@@ -204,6 +211,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                               value: _repeatLabel(l10n, state.draft.repeatRule),
                               onTap: () =>
                                   _openRepeatSettings(context, ref, state.draft.repeatRule),
+                            ),
+                          if (state.draft.type != ItemType.course)
+                            _PlainActionRow(
+                              rowKey: const ValueKey('item-editor-row-reminder'),
+                              label: l10n.editorSectionReminder,
+                              value: _reminderLabel(l10n, state.draft.reminder),
+                              onTap: () =>
+                                  _openReminderSettings(context, ref, state.draft.reminder),
                             ),
                           if (state.draft.type == ItemType.task)
                             _PlainActionRow(
@@ -242,16 +257,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     ),
                     const Gap(12),
                   ] else ...[
-                    const Gap(8),
-                    const Divider(),
-                    const Gap(8),
-                    _PlainActionRow(
-                      rowKey: const ValueKey('item-editor-row-reminder'),
-                      label: l10n.editorSectionReminder,
-                      value: _reminderLabel(l10n, state.draft.reminder),
-                      onTap: () =>
-                          _openReminderSettings(context, ref, state.draft.reminder),
-                    ),
                     const Gap(12),
                     const Divider(),
                     const Gap(12),

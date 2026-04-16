@@ -514,7 +514,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorFieldTargetDate => '目标日期';
 
   @override
-  String get editorFieldEstimatedDuration => '预计完成时长';
+  String get editorFieldEstimatedDuration => '预计时长';
 
   @override
   String get editorFieldImportant => '重要事项';
