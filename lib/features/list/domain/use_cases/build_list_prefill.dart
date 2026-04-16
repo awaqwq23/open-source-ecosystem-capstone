@@ -30,11 +30,6 @@ class BuildListPrefillUseCase {
           targetDate: today,
           estimatedDuration: const Duration(hours: 1),
         ),
-      ListHeaderTab.courses => ItemEditorPrefill(
-          type: ItemType.course,
-          startAt: today.add(const Duration(hours: 9)),
-          endAt: today.add(const Duration(hours: 11)),
-        ),
       ListHeaderTab.important => ItemEditorPrefill(
           isImportant: true,
           startAt: today.add(const Duration(hours: 9)),

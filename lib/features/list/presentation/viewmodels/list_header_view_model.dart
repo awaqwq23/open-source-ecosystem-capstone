@@ -6,7 +6,6 @@ import 'package:huajuan_agenda/features/list/domain/use_cases/build_list_prefill
 import 'package:huajuan_agenda/features/list/domain/use_cases/filter_list_items.dart';
 import 'package:huajuan_agenda/features/list/domain/use_cases/sort_list_items.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 
@@ -111,7 +110,6 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
   Future<void> reorderPendingTasks(int oldIndex, int newIndex) async {
     final section = _computeSection(
       items: ref.read(agendaItemRepositoryProvider),
-      activeCourseTimetableId: ref.read(courseTimetableRepositoryProvider).activeTimetableId,
       uiState: state,
       now: DateTime.now(),
     );
@@ -150,26 +148,18 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
 
   static ListPageSection _computeSection({
     required List<AgendaItem> items,
-    required String? activeCourseTimetableId,
     required ListHeaderState uiState,
     required DateTime now,
   }) {
     final visibleItems = [
       for (final item in items)
-        if (item.type != ItemType.course ||
-            (activeCourseTimetableId != null &&
-                item.courseDetails.timetableId == activeCourseTimetableId))
-          item,
+        if (item.type != ItemType.course) item,
     ];
     final filtered = _filterItems(visibleItems, uiState.currentTab, now);
     final pending = <AgendaItem>[];
     final completed = <AgendaItem>[];
 
     for (final item in filtered) {
-      if (item.type == ItemType.course) {
-        pending.add(item);
-        continue;
-      }
       if (item.isCompleted) {
         completed.add(item);
       } else {
@@ -193,11 +183,8 @@ final listHeaderViewModelProvider =
 final listPageViewDataProvider = Provider<ListPageViewData>((ref) {
   final uiState = ref.watch(listHeaderViewModelProvider);
   final items = ref.watch(agendaItemRepositoryProvider);
-  final activeCourseTimetableId =
-      ref.watch(courseTimetableRepositoryProvider).activeTimetableId;
   final section = ListHeaderViewModel._computeSection(
     items: items,
-    activeCourseTimetableId: activeCourseTimetableId,
     uiState: uiState,
     now: DateTime.now(),
   );

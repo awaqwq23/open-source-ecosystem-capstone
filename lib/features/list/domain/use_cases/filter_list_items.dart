@@ -17,7 +17,6 @@ class FilterListItemsUseCase {
       ListHeaderTab.schedules =>
         items.where((item) => item.type == ItemType.schedule).toList(),
       ListHeaderTab.memos => items.where((item) => item.type == ItemType.memo).toList(),
-      ListHeaderTab.courses => items.where((item) => item.type == ItemType.course).toList(),
       ListHeaderTab.important => items.where((item) => item.isImportant).toList(),
     };
   }

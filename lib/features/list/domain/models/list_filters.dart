@@ -4,7 +4,6 @@ enum ListHeaderTab {
   tasks,
   schedules,
   memos,
-  courses,
   important,
 }
 
