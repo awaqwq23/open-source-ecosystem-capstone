@@ -722,37 +722,20 @@ class _TypeButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: selected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
             color: selected
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.55)
-                : theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.45),
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.28)
+                : theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.18),
           ),
           child: Column(
             children: [
               Icon(icon, color: color, size: 24),
               const Gap(8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (selected) ...[
-                    Icon(
-                      Icons.check_circle,
-                      size: 14,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: color,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
               ),
             ],
           ),
