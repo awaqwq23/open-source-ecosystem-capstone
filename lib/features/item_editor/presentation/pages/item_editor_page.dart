@@ -258,8 +258,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     const Gap(12),
                   ] else ...[
                     const Gap(12),
-                    const Divider(),
-                    const Gap(12),
                   ],
                   _RoundedInputField(
                     containerKey: const ValueKey('item-editor-field-location'),
