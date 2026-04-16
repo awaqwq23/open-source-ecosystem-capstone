@@ -379,16 +379,6 @@ class _HomeGridState extends State<_HomeGrid> {
                                 ) &&
                                 widget.viewData.selectedCell?.slot.index == slot.index,
                           ),
-                      for (var columnIndex = 0;
-                          columnIndex < widget.viewData.columns.length;
-                          columnIndex++)
-                        if (widget.viewData.columns[columnIndex].isToday)
-                          _TodayColumnGuide(
-                            left: layout.columnLeft(columnIndex),
-                            top: layout.headerHeight,
-                            width: layout.columnWidth,
-                            height: layout.gridHeight,
-                          ),
                       for (final item in widget.viewData.items)
                         _AgendaBlock(
                           item: item,
@@ -850,45 +840,6 @@ class _GridSlot extends StatelessWidget {
                 ? theme.colorScheme.primary.withValues(alpha: 0.5)
                 : Colors.transparent,
             width: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TodayColumnGuide extends StatelessWidget {
-  const _TodayColumnGuide({
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
-  });
-
-  final double left;
-  final double top;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final alpha = theme.brightness == Brightness.dark ? 0.16 : 0.1;
-    final lineColor = theme.colorScheme.secondary.withValues(alpha: alpha);
-
-    return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      height: height,
-      child: IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
-            border: Border(
-              left: BorderSide(color: lineColor, width: 1),
-              right: BorderSide(color: lineColor, width: 1),
-            ),
           ),
         ),
       ),
