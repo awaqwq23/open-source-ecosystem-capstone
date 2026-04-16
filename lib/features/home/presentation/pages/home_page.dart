@@ -924,6 +924,7 @@ class _AgendaBlock extends StatelessWidget {
                   ? 2
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
+              final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
               final titleMaxLines = switch (contentHeight) {
                 < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
                 < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
@@ -969,7 +970,7 @@ class _AgendaBlock extends StatelessWidget {
                               ),
                             ),
                             if (showDetails) ...[
-                              const SizedBox(height: _HomeGridLayoutSpec.itemDetailsSpacing),
+                              SizedBox(height: detailsSpacing),
                               Flexible(
                                 fit: FlexFit.loose,
                                 child: Text(
@@ -980,6 +981,7 @@ class _AgendaBlock extends StatelessWidget {
                                     color: textBaseColor.withValues(
                                       alpha: 0.9,
                                     ),
+                                    height: isCourseItem ? 1.0 : null,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
