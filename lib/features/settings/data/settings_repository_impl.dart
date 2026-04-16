@@ -7,6 +7,7 @@ import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,6 +29,9 @@ class RiverpodSettingsRepository implements SettingsRepository {
 
   @override
   AiSettings get aiSettings => _ref.read(appAiSettingsProvider);
+
+  @override
+  WidgetSettings get widgetSettings => _ref.read(appWidgetSettingsProvider);
 
   @override
   Future<void> saveLocale(Locale locale) async {
@@ -69,6 +73,22 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'apiKey': settings.apiKey,
         'model': settings.model,
         'systemPrompt': settings.systemPrompt,
+      }),
+    );
+  }
+
+  @override
+  Future<void> saveWidgetSettings(WidgetSettings settings) async {
+    _ref.read(appWidgetSettingsProvider.notifier).state = settings;
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.widgetSettings,
+      jsonEncode({
+        'enabled': settings.enabled,
+        'refreshInterval': settings.refreshInterval.name,
+        'gridShowThisWeek': settings.gridShowThisWeek,
+        'listShowTodayAndPending': settings.listShowTodayAndPending,
+        'followAppLanguage': settings.followAppLanguage,
+        'followAppTheme': settings.followAppTheme,
       }),
     );
   }

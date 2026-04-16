@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
@@ -18,6 +19,7 @@ class AppBootstrapData {
     required this.themeMode,
     required this.homeSettings,
     required this.aiSettings,
+    required this.widgetSettings,
     required this.aiMessages,
     required this.agendaItems,
     required this.courseTimetableStore,
@@ -27,6 +29,7 @@ class AppBootstrapData {
   final ui.ThemeMode themeMode;
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
+  final WidgetSettings widgetSettings;
   final List<AiChatMessage> aiMessages;
   final List<AgendaItem> agendaItems;
   final CourseTimetableStore courseTimetableStore;
@@ -37,6 +40,7 @@ abstract final class AppBootstrapStorageKeys {
   static const themeMode = 'settings.themeMode';
   static const homeSettings = 'settings.home';
   static const aiSettings = 'settings.ai';
+  static const widgetSettings = 'settings.widget';
   static const aiMessages = 'ai.messages';
   static const agendaItems = 'agenda.items';
   static const courseTimetables = 'course.timetables';
@@ -53,6 +57,7 @@ class AppBootstrapLoader {
       themeMode: _readThemeMode(preferences),
       homeSettings: _readHomeSettings(preferences),
       aiSettings: _readAiSettings(preferences),
+      widgetSettings: _readWidgetSettings(preferences),
       aiMessages: _readAiMessages(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
@@ -123,6 +128,31 @@ class AppBootstrapLoader {
       );
     } catch (_) {
       return const AiSettings.defaults();
+    }
+  }
+
+  static WidgetSettings _readWidgetSettings(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.widgetSettings);
+    if (raw == null || raw.isEmpty) {
+      return const WidgetSettings.defaults();
+    }
+
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return WidgetSettings(
+        enabled: json['enabled'] as bool? ?? true,
+        refreshInterval: switch (json['refreshInterval']) {
+          'minutes30' => WidgetRefreshInterval.minutes30,
+          'hours3' => WidgetRefreshInterval.hours3,
+          _ => WidgetRefreshInterval.hour1,
+        },
+        gridShowThisWeek: json['gridShowThisWeek'] as bool? ?? true,
+        listShowTodayAndPending: json['listShowTodayAndPending'] as bool? ?? true,
+        followAppLanguage: json['followAppLanguage'] as bool? ?? true,
+        followAppTheme: json['followAppTheme'] as bool? ?? true,
+      );
+    } catch (_) {
+      return const WidgetSettings.defaults();
     }
   }
 

@@ -5,6 +5,7 @@ abstract final class AppRoutePaths {
   static const itemEditor = '/item-editor';
   static const settings = '/settings';
   static const settingsGeneral = '/settings/general';
+  static const settingsWidgets = '/settings/widgets';
   static const settingsHome = '/settings/home';
   static const settingsList = '/settings/list';
   static const settingsCourseTimetables = '/settings/course-timetables';

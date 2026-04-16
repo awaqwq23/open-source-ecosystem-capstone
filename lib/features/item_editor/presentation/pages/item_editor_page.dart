@@ -43,6 +43,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   late final TextEditingController _locationController;
   late final TextEditingController _courseNatureController;
   late final TextEditingController _courseInstructorController;
+  bool _typePickerShown = false;
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   void didUpdateWidget(covariant ItemEditorPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.args != widget.args) {
+      _typePickerShown = false;
       Future<void>.microtask(
         () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
       );
@@ -99,6 +101,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
     final state = ref.watch(itemEditorPageControllerProvider);
     _syncControllers(state);
+    _tryShowTypePickerIfNeeded(context, state);
     final l10n = context.l10n;
     final isCourse = state.draft.type == ItemType.course;
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
@@ -285,6 +288,22 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     );
   }
 
+  void _tryShowTypePickerIfNeeded(BuildContext context, ItemEditorPageState state) {
+    final shouldShow = (widget.args?.showTypePickerOnLaunch ?? false) &&
+        !state.isEditing &&
+        !_typePickerShown;
+    if (!shouldShow) {
+      return;
+    }
+    _typePickerShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _showTypePicker(context, ref);
+    });
+  }
+
   void _syncControllers(ItemEditorPageState state) {
     _syncTextController(_titleController, state.draft.title);
     _syncTextController(_detailsController, state.draft.details);
@@ -362,6 +381,58 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                   ],
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTypePicker(BuildContext context, WidgetRef ref) {
+    final state = ref.read(itemEditorPageControllerProvider);
+    final l10n = context.l10n;
+
+    return ui.openSheet<void>(
+      context: context,
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return AppSheetEntrance(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: RadioGroup<ItemType>(
+              groupValue: state.draft.type,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                ref.read(itemEditorPageControllerProvider.notifier).selectType(value);
+                ui.closeDrawer(sheetContext);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isChinese(context) ? '选择事项类型' : 'Choose item type',
+                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  RadioListTile<ItemType>(
+                    value: ItemType.task,
+                    title: Text(l10n.editorTypeTask),
+                  ),
+                  RadioListTile<ItemType>(
+                    value: ItemType.schedule,
+                    title: Text(l10n.editorTypeSchedule),
+                  ),
+                  RadioListTile<ItemType>(
+                    value: ItemType.memo,
+                    title: Text(l10n.editorTypeMemo),
+                  ),
+                ],
+              ),
             ),
           ),
         );

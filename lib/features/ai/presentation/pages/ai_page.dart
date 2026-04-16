@@ -13,7 +13,12 @@ import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AiPage extends ConsumerStatefulWidget {
-  const AiPage({super.key});
+  const AiPage({
+    this.autoFocusInput = false,
+    super.key,
+  });
+
+  final bool autoFocusInput;
 
   @override
   ConsumerState<AiPage> createState() => _AiPageState();
@@ -21,16 +26,20 @@ class AiPage extends ConsumerStatefulWidget {
 
 class _AiPageState extends ConsumerState<AiPage> {
   late final TextEditingController _controller;
+  late final FocusNode _inputFocusNode;
+  bool _focusRequested = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _inputFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -40,6 +49,7 @@ class _AiPageState extends ConsumerState<AiPage> {
     final groups = ref.watch(aiConversationGroupsProvider);
     final theme = Theme.of(context);
     _syncController(state.input);
+    _tryAutoFocus();
 
     return ui.Scaffold(
       headers: [
@@ -151,6 +161,7 @@ class _AiPageState extends ConsumerState<AiPage> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _controller,
+                        focusNode: _inputFocusNode,
                         onChanged: ref.read(aiHeaderViewModelProvider.notifier).updateInput,
                         minLines: 2,
                         maxLines: 4,
@@ -198,6 +209,28 @@ class _AiPageState extends ConsumerState<AiPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant AiPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.autoFocusInput && widget.autoFocusInput) {
+      _focusRequested = false;
+      _tryAutoFocus();
+    }
+  }
+
+  void _tryAutoFocus() {
+    if (!widget.autoFocusInput || _focusRequested) {
+      return;
+    }
+    _focusRequested = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _inputFocusNode.requestFocus();
+    });
   }
 
   void _syncController(String value) {

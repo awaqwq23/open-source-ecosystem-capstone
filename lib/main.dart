@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
+import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/app/app.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
@@ -23,11 +24,14 @@ Future<void> main() async {
         appThemeModeProvider.overrideWith((ref) => bootstrap.themeMode),
         appHomeSettingsProvider.overrideWith((ref) => bootstrap.homeSettings),
         appAiSettingsProvider.overrideWith((ref) => bootstrap.aiSettings),
+        appWidgetSettingsProvider.overrideWith((ref) => bootstrap.widgetSettings),
         aiChatBootstrapMessagesProvider.overrideWithValue(bootstrap.aiMessages),
         agendaItemsBootstrapProvider.overrideWithValue(bootstrap.agendaItems),
         courseTimetableBootstrapProvider.overrideWithValue(bootstrap.courseTimetableStore),
       ],
-      child: const HuaJuanAgendaApp(),
+      child: const AppRuntimeInitializer(
+        child: HuaJuanAgendaApp(),
+      ),
     ),
   );
 }

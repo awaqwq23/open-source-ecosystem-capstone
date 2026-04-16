@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/repositories/settings_repository_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -20,6 +21,7 @@ class SettingsState {
     required this.locale,
     required this.homeSettings,
     required this.aiSettings,
+    required this.widgetSettings,
     this.aiConnectionStatus = SettingsAiConnectionStatus.idle,
     this.aiConnectionMessage,
   });
@@ -28,6 +30,7 @@ class SettingsState {
   final Locale locale;
   final HomeSettings homeSettings;
   final AiSettings aiSettings;
+  final WidgetSettings widgetSettings;
   final SettingsAiConnectionStatus aiConnectionStatus;
   final String? aiConnectionMessage;
 
@@ -36,6 +39,7 @@ class SettingsState {
     Locale? locale,
     HomeSettings? homeSettings,
     AiSettings? aiSettings,
+    WidgetSettings? widgetSettings,
     SettingsAiConnectionStatus? aiConnectionStatus,
     String? aiConnectionMessage,
     bool clearAiConnectionMessage = false,
@@ -45,6 +49,7 @@ class SettingsState {
       locale: locale ?? this.locale,
       homeSettings: homeSettings ?? this.homeSettings,
       aiSettings: aiSettings ?? this.aiSettings,
+      widgetSettings: widgetSettings ?? this.widgetSettings,
       aiConnectionStatus: aiConnectionStatus ?? this.aiConnectionStatus,
       aiConnectionMessage: clearAiConnectionMessage
           ? null
@@ -62,6 +67,7 @@ class SettingsViewModel extends Notifier<SettingsState> {
       locale: repository.locale,
       homeSettings: ref.watch(appHomeSettingsProvider),
       aiSettings: ref.watch(appAiSettingsProvider),
+      widgetSettings: ref.watch(appWidgetSettingsProvider),
     );
   }
 
@@ -87,6 +93,11 @@ class SettingsViewModel extends Notifier<SettingsState> {
       aiConnectionStatus: SettingsAiConnectionStatus.idle,
       clearAiConnectionMessage: true,
     );
+  }
+
+  Future<void> saveWidgetSettings(WidgetSettings settings) async {
+    await ref.read(settingsRepositoryProvider).saveWidgetSettings(settings);
+    state = state.copyWith(widgetSettings: settings);
   }
 
   Future<void> testAiConnection(AiSettings settings) async {

@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
@@ -67,8 +69,11 @@ class SettingsGeneralPage extends ConsumerWidget {
                 ),
                 SettingsFlatTile(
                   title: l10n.settingsGeneralWidgetsTitle,
-                  subtitle: l10n.settingsGeneralComingSoon,
+                  subtitle: _isChinese(context)
+                      ? '配置刷新策略、展示范围和跳转行为'
+                      : 'Configure refresh policy, ranges and launch actions',
                   leading: const Icon(Icons.widgets_outlined),
+                  onTap: () => context.push(AppRoutePaths.settingsWidgets),
                 ),
               ],
             ),
@@ -77,6 +82,10 @@ class SettingsGeneralPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+bool _isChinese(BuildContext context) {
+  return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 }
 
 class _ThemeModeDropdown extends StatelessWidget {

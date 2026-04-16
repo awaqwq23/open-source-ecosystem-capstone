@@ -23,6 +23,7 @@ import 'package:huajuan_agenda/features/settings/presentation/pages/settings_gen
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_home_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_list_page.dart';
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_page.dart';
+import 'package:huajuan_agenda/features/settings/presentation/pages/settings_widgets_page.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:huajuan_agenda/features/time_picker/presentation/pages/time_picker_page.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
@@ -57,7 +58,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutePaths.ai,
-                builder: (context, state) => const AiPage(),
+                builder: (context, state) => AiPage(
+                  autoFocusInput: state.uri.queryParameters['focusInput'] == '1',
+                ),
               ),
             ],
           ),
@@ -65,13 +68,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutePaths.itemEditor,
-                builder: (context, state) => ItemEditorPage(
-                  args: switch (state.extra) {
-                    final ItemEditorArgs args => args,
-                    final ItemEditorPrefill prefill => ItemEditorArgs(prefill: prefill),
-                    _ => null,
-                  },
-                ),
+                builder: (context, state) {
+                  final showTypePicker = state.uri.queryParameters['showTypePicker'] == '1';
+                  final args = switch (state.extra) {
+                    final ItemEditorArgs value =>
+                      value.copyWith(showTypePickerOnLaunch: showTypePicker),
+                    final ItemEditorPrefill prefill =>
+                      ItemEditorArgs(
+                        prefill: prefill,
+                        showTypePickerOnLaunch: showTypePicker,
+                      ),
+                    _ => showTypePicker ? const ItemEditorArgs(showTypePickerOnLaunch: true) : null,
+                  };
+                  return ItemEditorPage(args: args);
+                },
               ),
             ],
           ),
@@ -84,6 +94,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'general',
                     builder: (context, state) => const SettingsGeneralPage(),
+                  ),
+                  GoRoute(
+                    path: 'widgets',
+                    builder: (context, state) => const SettingsWidgetsPage(),
                   ),
                   GoRoute(
                     path: 'home',
