@@ -523,6 +523,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorHintTitle => '这件事叫什么？';
 
   @override
+  String get editorHintTaskTitle => '任务名称';
+
+  @override
+  String get editorHintScheduleTitle => '日程名称';
+
+  @override
+  String get editorHintMemoTitle => '备忘名称';
+
+  @override
+  String get editorHintCourseTitle => '课程名称';
+
+  @override
   String get editorHintDetails => '补充更多说明';
 
   @override

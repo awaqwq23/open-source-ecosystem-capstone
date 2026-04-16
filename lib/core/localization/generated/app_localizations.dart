@@ -1106,6 +1106,30 @@ abstract class AppLocalizations {
   /// **'What needs to be done?'**
   String get editorHintTitle;
 
+  /// No description provided for @editorHintTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task name'**
+  String get editorHintTaskTitle;
+
+  /// No description provided for @editorHintScheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule name'**
+  String get editorHintScheduleTitle;
+
+  /// No description provided for @editorHintMemoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo name'**
+  String get editorHintMemoTitle;
+
+  /// No description provided for @editorHintCourseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Course name'**
+  String get editorHintCourseTitle;
+
   /// No description provided for @editorHintDetails.
   ///
   /// In en, this message translates to:

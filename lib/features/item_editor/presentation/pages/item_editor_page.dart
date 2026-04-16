@@ -41,6 +41,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   late final TextEditingController _titleController;
   late final TextEditingController _detailsController;
   late final TextEditingController _locationController;
+  late final TextEditingController _courseNatureController;
+  late final TextEditingController _courseInstructorController;
 
   @override
   void initState() {
@@ -48,6 +50,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _titleController = TextEditingController();
     _detailsController = TextEditingController();
     _locationController = TextEditingController();
+    _courseNatureController = TextEditingController();
+    _courseInstructorController = TextEditingController();
     Future<void>.microtask(
       () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
     );
@@ -68,6 +72,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _titleController.dispose();
     _detailsController.dispose();
     _locationController.dispose();
+    _courseNatureController.dispose();
+    _courseInstructorController.dispose();
     super.dispose();
   }
 
@@ -94,6 +100,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     final state = ref.watch(itemEditorPageControllerProvider);
     _syncControllers(state);
     final l10n = context.l10n;
+    final isCourse = state.draft.type == ItemType.course;
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
     final horizontalPadding = isCompact ? 20.0 : 32.0;
 
@@ -136,7 +143,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         _RoundedInputField(
                           containerKey: const ValueKey('item-editor-field-title'),
                           controller: _titleController,
-                          hintText: l10n.editorHintTitle,
+                          hintText: _titleHint(l10n, state.draft.type),
                           errorText: state.errors.title,
                           onChanged: notifier.updateTitle,
                           trailing: _ColorTrigger(
@@ -145,7 +152,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                           ),
                         ),
                         const Gap(12),
-                        if (state.draft.type != ItemType.memo)
+                        if (state.draft.type != ItemType.memo && !isCourse)
                           _SwitchRow(
                             rowKey: const ValueKey('item-editor-row-all-day'),
                             label: l10n.editorAllDayTitle,
@@ -195,13 +202,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             errorText: state.errors.timeRange,
                             onTap: () => _pickEndDateTime(context, ref, state),
                           ),
-                          _PlainActionRow(
-                            rowKey: const ValueKey('item-editor-row-repeat'),
-                            label: l10n.editorSectionRepeat,
-                            value: _repeatLabel(l10n, state.draft.repeatRule),
-                            onTap: () =>
-                                _openRepeatSettings(context, ref, state.draft.repeatRule),
-                          ),
+                          if (state.draft.type != ItemType.course)
+                            _PlainActionRow(
+                              rowKey: const ValueKey('item-editor-row-repeat'),
+                              label: l10n.editorSectionRepeat,
+                              value: _repeatLabel(l10n, state.draft.repeatRule),
+                              onTap: () =>
+                                  _openRepeatSettings(context, ref, state.draft.repeatRule),
+                            ),
                           if (state.draft.type == ItemType.task)
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-deadline'),
@@ -220,39 +228,62 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                       ],
                     ),
                   ),
-                  const Gap(20),
-                  _SwitchRow(
-                    rowKey: const ValueKey('item-editor-row-important'),
-                    label: l10n.editorFieldImportant,
-                    value: state.isImportant,
-                    onChanged: notifier.toggleImportant,
-                  ),
-                  const Gap(20),
-                  const Divider(),
-                  const Gap(8),
-                  _PlainActionRow(
-                    rowKey: const ValueKey('item-editor-row-reminder'),
-                    label: l10n.editorSectionReminder,
-                    value: _reminderLabel(l10n, state.draft.reminder),
-                    onTap: () => _openReminderSettings(context, ref, state.draft.reminder),
-                  ),
-                  const Gap(20),
-                  const Divider(),
-                  const Gap(20),
+                  if (isCourse) ...[
+                    const Gap(20),
+                    const Divider(),
+                    const Gap(20),
+                    _RoundedInputField(
+                      containerKey: const ValueKey('item-editor-field-course-nature'),
+                      controller: _courseNatureController,
+                      hintText: _courseNatureHint(context),
+                      onChanged: notifier.updateCourseNature,
+                    ),
+                    const Gap(12),
+                    _RoundedInputField(
+                      containerKey: const ValueKey('item-editor-field-course-instructor'),
+                      controller: _courseInstructorController,
+                      hintText: _courseInstructorHint(context),
+                      onChanged: notifier.updateCourseInstructor,
+                    ),
+                    const Gap(12),
+                  ] else ...[
+                    const Gap(20),
+                    _SwitchRow(
+                      rowKey: const ValueKey('item-editor-row-important'),
+                      label: l10n.editorFieldImportant,
+                      value: state.isImportant,
+                      onChanged: notifier.toggleImportant,
+                    ),
+                    const Gap(20),
+                    const Divider(),
+                    const Gap(8),
+                    _PlainActionRow(
+                      rowKey: const ValueKey('item-editor-row-reminder'),
+                      label: l10n.editorSectionReminder,
+                      value: _reminderLabel(l10n, state.draft.reminder),
+                      onTap: () =>
+                          _openReminderSettings(context, ref, state.draft.reminder),
+                    ),
+                    const Gap(20),
+                    const Divider(),
+                    const Gap(20),
+                  ],
                   _RoundedInputField(
                     containerKey: const ValueKey('item-editor-field-location'),
                     controller: _locationController,
-                    hintText: l10n.editorHintLocation,
+                    hintText: isCourse ? _courseLocationHint(context) : l10n.editorHintLocation,
                     onChanged: notifier.updateLocation,
                   ),
-                  const Gap(12),
-                  _RoundedInputField(
-                    containerKey: const ValueKey('item-editor-field-details'),
-                    controller: _detailsController,
-                    hintText: l10n.editorHintDetails,
-                    onChanged: notifier.updateDetails,
-                    maxLines: 4,
-                  ),
+                  if (!isCourse) ...[
+                    const Gap(12),
+                    _RoundedInputField(
+                      containerKey: const ValueKey('item-editor-field-details'),
+                      controller: _detailsController,
+                      hintText: l10n.editorHintDetails,
+                      onChanged: notifier.updateDetails,
+                      maxLines: 4,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -266,6 +297,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _syncTextController(_titleController, state.draft.title);
     _syncTextController(_detailsController, state.draft.details);
     _syncTextController(_locationController, state.draft.location);
+    _syncTextController(_courseNatureController, state.draft.courseDetails.courseNature);
+    _syncTextController(_courseInstructorController, state.draft.courseDetails.instructor);
   }
 
   void _syncTextController(TextEditingController controller, String text) {
@@ -549,6 +582,15 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     };
   }
 
+  String _titleHint(AppLocalizations l10n, ItemType type) {
+    return switch (type) {
+      ItemType.task => l10n.editorHintTaskTitle,
+      ItemType.schedule => l10n.editorHintScheduleTitle,
+      ItemType.memo => l10n.editorHintMemoTitle,
+      ItemType.course => l10n.editorHintCourseTitle,
+    };
+  }
+
   String _colorLabel(AppLocalizations l10n, ItemColorOption color) {
     return switch (color) {
       ItemColorOption.sky => l10n.editorColorSky,
@@ -620,6 +662,18 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
   String _courseLabel(BuildContext context) {
     return _isChinese(context) ? '课程' : 'Course';
+  }
+
+  String _courseNatureHint(BuildContext context) {
+    return _isChinese(context) ? '课程性质（如：必修/选修）' : 'Course nature';
+  }
+
+  String _courseInstructorHint(BuildContext context) {
+    return _isChinese(context) ? '教师' : 'Instructor';
+  }
+
+  String _courseLocationHint(BuildContext context) {
+    return _isChinese(context) ? '地点' : 'Location';
   }
 
   bool _isChinese(BuildContext context) {

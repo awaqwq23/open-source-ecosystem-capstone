@@ -544,6 +544,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorHintTitle => 'What needs to be done?';
 
   @override
+  String get editorHintTaskTitle => 'Task name';
+
+  @override
+  String get editorHintScheduleTitle => 'Schedule name';
+
+  @override
+  String get editorHintMemoTitle => 'Memo name';
+
+  @override
+  String get editorHintCourseTitle => 'Course name';
+
+  @override
   String get editorHintDetails => 'Add more context';
 
   @override
