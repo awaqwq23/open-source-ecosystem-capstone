@@ -9,7 +9,6 @@ import 'package:huajuan_agenda/features/ai/domain/repositories/ai_service.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:openai_dart/openai_dart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -168,7 +167,7 @@ class OpenAiCompatibleAiService implements AiService {
             if (item.deadline != null) '截止:${item.deadline!.toIso8601String()}',
             if (item.location.trim().isNotEmpty) '地点:${item.location.trim()}',
             '重要:${item.isImportant ? '是' : '否'}',
-            if (item.type != ItemType.course) '完成:${item.isCompleted ? '是' : '否'}',
+            '完成:${item.isCompleted ? '是' : '否'}',
           ].join('；'),
         )
         .join('\n');

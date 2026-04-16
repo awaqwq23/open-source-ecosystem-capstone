@@ -120,9 +120,6 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
 
     final current = state[index];
-    if (current.type == ItemType.course) {
-      return current;
-    }
     final completed = !current.isCompleted;
     final updated = current.copyWith(
       isCompleted: completed,

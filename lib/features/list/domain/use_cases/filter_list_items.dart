@@ -12,12 +12,14 @@ class FilterListItemsUseCase {
   ) {
     return switch (tab) {
       ListHeaderTab.myDay => items.where((item) => _isInMyDay(item, now)).toList(),
-      ListHeaderTab.allItems => [...items],
+      ListHeaderTab.allItems =>
+        items.where((item) => item.type != ItemType.course).toList(),
       ListHeaderTab.tasks => items.where((item) => item.type == ItemType.task).toList(),
       ListHeaderTab.schedules =>
         items.where((item) => item.type == ItemType.schedule).toList(),
       ListHeaderTab.memos => items.where((item) => item.type == ItemType.memo).toList(),
-      ListHeaderTab.important => items.where((item) => item.isImportant).toList(),
+      ListHeaderTab.important =>
+        items.where((item) => item.isImportant && item.type != ItemType.course).toList(),
     };
   }
 

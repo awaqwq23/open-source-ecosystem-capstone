@@ -657,8 +657,6 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
-    final isCompletable = item.type != ItemType.course;
-    final isCompleted = isCompletable && item.isCompleted;
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
     final cardColor = Color.alphaBlend(
@@ -722,13 +720,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _ActionIconButton(
-                        onPressed: isCompletable ? widget.onToggleComplete : null,
-                        icon: isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                        color: isCompleted
-                            ? theme.colorScheme.primary
-                            : isCompletable
-                                ? accent
-                                : theme.colorScheme.onSurfaceVariant,
+                        onPressed: widget.onToggleComplete,
+                        icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                        color: item.isCompleted ? theme.colorScheme.primary : accent,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -742,7 +736,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
                                   decoration:
-                                      isCompleted ? TextDecoration.lineThrough : null,
+                                      item.isCompleted ? TextDecoration.lineThrough : null,
                                   height: 1,
                                 ),
                           ),
