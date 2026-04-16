@@ -915,6 +915,8 @@ class _AgendaBlock extends StatelessWidget {
               final ultraCompactText = isCourseItem
                   ? _buildUltraCompactCourseText()
                   : item.item.title;
+              final courseInstructor = item.item.courseDetails.instructor.trim();
+              final courseLocation = _resolveCourseLocation();
               final showDetails = isCourseItem
                   ? !ultraCompactHeight
                   : detailsText.isNotEmpty &&
@@ -973,18 +975,47 @@ class _AgendaBlock extends StatelessWidget {
                               SizedBox(height: detailsSpacing),
                               Flexible(
                                 fit: FlexFit.loose,
-                                child: Text(
-                                  detailsText,
-                                  maxLines: effectiveDetailsMaxLines,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: textBaseColor.withValues(
-                                      alpha: 0.9,
-                                    ),
-                                    height: isCourseItem ? 1.0 : null,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                child: isCourseItem
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            courseInstructor.isEmpty ? '-' : courseInstructor,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              color: textBaseColor.withValues(alpha: 0.9),
+                                              height: 1.0,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            courseLocation.isEmpty ? '-' : courseLocation,
+                                            maxLines: 2,
+                                            softWrap: true,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              color: textBaseColor.withValues(alpha: 0.9),
+                                              height: 1.0,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Text(
+                                        detailsText,
+                                        maxLines: effectiveDetailsMaxLines,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: textBaseColor.withValues(
+                                            alpha: 0.9,
+                                          ),
+                                          height: isCourseItem ? 1.0 : null,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                
                               ),
                             ]
                           ],
