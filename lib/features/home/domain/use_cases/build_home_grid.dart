@@ -184,13 +184,9 @@ class BuildHomeGridUseCase {
     final weekStart = visibleRange.start;
     final weekEnd = visibleRange.end.subtract(const Duration(days: 1));
     if (localeTag.startsWith('zh')) {
-      final originalLabel = weekStart.month == weekEnd.month
+      return weekStart.month == weekEnd.month
           ? '${weekStart.year}年${weekStart.month}月第${_weekOfMonth(weekStart)}周'
           : '${weekStart.year}年第${_weekOfYear(weekStart)}周';
-      if (_isCurrentWeek(weekStart)) {
-        return '本周·$originalLabel';
-      }
-      return originalLabel;
     }
     if (weekStart.month == weekEnd.month) {
       return 'Week ${_weekOfMonth(weekStart)} of ${DateFormat.yMMMM(localeTag).format(weekStart)}';
@@ -236,12 +232,6 @@ class BuildHomeGridUseCase {
     final offset = firstDay.weekday - DateTime.monday;
     final dayOfYear = date.difference(firstDay).inDays + 1;
     return ((dayOfYear + offset - 1) ~/ 7) + 1;
-  }
-
-  bool _isCurrentWeek(DateTime weekStart) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final todayWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
-    return DateUtils.isSameDay(todayWeekStart, DateUtils.dateOnly(weekStart));
   }
 
   String _weekdayLabel(int weekday) {

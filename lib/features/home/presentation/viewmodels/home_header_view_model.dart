@@ -299,9 +299,9 @@ String? _buildSemesterWeekLabel({
   final today = DateUtils.dateOnly(DateTime.now());
   final todayMonday = today.subtract(Duration(days: today.weekday - DateTime.monday));
   if (DateUtils.isSameDay(todayMonday, currentMonday)) {
-    return '本周·第 $weekIndex 周';
+    return '本周·第$weekIndex周';
   }
-  return '第 $weekIndex 周';
+  return '第$weekIndex周';
 }
 
 String _withCurrentWeekPrefixIfNeeded({
