@@ -237,7 +237,7 @@ private fun CardShell(
             .fillMaxSize()
             .clickable(action)
             .padding(12.dp)
-            .background(ColorProvider(R.color.widget_status_bg)),
+            .background(ColorProvider(R.color.widget_surface_bg)),
     ) {
         Column(
             modifier = GlanceModifier.fillMaxSize(),
