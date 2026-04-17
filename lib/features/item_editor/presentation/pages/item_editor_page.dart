@@ -97,7 +97,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
             context.l10n.editorSubmitSuccess,
           );
           if (widget.autoPopOnSubmit) {
-            context.pop();
+            context.pop(true);
           }
         }
       },

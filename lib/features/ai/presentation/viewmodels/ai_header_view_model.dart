@@ -28,6 +28,7 @@ class AiHeaderState {
     this.input = '',
     this.phase = AiWorkflowPhase.idle,
     this.pendingDraft,
+    this.pendingDraftNavigationId,
     this.lastError,
     this.composerEnabled = true,
     this.composerDisabledReason,
@@ -38,6 +39,7 @@ class AiHeaderState {
   final String input;
   final AiWorkflowPhase phase;
   final AiCreateItemDraft? pendingDraft;
+  final int? pendingDraftNavigationId;
   final String? lastError;
   final bool composerEnabled;
   final String? composerDisabledReason;
@@ -57,6 +59,8 @@ class AiHeaderState {
     AiWorkflowPhase? phase,
     AiCreateItemDraft? pendingDraft,
     bool clearPendingDraft = false,
+    int? pendingDraftNavigationId,
+    bool clearPendingDraftNavigation = false,
     String? lastError,
     bool clearError = false,
     bool? composerEnabled,
@@ -69,6 +73,9 @@ class AiHeaderState {
       input: input ?? this.input,
       phase: phase ?? this.phase,
       pendingDraft: clearPendingDraft ? null : (pendingDraft ?? this.pendingDraft),
+      pendingDraftNavigationId: clearPendingDraftNavigation
+          ? null
+          : (pendingDraftNavigationId ?? this.pendingDraftNavigationId),
       lastError: clearError ? null : (lastError ?? this.lastError),
       composerEnabled: composerEnabled ?? this.composerEnabled,
       composerDisabledReason: clearComposerDisabledReason
@@ -220,41 +227,56 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
   }
 
   Future<void> confirmCreateDraft() async {
-    final pendingDraft = state.pendingDraft;
-    if (pendingDraft == null || pendingDraft.missingRequired.isNotEmpty) {
-      return;
-    }
-
-    state = state.copyWith(
-      phase: AiWorkflowPhase.creating,
-      clearError: true,
-    );
-
-    try {
-      final created = await ref.read(agendaItemRepositoryNotifierProvider).createItem(
-            pendingDraft.draft,
-            isImportant: pendingDraft.isImportant,
-          );
-      await _appendAssistantMessage(
-        content: '已创建事项：${created.title}',
-        kind: AiMessageKind.system,
-      );
-      state = state.copyWith(
-        phase: AiWorkflowPhase.idle,
-        clearPendingDraft: true,
-        clearError: true,
-      );
-    } catch (_) {
-      state = state.copyWith(
-        phase: AiWorkflowPhase.failed,
-        lastError: '创建事项失败，请稍后再试。',
-      );
-    }
+    requestOpenDraftEditor();
   }
 
   void discardCreateDraft() {
     state = state.copyWith(
       clearPendingDraft: true,
+      clearPendingDraftNavigation: true,
+      phase: AiWorkflowPhase.idle,
+    );
+  }
+
+  void requestOpenDraftEditor() {
+    if (state.pendingDraft == null) {
+      return;
+    }
+    state = state.copyWith(
+      pendingDraftNavigationId: DateTime.now().microsecondsSinceEpoch,
+      phase: AiWorkflowPhase.awaitingConfirm,
+    );
+  }
+
+  void consumeDraftNavigationRequest() {
+    if (state.pendingDraftNavigationId == null) {
+      return;
+    }
+    state = state.copyWith(
+      clearPendingDraftNavigation: true,
+      phase: AiWorkflowPhase.idle,
+    );
+  }
+
+  Future<void> onDraftEditorClosed({
+    required bool created,
+  }) async {
+    final draft = state.pendingDraft;
+    if (created && draft != null) {
+      await _appendAssistantMessage(
+        content: '已通过草稿页创建事项：${draft.draft.title}',
+        kind: AiMessageKind.system,
+      );
+      state = state.copyWith(
+        clearPendingDraft: true,
+        clearPendingDraftNavigation: true,
+        phase: AiWorkflowPhase.idle,
+        clearError: true,
+      );
+      return;
+    }
+    state = state.copyWith(
+      clearPendingDraftNavigation: true,
       phase: AiWorkflowPhase.idle,
     );
   }
@@ -278,6 +300,7 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       state = state.copyWith(
         phase: AiWorkflowPhase.idle,
         clearPendingDraft: true,
+        clearPendingDraftNavigation: true,
       );
       return;
     }
@@ -286,6 +309,7 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       input: '',
       phase: AiWorkflowPhase.awaitingConfirm,
       pendingDraft: draft,
+      pendingDraftNavigationId: DateTime.now().microsecondsSinceEpoch,
     );
   }
 
