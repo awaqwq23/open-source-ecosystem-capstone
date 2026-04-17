@@ -68,7 +68,7 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
                   child: TextField(
                     controller: _aiBaseUrlController,
                     decoration: const InputDecoration(
-                      hintText: 'https://api.openai.com/v1',
+                      hintText: 'https://api.siliconflow.cn/v1',
                     ),
                   ),
                 ),
@@ -84,7 +84,7 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
                   child: TextField(
                     controller: _aiModelController,
                     decoration: const InputDecoration(
-                      hintText: 'gpt-4o-mini',
+                      hintText: 'Pro/MiniMaxAI/MiniMax-M2.5',
                     ),
                   ),
                 ),

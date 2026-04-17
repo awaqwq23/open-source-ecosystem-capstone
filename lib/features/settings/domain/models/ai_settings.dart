@@ -7,9 +7,9 @@ class AiSettings {
   });
 
   const AiSettings.defaults()
-      : baseUrl = '',
+      : baseUrl = 'https://api.siliconflow.cn/v1',
         apiKey = '',
-        model = 'gpt-4o-mini',
+        model = 'Pro/MiniMaxAI/MiniMax-M2.5',
         systemPrompt =
             '你是花卷日程的 AI 助手。你只会基于当前用户消息和提供的事项摘要回答，不引用历史对话。优先帮助用户创建事项、整理安排、回答日程问题。';
 
