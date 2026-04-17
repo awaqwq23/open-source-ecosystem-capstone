@@ -914,6 +914,7 @@ class _AgendaBlock extends StatelessWidget {
                   : item.item.title;
               final courseInstructor = item.item.courseDetails.instructor.trim();
               final courseLocation = _resolveCourseLocation();
+              final courseDetailSpacing = compactHeight ? 1.0 : 2.0;
               final showDetails = isCourseItem
                   ? contentHeight >= _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
                   : detailsText.isNotEmpty &&
@@ -923,7 +924,9 @@ class _AgendaBlock extends StatelessWidget {
                   ? 2
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
-              final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
+              final detailsSpacing = isCourseItem
+                  ? courseDetailSpacing
+                  : _HomeGridLayoutSpec.itemDetailsSpacing;
               final titleMaxLines = switch (contentHeight) {
                 < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
                 _ when isCourseItem &&
@@ -992,6 +995,7 @@ class _AgendaBlock extends StatelessWidget {
                                               fontWeight: FontWeight.normal,
                                             ),
                                           ),
+                                          SizedBox(height: courseDetailSpacing),
                                           Text(
                                             courseLocation.isEmpty ? '-' : courseLocation,
                                             maxLines: 2,
