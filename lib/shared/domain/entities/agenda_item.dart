@@ -59,6 +59,19 @@ class AgendaItem {
   DateTime? get deadline => taskDetails.deadline;
   DateTime get targetDate => memoDetails.targetDate;
   Duration get estimatedDuration => memoDetails.estimatedDuration;
+  bool get supportsManualCompletion {
+    return switch (type) {
+      ItemType.task || ItemType.memo => true,
+      ItemType.schedule || ItemType.course => false,
+    };
+  }
+
+  bool isEffectivelyCompleted(DateTime now) {
+    if (supportsManualCompletion) {
+      return isCompleted;
+    }
+    return !endAt.isAfter(now);
+  }
 
   ItemScheduleDetails get activeScheduleDetails {
     return switch (type) {

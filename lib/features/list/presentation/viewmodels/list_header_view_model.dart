@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/core/time/now_ticker_provider.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:huajuan_agenda/features/list/data/list_demo_items.dart';
 import 'package:huajuan_agenda/features/list/domain/models/list_filters.dart';
@@ -166,7 +167,7 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
     final completed = <AgendaItem>[];
 
     for (final item in filtered) {
-      if (item.isCompleted) {
+      if (item.isEffectivelyCompleted(now)) {
         completed.add(item);
       } else {
         pending.add(item);
@@ -189,13 +190,14 @@ final listHeaderViewModelProvider =
 final listPageViewDataProvider = Provider<ListPageViewData>((ref) {
   final uiState = ref.watch(listHeaderViewModelProvider);
   final items = ref.watch(agendaItemRepositoryProvider);
+  final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
   final activeCourseTimetableId =
       ref.watch(courseTimetableRepositoryProvider).activeTimetableId;
   final section = ListHeaderViewModel._computeSection(
     items: items,
     activeCourseTimetableId: activeCourseTimetableId,
     uiState: uiState,
-    now: DateTime.now(),
+    now: now,
   );
   return ListPageViewData(
     state: uiState,

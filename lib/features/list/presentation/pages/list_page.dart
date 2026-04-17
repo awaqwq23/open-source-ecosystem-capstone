@@ -660,6 +660,8 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final item = widget.item;
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
+    final canToggleCompleted = item.supportsManualCompletion;
+    final isManuallyCompleted = item.isCompleted && canToggleCompleted;
     final cardColor = Color.alphaBlend(
       theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
       theme.colorScheme.surface,
@@ -722,11 +724,18 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _ActionIconButton(
-                        onPressed: widget.onToggleComplete,
-                        icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                        color: item.isCompleted ? theme.colorScheme.primary : accent,
-                      ),
+                      canToggleCompleted
+                          ? _ActionIconButton(
+                              onPressed: widget.onToggleComplete,
+                              icon:
+                                  isManuallyCompleted ? AppIcons.complete : AppIcons.incomplete,
+                              color:
+                                  isManuallyCompleted ? theme.colorScheme.primary : accent,
+                            )
+                          : const SizedBox(
+                              width: 28,
+                              height: 28,
+                            ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(
@@ -738,8 +747,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                             style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
-                                  decoration:
-                                      item.isCompleted ? TextDecoration.lineThrough : null,
+                                  decoration: isManuallyCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                   height: 1,
                                 ),
                           ),

@@ -58,12 +58,14 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
                 .map((item) => item.manualOrder)
                 .reduce((value, element) => value > element ? value : element) +
             1;
-    final item = AgendaItem.fromDraft(
+    final item = _normalizeCompletionByType(
+      AgendaItem.fromDraft(
       id: 'item_${_idSeed++}',
       draft: draft,
       createdAt: now,
       manualOrder: nextOrder,
       isImportant: isImportant,
+      ),
     );
     state = [...state, item];
     await _persist();
@@ -82,7 +84,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
 
     final current = state[index];
-    final updated = current.copyWith(
+    final updated = _normalizeCompletionByType(current.copyWith(
       type: draft.type,
       title: draft.title.trim(),
       details: draft.details.trim(),
@@ -96,7 +98,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       courseDetails: draft.courseDetails,
       isImportant: isImportant ?? current.isImportant,
       updatedAt: DateTime.now(),
-    );
+    ));
     state = [
       ...state.take(index),
       updated,
@@ -120,6 +122,9 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
 
     final current = state[index];
+    if (!current.supportsManualCompletion) {
+      return current;
+    }
     final completed = !current.isCompleted;
     final updated = current.copyWith(
       isCompleted: completed,
@@ -208,6 +213,16 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
             !item.targetDate.isAfter(range.end),
       _ => item.endAt.isAfter(range.start) && item.startAt.isBefore(range.end),
     };
+  }
+
+  AgendaItem _normalizeCompletionByType(AgendaItem item) {
+    if (item.supportsManualCompletion) {
+      return item;
+    }
+    return item.copyWith(
+      isCompleted: false,
+      clearCompletedAt: true,
+    );
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
+import 'package:huajuan_agenda/core/time/now_ticker_provider.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/viewmodels/item_detail_view_model.dart';
@@ -107,6 +108,9 @@ class _ItemDetailContent extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final repository = ref.read(agendaItemRepositoryProvider.notifier);
+    final canToggleCompleted = item.supportsManualCompletion;
+    final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
+    final isCompleted = item.isEffectivelyCompleted(now);
 
     return ui.Card(
       child: Column(
@@ -136,7 +140,9 @@ class _ItemDetailContent extends ConsumerWidget {
                       item.title,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                        decoration: canToggleCompleted && isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -144,12 +150,13 @@ class _ItemDetailContent extends ConsumerWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _MetaChip(
-                          icon: item.isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                          label: item.isCompleted
-                              ? l10n.listStatusCompleted
-                              : l10n.listStatusPending,
-                        ),
+                        if (canToggleCompleted)
+                          _MetaChip(
+                            icon: isCompleted ? AppIcons.complete : AppIcons.incomplete,
+                            label: isCompleted
+                                ? l10n.listStatusCompleted
+                                : l10n.listStatusPending,
+                          ),
                         _MetaChip(
                           icon: item.isImportant
                               ? AppIcons.importantFilled
@@ -229,15 +236,16 @@ class _ItemDetailContent extends ConsumerWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              ui.PrimaryButton(
-                onPressed: () => repository.toggleCompleted(item.id),
-                leading: Icon(item.isCompleted ? AppIcons.incomplete : AppIcons.complete),
-                child: Text(
-                  item.isCompleted
-                      ? l10n.detailMarkIncomplete
-                      : l10n.detailMarkComplete,
+              if (canToggleCompleted)
+                ui.PrimaryButton(
+                  onPressed: () => repository.toggleCompleted(item.id),
+                  leading: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
+                  child: Text(
+                    isCompleted
+                        ? l10n.detailMarkIncomplete
+                        : l10n.detailMarkComplete,
+                  ),
                 ),
-              ),
               ui.OutlineButton(
                 onPressed: () => repository.toggleImportant(item.id),
                 leading: Icon(

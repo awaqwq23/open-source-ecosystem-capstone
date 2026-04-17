@@ -156,6 +156,7 @@ class OpenAiCompatibleAiService implements AiService {
       return '$cleanedBasePrompt\n\n当前没有可参考的事项数据。';
     }
 
+    final now = DateTime.now();
     final summary = items
         .map(
           (item) => [
@@ -167,7 +168,7 @@ class OpenAiCompatibleAiService implements AiService {
             if (item.deadline != null) '截止:${item.deadline!.toIso8601String()}',
             if (item.location.trim().isNotEmpty) '地点:${item.location.trim()}',
             '重要:${item.isImportant ? '是' : '否'}',
-            '完成:${item.isCompleted ? '是' : '否'}',
+            '完成:${item.isEffectivelyCompleted(now) ? '是' : '否'}',
           ].join('；'),
         )
         .join('\n');
