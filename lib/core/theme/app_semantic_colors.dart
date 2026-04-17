@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppSemanticColors {
+  static Color settingsSectionBackground(ThemeData theme) {
+    return theme.colorScheme.surfaceContainerLowest;
+  }
+
+  static Color settingsSectionDivider(ThemeData theme) {
+    return Color.alphaBlend(
+      theme.colorScheme.outlineVariant.withValues(alpha: 0.28),
+      theme.colorScheme.surfaceContainerLowest,
+    );
+  }
+
   static Color listSwipeBackground(ThemeData theme) {
     return Color.alphaBlend(
       theme.colorScheme.outlineVariant.withValues(alpha: 0.24),

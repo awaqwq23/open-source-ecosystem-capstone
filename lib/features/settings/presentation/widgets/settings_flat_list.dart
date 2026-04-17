@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
 
 class SettingsFlatSection extends StatelessWidget {
   const SettingsFlatSection({
@@ -33,7 +34,7 @@ class SettingsFlatSection extends StatelessWidget {
         AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOutCubic,
-          color: theme.colorScheme.surfaceContainerLowest,
+          color: AppSemanticColors.settingsSectionBackground(theme),
           child: Column(
             children: [
               for (var index = 0; index < children.length; index++) ...[
@@ -42,7 +43,7 @@ class SettingsFlatSection extends StatelessWidget {
                   Divider(
                     height: 1,
                     thickness: 1,
-                    color: theme.colorScheme.outlineVariant.withOpacity(0.28),
+                    color: AppSemanticColors.settingsSectionDivider(theme),
                   ),
               ],
             ],
