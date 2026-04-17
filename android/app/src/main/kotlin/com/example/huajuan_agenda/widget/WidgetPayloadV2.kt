@@ -30,6 +30,7 @@ data class AgendaListRowModel(
     val subText: String,
     val typeKey: String,
     val tag: String,
+    val accentColor: String,
 )
 
 data class AgendaListWidgetModel(
@@ -40,6 +41,8 @@ data class AgendaListWidgetModel(
     val rightTitle: String,
     val leftRows: List<AgendaListRowModel>,
     val rightRows: List<AgendaListRowModel>,
+    val weekdayLabel: String,
+    val weekLabel: String,
 )
 
 data class WeekDayWidgetModel(
@@ -109,6 +112,8 @@ object WidgetPayloadReader {
                     rightTitle = agendaListJson.optString("rightTitle", "今天之后"),
                     leftRows = readAgendaRows(agendaListJson.optJSONArray("leftRows")),
                     rightRows = readAgendaRows(agendaListJson.optJSONArray("rightRows")),
+                    weekdayLabel = agendaListJson.optString("weekdayLabel", "星期一"),
+                    weekLabel = agendaListJson.optString("weekLabel", "第1周"),
                 ),
                 weekGrid = WeekGridWidgetModel(
                     title = weekGridJson.optString("title", "周视图"),
@@ -140,6 +145,7 @@ object WidgetPayloadReader {
                 subText = obj.optString("subText", obj.optString("meta", "")),
                 typeKey = obj.optString("typeKey", "task"),
                 tag = obj.optString("tag", ""),
+                accentColor = obj.optString("accentColor", ""),
             )
         }
         return rows
@@ -198,6 +204,8 @@ object WidgetPayloadReader {
                 rightTitle = "今天之后",
                 leftRows = emptyList(),
                 rightRows = emptyList(),
+                weekdayLabel = "星期一",
+                weekLabel = "第1周",
             ),
             weekGrid = WeekGridWidgetModel(
                 title = "周视图",

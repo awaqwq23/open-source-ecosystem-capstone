@@ -80,7 +80,12 @@ class HomeWidgetSyncService {
           'taskLabel': zh ? '任务' : 'Task',
           'memoLabel': zh ? '备忘' : 'Memo',
         },
-        'agendaList': _buildAgendaListPayload(items: items, now: now, zh: zh),
+        'agendaList': _buildAgendaListPayload(
+          items: items,
+          now: now,
+          zh: zh,
+          darkMode: _isDarkMode(themeMode),
+        ),
         'weekGrid': _buildWeekGridPayload(
           items: items,
           week: week,
@@ -122,6 +127,7 @@ Map<String, dynamic> _buildAgendaListPayload({
   required List<AgendaItem> items,
   required DateTime now,
   required bool zh,
+  required bool darkMode,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final tomorrow = today.add(const Duration(days: 1));
@@ -171,7 +177,13 @@ Map<String, dynamic> _buildAgendaListPayload({
     'rightTitle': hasCourseToday ? (zh ? '今天之后' : 'After Today') : (zh ? '明天之后' : 'After Tomorrow'),
     'leftRows': [
       for (final item in leftItems.take(40))
-        _toAgendaListRow(item, leftDay, zh, includeDay: false),
+        _toAgendaListRow(
+          item,
+          leftDay,
+          zh,
+          darkMode: darkMode,
+          includeDay: false,
+        ),
     ],
     'rightRows': [
       for (final item in rightItems.take(80))
@@ -179,9 +191,12 @@ Map<String, dynamic> _buildAgendaListPayload({
           item,
           _displayDayForItem(item, fallback: rightStart),
           zh,
+          darkMode: darkMode,
           includeDay: true,
         ),
     ],
+    'weekdayLabel': _weekdayLong(zh, leftDay.weekday),
+    'weekLabel': zh ? '第${_weekOfYear(leftDay)}周' : 'Week ${_weekOfYear(leftDay)}',
   };
 }
 
@@ -240,6 +255,7 @@ Map<String, dynamic> _toAgendaListRow(
   AgendaItem item,
   DateTime today,
   bool zh, {
+  required bool darkMode,
   required bool includeDay,
 }) {
   final typeKey = switch (item.type) {
@@ -272,6 +288,7 @@ Map<String, dynamic> _toAgendaListRow(
     compactMeta,
     maxChars: includeDay ? 30 : 24,
   );
+  final accent = item.color.resolve(darkMode ? Brightness.dark : Brightness.light);
 
   return {
     'id': item.id,
@@ -280,6 +297,7 @@ Map<String, dynamic> _toAgendaListRow(
     'subText': clippedSubText,
     'typeKey': typeKey,
     'tag': tag,
+    'accentColor': _toArgbHex(accent),
   };
 }
 
@@ -426,6 +444,29 @@ String _weekdayShort(bool zh, int weekday) {
   };
 }
 
+String _weekdayLong(bool zh, int weekday) {
+  if (zh) {
+    return switch (weekday) {
+      DateTime.monday => '星期一',
+      DateTime.tuesday => '星期二',
+      DateTime.wednesday => '星期三',
+      DateTime.thursday => '星期四',
+      DateTime.friday => '星期五',
+      DateTime.saturday => '星期六',
+      _ => '星期日',
+    };
+  }
+  return switch (weekday) {
+    DateTime.monday => 'Monday',
+    DateTime.tuesday => 'Tuesday',
+    DateTime.wednesday => 'Wednesday',
+    DateTime.thursday => 'Thursday',
+    DateTime.friday => 'Friday',
+    DateTime.saturday => 'Saturday',
+    _ => 'Sunday',
+  };
+}
+
 bool _isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
@@ -447,6 +488,21 @@ String _clipWidgetText(String text, {required int maxChars}) {
     return normalized;
   }
   return '${normalized.substring(0, maxChars - 1)}…';
+}
+
+String _toArgbHex(Color color) {
+  final a = color.alpha.toRadixString(16).padLeft(2, '0').toUpperCase();
+  final r = color.red.toRadixString(16).padLeft(2, '0').toUpperCase();
+  final g = color.green.toRadixString(16).padLeft(2, '0').toUpperCase();
+  final b = color.blue.toRadixString(16).padLeft(2, '0').toUpperCase();
+  return '#$a$r$g$b';
+}
+
+int _weekOfYear(DateTime date) {
+  final firstDay = DateTime(date.year, 1, 1);
+  final offset = firstDay.weekday - DateTime.monday;
+  final dayOfYear = date.difference(firstDay).inDays + 1;
+  return ((dayOfYear + offset - 1) ~/ 7) + 1;
 }
 
 String _timezoneLabel() {

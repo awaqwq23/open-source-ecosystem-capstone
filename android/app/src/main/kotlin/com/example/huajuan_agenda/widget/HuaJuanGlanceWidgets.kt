@@ -2,8 +2,10 @@ package com.example.huajuan_agenda.widget
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -147,13 +149,9 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
             val showSubtitle = span.rows >= 4 || span.cols >= 5
             val rowBudget = resolveAgendaRowBudget(size = LocalSize.current, showSubtitle = showSubtitle)
             CardShell(clickUri = WidgetDeepLinkFactory.list()) {
-                Text(text = payload.agendaList.title, style = titleStyle(), maxLines = 1)
-                if (showSubtitle) {
-                    Text(text = payload.agendaList.subtitle, style = tertiaryStyle(), maxLines = 1)
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-                } else {
-                    Spacer(modifier = GlanceModifier.height(4.dp))
-                }
+                Text(text = payload.agendaList.weekdayLabel, style = topMetaPrimaryStyle(), maxLines = 1)
+                Text(text = payload.agendaList.weekLabel, style = topMetaSecondaryStyle(), maxLines = 1)
+                Spacer(modifier = GlanceModifier.height(8.dp))
                 AgendaTwoColumnPanel(
                     model = payload.agendaList,
                     leftMaxRows = rowBudget.left,
@@ -397,17 +395,26 @@ private fun AgendaTwoColumnPanel(
     locale: String,
 ) {
     val size = LocalSize.current
-    val columnWidth = ((size.width.value - 17f) / 2f).coerceAtLeast(96f).dp
+    val columnWidth = ((size.width.value - 15f) / 2f).coerceAtLeast(96f).dp
 
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        Column(
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+    ) {
+        Box(
             modifier = GlanceModifier
                 .width(columnWidth)
+                .fillMaxHeight()
                 .padding(end = 6.dp),
+            contentAlignment = Alignment.BottomStart,
         ) {
-            Text(text = model.leftTitle, style = sectionTitleStyle(), maxLines = 1)
-            Spacer(modifier = GlanceModifier.height(5.dp))
-            AgendaColumnRows(rows = model.leftRows, maxRows = leftMaxRows, locale = locale)
+            AgendaColumnRows(
+                rows = model.leftRows,
+                maxRows = leftMaxRows,
+                locale = locale,
+                alignBottom = true,
+            )
         }
         Box(
             modifier = GlanceModifier
@@ -415,33 +422,49 @@ private fun AgendaTwoColumnPanel(
                 .fillMaxHeight()
                 .background(ColorProvider(R.color.widget_divider)),
         ) {}
-        Column(
+        Box(
             modifier = GlanceModifier
                 .width(columnWidth)
+                .fillMaxHeight()
                 .padding(start = 6.dp),
+            contentAlignment = Alignment.TopStart,
         ) {
-            Text(text = model.rightTitle, style = sectionTitleStyle(), maxLines = 1)
-            Spacer(modifier = GlanceModifier.height(5.dp))
-            AgendaColumnRows(rows = model.rightRows, maxRows = rightMaxRows, locale = locale)
+            AgendaColumnRows(
+                rows = model.rightRows,
+                maxRows = rightMaxRows,
+                locale = locale,
+                alignBottom = false,
+            )
         }
     }
 }
 
 @Composable
-private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int, locale: String) {
+private fun AgendaColumnRows(
+    rows: List<AgendaListRowModel>,
+    maxRows: Int,
+    locale: String,
+    alignBottom: Boolean,
+) {
     if (rows.isEmpty()) {
         Text(text = localizedEmptyText(locale), style = secondaryStyle(), maxLines = 1)
         return
     }
+    val visibleRows = rows.take(maxRows)
     Column(modifier = GlanceModifier.fillMaxWidth()) {
-        rows.take(maxRows).forEach { row ->
+        if (alignBottom && visibleRows.size < maxRows) {
+            repeat(maxRows - visibleRows.size) {
+                Spacer(modifier = GlanceModifier.height(35.dp))
+            }
+        }
+        visibleRows.forEach { row ->
             Row(modifier = GlanceModifier.fillMaxWidth()) {
                 Box(
                     modifier = GlanceModifier
                         .width(5.dp)
                         .height(30.dp)
                         .cornerRadius(3.dp)
-                        .background(accentColorFor(row.typeKey)),
+                        .background(accentColorFor(row)),
                 ) {}
                 Spacer(modifier = GlanceModifier.width(6.dp))
                 Column(modifier = GlanceModifier.fillMaxWidth()) {
@@ -566,6 +589,22 @@ private fun rowTitleStyle(): TextStyle {
     )
 }
 
+private fun topMetaPrimaryStyle(): TextStyle {
+    return TextStyle(
+        color = ColorProvider(R.color.widget_meta_highlight),
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+    )
+}
+
+private fun topMetaSecondaryStyle(): TextStyle {
+    return TextStyle(
+        color = ColorProvider(R.color.widget_text_primary),
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+    )
+}
+
 private fun bodyStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
@@ -594,7 +633,22 @@ private fun tertiaryStyle(): TextStyle {
     )
 }
 
-private fun accentColorFor(typeKey: String): ColorProvider {
+private fun accentColorFor(row: AgendaListRowModel): ColorProvider {
+    val parsed = runCatching {
+        val value = row.accentColor.trim()
+        if (value.isBlank()) {
+            null
+        } else {
+            ColorProvider(ComposeColor(AndroidColor.parseColor(value)))
+        }
+    }.getOrNull()
+    if (parsed != null) {
+        return parsed
+    }
+    return accentColorForType(row.typeKey)
+}
+
+private fun accentColorForType(typeKey: String): ColorProvider {
     return when (typeKey) {
         "schedule" -> ColorProvider(R.color.widget_accent_schedule)
         "memo" -> ColorProvider(R.color.widget_accent_memo)
