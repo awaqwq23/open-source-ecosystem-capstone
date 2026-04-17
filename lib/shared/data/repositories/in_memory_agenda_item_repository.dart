@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
@@ -333,7 +334,29 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     required DateTime startInclusive,
     required DateTime endExclusive,
   }) async {
+    final probe = StartupPerfProbe.instance;
+    final loadSeq = probe.nextSequence('home_window_storage_load');
+    final loadTimer = Stopwatch()..start();
+    probe.mark(
+      'home_window_storage_load_start',
+      extras: <String, Object?>{
+        'load_seq': loadSeq,
+        'window_key': windowKey,
+        'start': startInclusive.toIso8601String(),
+        'end': endExclusive.toIso8601String(),
+      },
+    );
     if (_loadedWindowKeys.contains(windowKey) || _loadingWindowKeys.contains(windowKey)) {
+      probe.mark(
+        'home_window_storage_load_skipped',
+        extras: <String, Object?>{
+          'load_seq': loadSeq,
+          'window_key': windowKey,
+          'already_loaded': _loadedWindowKeys.contains(windowKey),
+          'already_loading': _loadingWindowKeys.contains(windowKey),
+          'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+        },
+      );
       return;
     }
     _loadingWindowKeys.add(windowKey);
@@ -343,31 +366,90 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         _loadedWindowKeys.add(windowKey);
         // 触发依赖刷新，让 Home 看到窗口已加载状态。
         state = [...state];
+        probe.mark(
+          'home_window_storage_load_end',
+          extras: <String, Object?>{
+            'load_seq': loadSeq,
+            'window_key': windowKey,
+            'reason': 'preferences_null',
+            'loaded_items': 0,
+            'state_items': state.length,
+            'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+          },
+        );
         return;
       }
 
+      final readStartUs = loadTimer.elapsedMicroseconds;
       final raw = prefs.getString(AppBootstrapStorageKeys.agendaItems);
+      final readEndUs = loadTimer.elapsedMicroseconds;
+      probe.mark(
+        'home_window_storage_raw_read',
+        extras: <String, Object?>{
+          'load_seq': loadSeq,
+          'window_key': windowKey,
+          'raw_length': raw?.length ?? 0,
+          'read_cost_ms': ((readEndUs - readStartUs) / 1000).toStringAsFixed(3),
+        },
+      );
       if (raw == null || raw.isEmpty) {
         _loadedWindowKeys.add(windowKey);
         state = [...state];
+        probe.mark(
+          'home_window_storage_load_end',
+          extras: <String, Object?>{
+            'load_seq': loadSeq,
+            'window_key': windowKey,
+            'reason': 'raw_empty',
+            'loaded_items': 0,
+            'state_items': state.length,
+            'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+          },
+        );
         return;
       }
 
       List<dynamic> decoded;
+      final decodeStartUs = loadTimer.elapsedMicroseconds;
       try {
         final json = jsonDecode(raw);
         decoded = json is List<dynamic> ? json : const [];
       } catch (_) {
         decoded = const [];
       }
+      final decodeEndUs = loadTimer.elapsedMicroseconds;
+      probe.mark(
+        'home_window_storage_json_decoded',
+        extras: <String, Object?>{
+          'load_seq': loadSeq,
+          'window_key': windowKey,
+          'decoded_count': decoded.length,
+          'decode_cost_ms': ((decodeEndUs - decodeStartUs) / 1000).toStringAsFixed(3),
+        },
+      );
 
       if (decoded.isEmpty) {
         _loadedWindowKeys.add(windowKey);
         state = [...state];
+        probe.mark(
+          'home_window_storage_load_end',
+          extras: <String, Object?>{
+            'load_seq': loadSeq,
+            'window_key': windowKey,
+            'reason': 'decoded_empty',
+            'loaded_items': 0,
+            'state_items': state.length,
+            'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+          },
+        );
         return;
       }
 
       final windowItems = <AgendaItem>[];
+      var parsedCount = 0;
+      var matchedTypeCount = 0;
+      var matchedRangeCount = 0;
+      final filterStartUs = loadTimer.elapsedMicroseconds;
       for (var index = 0; index < decoded.length; index += _hydrateChunkSize) {
         final end = (index + _hydrateChunkSize).clamp(0, decoded.length);
         for (final itemRaw in decoded.sublist(index, end)) {
@@ -381,23 +463,39 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
           if (parsed == null) {
             continue;
           }
+          parsedCount++;
           if (parsed.type != ItemType.task &&
               parsed.type != ItemType.schedule &&
               parsed.type != ItemType.course) {
             continue;
           }
+          matchedTypeCount++;
           if (!parsed.endAt.isAfter(startInclusive) || !parsed.startAt.isBefore(endExclusive)) {
             continue;
           }
+          matchedRangeCount++;
           windowItems.add(parsed);
         }
         if (end < decoded.length) {
           await Future<void>.delayed(Duration.zero);
         }
       }
+      final filterEndUs = loadTimer.elapsedMicroseconds;
+      probe.mark(
+        'home_window_storage_filter_done',
+        extras: <String, Object?>{
+          'load_seq': loadSeq,
+          'window_key': windowKey,
+          'parsed_count': parsedCount,
+          'matched_type_count': matchedTypeCount,
+          'matched_range_count': matchedRangeCount,
+          'filter_cost_ms': ((filterEndUs - filterStartUs) / 1000).toStringAsFixed(3),
+        },
+      );
 
       _loadedWindowKeys.add(windowKey);
       if (windowItems.isNotEmpty) {
+        final mergeStartUs = loadTimer.elapsedMicroseconds;
         final byId = <String, AgendaItem>{
           for (final item in state) item.id: item,
         };
@@ -406,10 +504,33 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         }
         state = byId.values.toList(growable: false);
         _idSeed = state.length;
+        final mergeEndUs = loadTimer.elapsedMicroseconds;
+        probe.mark(
+          'home_window_storage_merge_done',
+          extras: <String, Object?>{
+            'load_seq': loadSeq,
+            'window_key': windowKey,
+            'loaded_items': windowItems.length,
+            'state_items': state.length,
+            'merge_cost_ms': ((mergeEndUs - mergeStartUs) / 1000).toStringAsFixed(3),
+          },
+        );
       } else {
         // 窗口内无数据时也要刷新一次，避免页面永远等待“加载完成”。
         state = [...state];
       }
+      probe.mark(
+        'home_window_storage_load_end',
+        extras: <String, Object?>{
+          'load_seq': loadSeq,
+          'window_key': windowKey,
+          'reason': 'success',
+          'loaded_items': windowItems.length,
+          'state_items': state.length,
+          'loaded_window_count': _loadedWindowKeys.length,
+          'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+        },
+      );
     } finally {
       _loadingWindowKeys.remove(windowKey);
     }

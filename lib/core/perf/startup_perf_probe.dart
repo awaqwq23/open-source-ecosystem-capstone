@@ -26,6 +26,8 @@ class StartupPerfProbe {
   String get sessionId => _sessionId ??= DateTime.now().microsecondsSinceEpoch.toString();
 
   final Map<String, int> _marksUs = <String, int>{};
+  final Map<String, int> _stageStartsUs = <String, int>{};
+  final Map<String, int> _counters = <String, int>{};
 
   bool get enabled => _enabled;
 
@@ -114,6 +116,50 @@ class StartupPerfProbe {
       return;
     }
     mark(event, extras: extras);
+  }
+
+  int nextSequence(String key) {
+    final next = (_counters[key] ?? 0) + 1;
+    _counters[key] = next;
+    return next;
+  }
+
+  void startStage(
+    String stage, {
+    Map<String, Object?> extras = const <String, Object?>{},
+  }) {
+    if (!_enabled) {
+      return;
+    }
+    startMainStopwatchIfNeeded();
+    _stageStartsUs[stage] = _sinceMain.elapsedMicroseconds;
+    mark(
+      'stage_start',
+      extras: <String, Object?>{
+        'stage': stage,
+        ...extras,
+      },
+    );
+  }
+
+  void endStage(
+    String stage, {
+    Map<String, Object?> extras = const <String, Object?>{},
+  }) {
+    if (!_enabled) {
+      return;
+    }
+    startMainStopwatchIfNeeded();
+    final nowUs = _sinceMain.elapsedMicroseconds;
+    final startUs = _stageStartsUs.remove(stage);
+    mark(
+      'stage_end',
+      extras: <String, Object?>{
+        'stage': stage,
+        'duration_ms': startUs == null ? null : _toMsString(nowUs - startUs),
+        ...extras,
+      },
+    );
   }
 
   void emitSummary({

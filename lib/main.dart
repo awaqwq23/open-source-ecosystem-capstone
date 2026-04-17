@@ -20,17 +20,25 @@ Future<void> main() async {
   final startupProbe = StartupPerfProbe.instance;
   startupProbe.startMainStopwatchIfNeeded();
   startupProbe.markOnce('main_enter');
+  startupProbe.startStage('main_bootstrap');
   WidgetsFlutterBinding.ensureInitialized();
   startupProbe.markOnce('widgets_binding_ready');
   startupProbe.installFrameTimingObserver();
+  startupProbe.startStage('android_bridge_bootstrap');
   await startupProbe.bootstrapAndroidStart();
+  startupProbe.endStage('android_bridge_bootstrap');
 
+  startupProbe.startStage('shared_preferences_get_instance');
   final preferences = await SharedPreferences.getInstance();
+  startupProbe.endStage('shared_preferences_get_instance');
+  startupProbe.startStage('load_critical_startup_settings');
   final startup = AppBootstrapLoader.loadCriticalStartupSettings(preferences);
+  startupProbe.endStage('load_critical_startup_settings');
   startupProbe.markOnce('shared_preferences_minimal_ready');
   startupProbe.markOnce('startup_settings_ready');
 
   startupProbe.markOnce('run_app_called');
+  startupProbe.startStage('run_app_provider_scope_build');
   runApp(
     ProviderScope(
       overrides: [
@@ -53,6 +61,8 @@ Future<void> main() async {
       ),
     ),
   );
+  startupProbe.endStage('run_app_provider_scope_build');
+  startupProbe.endStage('main_bootstrap');
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     startupProbe.markOnce('first_post_frame_callback');

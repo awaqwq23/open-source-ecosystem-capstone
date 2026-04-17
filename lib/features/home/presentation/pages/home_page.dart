@@ -304,6 +304,47 @@ class _HomeGridState extends State<_HomeGrid> {
   bool _minimalGridVisibleMarked = false;
 
   @override
+  void initState() {
+    super.initState();
+    StartupPerfProbe.instance.mark(
+      'home_grid_state_init',
+      extras: <String, Object?>{
+        'is_bootstrap_ready': widget.isBootstrapReady,
+        'item_count': widget.viewData.items.length,
+        'columns': widget.viewData.columns.length,
+        'time_slots': widget.viewData.timeSlots.length,
+        'scope': widget.viewData.scope.name,
+      },
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _HomeGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isBootstrapReady != widget.isBootstrapReady) {
+      StartupPerfProbe.instance.mark(
+        'home_grid_bootstrap_ready_changed',
+        extras: <String, Object?>{
+          'from': oldWidget.isBootstrapReady,
+          'to': widget.isBootstrapReady,
+          'item_count': widget.viewData.items.length,
+          'scope': widget.viewData.scope.name,
+        },
+      );
+    }
+    if (oldWidget.viewData.items.length != widget.viewData.items.length) {
+      StartupPerfProbe.instance.mark(
+        'home_grid_item_count_changed',
+        extras: <String, Object?>{
+          'from': oldWidget.viewData.items.length,
+          'to': widget.viewData.items.length,
+          'scope': widget.viewData.scope.name,
+        },
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
@@ -311,6 +352,16 @@ class _HomeGridState extends State<_HomeGrid> {
 
   @override
   Widget build(BuildContext context) {
+    StartupPerfProbe.instance.mark(
+      'home_grid_build',
+      extras: <String, Object?>{
+        'is_bootstrap_ready': widget.isBootstrapReady,
+        'item_count': widget.viewData.items.length,
+        'columns': widget.viewData.columns.length,
+        'time_slots': widget.viewData.timeSlots.length,
+        'scope': widget.viewData.scope.name,
+      },
+    );
     _scheduleGridVisibleMarkIfNeeded();
     final theme = Theme.of(context);
 

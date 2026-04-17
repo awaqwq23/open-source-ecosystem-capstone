@@ -64,9 +64,14 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       return;
     }
     _initialized = true;
-    StartupPerfProbe.instance.markOnce('runtime_setup_start');
+    final probe = StartupPerfProbe.instance;
+    probe.markOnce('runtime_setup_start');
+    probe.startStage('runtime_setup_total');
     final service = ref.read(homeWidgetSyncServiceProvider);
+    probe.startStage('runtime_home_widget_service_init_schedule');
     unawaited(service.initialize());
+    probe.endStage('runtime_home_widget_service_init_schedule');
+    probe.startStage('runtime_provider_listen_register');
     _subs.add(
       ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.syncDebounced()),
     );
@@ -82,13 +87,21 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _subs.add(
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
-    StartupPerfProbe.instance.markOnce('runtime_setup_end');
+    probe.endStage('runtime_provider_listen_register');
+    probe.markOnce('runtime_setup_end');
+    probe.startStage('runtime_load_noncritical_schedule');
     unawaited(_loadNonCriticalStartupSettings());
+    probe.endStage('runtime_load_noncritical_schedule');
+    probe.startStage('runtime_bootstrap_phase_set_ready');
     ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
-    StartupPerfProbe.instance.markOnce('home_minimal_ready');
-    StartupPerfProbe.instance.markOnce('home_full_ready');
-    StartupPerfProbe.instance.markOnce('bootstrap_phase_ready');
+    probe.endStage('runtime_bootstrap_phase_set_ready');
+    probe.markOnce('home_minimal_ready');
+    probe.markOnce('home_full_ready');
+    probe.markOnce('bootstrap_phase_ready');
+    probe.startStage('runtime_widget_sync_debounced_trigger');
     service.syncDebounced();
+    probe.endStage('runtime_widget_sync_debounced_trigger');
+    probe.endStage('runtime_setup_total');
   }
 
   Future<void> _loadNonCriticalStartupSettings() async {
@@ -96,6 +109,8 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       if (!mounted) {
         return;
       }
+      final probe = StartupPerfProbe.instance;
+      probe.startStage('runtime_load_noncritical_post_frame_callback');
       final settings = AppBootstrapLoader.loadNonCriticalStartupSettings(widget.preferences);
       final activeTimetableId = widget.preferences.getString(
         AppBootstrapStorageKeys.activeCourseTimetableId,
@@ -106,7 +121,13 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       ref
           .read(courseTimetableRepositoryProvider.notifier)
           .hydrateActiveTimetableFromBootstrapHint(activeTimetableId);
-      StartupPerfProbe.instance.markOnce('shared_preferences_noncritical_ready');
+      probe.markOnce('shared_preferences_noncritical_ready');
+      probe.endStage(
+        'runtime_load_noncritical_post_frame_callback',
+        extras: <String, Object?>{
+          'has_active_timetable_hint': activeTimetableId != null && activeTimetableId.isNotEmpty,
+        },
+      );
     });
   }
 

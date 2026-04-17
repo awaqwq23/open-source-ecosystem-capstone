@@ -147,6 +147,16 @@ final homeHeaderViewModelProvider =
 
 final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, query) {
   final probe = StartupPerfProbe.instance;
+  final buildSeq = probe.nextSequence('home_viewdata_build');
+  final buildTimer = Stopwatch()..start();
+  probe.mark(
+    'home_viewdata_build_start',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'allow_month_layout': query.allowMonthLayout,
+      'locale': query.localeTag,
+    },
+  );
   probe.markOnce(
     'home_viewdata_provider_first',
     extras: <String, Object?>{
@@ -163,6 +173,16 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
   final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
       ? HomeDisplayScope.month
       : HomeDisplayScope.week;
+  probe.mark(
+    'home_viewdata_scope_resolved',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'scope': scope.name,
+      'anchor': state.anchor.toIso8601String(),
+      'show_demo_data': settings.showDemoData,
+      'build_elapsed_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+    },
+  );
   final previewGrid = HomeHeaderViewModel._gridBuilder.build(
     localeTag: query.localeTag,
     anchor: state.anchor,
@@ -172,15 +192,40 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: const [],
   );
+  probe.mark(
+    'home_viewdata_preview_grid_ready',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'visible_start': previewGrid.visibleRange.start.toIso8601String(),
+      'visible_end': previewGrid.visibleRange.end.toIso8601String(),
+      'columns': previewGrid.columns.length,
+      'slots': previewGrid.timeSlots.length,
+      'build_elapsed_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+    },
+  );
   final windowKey = _homeWindowKey(
     scope: scope,
     anchor: previewGrid.visibleRange.start,
   );
-  if (!settings.showDemoData && !repository.hasLoadedWindow(windowKey)) {
+  final hasLoadedWindow = repository.hasLoadedWindow(windowKey);
+  probe.mark(
+    'home_window_load_gate_checked',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'window_key': windowKey,
+      'has_loaded_window': hasLoadedWindow,
+      'show_demo_data': settings.showDemoData,
+      'build_elapsed_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+    },
+  );
+  if (!settings.showDemoData && !hasLoadedWindow) {
     probe.mark(
       'home_window_load_requested',
       extras: <String, Object?>{
+        'build_seq': buildSeq,
         'window_key': windowKey,
+        'visible_start': previewGrid.visibleRange.start.toIso8601String(),
+        'visible_end': previewGrid.visibleRange.end.toIso8601String(),
       },
     );
     unawaited(
@@ -192,6 +237,15 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     );
   }
   final shouldLoadItems = settings.showDemoData || repository.hasLoadedWindow(windowKey);
+  probe.mark(
+    'home_window_readiness_checked',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'window_key': windowKey,
+      'should_load_items': shouldLoadItems,
+      'build_elapsed_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+    },
+  );
   if (shouldLoadItems) {
     probe.markOnce('home_viewdata_window_ready_phase_observed');
   }
@@ -250,6 +304,16 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
         if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
     ],
   );
+  probe.mark(
+    'home_viewdata_items_layout_ready',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'visible_item_count': visibleItems.length,
+      'laid_out_item_count': laidOutItems.length,
+      'active_timetable_id': activeTimetableId,
+      'build_elapsed_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+    },
+  );
   if (semesterWeekLabel == null) {
     final prefixedLabel = _withCurrentWeekPrefixIfNeeded(
       label: baseViewData.periodLabel,
@@ -258,8 +322,30 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       visibleRangeStart: baseViewData.visibleRange.start,
     );
     if (prefixedLabel == baseViewData.periodLabel) {
+      probe.mark(
+        'home_viewdata_build_end',
+        extras: <String, Object?>{
+          'build_seq': buildSeq,
+          'scope': baseViewData.scope.name,
+          'item_count': baseViewData.items.length,
+          'window_key': windowKey,
+          'build_total_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+          'label_mode': 'base',
+        },
+      );
       return baseViewData;
     }
+    probe.mark(
+      'home_viewdata_build_end',
+      extras: <String, Object?>{
+        'build_seq': buildSeq,
+        'scope': baseViewData.scope.name,
+        'item_count': baseViewData.items.length,
+        'window_key': windowKey,
+        'build_total_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+        'label_mode': 'current_week_prefixed',
+      },
+    );
     return HomeViewData(
       scope: baseViewData.scope,
       periodLabel: prefixedLabel,
@@ -274,6 +360,17 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     );
   }
 
+  probe.mark(
+    'home_viewdata_build_end',
+    extras: <String, Object?>{
+      'build_seq': buildSeq,
+      'scope': baseViewData.scope.name,
+      'item_count': baseViewData.items.length,
+      'window_key': windowKey,
+      'build_total_ms': (buildTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
+      'label_mode': 'semester_week',
+    },
+  );
   return HomeViewData(
     scope: baseViewData.scope,
     periodLabel: semesterWeekLabel,
@@ -289,6 +386,8 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
 });
 
 final homeWindowLoadedProvider = Provider.family<bool, HomeViewQuery>((ref, query) {
+  final probe = StartupPerfProbe.instance;
+  final checkSeq = probe.nextSequence('home_window_loaded_check');
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
   ref.watch(agendaItemRepositoryProvider);
@@ -298,10 +397,31 @@ final homeWindowLoadedProvider = Provider.family<bool, HomeViewQuery>((ref, quer
       : HomeDisplayScope.week;
   final visibleRange = HomeHeaderViewModel._gridBuilder.visibleDateRange(state.anchor, scope);
   if (settings.showDemoData) {
+    probe.mark(
+      'home_window_loaded_check',
+      extras: <String, Object?>{
+        'check_seq': checkSeq,
+        'scope': scope.name,
+        'anchor': state.anchor.toIso8601String(),
+        'window_key': 'demo_data',
+        'is_loaded': true,
+      },
+    );
     return true;
   }
   final windowKey = _homeWindowKey(scope: scope, anchor: visibleRange.start);
-  return repository.hasLoadedWindow(windowKey);
+  final loaded = repository.hasLoadedWindow(windowKey);
+  probe.mark(
+    'home_window_loaded_check',
+    extras: <String, Object?>{
+      'check_seq': checkSeq,
+      'scope': scope.name,
+      'anchor': state.anchor.toIso8601String(),
+      'window_key': windowKey,
+      'is_loaded': loaded,
+    },
+  );
+  return loaded;
 });
 
 String _homeWindowKey({
