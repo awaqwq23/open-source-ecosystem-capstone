@@ -209,12 +209,38 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     ],
   );
   if (semesterWeekLabel == null) {
-    return baseViewData;
+    final prefixedLabel = _withCurrentWeekPrefixIfNeeded(
+      label: baseViewData.periodLabel,
+      localeTag: query.localeTag,
+      scope: scope,
+      visibleRangeStart: baseViewData.visibleRange.start,
+    );
+    if (prefixedLabel == baseViewData.periodLabel) {
+      return baseViewData;
+    }
+    return HomeViewData(
+      scope: baseViewData.scope,
+      periodLabel: prefixedLabel,
+      periodSubtitle: baseViewData.periodSubtitle,
+      metrics: baseViewData.metrics,
+      visibleRange: baseViewData.visibleRange,
+      periodSelection: baseViewData.periodSelection,
+      selectedCell: baseViewData.selectedCell,
+      columns: baseViewData.columns,
+      timeSlots: baseViewData.timeSlots,
+      items: baseViewData.items,
+    );
   }
 
+  final prefixedSemesterLabel = _withCurrentWeekPrefixIfNeeded(
+    label: semesterWeekLabel,
+    localeTag: query.localeTag,
+    scope: scope,
+    visibleRangeStart: baseViewData.visibleRange.start,
+  );
   return HomeViewData(
     scope: baseViewData.scope,
-    periodLabel: semesterWeekLabel,
+    periodLabel: prefixedSemesterLabel,
     periodSubtitle: baseViewData.periodSubtitle,
     metrics: baseViewData.metrics,
     visibleRange: baseViewData.visibleRange,
@@ -274,5 +300,27 @@ String? _buildSemesterWeekLabel({
   }
 
   return localeTag.startsWith('zh') ? '第 $weekIndex 周' : 'Week $weekIndex';
+}
+
+String _withCurrentWeekPrefixIfNeeded({
+  required String label,
+  required String localeTag,
+  required HomeDisplayScope scope,
+  required DateTime visibleRangeStart,
+}) {
+  if (!localeTag.startsWith('zh') || scope != HomeDisplayScope.week) {
+    return label;
+  }
+  if (label.startsWith('本周·')) {
+    return label;
+  }
+  final today = DateUtils.dateOnly(DateTime.now());
+  final todayMonday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+  final visibleMonday = DateUtils.dateOnly(visibleRangeStart)
+      .subtract(Duration(days: visibleRangeStart.weekday - DateTime.monday));
+  if (!DateUtils.isSameDay(todayMonday, visibleMonday)) {
+    return label;
+  }
+  return '本周·$label';
 }
 
