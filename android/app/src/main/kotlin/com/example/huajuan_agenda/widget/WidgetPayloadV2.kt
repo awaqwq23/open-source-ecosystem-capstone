@@ -27,6 +27,8 @@ data class AgendaListRowModel(
     val id: String,
     val title: String,
     val meta: String,
+    val subText: String,
+    val typeKey: String,
     val tag: String,
 )
 
@@ -135,6 +137,8 @@ object WidgetPayloadReader {
                 id = obj.optString("id", ""),
                 title = title,
                 meta = obj.optString("meta", ""),
+                subText = obj.optString("subText", obj.optString("meta", "")),
+                typeKey = obj.optString("typeKey", "task"),
                 tag = obj.optString("tag", ""),
             )
         }

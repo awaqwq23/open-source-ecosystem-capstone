@@ -25,9 +25,11 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
+import androidx.glance.layout.defaultWeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -142,13 +144,18 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
         val payload = WidgetPayloadReader.read(context)
         provideContent {
             val span = resolveSpan(LocalSize.current)
-            val totalRows = max(4, span.cols * span.rows)
-            val leftMaxRows = max(2, totalRows / 2)
-            val rightMaxRows = max(2, totalRows - leftMaxRows)
+            val showSubtitle = span.rows >= 4 || span.cols >= 5
+            val totalRows = max(6, span.cols * span.rows)
+            val leftMaxRows = max(3, totalRows / 2)
+            val rightMaxRows = max(3, totalRows - leftMaxRows)
             CardShell(clickUri = WidgetDeepLinkFactory.list()) {
                 Text(text = payload.agendaList.title, style = titleStyle(), maxLines = 1)
-                Text(text = payload.agendaList.subtitle, style = tertiaryStyle(), maxLines = 1)
-                Spacer(modifier = GlanceModifier.height(8.dp))
+                if (showSubtitle) {
+                    Text(text = payload.agendaList.subtitle, style = tertiaryStyle(), maxLines = 1)
+                    Spacer(modifier = GlanceModifier.height(6.dp))
+                } else {
+                    Spacer(modifier = GlanceModifier.height(4.dp))
+                }
                 AgendaTwoColumnPanel(
                     model = payload.agendaList,
                     leftMaxRows = leftMaxRows,
@@ -391,7 +398,7 @@ private fun AgendaTwoColumnPanel(
     Row(modifier = GlanceModifier.fillMaxWidth()) {
         Column(
             modifier = GlanceModifier
-                .width(140.dp)
+                .defaultWeight()
                 .padding(end = 4.dp),
         ) {
             Text(text = model.leftTitle, style = bodyStrongStyle(), maxLines = 1)
@@ -401,12 +408,12 @@ private fun AgendaTwoColumnPanel(
         Box(
             modifier = GlanceModifier
                 .width(1.dp)
-                .height(140.dp)
+                .fillMaxHeight()
                 .background(ColorProvider(R.color.widget_text_tertiary)),
         ) {}
         Column(
             modifier = GlanceModifier
-                .width(140.dp)
+                .defaultWeight()
                 .padding(start = 4.dp),
         ) {
             Text(text = model.rightTitle, style = bodyStrongStyle(), maxLines = 1)
@@ -424,12 +431,25 @@ private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
     }
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         rows.take(maxRows).forEach { row ->
-            Text(text = row.tag, style = tertiaryStyle(), maxLines = 1)
-            Text(text = row.title, style = bodyStrongStyle(), maxLines = 1)
-            if (row.meta.isNotBlank()) {
-                Text(text = row.meta, style = bodyStyle(), maxLines = 1)
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                Box(
+                    modifier = GlanceModifier
+                        .width(4.dp)
+                        .height(28.dp)
+                        .background(accentColorFor(row.typeKey)),
+                ) {}
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                Column(modifier = GlanceModifier.defaultWeight()) {
+                    Text(text = row.title, style = bodyStrongStyle(), maxLines = 1)
+                    val subText = row.subText.ifBlank { row.meta }
+                    if (subText.isNotBlank()) {
+                        Text(text = subText, style = metaStyle(), maxLines = 1)
+                    } else if (row.tag.isNotBlank()) {
+                        Text(text = row.tag, style = tertiaryStyle(), maxLines = 1)
+                    }
+                }
             }
-            Spacer(modifier = GlanceModifier.height(3.dp))
+            Spacer(modifier = GlanceModifier.height(4.dp))
         }
     }
 }
@@ -532,6 +552,13 @@ private fun bodyStyle(): TextStyle {
     )
 }
 
+private fun metaStyle(): TextStyle {
+    return TextStyle(
+        color = ColorProvider(R.color.widget_text_secondary),
+        fontSize = 10.sp,
+    )
+}
+
 private fun secondaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_secondary),
@@ -544,4 +571,13 @@ private fun tertiaryStyle(): TextStyle {
         color = ColorProvider(R.color.widget_text_tertiary),
         fontSize = 10.sp,
     )
+}
+
+private fun accentColorFor(typeKey: String): ColorProvider {
+    return when (typeKey) {
+        "schedule" -> ColorProvider(R.color.widget_accent_schedule)
+        "memo" -> ColorProvider(R.color.widget_accent_memo)
+        "course" -> ColorProvider(R.color.widget_accent_course)
+        else -> ColorProvider(R.color.widget_accent_task)
+    }
 }

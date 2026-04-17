@@ -170,11 +170,17 @@ Map<String, dynamic> _buildAgendaListPayload({
     'leftTitle': hasCourseToday ? (zh ? '今天' : 'Today') : (zh ? '明天' : 'Tomorrow'),
     'rightTitle': hasCourseToday ? (zh ? '今天之后' : 'After Today') : (zh ? '明天之后' : 'After Tomorrow'),
     'leftRows': [
-      for (final item in leftItems.take(40)) _toAgendaListRow(item, leftDay, zh),
+      for (final item in leftItems.take(40))
+        _toAgendaListRow(item, leftDay, zh, includeDay: false),
     ],
     'rightRows': [
       for (final item in rightItems.take(80))
-        _toAgendaListRow(item, _displayDayForItem(item, fallback: rightStart), zh),
+        _toAgendaListRow(
+          item,
+          _displayDayForItem(item, fallback: rightStart),
+          zh,
+          includeDay: true,
+        ),
     ],
   };
 }
@@ -230,7 +236,19 @@ DateTime _displayDayForItem(
   return DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
 }
 
-Map<String, dynamic> _toAgendaListRow(AgendaItem item, DateTime today, bool zh) {
+Map<String, dynamic> _toAgendaListRow(
+  AgendaItem item,
+  DateTime today,
+  bool zh, {
+  required bool includeDay,
+}) {
+  final typeKey = switch (item.type) {
+    ItemType.schedule => 'schedule',
+    ItemType.task => 'task',
+    ItemType.memo => 'memo',
+    ItemType.course => 'course',
+  };
+
   final tag = switch (item.type) {
     ItemType.schedule => zh ? '日程' : 'Schedule',
     ItemType.task => zh ? '任务' : 'Task',
@@ -247,7 +265,12 @@ Map<String, dynamic> _toAgendaListRow(AgendaItem item, DateTime today, bool zh) 
       ? (zh ? '已完成' : 'Done')
       : (item.isImportant ? (zh ? '重要' : 'Important') : (zh ? '待办' : 'Open'));
 
-  final timeText = _buildItemTimeText(item, today, zh);
+  final timeText = _buildItemTimeText(
+    item,
+    today,
+    zh,
+    includeDay: includeDay,
+  );
   final metaParts = <String>[timeText, status];
   if (location.isNotEmpty) {
     metaParts.add(location);
@@ -257,6 +280,8 @@ Map<String, dynamic> _toAgendaListRow(AgendaItem item, DateTime today, bool zh) 
     'id': item.id,
     'title': title,
     'meta': metaParts.join(' · '),
+    'subText': location.isNotEmpty ? '$timeText · $location' : timeText,
+    'typeKey': typeKey,
     'tag': tag,
   };
 }
@@ -348,20 +373,37 @@ String _toCompactDayLine(AgendaItem item, DateTime day, bool zh) {
   return '[$prefix] $when $title';
 }
 
-String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
+String _buildItemTimeText(
+  AgendaItem item,
+  DateTime day,
+  bool zh, {
+  bool includeDay = false,
+}) {
   if (item.type == ItemType.memo) {
     final minutes = item.estimatedDuration.inMinutes;
-    return zh ? '全天/${minutes}分' : 'AllDay/${minutes}m';
+    final memoText = zh ? '全天/${minutes}分' : 'AllDay/${minutes}m';
+    if (!includeDay) {
+      return memoText;
+    }
+    return '${day.month}/${day.day} $memoText';
   }
   if (item.isAllDay) {
-    return zh ? '全天' : 'All day';
+    final allDayText = zh ? '全天' : 'All day';
+    if (!includeDay) {
+      return allDayText;
+    }
+    return '${day.month}/${day.day} $allDayText';
   }
 
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
   final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
   final effectiveEnd = item.endAt.isAfter(dayEnd) ? dayEnd : item.endAt;
-  return '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
+  final range = '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
+  if (!includeDay) {
+    return range;
+  }
+  return '${day.month}/${day.day} $range';
 }
 
 String _weekdayShort(bool zh, int weekday) {
