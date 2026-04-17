@@ -126,13 +126,14 @@ private class HuaJuanQuickCreateWidget : GlanceAppWidget() {
 private class HuaJuanAgendaListWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(156.dp, 156.dp),
-            DpSize(240.dp, 156.dp),
-            DpSize(240.dp, 240.dp),
             DpSize(324.dp, 240.dp),
+            DpSize(324.dp, 156.dp),
             DpSize(324.dp, 324.dp),
+            DpSize(408.dp, 156.dp),
             DpSize(408.dp, 324.dp),
             DpSize(408.dp, 408.dp),
+            DpSize(492.dp, 156.dp),
+            DpSize(492.dp, 240.dp),
             DpSize(492.dp, 408.dp),
         ),
     )
