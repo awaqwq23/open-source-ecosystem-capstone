@@ -184,16 +184,13 @@ class BuildHomeGridUseCase {
     final weekStart = visibleRange.start;
     final weekEnd = visibleRange.end.subtract(const Duration(days: 1));
     if (localeTag.startsWith('zh')) {
+      final originalLabel = weekStart.month == weekEnd.month
+          ? '${weekStart.year}年${weekStart.month}月第${_weekOfMonth(weekStart)}周'
+          : '${weekStart.year}年第${_weekOfYear(weekStart)}周';
       if (_isCurrentWeek(weekStart)) {
-        final weekNumber = weekStart.month == weekEnd.month
-            ? _weekOfMonth(weekStart)
-            : _weekOfYear(weekStart);
-        return '本周·第$weekNumber周';
+        return '本周·$originalLabel';
       }
-      if (weekStart.month == weekEnd.month) {
-        return '${weekStart.year}年${weekStart.month}月第${_weekOfMonth(weekStart)}周';
-      }
-      return '${weekStart.year}年第${_weekOfYear(weekStart)}周';
+      return originalLabel;
     }
     if (weekStart.month == weekEnd.month) {
       return 'Week ${_weekOfMonth(weekStart)} of ${DateFormat.yMMMM(localeTag).format(weekStart)}';
