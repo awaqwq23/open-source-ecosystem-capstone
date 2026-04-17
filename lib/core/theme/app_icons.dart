@@ -46,7 +46,7 @@ abstract final class AppIcons {
   static const IconData itemTypeCourse = Icons.school_outlined;
   static const IconData import = Icons.file_download_outlined;
   static const IconData web = Icons.public_outlined;
-  static const IconData submitCreate = Icons.add_circle_outline;
+  static const IconData submitCreate = Icons.check;
   static const IconData add = Icons.add;
   static const IconData complete = Icons.check_circle;
   static const IconData incomplete = Icons.radio_button_unchecked;
