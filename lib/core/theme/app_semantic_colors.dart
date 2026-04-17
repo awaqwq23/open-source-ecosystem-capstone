@@ -39,9 +39,8 @@ abstract final class AppSemanticColors {
     return theme.colorScheme.tertiary;
   }
 
-  static Color onAgendaAccent(ThemeData theme, Color accent) {
-    return ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
-        ? theme.colorScheme.onPrimary
-        : theme.colorScheme.onSurface;
+  static Color onAgendaAccent(Color accent) {
+    final brightness = ThemeData.estimateBrightnessForColor(accent);
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
   }
 }

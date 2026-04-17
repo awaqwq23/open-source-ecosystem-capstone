@@ -875,7 +875,7 @@ class _AgendaBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
     final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
-    final textBaseColor = AppSemanticColors.onAgendaAccent(theme, accent);
+    final textBaseColor = AppSemanticColors.onAgendaAccent(accent);
 
     return Positioned(
       left: left,
