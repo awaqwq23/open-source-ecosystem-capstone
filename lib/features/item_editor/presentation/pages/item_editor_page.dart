@@ -93,7 +93,10 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.l10n.editorSubmitSuccess)),
           );
-          if (context.canPop()) {
+          final currentPath = GoRouterState.of(context).uri.path;
+          final isSecondaryEditPage =
+              currentPath == AppRoutePaths.itemEditorFlow && next.isEditing;
+          if (isSecondaryEditPage || context.canPop()) {
             context.pop();
           }
         }
