@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/presentation/layout/home_grid_metrics.dart';
 import 'package:huajuan_agenda/features/home/presentation/viewmodels/home_header_view_model.dart';
@@ -874,7 +875,7 @@ class _AgendaBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
     final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
-    final textBaseColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+    final textBaseColor = AppSemanticColors.onAgendaAccent(accent);
 
     return Positioned(
       left: left,
@@ -914,7 +915,6 @@ class _AgendaBlock extends StatelessWidget {
                   : item.item.title;
               final courseInstructor = item.item.courseDetails.instructor.trim();
               final courseLocation = _resolveCourseLocation();
-              final courseDetailSpacing = compactHeight ? 1.0 : 2.0;
               final showDetails = isCourseItem
                   ? contentHeight >= _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
                   : detailsText.isNotEmpty &&
@@ -924,9 +924,7 @@ class _AgendaBlock extends StatelessWidget {
                   ? 2
                   : 1;
               final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
-              final detailsSpacing = isCourseItem
-                  ? courseDetailSpacing
-                  : _HomeGridLayoutSpec.itemDetailsSpacing;
+              final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
               final titleMaxLines = switch (contentHeight) {
                 < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
                 _ when isCourseItem &&
@@ -995,7 +993,6 @@ class _AgendaBlock extends StatelessWidget {
                                               fontWeight: FontWeight.normal,
                                             ),
                                           ),
-                                          SizedBox(height: courseDetailSpacing),
                                           Text(
                                             courseLocation.isEmpty ? '-' : courseLocation,
                                             maxLines: 2,
