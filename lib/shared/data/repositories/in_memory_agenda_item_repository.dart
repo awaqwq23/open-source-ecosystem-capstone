@@ -17,11 +17,15 @@ final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
   var _idSeed = 0;
+  var _hasMutated = false;
+  var _hydratedDeferred = false;
 
   @override
   List<AgendaItem> build() {
     final items = ref.read(agendaItemsBootstrapProvider);
     _idSeed = items.length;
+    _hasMutated = false;
+    _hydratedDeferred = false;
     return items;
   }
 
@@ -51,6 +55,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     ItemDraft draft, {
     bool isImportant = false,
   }) async {
+    _hasMutated = true;
     final now = DateTime.now();
     final nextOrder = state.isEmpty
         ? 0.0
@@ -83,6 +88,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       return null;
     }
 
+    _hasMutated = true;
     final current = state[index];
     final updated = _normalizeCompletionByType(current.copyWith(
       type: draft.type,
@@ -110,6 +116,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   @override
   Future<void> deleteItem(String id) async {
+    _hasMutated = true;
     state = state.where((item) => item.id != id).toList(growable: false);
     await _persist();
   }
@@ -121,6 +128,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       return null;
     }
 
+    _hasMutated = true;
     final current = state[index];
     if (!current.supportsManualCompletion) {
       return current;
@@ -148,6 +156,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       return null;
     }
 
+    _hasMutated = true;
     final current = state[index];
     if (current.type == ItemType.course) {
       return current;
@@ -167,6 +176,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   @override
   Future<void> reorderItems(List<String> orderedIds) async {
+    _hasMutated = true;
     final orderMap = <String, double>{};
     for (var index = 0; index < orderedIds.length; index++) {
       orderMap[orderedIds[index]] = index.toDouble();
@@ -186,6 +196,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     required String idPrefix,
     required List<AgendaItem> items,
   }) async {
+    _hasMutated = true;
     final preservedItems = [
       for (final item in state)
         if (!item.id.startsWith(idPrefix)) item,
@@ -196,6 +207,18 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     ];
     _idSeed = state.length;
     await _persist();
+  }
+
+  void hydrateFromBootstrap(List<AgendaItem> items) {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.isNotEmpty) {
+      return;
+    }
+    state = items;
+    _idSeed = items.length;
   }
 
   Future<void> _persist() {

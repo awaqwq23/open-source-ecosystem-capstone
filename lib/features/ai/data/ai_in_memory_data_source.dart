@@ -1,15 +1,23 @@
 import 'dart:convert';
 
-import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_bootstrap.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_chat_repository.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_service.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_memo_details.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
+import 'package:huajuan_agenda/shared/domain/value_objects/item_task_details.dart';
+import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
+import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
+import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 import 'package:openai_dart/openai_dart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,6 +57,18 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
             'content': item.content,
             'createdAt': item.createdAt.toIso8601String(),
             'role': item.role.name,
+            'kind': item.kind.name,
+            'citations': [
+              for (final citation in item.citations)
+                {
+                  'itemId': citation.itemId,
+                  'title': citation.title,
+                  'type': citation.type.name,
+                  'startAt': citation.startAt?.toIso8601String(),
+                  'endAt': citation.endAt?.toIso8601String(),
+                  'reason': citation.reason,
+                },
+            ],
           },
       ]),
     );
@@ -57,13 +77,9 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
   SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);
 }
 
-class OpenAiConfigurationException implements Exception {
-  const OpenAiConfigurationException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
+class OpenAiConfigurationException extends AiServiceException {
+  const OpenAiConfigurationException(String message)
+      : super(code: AiServiceErrorCode.configuration, message: message);
 }
 
 class OpenAiCompatibleAiService implements AiService {
@@ -72,42 +88,78 @@ class OpenAiCompatibleAiService implements AiService {
   final Ref _ref;
 
   @override
-  Stream<AiStreamEvent> sendMessage({
+  Future<AiResolvedMessage> resolveMessage({
     required String message,
     required List<AgendaItem> items,
-  }) async* {
+  }) async {
     final settings = _ref.read(appAiSettingsProvider);
     final client = _buildClient(settings);
-
-    final systemPrompt = _buildSystemPrompt(
-      basePrompt: settings.systemPrompt,
-      items: items,
-    );
-
-    final buffer = StringBuffer();
+    final now = DateTime.now();
 
     try {
-      yield const AiStreamStarted();
-      final stream = client.chat.completions.createStream(
+      final response = await client.chat.completions.create(
         ChatCompletionCreateRequest(
           model: settings.model.trim(),
           messages: [
-            ChatMessage.system(systemPrompt),
+            ChatMessage.system(
+              _buildResolverPrompt(
+                basePrompt: settings.systemPrompt,
+                now: now,
+                items: items,
+              ),
+            ),
             ChatMessage.user(message),
           ],
         ),
       );
 
-      await for (final event in stream) {
-        final delta = event.textDelta;
-        if (delta == null || delta.isEmpty) {
-          continue;
-        }
-        buffer.write(delta);
-        yield AiStreamDelta(delta);
+      final content = response.choices.isEmpty
+          ? ''
+          : (response.choices.first.message.content ?? '');
+      final payload = _extractJsonPayload(content);
+      final intent = _parseIntent(payload['intent'] as String?);
+      final reply = (payload['assistant_reply'] as String? ?? '').trim();
+
+      if (intent == AiResolvedIntentType.createItem) {
+        final createDraft = _parseCreateDraft(
+          payload['create_item'] as Map<String, dynamic>?,
+          now: now,
+          items: items,
+        );
+        return AiResolvedMessage(
+          intent: intent,
+          reply: reply.isEmpty ? '我已经整理好草稿，请确认后创建。' : reply,
+          createItemDraft: createDraft,
+        );
       }
 
-      yield AiStreamCompleted(buffer.toString().trim());
+      if (intent == AiResolvedIntentType.answer) {
+        return AiResolvedMessage(
+          intent: intent,
+          reply: reply.isEmpty ? '我暂时没有找到明确答案。' : reply,
+          citations: _parseCitations(
+            payload['citations'] as List<dynamic>?,
+            items: items,
+          ),
+        );
+      }
+
+      return AiResolvedMessage(
+        intent: AiResolvedIntentType.fallback,
+        reply: reply.isEmpty ? '我理解了你的消息，你可以继续补充需求。' : reply,
+      );
+    } on AiServiceException {
+      rethrow;
+    } on FormatException catch (error) {
+      throw AiServiceException(
+        code: AiServiceErrorCode.parse,
+        message: 'AI 返回内容解析失败：${error.message}',
+      );
+    } catch (_) {
+      throw const AiServiceException(
+        code: AiServiceErrorCode.network,
+        message: 'AI 服务暂不可用，请稍后再试。',
+      );
     } finally {
       client.close();
     }
@@ -147,33 +199,245 @@ class OpenAiCompatibleAiService implements AiService {
     );
   }
 
-  String _buildSystemPrompt({
+  String _buildResolverPrompt({
     required String basePrompt,
+    required DateTime now,
     required List<AgendaItem> items,
   }) {
-    final cleanedBasePrompt = basePrompt.trim();
-    if (items.isEmpty) {
-      return '$cleanedBasePrompt\n\n当前没有可参考的事项数据。';
+    final itemSummary = items.isEmpty
+        ? '[]'
+        : jsonEncode([
+            for (final item in items)
+              {
+                'id': item.id,
+                'type': item.type.name,
+                'title': item.title,
+                'details': item.details,
+                'location': item.location,
+                'startAt': item.startAt.toIso8601String(),
+                'endAt': item.endAt.toIso8601String(),
+                'deadline': item.deadline?.toIso8601String(),
+                'targetDate': item.targetDate.toIso8601String(),
+                'isImportant': item.isImportant,
+              },
+          ]);
+
+    return '''
+${basePrompt.trim()}
+
+你是“花卷日程”AI页解析器。你必须只输出一个 JSON 对象，不要输出 markdown。
+当前时间：${now.toIso8601String()}
+事项数据：$itemSummary
+
+输出 JSON schema：
+{
+  "intent": "create_item" | "answer" | "fallback",
+  "assistant_reply": "字符串，给用户的自然语言回复",
+  "create_item": {
+    "type": "schedule" | "task" | "memo",
+    "title": "字符串",
+    "details": "字符串，可空",
+    "location": "字符串，可空",
+    "start_at": "ISO8601，可空",
+    "end_at": "ISO8601，可空",
+    "deadline": "ISO8601，可空",
+    "target_date": "ISO8601，可空",
+    "estimated_minutes": 数字，可空,
+    "is_important": 布尔，可空
+  },
+  "citations": [
+    {
+      "item_id": "字符串",
+      "reason": "字符串，可空"
+    }
+  ]
+}
+
+规则：
+1. 当用户在“创建/新增/安排/提醒”时 intent=create_item。
+2. create_item 缺少必要字段时仍返回 create_item，并在 assistant_reply 中用自然语言追问缺失信息。
+3. 非必要字段允许为空，不要臆造。
+4. 当用户问“我有什么安排/冲突/空闲”等问题时 intent=answer，并尽量给 citations。
+5. 其余情况 intent=fallback。
+''';
+  }
+
+  Map<String, dynamic> _extractJsonPayload(String raw) {
+    final fenced = RegExp(r'```json\s*([\s\S]*?)```', caseSensitive: false).firstMatch(raw);
+    final candidate = fenced?.group(1)?.trim() ?? raw.trim();
+    final firstBrace = candidate.indexOf('{');
+    final lastBrace = candidate.lastIndexOf('}');
+    if (firstBrace < 0 || lastBrace <= firstBrace) {
+      throw const FormatException('未找到 JSON 对象。');
+    }
+    final jsonText = candidate.substring(firstBrace, lastBrace + 1);
+    final decoded = jsonDecode(jsonText);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('AI 输出不是 JSON 对象。');
+    }
+    return decoded;
+  }
+
+  AiResolvedIntentType _parseIntent(String? raw) {
+    return switch ((raw ?? '').trim()) {
+      'create_item' => AiResolvedIntentType.createItem,
+      'answer' => AiResolvedIntentType.answer,
+      _ => AiResolvedIntentType.fallback,
+    };
+  }
+
+  AiCreateItemDraft _parseCreateDraft(
+    Map<String, dynamic>? createMap, {
+    required DateTime now,
+    required List<AgendaItem> items,
+  }) {
+    final map = createMap ?? const <String, dynamic>{};
+    final type = _itemTypeFromString(map['type'] as String?) ?? ItemType.schedule;
+    final title = (map['title'] as String? ?? '').trim();
+    final details = (map['details'] as String? ?? '').trim();
+    final location = (map['location'] as String? ?? '').trim();
+    final startAt = DateTime.tryParse((map['start_at'] as String? ?? '').trim());
+    final endAt = DateTime.tryParse((map['end_at'] as String? ?? '').trim());
+    final deadline = DateTime.tryParse((map['deadline'] as String? ?? '').trim());
+    final targetDate = DateTime.tryParse((map['target_date'] as String? ?? '').trim());
+    final estimatedMinutes = (map['estimated_minutes'] as num?)?.toInt();
+    final isImportant = map['is_important'] as bool? ?? false;
+
+    final normalizedStart = startAt ?? _roundToHalfHour(now);
+    final normalizedEnd = (endAt ?? normalizedStart.add(const Duration(hours: 1)))
+        .isAfter(normalizedStart)
+        ? (endAt ?? normalizedStart.add(const Duration(hours: 1)))
+        : normalizedStart.add(const Duration(hours: 1));
+    final normalizedTargetDate = DateTime(
+      (targetDate ?? normalizedStart).year,
+      (targetDate ?? normalizedStart).month,
+      (targetDate ?? normalizedStart).day,
+    );
+    final normalizedEstimate = Duration(
+      minutes: (estimatedMinutes == null || estimatedMinutes <= 0)
+          ? 60
+          : estimatedMinutes,
+    );
+
+    final draft = ItemDraft(
+      type: type,
+      title: title,
+      details: details,
+      location: location,
+      color: ItemColorOption.sky,
+      reminder: ReminderOption.none,
+      repeatRule: RepeatRule.none,
+      scheduleDetails: ItemScheduleDetails(
+        range: DateTimeRangeValue(start: normalizedStart, end: normalizedEnd),
+        isAllDay: false,
+      ),
+      taskDetails: ItemTaskDetails(
+        schedule: ItemScheduleDetails(
+          range: DateTimeRangeValue(start: normalizedStart, end: normalizedEnd),
+          isAllDay: false,
+        ),
+        deadline: deadline,
+      ),
+      memoDetails: ItemMemoDetails(
+        targetDate: normalizedTargetDate,
+        estimatedDuration: normalizedEstimate,
+      ),
+    );
+
+    final missingRequired = <String>[
+      if (title.isEmpty) 'title',
+      if ((type == ItemType.schedule || type == ItemType.task) && startAt == null) 'start_at',
+      if ((type == ItemType.schedule || type == ItemType.task) && endAt == null) 'end_at',
+      if (type == ItemType.memo && targetDate == null) 'target_date',
+    ];
+
+    return AiCreateItemDraft(
+      draft: draft,
+      isImportant: isImportant,
+      missingRequired: missingRequired,
+      conflicts: _findConflicts(draft: draft, items: items),
+    );
+  }
+
+  List<AiDraftConflict> _findConflicts({
+    required ItemDraft draft,
+    required List<AgendaItem> items,
+  }) {
+    if (draft.type == ItemType.memo) {
+      return const [];
+    }
+    final start = draft.startAt;
+    final end = draft.endAt;
+    if (!end.isAfter(start)) {
+      return const [];
+    }
+    return [
+      for (final item in items)
+        if (item.endAt.isAfter(start) && item.startAt.isBefore(end))
+          AiDraftConflict(
+            itemId: item.id,
+            title: item.title,
+            overlapStart: item.startAt.isAfter(start) ? item.startAt : start,
+            overlapEnd: item.endAt.isBefore(end) ? item.endAt : end,
+          ),
+    ];
+  }
+
+  List<AiCitation> _parseCitations(
+    List<dynamic>? raw, {
+    required List<AgendaItem> items,
+  }) {
+    if (raw == null || raw.isEmpty) {
+      return const [];
     }
 
-    final now = DateTime.now();
-    final summary = items
-        .map(
-          (item) => [
-            '类型:${item.type.name}',
-            '标题:${item.title}',
-            if (item.details.trim().isNotEmpty) '详情:${item.details.trim()}',
-            '开始:${item.startAt.toIso8601String()}',
-            '结束:${item.endAt.toIso8601String()}',
-            if (item.deadline != null) '截止:${item.deadline!.toIso8601String()}',
-            if (item.location.trim().isNotEmpty) '地点:${item.location.trim()}',
-            '重要:${item.isImportant ? '是' : '否'}',
-            '完成:${item.isEffectivelyCompleted(now) ? '是' : '否'}',
-          ].join('；'),
-        )
-        .join('\n');
+    final byId = {
+      for (final item in items) item.id: item,
+    };
+    final citations = <AiCitation>[];
+    for (final row in raw) {
+      if (row is! Map<String, dynamic>) {
+        continue;
+      }
+      final itemId = (row['item_id'] as String? ?? '').trim();
+      if (itemId.isEmpty) {
+        continue;
+      }
+      final matched = byId[itemId];
+      if (matched == null) {
+        continue;
+      }
+      citations.add(
+        AiCitation(
+          itemId: matched.id,
+          title: matched.title,
+          type: matched.type,
+          startAt: matched.startAt,
+          endAt: matched.endAt,
+          reason: (row['reason'] as String?)?.trim(),
+        ),
+      );
+    }
+    return citations;
+  }
 
-    return '$cleanedBasePrompt\n\n以下是当前事项摘要，请仅以这些信息为依据回答：\n$summary';
+  ItemType? _itemTypeFromString(String? raw) {
+    return switch ((raw ?? '').trim()) {
+      'schedule' => ItemType.schedule,
+      'task' => ItemType.task,
+      'memo' => ItemType.memo,
+      _ => null,
+    };
+  }
+
+  DateTime _roundToHalfHour(DateTime time) {
+    return DateTime(
+      time.year,
+      time.month,
+      time.day,
+      time.hour,
+      time.minute >= 30 ? 30 : 0,
+    );
   }
 }
 
@@ -189,4 +453,3 @@ final aiChatRepositoryNotifierProvider = Provider<AiChatRepository>((ref) {
 final aiServiceProvider = Provider<AiService>((ref) {
   return OpenAiCompatibleAiService(ref);
 });
-

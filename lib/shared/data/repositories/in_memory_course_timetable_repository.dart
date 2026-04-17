@@ -14,11 +14,15 @@ final courseTimetableBootstrapProvider = Provider<CourseTimetableStore>((ref) {
 class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     implements CourseTimetableRepository {
   var _idSeed = 0;
+  var _hasMutated = false;
+  var _hydratedDeferred = false;
 
   @override
   CourseTimetableStore build() {
     final boot = ref.read(courseTimetableBootstrapProvider);
     _idSeed = boot.timetables.length;
+    _hasMutated = false;
+    _hydratedDeferred = false;
     return boot;
   }
 
@@ -41,6 +45,7 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     required CourseTimetableSource source,
     String termLabel = '',
   }) async {
+    _hasMutated = true;
     final now = DateTime.now();
     final timetable = CourseTimetable(
       id: 'timetable_${_idSeed++}',
@@ -63,6 +68,7 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     if (normalized.isEmpty) {
       return;
     }
+    _hasMutated = true;
     state = state.copyWith(
       timetables: [
         for (final timetable in state.timetables)
@@ -80,12 +86,14 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     if (timetableId != null && findById(timetableId) == null) {
       return;
     }
+    _hasMutated = true;
     state = state.copyWith(activeTimetableId: timetableId);
     await _persist();
   }
 
   @override
   Future<void> deleteTimetable(String id) async {
+    _hasMutated = true;
     final remaining = [
       for (final timetable in state.timetables)
         if (timetable.id != id) timetable,
@@ -99,6 +107,18 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       clearActiveTimetableId: nextActiveId == null,
     );
     await _persist();
+  }
+
+  void hydrateFromBootstrap(CourseTimetableStore store) {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.timetables.isNotEmpty || state.activeTimetableId != null) {
+      return;
+    }
+    state = store;
+    _idSeed = store.timetables.length;
   }
 
   Future<void> _persist() {

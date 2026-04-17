@@ -189,13 +189,16 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
           );
         }();
 
-  final baseViewData = HomeHeaderViewModel._gridBuilder.build(
-    localeTag: query.localeTag,
-    anchor: state.anchor,
-    scope: scope,
-    selectedDate: state.selectedDate,
+  final baseViewData = HomeViewData(
+    scope: previewGrid.scope,
+    periodLabel: previewGrid.periodLabel,
+    periodSubtitle: previewGrid.periodSubtitle,
+    metrics: previewGrid.metrics,
+    visibleRange: previewGrid.visibleRange,
+    periodSelection: previewGrid.periodSelection,
     selectedCell: selectedCell,
-    settings: settings,
+    columns: previewGrid.columns,
+    timeSlots: previewGrid.timeSlots,
     items: laidOutItems,
   );
   final semesterWeekLabel = _buildSemesterWeekLabel(

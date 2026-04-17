@@ -38,6 +38,36 @@ class AppBootstrapData {
   final CourseTimetableStore courseTimetableStore;
 }
 
+class AppStartupSettingsData {
+  const AppStartupSettingsData({
+    required this.locale,
+    required this.themeMode,
+    required this.homeSettings,
+    required this.aiSettings,
+    required this.widgetSettings,
+    required this.navigationSettings,
+  });
+
+  final Locale locale;
+  final ui.ThemeMode themeMode;
+  final HomeSettings homeSettings;
+  final AiSettings aiSettings;
+  final WidgetSettings widgetSettings;
+  final NavigationSettings navigationSettings;
+}
+
+class AppDeferredBootstrapData {
+  const AppDeferredBootstrapData({
+    required this.aiMessages,
+    required this.agendaItems,
+    required this.courseTimetableStore,
+  });
+
+  final List<AiChatMessage> aiMessages;
+  final List<AgendaItem> agendaItems;
+  final CourseTimetableStore courseTimetableStore;
+}
+
 abstract final class AppBootstrapStorageKeys {
   static const locale = 'settings.locale';
   static const themeMode = 'settings.themeMode';
@@ -56,13 +86,34 @@ class AppBootstrapLoader {
   const AppBootstrapLoader._();
 
   static Future<AppBootstrapData> load(SharedPreferences preferences) async {
+    final startup = loadStartupSettings(preferences);
+    final deferred = loadDeferredData(preferences);
     return AppBootstrapData(
+      locale: startup.locale,
+      themeMode: startup.themeMode,
+      homeSettings: startup.homeSettings,
+      aiSettings: startup.aiSettings,
+      widgetSettings: startup.widgetSettings,
+      navigationSettings: startup.navigationSettings,
+      aiMessages: deferred.aiMessages,
+      agendaItems: deferred.agendaItems,
+      courseTimetableStore: deferred.courseTimetableStore,
+    );
+  }
+
+  static AppStartupSettingsData loadStartupSettings(SharedPreferences preferences) {
+    return AppStartupSettingsData(
       locale: _readLocale(preferences),
       themeMode: _readThemeMode(preferences),
       homeSettings: _readHomeSettings(preferences),
       aiSettings: _readAiSettings(preferences),
       widgetSettings: _readWidgetSettings(preferences),
       navigationSettings: _readNavigationSettings(preferences),
+    );
+  }
+
+  static AppDeferredBootstrapData loadDeferredData(SharedPreferences preferences) {
+    return AppDeferredBootstrapData(
       aiMessages: _readAiMessages(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
