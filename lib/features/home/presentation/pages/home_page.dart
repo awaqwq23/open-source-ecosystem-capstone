@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
+import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/presentation/layout/home_grid_metrics.dart';
@@ -30,6 +32,7 @@ class HomePage extends ConsumerWidget {
     final allowMonthLayout = _HomeGridLayoutSpec.canFitMonthLayout(width) &&
         ResponsiveBreakpoints.of(context).largerThan(TABLET);
     final homeSettings = ref.watch(appHomeSettingsProvider);
+    final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
     final viewData = ref.watch(
       homeViewDataProvider(
         HomeViewQuery(
@@ -132,6 +135,7 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
+                    isBootstrapReady: bootstrapPhase == AppBootstrapPhase.ready,
                     itemOpacityFactor: (homeSettings.itemOpacityPercent.clamp(0, 100) as int) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),
@@ -273,6 +277,7 @@ class _DemoModeBanner extends StatelessWidget {
 class _HomeGrid extends StatefulWidget {
   const _HomeGrid({
     required this.viewData,
+    required this.isBootstrapReady,
     required this.itemOpacityFactor,
     required this.onPrevious,
     required this.onNext,
@@ -283,6 +288,7 @@ class _HomeGrid extends StatefulWidget {
   });
 
   final HomeViewData viewData;
+  final bool isBootstrapReady;
   final double itemOpacityFactor;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
@@ -297,6 +303,7 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
+  bool _gridVisibleMarked = false;
 
   @override
   void dispose() {
@@ -306,6 +313,7 @@ class _HomeGridState extends State<_HomeGrid> {
 
   @override
   Widget build(BuildContext context) {
+    _scheduleGridVisibleMarkIfNeeded();
     final theme = Theme.of(context);
 
     return ClipRRect(
@@ -400,6 +408,35 @@ class _HomeGridState extends State<_HomeGrid> {
         ),
       ),
     );
+  }
+
+  void _scheduleGridVisibleMarkIfNeeded() {
+    if (_gridVisibleMarked || !widget.isBootstrapReady || !mounted) {
+      return;
+    }
+    _gridVisibleMarked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final probe = StartupPerfProbe.instance;
+      probe.markOnce(
+        'home_grid_with_items_visible',
+        extras: <String, Object?>{
+          'columns': widget.viewData.columns.length,
+          'time_slots': widget.viewData.timeSlots.length,
+          'item_count': widget.viewData.items.length,
+          'scope': widget.viewData.scope.name,
+        },
+      );
+      probe.emitSummary(
+        endEvent: 'home_grid_with_items_visible',
+        extras: <String, Object?>{
+          'sla_target_ms': 500,
+          'sla_type': 'grid_with_items_visible',
+        },
+      );
+    });
   }
 
   void _handleTap(Offset position, _HomeGridLayout layout) {

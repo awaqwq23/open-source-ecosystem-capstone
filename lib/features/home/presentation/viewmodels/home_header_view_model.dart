@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/features/home/data/home_demo_items.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/build_home_grid.dart';
@@ -144,6 +145,14 @@ final homeHeaderViewModelProvider =
 );
 
 final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, query) {
+  final probe = StartupPerfProbe.instance;
+  probe.markOnce(
+    'home_viewdata_provider_first',
+    extras: <String, Object?>{
+      'allow_month_layout': query.allowMonthLayout,
+      'locale': query.localeTag,
+    },
+  );
   final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
@@ -163,6 +172,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     items: const [],
   );
   final shouldLoadItems = bootstrapPhase == AppBootstrapPhase.ready;
+  if (shouldLoadItems) {
+    probe.markOnce('home_viewdata_ready_phase_observed');
+  }
   final visibleItems = !shouldLoadItems
       ? const <AgendaItem>[]
       : settings.showDemoData

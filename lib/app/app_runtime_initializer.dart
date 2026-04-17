@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
@@ -53,6 +54,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       return;
     }
     _initialized = true;
+    StartupPerfProbe.instance.markOnce('runtime_setup_start');
     final service = ref.read(homeWidgetSyncServiceProvider);
     unawaited(service.initialize());
     _subs.add(
@@ -70,36 +72,56 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _subs.add(
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
+    StartupPerfProbe.instance.markOnce('runtime_setup_end');
     unawaited(_hydrateDeferredBootstrapData(service));
   }
 
   Future<void> _hydrateDeferredBootstrapData(HomeWidgetSyncService service) async {
+    final probe = StartupPerfProbe.instance;
+    probe.markOnce('deferred_hydrate_start');
     ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.hydrating;
     try {
+      probe.markOnce('deferred_payload_decode_start');
       final payload = await AppBootstrapLoader.loadDeferredPayloadInBackground(widget.preferences);
+      probe.markOnce(
+        'deferred_payload_decode_end',
+        extras: <String, Object?>{
+          'agenda_json_count': payload.agendaItemsJson.length,
+          'course_json_count': payload.courseTimetablesJson.length,
+          'ai_json_count': payload.aiMessagesJson.length,
+        },
+      );
       if (!mounted) {
         return;
       }
+      probe.markOnce('agenda_hydrate_start');
       await ref
           .read(agendaItemRepositoryProvider.notifier)
           .hydrateFromSerializedBootstrap(payload.agendaItemsJson);
+      probe.markOnce('agenda_hydrate_end');
+      probe.markOnce('course_hydrate_start');
       await ref
           .read(courseTimetableRepositoryProvider.notifier)
           .hydrateFromSerializedBootstrap(
             timetablesJson: payload.courseTimetablesJson,
             activeTimetableId: payload.activeCourseTimetableId,
           );
+      probe.markOnce('course_hydrate_end');
+      probe.markOnce('ai_hydrate_start');
       await ref
           .read(aiChatRepositoryProvider.notifier)
           .hydrateFromSerializedBootstrap(payload.aiMessagesJson);
+      probe.markOnce('ai_hydrate_end');
     } finally {
       if (mounted) {
         ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
+        probe.markOnce('bootstrap_phase_ready');
       }
     }
     if (mounted) {
       service.syncDebounced();
     }
+    probe.markOnce('deferred_hydrate_end');
   }
 
   @override

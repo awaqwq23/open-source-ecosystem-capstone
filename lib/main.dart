@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/app/app.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
@@ -13,10 +14,20 @@ import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
+  final startupProbe = StartupPerfProbe.instance;
+  startupProbe.startMainStopwatchIfNeeded();
+  startupProbe.markOnce('main_enter');
   WidgetsFlutterBinding.ensureInitialized();
-  final preferences = await SharedPreferences.getInstance();
-  final startup = AppBootstrapLoader.loadStartupSettings(preferences);
+  startupProbe.markOnce('widgets_binding_ready');
+  startupProbe.installFrameTimingObserver();
+  await startupProbe.bootstrapAndroidStart();
 
+  final preferences = await SharedPreferences.getInstance();
+  startupProbe.markOnce('shared_preferences_ready');
+  final startup = AppBootstrapLoader.loadStartupSettings(preferences);
+  startupProbe.markOnce('startup_settings_ready');
+
+  startupProbe.markOnce('run_app_called');
   runApp(
     ProviderScope(
       overrides: [
@@ -39,4 +50,8 @@ Future<void> main() async {
       ),
     ),
   );
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    startupProbe.markOnce('first_post_frame_callback');
+  });
 }
