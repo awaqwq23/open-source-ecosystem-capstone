@@ -4,15 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.background
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.GlanceId
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -23,14 +26,10 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.layout.defaultWeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import androidx.glance.unit.DpSize
-import androidx.glance.unit.dp
-import androidx.glance.unit.sp
 import com.example.huajuan_agenda.MainActivity
 import com.example.huajuan_agenda.R
 import kotlin.math.max
@@ -218,7 +217,7 @@ private class HuaJuanWeekGridWidget : GlanceAppWidget() {
                     maxLines = 1,
                 )
                 Spacer(modifier = GlanceModifier.height(8.dp))
-                WeekGridPanel(payload)
+                WeekGridPanel(payload.weekGrid)
                 Spacer(modifier = GlanceModifier.height(8.dp))
                 DenseRows(rows = payload.weekGrid.rows, maxRows = maxRows)
             }
@@ -311,7 +310,7 @@ private fun WeekGridPanel(model: WeekGridWidgetModel) {
             model.headers.take(7).forEach { header ->
                 Text(
                     text = header,
-                    modifier = GlanceModifier.defaultWeight(),
+                    modifier = GlanceModifier,
                     style = tertiaryStyle(),
                     maxLines = 1,
                 )
@@ -325,7 +324,7 @@ private fun WeekGridPanel(model: WeekGridWidgetModel) {
             model.cells.take(7).forEach { cell ->
                 Text(
                     text = cell,
-                    modifier = GlanceModifier.defaultWeight(),
+                    modifier = GlanceModifier,
                     style = bodyStyle(),
                     maxLines = 2,
                 )
@@ -361,21 +360,21 @@ private fun TrioRow(model: QuickCreateWidgetModel, compact: Boolean) {
         QuickCreateButton(
             text = model.scheduleLabel,
             uri = "huajuan://app/item-editor?presetType=schedule&source=widget",
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier,
             compact = compact,
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         QuickCreateButton(
             text = model.taskLabel,
             uri = "huajuan://app/item-editor?presetType=task&source=widget",
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier,
             compact = compact,
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         QuickCreateButton(
             text = model.memoLabel,
             uri = "huajuan://app/item-editor?presetType=memo&source=widget",
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier,
             compact = compact,
         )
     }
@@ -388,14 +387,14 @@ private fun QuadGrid(model: QuickCreateWidgetModel) {
             QuickCreateButton(
                 text = "+",
                 uri = "huajuan://app/item-editor?source=widget",
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier,
                 compact = true,
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             QuickCreateButton(
                 text = model.scheduleLabel,
                 uri = "huajuan://app/item-editor?presetType=schedule&source=widget",
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier,
                 compact = true,
             )
         }
@@ -404,14 +403,14 @@ private fun QuadGrid(model: QuickCreateWidgetModel) {
             QuickCreateButton(
                 text = model.taskLabel,
                 uri = "huajuan://app/item-editor?presetType=task&source=widget",
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier,
                 compact = true,
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             QuickCreateButton(
                 text = model.memoLabel,
                 uri = "huajuan://app/item-editor?presetType=memo&source=widget",
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier,
                 compact = true,
             )
         }
@@ -426,7 +425,7 @@ private fun QuickCreateLine(icon: String, text: String, uri: String) {
         QuickCreateButton(
             text = text,
             uri = uri,
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier,
             compact = false,
         )
     }
