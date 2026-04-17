@@ -29,7 +29,6 @@ import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.layout.defaultWeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -395,10 +394,13 @@ private fun AgendaTwoColumnPanel(
     leftMaxRows: Int,
     rightMaxRows: Int,
 ) {
+    val size = LocalSize.current
+    val columnWidth = ((size.width.value - 13f) / 2f).coerceAtLeast(96f).dp
+
     Row(modifier = GlanceModifier.fillMaxWidth()) {
         Column(
             modifier = GlanceModifier
-                .defaultWeight()
+                .width(columnWidth)
                 .padding(end = 4.dp),
         ) {
             Text(text = model.leftTitle, style = bodyStrongStyle(), maxLines = 1)
@@ -413,7 +415,7 @@ private fun AgendaTwoColumnPanel(
         ) {}
         Column(
             modifier = GlanceModifier
-                .defaultWeight()
+                .width(columnWidth)
                 .padding(start = 4.dp),
         ) {
             Text(text = model.rightTitle, style = bodyStrongStyle(), maxLines = 1)
@@ -439,7 +441,7 @@ private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
                         .background(accentColorFor(row.typeKey)),
                 ) {}
                 Spacer(modifier = GlanceModifier.width(6.dp))
-                Column(modifier = GlanceModifier.defaultWeight()) {
+                Column(modifier = GlanceModifier.fillMaxWidth()) {
                     Text(text = row.title, style = bodyStrongStyle(), maxLines = 1)
                     val subText = row.subText.ifBlank { row.meta }
                     if (subText.isNotBlank()) {
