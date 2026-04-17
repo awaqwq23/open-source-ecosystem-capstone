@@ -71,7 +71,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.itemEditor,
                 builder: (context, state) {
-                  return ItemEditorPage(args: _resolveItemEditorArgs(state));
+                  return ProviderScope(
+                    key: state.pageKey,
+                    child: ItemEditorPage(args: _resolveItemEditorArgs(state)),
+                  );
                 },
               ),
             ],
@@ -135,7 +138,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
           context,
           state,
-          ItemEditorPage(args: _resolveItemEditorArgs(state)),
+          ProviderScope(
+            key: state.pageKey,
+            child: ItemEditorPage(args: _resolveItemEditorArgs(state)),
+          ),
           type: SharedAxisTransitionType.horizontal,
         ),
       ),
