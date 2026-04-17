@@ -49,6 +49,7 @@ class AppRuntimeInitializer extends ConsumerStatefulWidget {
 
 class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
   final List<ProviderSubscription<dynamic>> _subs = [];
+  HomeWidgetSyncService? _homeWidgetSyncService;
   bool _initialized = false;
 
   @override
@@ -67,11 +68,40 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     final probe = StartupPerfProbe.instance;
     probe.markOnce('runtime_setup_start');
     probe.startStage('runtime_setup_total');
+    probe.markOnce('runtime_setup_end');
+    probe.startStage('runtime_load_noncritical_schedule');
+    unawaited(_loadNonCriticalStartupSettings());
+    probe.endStage('runtime_load_noncritical_schedule');
+    probe.startStage('runtime_bootstrap_phase_set_ready');
+    ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
+    probe.endStage('runtime_bootstrap_phase_set_ready');
+    probe.markOnce('home_minimal_ready');
+    probe.markOnce('home_full_ready');
+    probe.markOnce('bootstrap_phase_ready');
+    probe.startStage('runtime_widget_sync_deferred_schedule');
+    unawaited(_setupDeferredWidgetSync());
+    probe.endStage('runtime_widget_sync_deferred_schedule');
+    probe.endStage('runtime_setup_total');
+  }
+
+  Future<void> _setupDeferredWidgetSync() async {
+    final probe = StartupPerfProbe.instance;
+    probe.mark(
+      'runtime_widget_sync_deferred_wait_start',
+      extras: const <String, Object?>{
+        'delay_ms': 3000,
+      },
+    );
+    await Future<void>.delayed(const Duration(seconds: 3));
+    if (!mounted) {
+      probe.mark('runtime_widget_sync_deferred_cancelled');
+      return;
+    }
+
+    probe.startStage('runtime_widget_sync_init_and_listeners');
     final service = ref.read(homeWidgetSyncServiceProvider);
-    probe.startStage('runtime_home_widget_service_init_schedule');
-    unawaited(service.initialize());
-    probe.endStage('runtime_home_widget_service_init_schedule');
-    probe.startStage('runtime_provider_listen_register');
+    _homeWidgetSyncService = service;
+    await service.initialize();
     _subs.add(
       ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.syncDebounced()),
     );
@@ -87,21 +117,13 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _subs.add(
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
-    probe.endStage('runtime_provider_listen_register');
-    probe.markOnce('runtime_setup_end');
-    probe.startStage('runtime_load_noncritical_schedule');
-    unawaited(_loadNonCriticalStartupSettings());
-    probe.endStage('runtime_load_noncritical_schedule');
-    probe.startStage('runtime_bootstrap_phase_set_ready');
-    ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
-    probe.endStage('runtime_bootstrap_phase_set_ready');
-    probe.markOnce('home_minimal_ready');
-    probe.markOnce('home_full_ready');
-    probe.markOnce('bootstrap_phase_ready');
-    probe.startStage('runtime_widget_sync_debounced_trigger');
     service.syncDebounced();
-    probe.endStage('runtime_widget_sync_debounced_trigger');
-    probe.endStage('runtime_setup_total');
+    probe.endStage(
+      'runtime_widget_sync_init_and_listeners',
+      extras: <String, Object?>{
+        'listener_count': _subs.length,
+      },
+    );
   }
 
   Future<void> _loadNonCriticalStartupSettings() async {
@@ -136,7 +158,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     for (final sub in _subs) {
       sub.close();
     }
-    ref.read(homeWidgetSyncServiceProvider).dispose();
+    _homeWidgetSyncService?.dispose();
     super.dispose();
   }
 

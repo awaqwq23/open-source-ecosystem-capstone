@@ -25,12 +25,15 @@ Future<void> main() async {
   startupProbe.markOnce('widgets_binding_ready');
   startupProbe.installFrameTimingObserver();
   startupProbe.startStage('android_bridge_bootstrap');
-  await startupProbe.bootstrapAndroidStart();
-  startupProbe.endStage('android_bridge_bootstrap');
-
   startupProbe.startStage('shared_preferences_get_instance');
-  final preferences = await SharedPreferences.getInstance();
-  startupProbe.endStage('shared_preferences_get_instance');
+  final androidBridgeFuture = startupProbe.bootstrapAndroidStart().whenComplete(() {
+    startupProbe.endStage('android_bridge_bootstrap');
+  });
+  final preferencesFuture = SharedPreferences.getInstance().whenComplete(() {
+    startupProbe.endStage('shared_preferences_get_instance');
+  });
+  final preferences = await preferencesFuture;
+  await androidBridgeFuture;
   startupProbe.startStage('load_critical_startup_settings');
   final startup = AppBootstrapLoader.loadCriticalStartupSettings(preferences);
   startupProbe.endStage('load_critical_startup_settings');

@@ -10,6 +10,7 @@ import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
 import 'package:huajuan_agenda/shared/domain/repositories/agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
   return const [];
@@ -18,6 +19,8 @@ final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
   static const _hydrateChunkSize = 200;
+  static const _windowWeekStoragePrefix = 'agenda.items.window.week:';
+  static const _windowMonthStoragePrefix = 'agenda.items.window.month:';
 
   var _idSeed = 0;
   var _hasMutated = false;
@@ -309,7 +312,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         if (_belongsToCurrentWeek(item, weekStart: weekStart, weekEndExclusive: weekEndExclusive))
           AgendaItemStorageMapper.toJson(item),
     ];
-    return Future.wait([
+    final pendingWrites = <Future<bool>>[
       prefs.setString(
         AppBootstrapStorageKeys.agendaItems,
         jsonEncode(allItemsJson),
@@ -322,7 +325,30 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         AppBootstrapStorageKeys.agendaItemsCurrentWeekStart,
         weekStart.toIso8601String(),
       ),
-    ]).then((_) {});
+    ];
+
+    for (final windowKey in _loadedWindowKeys) {
+      final range = _resolveWindowRange(windowKey);
+      if (range == null) {
+        continue;
+      }
+      final itemsJson = [
+        for (final item in state)
+          if (_belongsToWindow(
+            item,
+            startInclusive: range.start,
+            endExclusive: range.end,
+          ))
+            AgendaItemStorageMapper.toJson(item),
+      ];
+      pendingWrites.add(
+        prefs.setString(
+          _windowStorageKey(windowKey),
+          jsonEncode(itemsJson),
+        ),
+      );
+    }
+    return Future.wait(pendingWrites).then((_) {});
   }
 
   bool hasLoadedWindow(String windowKey) {
@@ -380,118 +406,71 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         return;
       }
 
-      final readStartUs = loadTimer.elapsedMicroseconds;
-      final raw = prefs.getString(AppBootstrapStorageKeys.agendaItems);
-      final readEndUs = loadTimer.elapsedMicroseconds;
+      final cacheStorageKeys = _candidateCacheStorageKeys(
+        prefs: prefs,
+        windowKey: windowKey,
+      );
+      String? cacheRaw;
+      String? hitStorageKey;
+      final cacheReadStartUs = loadTimer.elapsedMicroseconds;
+      for (final key in cacheStorageKeys) {
+        final raw = prefs.getString(key);
+        if (raw != null && raw.isNotEmpty) {
+          cacheRaw = raw;
+          hitStorageKey = key;
+          break;
+        }
+      }
+      final cacheReadEndUs = loadTimer.elapsedMicroseconds;
       probe.mark(
-        'home_window_storage_raw_read',
+        'home_window_storage_cache_lookup',
         extras: <String, Object?>{
           'load_seq': loadSeq,
           'window_key': windowKey,
-          'raw_length': raw?.length ?? 0,
-          'read_cost_ms': ((readEndUs - readStartUs) / 1000).toStringAsFixed(3),
+          'cache_hit': cacheRaw != null,
+          'storage_key': hitStorageKey,
+          'lookup_keys': cacheStorageKeys.length,
+          'read_cost_ms': ((cacheReadEndUs - cacheReadStartUs) / 1000).toStringAsFixed(3),
         },
       );
-      if (raw == null || raw.isEmpty) {
-        _loadedWindowKeys.add(windowKey);
-        state = [...state];
-        probe.mark(
-          'home_window_storage_load_end',
-          extras: <String, Object?>{
-            'load_seq': loadSeq,
-            'window_key': windowKey,
-            'reason': 'raw_empty',
-            'loaded_items': 0,
-            'state_items': state.length,
-            'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
-          },
-        );
-        return;
-      }
-
-      List<dynamic> decoded;
-      final decodeStartUs = loadTimer.elapsedMicroseconds;
-      try {
-        final json = jsonDecode(raw);
-        decoded = json is List<dynamic> ? json : const [];
-      } catch (_) {
-        decoded = const [];
-      }
-      final decodeEndUs = loadTimer.elapsedMicroseconds;
-      probe.mark(
-        'home_window_storage_json_decoded',
-        extras: <String, Object?>{
-          'load_seq': loadSeq,
-          'window_key': windowKey,
-          'decoded_count': decoded.length,
-          'decode_cost_ms': ((decodeEndUs - decodeStartUs) / 1000).toStringAsFixed(3),
-        },
-      );
-
-      if (decoded.isEmpty) {
-        _loadedWindowKeys.add(windowKey);
-        state = [...state];
-        probe.mark(
-          'home_window_storage_load_end',
-          extras: <String, Object?>{
-            'load_seq': loadSeq,
-            'window_key': windowKey,
-            'reason': 'decoded_empty',
-            'loaded_items': 0,
-            'state_items': state.length,
-            'elapsed_ms': (loadTimer.elapsedMicroseconds / 1000).toStringAsFixed(3),
-          },
-        );
-        return;
-      }
 
       final windowItems = <AgendaItem>[];
-      var parsedCount = 0;
-      var matchedTypeCount = 0;
-      var matchedRangeCount = 0;
-      final filterStartUs = loadTimer.elapsedMicroseconds;
-      for (var index = 0; index < decoded.length; index += _hydrateChunkSize) {
-        final end = (index + _hydrateChunkSize).clamp(0, decoded.length);
-        for (final itemRaw in decoded.sublist(index, end)) {
-          if (itemRaw is! Map<Object?, Object?>) {
-            continue;
-          }
-          final map = itemRaw.map(
-            (key, value) => MapEntry(key is String ? key : key.toString(), value),
+      var source = 'cache';
+      var fallbackPath = false;
+
+      if (cacheRaw != null) {
+        windowItems.addAll(
+          await _decodeAndFilterWindowItems(
+            raw: cacheRaw,
+            startInclusive: startInclusive,
+            endExclusive: endExclusive,
+          ),
+        );
+      } else {
+        source = 'all_items_fallback';
+        fallbackPath = true;
+        final readStartUs = loadTimer.elapsedMicroseconds;
+        final raw = prefs.getString(AppBootstrapStorageKeys.agendaItems);
+        final readEndUs = loadTimer.elapsedMicroseconds;
+        probe.mark(
+          'home_window_storage_raw_read',
+          extras: <String, Object?>{
+            'load_seq': loadSeq,
+            'window_key': windowKey,
+            'raw_length': raw?.length ?? 0,
+            'read_cost_ms': ((readEndUs - readStartUs) / 1000).toStringAsFixed(3),
+          },
+        );
+        if (raw != null && raw.isNotEmpty) {
+          windowItems.addAll(
+            await _decodeAndFilterWindowItems(
+              raw: raw,
+              startInclusive: startInclusive,
+              endExclusive: endExclusive,
+            ),
           );
-          final parsed = AgendaItemStorageMapper.fromJson(map);
-          if (parsed == null) {
-            continue;
-          }
-          parsedCount++;
-          if (parsed.type != ItemType.task &&
-              parsed.type != ItemType.schedule &&
-              parsed.type != ItemType.course) {
-            continue;
-          }
-          matchedTypeCount++;
-          if (!parsed.endAt.isAfter(startInclusive) || !parsed.startAt.isBefore(endExclusive)) {
-            continue;
-          }
-          matchedRangeCount++;
-          windowItems.add(parsed);
-        }
-        if (end < decoded.length) {
-          await Future<void>.delayed(Duration.zero);
         }
       }
-      final filterEndUs = loadTimer.elapsedMicroseconds;
-      probe.mark(
-        'home_window_storage_filter_done',
-        extras: <String, Object?>{
-          'load_seq': loadSeq,
-          'window_key': windowKey,
-          'parsed_count': parsedCount,
-          'matched_type_count': matchedTypeCount,
-          'matched_range_count': matchedRangeCount,
-          'filter_cost_ms': ((filterEndUs - filterStartUs) / 1000).toStringAsFixed(3),
-        },
-      );
 
       _loadedWindowKeys.add(windowKey);
       if (windowItems.isNotEmpty) {
@@ -519,12 +498,24 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         // 窗口内无数据时也要刷新一次，避免页面永远等待“加载完成”。
         state = [...state];
       }
+      if (fallbackPath) {
+        final windowItemsJson = [
+          for (final item in windowItems) AgendaItemStorageMapper.toJson(item),
+        ];
+        await prefs.setString(
+          _windowStorageKey(windowKey),
+          jsonEncode(windowItemsJson),
+        );
+      }
       probe.mark(
         'home_window_storage_load_end',
         extras: <String, Object?>{
           'load_seq': loadSeq,
           'window_key': windowKey,
           'reason': 'success',
+          'source': source,
+          'fallback_path': fallbackPath,
+          'cache_storage_key': hitStorageKey,
           'loaded_items': windowItems.length,
           'state_items': state.length,
           'loaded_window_count': _loadedWindowKeys.length,
@@ -534,6 +525,110 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     } finally {
       _loadingWindowKeys.remove(windowKey);
     }
+  }
+
+  List<String> _candidateCacheStorageKeys({
+    required SharedPreferences prefs,
+    required String windowKey,
+  }) {
+    final keys = <String>[
+      _windowStorageKey(windowKey),
+    ];
+    if (windowKey.startsWith('week:')) {
+      final weekStart = windowKey.substring('week:'.length);
+      final legacyWeekStart = prefs.getString(AppBootstrapStorageKeys.agendaItemsCurrentWeekStart);
+      if (legacyWeekStart == weekStart) {
+        keys.add(AppBootstrapStorageKeys.agendaItemsCurrentWeek);
+      }
+    }
+    return keys;
+  }
+
+  Future<List<AgendaItem>> _decodeAndFilterWindowItems({
+    required String raw,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+  }) async {
+    List<dynamic> decoded;
+    try {
+      final json = jsonDecode(raw);
+      decoded = json is List<dynamic> ? json : const [];
+    } catch (_) {
+      decoded = const [];
+    }
+    if (decoded.isEmpty) {
+      return const [];
+    }
+
+    final windowItems = <AgendaItem>[];
+    for (var index = 0; index < decoded.length; index += _hydrateChunkSize) {
+      final end = (index + _hydrateChunkSize).clamp(0, decoded.length);
+      for (final itemRaw in decoded.sublist(index, end)) {
+        if (itemRaw is! Map<Object?, Object?>) {
+          continue;
+        }
+        final map = itemRaw.map(
+          (key, value) => MapEntry(key is String ? key : key.toString(), value),
+        );
+        final parsed = AgendaItemStorageMapper.fromJson(map);
+        if (parsed == null) {
+          continue;
+        }
+        if (!_belongsToWindow(
+          parsed,
+          startInclusive: startInclusive,
+          endExclusive: endExclusive,
+        )) {
+          continue;
+        }
+        windowItems.add(parsed);
+      }
+      if (end < decoded.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+    return windowItems;
+  }
+
+  String _windowStorageKey(String windowKey) {
+    if (windowKey.startsWith('week:')) {
+      return '$_windowWeekStoragePrefix${windowKey.substring('week:'.length)}';
+    }
+    if (windowKey.startsWith('month:')) {
+      return '$_windowMonthStoragePrefix${windowKey.substring('month:'.length)}';
+    }
+    return '$_windowWeekStoragePrefix$windowKey';
+  }
+
+  _WindowRange? _resolveWindowRange(String windowKey) {
+    if (windowKey.startsWith('week:')) {
+      final start = DateTime.tryParse(windowKey.substring('week:'.length));
+      if (start == null) {
+        return null;
+      }
+      return _WindowRange(
+        start: start,
+        end: start.add(const Duration(days: 7)),
+      );
+    }
+    if (windowKey.startsWith('month:')) {
+      final month = windowKey.substring('month:'.length);
+      final parts = month.split('-');
+      if (parts.length != 2) {
+        return null;
+      }
+      final year = int.tryParse(parts[0]);
+      final mon = int.tryParse(parts[1]);
+      if (year == null || mon == null || mon < 1 || mon > 12) {
+        return null;
+      }
+      final start = DateTime(year, mon, 1);
+      return _WindowRange(
+        start: start,
+        end: DateTime(year, mon + 1, 1),
+      );
+    }
+    return null;
   }
 
   DateTime _currentWeekStart() {
@@ -547,11 +642,24 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     required DateTime weekStart,
     required DateTime weekEndExclusive,
   }) {
-    return switch (item.type) {
-      ItemType.task || ItemType.schedule || ItemType.course =>
-        item.endAt.isAfter(weekStart) && item.startAt.isBefore(weekEndExclusive),
-      _ => false,
-    };
+    return _belongsToWindow(
+      item,
+      startInclusive: weekStart,
+      endExclusive: weekEndExclusive,
+    );
+  }
+
+  bool _belongsToWindow(
+    AgendaItem item, {
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+  }) {
+    if (item.type != ItemType.task &&
+        item.type != ItemType.schedule &&
+        item.type != ItemType.course) {
+      return false;
+    }
+    return item.endAt.isAfter(startInclusive) && item.startAt.isBefore(endExclusive);
   }
 
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {
@@ -575,6 +683,16 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       clearCompletedAt: true,
     );
   }
+}
+
+class _WindowRange {
+  const _WindowRange({
+    required this.start,
+    required this.end,
+  });
+
+  final DateTime start;
+  final DateTime end;
 }
 
 final agendaItemRepositoryProvider =

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/router/app_router.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
+import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/localization/shadcn_localizations_fallback_delegate.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_factory.dart';
@@ -15,7 +16,10 @@ class HuaJuanAgendaApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final probe = StartupPerfProbe.instance;
+    probe.markOnce('app_root_widget_build_first');
     final router = ref.watch(appRouterProvider);
+    probe.markOnce('app_router_provider_ready');
     final themeMode = ref.watch(appThemeModeProvider);
     final locale = ref.watch(appLocaleProvider);
 
