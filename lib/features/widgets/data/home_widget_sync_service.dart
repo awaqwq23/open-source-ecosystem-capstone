@@ -261,26 +261,23 @@ Map<String, dynamic> _toAgendaListRow(
       : item.title.trim();
 
   final location = item.location.trim();
-  final status = item.isCompleted
-      ? (zh ? '已完成' : 'Done')
-      : (item.isImportant ? (zh ? '重要' : 'Important') : (zh ? '待办' : 'Open'));
-
   final timeText = _buildItemTimeText(
     item,
     today,
     zh,
     includeDay: includeDay,
   );
-  final metaParts = <String>[timeText, status];
-  if (location.isNotEmpty) {
-    metaParts.add(location);
-  }
+  final compactMeta = location.isNotEmpty ? '$timeText · $location' : timeText;
+  final clippedSubText = _clipWidgetText(
+    compactMeta,
+    maxChars: includeDay ? 30 : 24,
+  );
 
   return {
     'id': item.id,
     'title': title,
-    'meta': metaParts.join(' · '),
-    'subText': location.isNotEmpty ? '$timeText · $location' : timeText,
+    'meta': clippedSubText,
+    'subText': clippedSubText,
     'typeKey': typeKey,
     'tag': tag,
   };
@@ -442,6 +439,14 @@ String _formatHm(DateTime time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
+}
+
+String _clipWidgetText(String text, {required int maxChars}) {
+  final normalized = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
+  return '${normalized.substring(0, maxChars - 1)}…';
 }
 
 String _timezoneLabel() {

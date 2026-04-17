@@ -16,6 +16,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -144,9 +145,7 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
         provideContent {
             val span = resolveSpan(LocalSize.current)
             val showSubtitle = span.rows >= 4 || span.cols >= 5
-            val totalRows = max(6, span.cols * span.rows)
-            val leftMaxRows = max(3, totalRows / 2)
-            val rightMaxRows = max(3, totalRows - leftMaxRows)
+            val rowBudget = resolveAgendaRowBudget(size = LocalSize.current, showSubtitle = showSubtitle)
             CardShell(clickUri = WidgetDeepLinkFactory.list()) {
                 Text(text = payload.agendaList.title, style = titleStyle(), maxLines = 1)
                 if (showSubtitle) {
@@ -157,8 +156,9 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
                 }
                 AgendaTwoColumnPanel(
                     model = payload.agendaList,
-                    leftMaxRows = leftMaxRows,
-                    rightMaxRows = rightMaxRows,
+                    leftMaxRows = rowBudget.left,
+                    rightMaxRows = rowBudget.right,
+                    locale = payload.meta.locale,
                 )
             }
         }
@@ -191,6 +191,7 @@ private class HuaJuanWeekGridWidget : GlanceAppWidget() {
                 WeekGridPanel(
                     days = payload.weekGrid.days.take(dayCount),
                     perDayLines = lineBudget,
+                    locale = payload.meta.locale,
                 )
             }
         }
@@ -393,42 +394,43 @@ private fun AgendaTwoColumnPanel(
     model: AgendaListWidgetModel,
     leftMaxRows: Int,
     rightMaxRows: Int,
+    locale: String,
 ) {
     val size = LocalSize.current
-    val columnWidth = ((size.width.value - 13f) / 2f).coerceAtLeast(96f).dp
+    val columnWidth = ((size.width.value - 17f) / 2f).coerceAtLeast(96f).dp
 
     Row(modifier = GlanceModifier.fillMaxWidth()) {
         Column(
             modifier = GlanceModifier
                 .width(columnWidth)
-                .padding(end = 4.dp),
+                .padding(end = 6.dp),
         ) {
-            Text(text = model.leftTitle, style = bodyStrongStyle(), maxLines = 1)
-            Spacer(modifier = GlanceModifier.height(4.dp))
-            AgendaColumnRows(rows = model.leftRows, maxRows = leftMaxRows)
+            Text(text = model.leftTitle, style = sectionTitleStyle(), maxLines = 1)
+            Spacer(modifier = GlanceModifier.height(5.dp))
+            AgendaColumnRows(rows = model.leftRows, maxRows = leftMaxRows, locale = locale)
         }
         Box(
             modifier = GlanceModifier
                 .width(1.dp)
                 .fillMaxHeight()
-                .background(ColorProvider(R.color.widget_text_tertiary)),
+                .background(ColorProvider(R.color.widget_divider)),
         ) {}
         Column(
             modifier = GlanceModifier
                 .width(columnWidth)
-                .padding(start = 4.dp),
+                .padding(start = 6.dp),
         ) {
-            Text(text = model.rightTitle, style = bodyStrongStyle(), maxLines = 1)
-            Spacer(modifier = GlanceModifier.height(4.dp))
-            AgendaColumnRows(rows = model.rightRows, maxRows = rightMaxRows)
+            Text(text = model.rightTitle, style = sectionTitleStyle(), maxLines = 1)
+            Spacer(modifier = GlanceModifier.height(5.dp))
+            AgendaColumnRows(rows = model.rightRows, maxRows = rightMaxRows, locale = locale)
         }
     }
 }
 
 @Composable
-private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
+private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int, locale: String) {
     if (rows.isEmpty()) {
-        Text(text = "暂无", style = secondaryStyle(), maxLines = 1)
+        Text(text = localizedEmptyText(locale), style = secondaryStyle(), maxLines = 1)
         return
     }
     Column(modifier = GlanceModifier.fillMaxWidth()) {
@@ -436,13 +438,14 @@ private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
             Row(modifier = GlanceModifier.fillMaxWidth()) {
                 Box(
                     modifier = GlanceModifier
-                        .width(4.dp)
-                        .height(28.dp)
+                        .width(5.dp)
+                        .height(30.dp)
+                        .cornerRadius(3.dp)
                         .background(accentColorFor(row.typeKey)),
                 ) {}
                 Spacer(modifier = GlanceModifier.width(6.dp))
                 Column(modifier = GlanceModifier.fillMaxWidth()) {
-                    Text(text = row.title, style = bodyStrongStyle(), maxLines = 1)
+                    Text(text = row.title, style = rowTitleStyle(), maxLines = 1)
                     val subText = row.subText.ifBlank { row.meta }
                     if (subText.isNotBlank()) {
                         Text(text = subText, style = metaStyle(), maxLines = 1)
@@ -451,15 +454,15 @@ private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
                     }
                 }
             }
-            Spacer(modifier = GlanceModifier.height(4.dp))
+            Spacer(modifier = GlanceModifier.height(5.dp))
         }
     }
 }
 
 @Composable
-private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int) {
+private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int, locale: String) {
     if (days.isEmpty()) {
-        Text(text = "暂无事项", style = secondaryStyle(), maxLines = 1)
+        Text(text = localizedEmptyItemsText(locale), style = secondaryStyle(), maxLines = 1)
         return
     }
 
@@ -547,6 +550,22 @@ private fun bodyStrongStyle(): TextStyle {
     )
 }
 
+private fun sectionTitleStyle(): TextStyle {
+    return TextStyle(
+        color = ColorProvider(R.color.widget_text_primary),
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+    )
+}
+
+private fun rowTitleStyle(): TextStyle {
+    return TextStyle(
+        color = ColorProvider(R.color.widget_text_primary),
+        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+    )
+}
+
 private fun bodyStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
@@ -557,7 +576,7 @@ private fun bodyStyle(): TextStyle {
 private fun metaStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_secondary),
-        fontSize = 10.sp,
+        fontSize = 9.sp,
     )
 }
 
@@ -571,7 +590,7 @@ private fun secondaryStyle(): TextStyle {
 private fun tertiaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_tertiary),
-        fontSize = 10.sp,
+        fontSize = 9.sp,
     )
 }
 
@@ -582,4 +601,31 @@ private fun accentColorFor(typeKey: String): ColorProvider {
         "course" -> ColorProvider(R.color.widget_accent_course)
         else -> ColorProvider(R.color.widget_accent_task)
     }
+}
+
+private data class AgendaRowBudget(
+    val left: Int,
+    val right: Int,
+)
+
+private fun resolveAgendaRowBudget(size: DpSize, showSubtitle: Boolean): AgendaRowBudget {
+    val height = size.height.value
+    val baseRows = when {
+        height < 190f -> 3
+        height < 270f -> 4
+        height < 350f -> 5
+        else -> 6
+    }
+    val subtitlePenalty = if (showSubtitle) 0 else 1
+    val wideBonus = if (size.width.value >= 430f) 1 else 0
+    val rows = (baseRows + subtitlePenalty + wideBonus).coerceIn(3, 7)
+    return AgendaRowBudget(left = rows, right = rows)
+}
+
+private fun localizedEmptyText(locale: String): String {
+    return if (locale.startsWith("zh", ignoreCase = true)) "暂无" else "No items"
+}
+
+private fun localizedEmptyItemsText(locale: String): String {
+    return if (locale.startsWith("zh", ignoreCase = true)) "暂无事项" else "No agenda items"
 }

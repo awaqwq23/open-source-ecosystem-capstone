@@ -8,6 +8,7 @@
     <color name="widget_status_text">#FFE3F2FD</color>
     <color name="widget_badge_bg">#3342A5F5</color>
     <color name="widget_badge_text">#FFE3F2FD</color>
+    <color name="widget_divider">#2EFFFFFF</color>
     <color name="widget_accent_schedule">#FFD2B6F5</color>
     <color name="widget_accent_task">#FF9AC8FF</color>
     <color name="widget_accent_memo">#FFA8E4BA</color>
