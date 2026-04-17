@@ -18,7 +18,7 @@ import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
-import 'package:openai_dart/openai_dart.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 final aiChatBootstrapMessagesProvider = Provider<List<AiChatMessage>>((ref) {
@@ -190,29 +190,28 @@ class OpenAiCompatibleAiService implements AiService {
     required List<AgendaItem> items,
   }) async {
     final settings = _ref.read(appAiSettingsProvider);
-    final client = _buildClient(settings);
     final now = DateTime.now();
 
     try {
-      final response = await client.chat.completions.create(
-        ChatCompletionCreateRequest(
-          model: settings.model.trim(),
-          messages: [
-            ChatMessage.system(
-              _buildResolverPrompt(
-                basePrompt: settings.systemPrompt,
-                now: now,
-                items: items,
-              ),
+      final response = await _postChatCompletion(
+        settings: settings,
+        messages: [
+          {
+            'role': 'system',
+            'content': _buildResolverPrompt(
+              basePrompt: settings.systemPrompt,
+              now: now,
+              items: items,
             ),
-            ChatMessage.user(message),
-          ],
-        ),
+          },
+          {
+            'role': 'user',
+            'content': message,
+          },
+        ],
       );
 
-      final content = response.choices.isEmpty
-          ? ''
-          : (response.choices.first.message.content ?? '');
+      final content = _extractContentFromResponse(response);
       final payload = _extractJsonPayload(content);
       final intent = _parseIntent(payload['intent'] as String?);
       final reply = (payload['assistant_reply'] as String? ?? '').trim();
@@ -257,8 +256,6 @@ class OpenAiCompatibleAiService implements AiService {
         code: AiServiceErrorCode.network,
         message: 'AI 服务暂不可用，请稍后再试。',
       );
-    } finally {
-      client.close();
     }
   }
 
@@ -266,34 +263,105 @@ class OpenAiCompatibleAiService implements AiService {
   Future<void> validateConnection({
     required AiSettings settings,
   }) async {
-    final client = _buildClient(settings);
-
-    try {
-      await client.chat.completions.create(
-        ChatCompletionCreateRequest(
-          model: settings.model.trim(),
-          messages: [
-            ChatMessage.user('Ping'),
-          ],
-          maxTokens: 1,
-        ),
-      );
-    } finally {
-      client.close();
-    }
+    await _postChatCompletion(
+      settings: settings,
+      messages: const [
+        {
+          'role': 'user',
+          'content': 'Ping',
+        },
+      ],
+      maxTokens: 1,
+    );
   }
 
-  OpenAIClient _buildClient(AiSettings settings) {
+  void _ensureConfigured(AiSettings settings) {
     if (!settings.isConfigured) {
       throw const OpenAiConfigurationException('请先填写完整的 AI 地址、密钥和模型。');
     }
+  }
 
-    return OpenAIClient(
-      config: OpenAIConfig(
-        authProvider: ApiKeyProvider(settings.apiKey.trim()),
-        baseUrl: settings.baseUrl.trim(),
-      ),
-    );
+  Future<Map<String, dynamic>> _postChatCompletion({
+    required AiSettings settings,
+    required List<Map<String, Object?>> messages,
+    int? maxTokens,
+  }) async {
+    _ensureConfigured(settings);
+    final uri = _buildChatCompletionsUri(settings.baseUrl.trim());
+    final response = await http
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${settings.apiKey.trim()}',
+          },
+          body: jsonEncode({
+            'model': settings.model.trim(),
+            'messages': messages,
+            'enable_thinking': false,
+            if (maxTokens != null) 'max_tokens': maxTokens,
+          }),
+        )
+        .timeout(const Duration(seconds: 60));
+
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw const AiServiceException(
+        code: AiServiceErrorCode.parse,
+        message: 'AI 返回内容解析失败。',
+      );
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = (body['error'] is Map<String, dynamic>)
+          ? (((body['error'] as Map<String, dynamic>)['message'] as String?) ??
+              '请求失败')
+          : ((body['message'] as String?) ?? '请求失败');
+      throw AiServiceException(
+        code: AiServiceErrorCode.network,
+        message: 'AI 请求失败（${response.statusCode}）：$message',
+      );
+    }
+
+    return body;
+  }
+
+  Uri _buildChatCompletionsUri(String baseUrl) {
+    final parsed = Uri.parse(baseUrl);
+    final normalizedPath = parsed.path.endsWith('/')
+        ? parsed.path.substring(0, parsed.path.length - 1)
+        : parsed.path;
+    final hasEndpoint = normalizedPath.endsWith('/chat/completions');
+    final path = hasEndpoint ? normalizedPath : '$normalizedPath/chat/completions';
+    return parsed.replace(path: path);
+  }
+
+  String _extractContentFromResponse(Map<String, dynamic> response) {
+    final choices = response['choices'];
+    if (choices is! List || choices.isEmpty) {
+      return '';
+    }
+    final first = choices.first;
+    if (first is! Map<String, dynamic>) {
+      return '';
+    }
+    final message = first['message'];
+    if (message is! Map<String, dynamic>) {
+      return '';
+    }
+    final content = message['content'];
+    if (content is String) {
+      return content;
+    }
+    if (content is List) {
+      return content
+          .whereType<Map<String, dynamic>>()
+          .map((part) => part['text'] as String? ?? '')
+          .join();
+    }
+    return '';
   }
 
   String _buildResolverPrompt({
