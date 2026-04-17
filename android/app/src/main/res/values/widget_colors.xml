@@ -2,4 +2,9 @@
 <resources>
     <color name="widget_text_primary">#DE000000</color>
     <color name="widget_text_secondary">#8A000000</color>
+    <color name="widget_text_tertiary">#61000000</color>
+    <color name="widget_status_bg">#140061D1</color>
+    <color name="widget_status_text">#FF0053B0</color>
+    <color name="widget_badge_bg">#1A0B57D0</color>
+    <color name="widget_badge_text">#FF0046A8</color>
 </resources>
