@@ -29,10 +29,12 @@ const _kValidateItemDraft = ValidateItemDraftUseCase();
 class ItemEditorPage extends ConsumerStatefulWidget {
   const ItemEditorPage({
     this.args,
+    this.autoPopOnSubmit = false,
     super.key,
   });
 
   final ItemEditorArgs? args;
+  final bool autoPopOnSubmit;
 
   @override
   ConsumerState<ItemEditorPage> createState() => _ItemEditorPageState();
@@ -93,10 +95,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.l10n.editorSubmitSuccess)),
           );
-          final currentPath = GoRouterState.of(context).uri.path;
-          final isSecondaryEditPage =
-              currentPath == AppRoutePaths.itemEditorFlow && next.isEditing;
-          if (isSecondaryEditPage || context.canPop()) {
+          if (widget.autoPopOnSubmit && next.isEditing) {
             context.pop();
           }
         }
