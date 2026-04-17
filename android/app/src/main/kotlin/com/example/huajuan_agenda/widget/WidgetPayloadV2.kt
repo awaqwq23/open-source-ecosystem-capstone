@@ -33,7 +33,11 @@ data class AgendaListRowModel(
 data class AgendaListWidgetModel(
     val title: String,
     val subtitle: String,
-    val rows: List<AgendaListRowModel>,
+    val mode: String,
+    val leftTitle: String,
+    val rightTitle: String,
+    val leftRows: List<AgendaListRowModel>,
+    val rightRows: List<AgendaListRowModel>,
 )
 
 data class WeekDayWidgetModel(
@@ -49,7 +53,7 @@ data class WeekGridWidgetModel(
     val days: List<WeekDayWidgetModel>,
 )
 
-data class WidgetPayloadV3(
+data class WidgetPayloadV4(
     val version: Int,
     val meta: WidgetMetaModel,
     val aiEntry: AiEntryWidgetModel,
@@ -59,7 +63,7 @@ data class WidgetPayloadV3(
 )
 
 object WidgetPayloadReader {
-    fun read(context: Context): WidgetPayloadV3 {
+    fun read(context: Context): WidgetPayloadV4 {
         val raw = WidgetStore.readPayload(context)
         if (raw.isBlank()) {
             return fallback()
@@ -67,7 +71,7 @@ object WidgetPayloadReader {
         return try {
             val root = JSONObject(raw)
             val version = root.optInt("version", 0)
-            if (version != 3) {
+            if (version != 4) {
                 return fallback()
             }
 
@@ -77,8 +81,8 @@ object WidgetPayloadReader {
             val agendaListJson = root.optJSONObject("agendaList") ?: JSONObject()
             val weekGridJson = root.optJSONObject("weekGrid") ?: JSONObject()
 
-            WidgetPayloadV3(
-                version = 3,
+            WidgetPayloadV4(
+                version = 4,
                 meta = WidgetMetaModel(
                     updatedLabel = metaJson.optString("updatedLabel", ""),
                     locale = metaJson.optString("languageCode", "zh"),
@@ -98,7 +102,11 @@ object WidgetPayloadReader {
                 agendaList = AgendaListWidgetModel(
                     title = agendaListJson.optString("title", "事项列表"),
                     subtitle = agendaListJson.optString("subtitle", "暂无数据"),
-                    rows = readAgendaRows(agendaListJson.optJSONArray("rows")),
+                    mode = agendaListJson.optString("mode", "today_future"),
+                    leftTitle = agendaListJson.optString("leftTitle", "今天"),
+                    rightTitle = agendaListJson.optString("rightTitle", "今天之后"),
+                    leftRows = readAgendaRows(agendaListJson.optJSONArray("leftRows")),
+                    rightRows = readAgendaRows(agendaListJson.optJSONArray("rightRows")),
                 ),
                 weekGrid = WeekGridWidgetModel(
                     title = weekGridJson.optString("title", "周视图"),
@@ -159,9 +167,9 @@ object WidgetPayloadReader {
         return days
     }
 
-    private fun fallback(): WidgetPayloadV3 {
-        return WidgetPayloadV3(
-            version = 3,
+    private fun fallback(): WidgetPayloadV4 {
+        return WidgetPayloadV4(
+            version = 4,
             meta = WidgetMetaModel(
                 updatedLabel = "",
                 locale = "zh",
@@ -181,7 +189,11 @@ object WidgetPayloadReader {
             agendaList = AgendaListWidgetModel(
                 title = "事项列表",
                 subtitle = "暂无事项",
-                rows = emptyList(),
+                mode = "today_future",
+                leftTitle = "今天",
+                rightTitle = "今天之后",
+                leftRows = emptyList(),
+                rightRows = emptyList(),
             ),
             weekGrid = WeekGridWidgetModel(
                 title = "周视图",

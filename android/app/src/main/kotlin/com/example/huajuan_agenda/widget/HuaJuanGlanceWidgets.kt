@@ -142,12 +142,18 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
         val payload = WidgetPayloadReader.read(context)
         provideContent {
             val span = resolveSpan(LocalSize.current)
-            val maxRows = max(4, span.cols * span.rows)
+            val totalRows = max(4, span.cols * span.rows)
+            val leftMaxRows = max(2, totalRows / 2)
+            val rightMaxRows = max(2, totalRows - leftMaxRows)
             CardShell(clickUri = WidgetDeepLinkFactory.list()) {
                 Text(text = payload.agendaList.title, style = titleStyle(), maxLines = 1)
                 Text(text = payload.agendaList.subtitle, style = tertiaryStyle(), maxLines = 1)
                 Spacer(modifier = GlanceModifier.height(8.dp))
-                AgendaRowsPanel(rows = payload.agendaList.rows, maxRows = maxRows)
+                AgendaTwoColumnPanel(
+                    model = payload.agendaList,
+                    leftMaxRows = leftMaxRows,
+                    rightMaxRows = rightMaxRows,
+                )
             }
         }
     }
@@ -377,9 +383,43 @@ private fun QuickCreateButton(
 }
 
 @Composable
-private fun AgendaRowsPanel(rows: List<AgendaListRowModel>, maxRows: Int) {
+private fun AgendaTwoColumnPanel(
+    model: AgendaListWidgetModel,
+    leftMaxRows: Int,
+    rightMaxRows: Int,
+) {
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
+        Column(
+            modifier = GlanceModifier
+                .width(140.dp)
+                .padding(end = 4.dp),
+        ) {
+            Text(text = model.leftTitle, style = bodyStrongStyle(), maxLines = 1)
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            AgendaColumnRows(rows = model.leftRows, maxRows = leftMaxRows)
+        }
+        Box(
+            modifier = GlanceModifier
+                .width(1.dp)
+                .height(140.dp)
+                .background(ColorProvider(R.color.widget_text_tertiary)),
+        ) {}
+        Column(
+            modifier = GlanceModifier
+                .width(140.dp)
+                .padding(start = 4.dp),
+        ) {
+            Text(text = model.rightTitle, style = bodyStrongStyle(), maxLines = 1)
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            AgendaColumnRows(rows = model.rightRows, maxRows = rightMaxRows)
+        }
+    }
+}
+
+@Composable
+private fun AgendaColumnRows(rows: List<AgendaListRowModel>, maxRows: Int) {
     if (rows.isEmpty()) {
-        Text(text = "暂无事项", style = secondaryStyle(), maxLines = 1)
+        Text(text = "暂无", style = secondaryStyle(), maxLines = 1)
         return
     }
     Column(modifier = GlanceModifier.fillMaxWidth()) {
@@ -389,7 +429,7 @@ private fun AgendaRowsPanel(rows: List<AgendaListRowModel>, maxRows: Int) {
             if (row.meta.isNotBlank()) {
                 Text(text = row.meta, style = bodyStyle(), maxLines = 1)
             }
-            Spacer(modifier = GlanceModifier.height(4.dp))
+            Spacer(modifier = GlanceModifier.height(3.dp))
         }
     }
 }

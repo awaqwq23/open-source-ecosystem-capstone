@@ -61,7 +61,7 @@ class HomeWidgetSyncService {
       final week = _weekRange(now);
 
       final payload = <String, dynamic>{
-        'version': 3,
+        'version': 4,
         'meta': {
           'languageCode': languageCode,
           'darkMode': _isDarkMode(themeMode),
@@ -124,36 +124,110 @@ Map<String, dynamic> _buildAgendaListPayload({
   required bool zh,
 }) {
   final today = DateTime(now.year, now.month, now.day);
-  final end = today.add(const Duration(days: 7));
+  final tomorrow = today.add(const Duration(days: 1));
 
-  final filtered = items
-      .where((item) => item.type != ItemType.course)
-      .where((item) => _itemIntersects(item, today, end))
+  final hasCourseToday = items.any(
+    (item) => item.type == ItemType.course && _itemInDay(item, today),
+  );
+
+  final leftDay = hasCourseToday ? today : tomorrow;
+  final rightStart = leftDay.add(const Duration(days: 1));
+
+  final leftItems = items
+      .where((item) => _shouldShowInLeftColumn(item, now: now, leftDay: leftDay))
       .toList(growable: false)
     ..sort((a, b) {
-      if (a.isCompleted != b.isCompleted) {
-        return a.isCompleted ? 1 : -1;
-      }
-      final byStart = _sortStart(a, today).compareTo(_sortStart(b, today));
+      final byStart = _sortStart(a, leftDay).compareTo(_sortStart(b, leftDay));
       if (byStart != 0) {
         return byStart;
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
 
-  final openToday = filtered
-      .where((item) => !item.isCompleted && _itemInDay(item, today))
-      .length;
+  final rightItems = items
+      .where((item) => _shouldShowInRightColumn(item, now: now, rightStart: rightStart))
+      .toList(growable: false)
+    ..sort((a, b) {
+      final dayA = _displayDayForItem(a, fallback: rightStart);
+      final dayB = _displayDayForItem(b, fallback: rightStart);
+      final byDay = dayA.compareTo(dayB);
+      if (byDay != 0) {
+        return byDay;
+      }
+      final byStart = _sortStart(a, dayA).compareTo(_sortStart(b, dayB));
+      if (byStart != 0) {
+        return byStart;
+      }
+      return a.manualOrder.compareTo(b.manualOrder);
+    });
 
   return {
     'title': zh ? '事项列表' : 'Agenda List',
-    'subtitle': zh
-        ? '今日未完成 $openToday 条 · 7天内'
-        : '$openToday open today · next 7 days',
-    'rows': [
-      for (final item in filtered.take(120)) _toAgendaListRow(item, today, zh),
+    'subtitle': hasCourseToday
+        ? (zh ? '左列今天，右列今天之后（右列无课程）' : 'Left today, right after today (no course on right)')
+        : (zh ? '左列明天，右列明天之后（右列无课程）' : 'Left tomorrow, right after tomorrow (no course on right)'),
+    'mode': hasCourseToday ? 'today_future' : 'tomorrow_future',
+    'leftTitle': hasCourseToday ? (zh ? '今天' : 'Today') : (zh ? '明天' : 'Tomorrow'),
+    'rightTitle': hasCourseToday ? (zh ? '今天之后' : 'After Today') : (zh ? '明天之后' : 'After Tomorrow'),
+    'leftRows': [
+      for (final item in leftItems.take(40)) _toAgendaListRow(item, leftDay, zh),
+    ],
+    'rightRows': [
+      for (final item in rightItems.take(80))
+        _toAgendaListRow(item, _displayDayForItem(item, fallback: rightStart), zh),
     ],
   };
+}
+
+bool _shouldShowInLeftColumn(
+  AgendaItem item, {
+  required DateTime now,
+  required DateTime leftDay,
+}) {
+  if (!_itemInDay(item, leftDay)) {
+    return false;
+  }
+  if (item.type == ItemType.course) {
+    return true;
+  }
+  if (item.type == ItemType.task && item.isCompleted) {
+    return false;
+  }
+  final today = DateTime(now.year, now.month, now.day);
+  if (_isSameDay(leftDay, today) && item.type != ItemType.memo) {
+    return item.endAt.isAfter(now);
+  }
+  return true;
+}
+
+bool _shouldShowInRightColumn(
+  AgendaItem item, {
+  required DateTime now,
+  required DateTime rightStart,
+}) {
+  if (item.type == ItemType.course) {
+    return false;
+  }
+  if (item.type == ItemType.task && item.isCompleted) {
+    return false;
+  }
+  if (!_itemIntersects(item, rightStart, rightStart.add(const Duration(days: 3650)))) {
+    return false;
+  }
+  if (item.type != ItemType.memo && !item.endAt.isAfter(now)) {
+    return false;
+  }
+  return true;
+}
+
+DateTime _displayDayForItem(
+  AgendaItem item, {
+  required DateTime fallback,
+}) {
+  if (item.type == ItemType.memo) {
+    return DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
+  }
+  return DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
 }
 
 Map<String, dynamic> _toAgendaListRow(AgendaItem item, DateTime today, bool zh) {
@@ -311,6 +385,10 @@ String _weekdayShort(bool zh, int weekday) {
     DateTime.saturday => 'Sat',
     _ => 'Sun',
   };
+}
+
+bool _isSameDay(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 String _formatWidgetTimestamp(DateTime time, bool zh) {
