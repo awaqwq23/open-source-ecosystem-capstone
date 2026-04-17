@@ -95,7 +95,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(context.l10n.editorSubmitSuccess)),
           );
-          if (widget.autoPopOnSubmit && next.isEditing) {
+          if (widget.autoPopOnSubmit) {
             context.pop();
           }
         }
