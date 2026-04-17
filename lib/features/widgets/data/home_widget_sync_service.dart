@@ -1,13 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:home_widget/home_widget.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
@@ -15,23 +13,7 @@ import 'package:huajuan_agenda/features/settings/domain/providers/settings_state
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
-
-abstract final class HomeWidgetIds {
-  static const gridProvider = 'com.example.huajuan_agenda.widget.HuaJuanGridWidgetProvider';
-  static const listProvider = 'com.example.huajuan_agenda.widget.HuaJuanListWidgetProvider';
-  static const aiProvider = 'com.example.huajuan_agenda.widget.HuaJuanAiShortcutWidgetProvider';
-  static const newItemProvider =
-      'com.example.huajuan_agenda.widget.HuaJuanNewItemShortcutWidgetProvider';
-}
-
-abstract final class HomeWidgetStorageKeys {
-  static const gridPayload = 'hj.widget.grid.payload';
-  static const listPayload = 'hj.widget.list.payload';
-  static const aiPayload = 'hj.widget.ai.payload';
-  static const newItemPayload = 'hj.widget.newItem.payload';
-}
 
 final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
   return HomeWidgetSyncService(ref);
@@ -40,28 +22,18 @@ final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
 class HomeWidgetSyncService {
   HomeWidgetSyncService(this._ref);
 
+  static const MethodChannel _channel = MethodChannel('huajuan/widget_sync');
+
   final Ref _ref;
-  StreamSubscription<Uri?>? _clickSub;
   bool _isSyncing = false;
   bool _syncQueued = false;
-  bool _initialized = false;
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
 
-  Future<void> initialize(GoRouter router) async {
-    if (!_supported || _initialized) {
+  Future<void> initialize() async {
+    if (!_supported) {
       return;
     }
-    _initialized = true;
-    final initialUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
-    if (initialUri != null) {
-      _handleWidgetUri(router, initialUri);
-    }
-    _clickSub = HomeWidget.widgetClicked.listen((uri) {
-      if (uri != null) {
-        _handleWidgetUri(router, uri);
-      }
-    });
     await sync();
   }
 
@@ -83,43 +55,32 @@ class HomeWidgetSyncService {
       final themeMode = _ref.read(appThemeModeProvider);
       final items = _ref.read(agendaItemRepositoryProvider);
       final now = DateTime.now();
+      final zh = locale.languageCode.startsWith('zh');
 
-      final gridPayload = _buildGridPayload(
-        items: items,
-        now: now,
-        locale: locale,
-        darkMode: _isDarkMode(themeMode),
-      );
-      final listPayload = _buildListPayload(
-        items: items,
-        now: now,
-        locale: locale,
-        darkMode: _isDarkMode(themeMode),
-      );
-      final aiPayload = _buildAiPayload(locale: locale);
-      final newItemPayload = _buildNewItemPayload(locale: locale);
+      final payload = <String, dynamic>{
+        'meta': {
+          'languageCode': locale.languageCode,
+          'darkMode': _isDarkMode(themeMode),
+          'updatedAt': now.toIso8601String(),
+          'updatedLabel': _formatWidgetTimestamp(now, zh),
+        },
+        'ai': {
+          'title': zh ? 'AI 快速入口' : 'AI Entry',
+          'subtitle': zh ? '点击直达 AI 页面' : 'Tap to open AI page',
+        },
+        'quickCreate': {
+          'title': zh ? '快速创建事项' : 'Quick Create',
+          'newItemLabel': zh ? '新建事项' : 'New Item',
+          'scheduleLabel': zh ? '日程' : 'Schedule',
+          'taskLabel': zh ? '任务' : 'Task',
+          'memoLabel': zh ? '备忘' : 'Memo',
+        },
+        'list': _buildListWidgetPayload(items: items, now: now, zh: zh),
+        'weekList': _buildWeekListWidgetPayload(items: items, now: now, zh: zh),
+        'weekGrid': _buildWeekGridWidgetPayload(items: items, now: now, zh: zh),
+      };
 
-      await HomeWidget.saveWidgetData<String>(
-        HomeWidgetStorageKeys.gridPayload,
-        jsonEncode(gridPayload),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        HomeWidgetStorageKeys.listPayload,
-        jsonEncode(listPayload),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        HomeWidgetStorageKeys.aiPayload,
-        jsonEncode(aiPayload),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        HomeWidgetStorageKeys.newItemPayload,
-        jsonEncode(newItemPayload),
-      );
-
-      await HomeWidget.updateWidget(qualifiedAndroidName: HomeWidgetIds.gridProvider);
-      await HomeWidget.updateWidget(qualifiedAndroidName: HomeWidgetIds.listProvider);
-      await HomeWidget.updateWidget(qualifiedAndroidName: HomeWidgetIds.aiProvider);
-      await HomeWidget.updateWidget(qualifiedAndroidName: HomeWidgetIds.newItemProvider);
+      await _channel.invokeMethod<void>('syncWidgets', payload);
     } finally {
       _isSyncing = false;
       if (_syncQueued) {
@@ -129,43 +90,7 @@ class HomeWidgetSyncService {
     }
   }
 
-  void dispose() {
-    final sub = _clickSub;
-    _clickSub = null;
-    if (sub != null) {
-      unawaited(sub.cancel());
-    }
-  }
-
-  void _handleWidgetUri(GoRouter router, Uri uri) {
-    final path = uri.path.isEmpty ? AppRoutePaths.home : uri.path;
-    final query = uri.query.isEmpty ? '' : '?${uri.query}';
-    final directRoutes = <String>{
-      AppRoutePaths.home,
-      AppRoutePaths.list,
-      AppRoutePaths.ai,
-      AppRoutePaths.itemEditor,
-    };
-    if (directRoutes.contains(path)) {
-      router.go('$path$query');
-      return;
-    }
-
-    final target = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
-    if (target == 'ai') {
-      router.go('${AppRoutePaths.ai}?focusInput=1&source=home_widget');
-      return;
-    }
-    if (target == 'new-item') {
-      router.go('${AppRoutePaths.itemEditor}?showTypePicker=1&source=home_widget');
-      return;
-    }
-    if (target == 'list') {
-      router.go('${AppRoutePaths.list}?source=home_widget');
-      return;
-    }
-    router.go(AppRoutePaths.home);
-  }
+  void dispose() {}
 
   Locale _resolveLocale(WidgetSettings settings) {
     if (settings.followAppLanguage) {
@@ -183,121 +108,190 @@ class HomeWidgetSyncService {
   }
 }
 
-Map<String, dynamic> _buildGridPayload({
+Map<String, dynamic> _buildListWidgetPayload({
   required List<AgendaItem> items,
   required DateTime now,
-  required Locale locale,
-  required bool darkMode,
-}) {
-  final week = _weekRange(now);
-  final weekItems = items
-      .where((item) => item.type != ItemType.memo)
-      .where(
-        (item) => item.endAt.isAfter(week.start) && item.startAt.isBefore(week.end),
-      )
-      .toList(growable: false);
-
-  final dayRows = <String>[];
-  for (var i = 0; i < 7; i++) {
-    final date = week.start.add(Duration(days: i));
-    final count = weekItems
-        .where((item) => _sameDay(item.startAt, date) || _sameDay(item.endAt, date))
-        .length;
-    dayRows.add('${_weekdayLabel(locale, date.weekday)} ${date.month}/${date.day}  $count');
-  }
-
-  return {
-    'title': locale.languageCode.startsWith('zh') ? '本周表格概览' : 'This Week Grid',
-    'subtitle': locale.languageCode.startsWith('zh')
-        ? '事项 ${weekItems.length} 条'
-        : '${weekItems.length} items',
-    'content': dayRows.join('\n'),
-    'darkMode': darkMode,
-    'updatedAt': now.toIso8601String(),
-  };
-}
-
-Map<String, dynamic> _buildListPayload({
-  required List<AgendaItem> items,
-  required DateTime now,
-  required Locale locale,
-  required bool darkMode,
+  required bool zh,
 }) {
   final today = DateTime(now.year, now.month, now.day);
-  final todayCourses = [
-    for (final item in items)
-      if (item.type == ItemType.course && _isItemInDay(item, today)) item,
-  ];
-  final showTomorrow = todayCourses.isNotEmpty &&
-      todayCourses.every((item) => !item.endAt.isAfter(now));
-  final targetDay = showTomorrow ? today.add(const Duration(days: 1)) : today;
-  final dayItems = [
-    for (final item in items)
-      if (_isItemInDay(item, targetDay)) item,
-  ]..sort((a, b) {
-      final byTime = _sortKeyInDay(a, targetDay).compareTo(_sortKeyInDay(b, targetDay));
-      if (byTime != 0) {
-        return byTime;
+  final endDay = today.add(const Duration(days: 7));
+  final filtered = items
+      .where((item) => item.type != ItemType.course)
+      .where((item) => _itemIntersects(item, today, endDay))
+      .toList(growable: false)
+    ..sort((a, b) {
+      if (a.isCompleted != b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      final byStart = _sortStart(a, today).compareTo(_sortStart(b, today));
+      if (byStart != 0) {
+        return byStart;
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
 
-  final blocks = [
-    for (final item in dayItems.take(4)) _buildListItemBlock(item, targetDay, locale),
+  final todayOpen = filtered.where((item) => !item.isCompleted && _itemInDay(item, today)).length;
+  final rows = [
+    for (final item in filtered.take(80)) _toListRow(item, today, zh),
   ];
-  final zh = locale.languageCode.startsWith('zh');
-  final dayLabel = '${targetDay.month}/${targetDay.day}';
 
   return {
-    'title': showTomorrow
-        ? (zh ? '明日课程与事项' : 'Tomorrow Classes & Agenda')
-        : (zh ? '今日课程与事项' : 'Today Classes & Agenda'),
-    'subtitle': zh ? '$dayLabel  共 ${dayItems.length} 条' : '$dayLabel  ${dayItems.length} items',
-    'content': blocks.isEmpty ? (zh ? '暂无事项' : 'No items') : blocks.join('\n\n'),
-    'darkMode': darkMode,
-    'updatedAt': now.toIso8601String(),
+    'title': zh ? '事项列表' : 'Agenda List',
+    'subtitle': zh
+        ? '今日未完成 $todayOpen 条 · 未来 7 天'
+        : '$todayOpen open today · next 7 days',
+    'rows': rows,
   };
 }
 
-Map<String, dynamic> _buildAiPayload({required Locale locale}) {
+Map<String, dynamic> _buildWeekListWidgetPayload({
+  required List<AgendaItem> items,
+  required DateTime now,
+  required bool zh,
+}) {
+  final week = _weekRange(now);
+  final rows = <String>[];
+  final filtered = items.where((item) => item.type != ItemType.course);
+
+  for (var i = 0; i < 7; i++) {
+    final day = week.start.add(Duration(days: i));
+    final dayItems = [
+      for (final item in filtered)
+        if (_itemInDay(item, day)) item,
+    ]..sort((a, b) => _sortStart(a, day).compareTo(_sortStart(b, day)));
+
+    rows.add('${_weekdayLabel(zh, day.weekday)} ${day.month}/${day.day} (${dayItems.length})');
+    for (final item in dayItems.take(6)) {
+      rows.add('  ${_toCompactDayLine(item, day, zh)}');
+    }
+  }
+
   return {
-    'title': locale.languageCode.startsWith('zh') ? 'AI 交互' : 'AI Chat',
-    'subtitle': locale.languageCode.startsWith('zh')
-        ? '点击直达输入框'
-        : 'Tap to open input',
+    'title': zh ? '周视图（列表版）' : 'Week View (List)',
+    'subtitle': zh ? '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}' : '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}',
+    'rows': rows,
   };
 }
 
-Map<String, dynamic> _buildNewItemPayload({required Locale locale}) {
+Map<String, dynamic> _buildWeekGridWidgetPayload({
+  required List<AgendaItem> items,
+  required DateTime now,
+  required bool zh,
+}) {
+  final week = _weekRange(now);
+  final filtered = items.where((item) => item.type != ItemType.course).toList(growable: false);
+  final headers = <String>[];
+  final cells = <String>[];
+  final rows = <String>[];
+
+  for (var i = 0; i < 7; i++) {
+    final day = week.start.add(Duration(days: i));
+    final dayItems = filtered.where((item) => _itemInDay(item, day)).toList(growable: false);
+    headers.add(_weekdayShort(zh, day.weekday));
+    cells.add('${day.month}/${day.day}\n${dayItems.length}');
+
+    final top = dayItems.take(2).map((item) => _toCompactDayLine(item, day, zh)).join(' | ');
+    if (top.isNotEmpty) {
+      rows.add('${_weekdayShort(zh, day.weekday)} $top');
+    }
+  }
+
   return {
-    'title': locale.languageCode.startsWith('zh') ? '新建事项' : 'New Item',
-    'subtitle': locale.languageCode.startsWith('zh')
-        ? '打开后先选择类型'
-        : 'Pick type after opening',
+    'title': zh ? '周视图（表格版）' : 'Week View (Grid)',
+    'subtitle': zh ? '本周事项总览' : 'Weekly overview',
+    'headers': headers,
+    'cells': cells,
+    'rows': rows,
   };
 }
 
 DateTimeRange _weekRange(DateTime now) {
   final start = DateTime(now.year, now.month, now.day)
       .subtract(Duration(days: now.weekday - DateTime.monday));
-  return DateTimeRange(start: start, end: start.add(const Duration(days: 7)));
+  final inclusiveEnd = start.add(const Duration(days: 6));
+  return DateTimeRange(start: start, end: inclusiveEnd);
 }
 
-bool _sameDay(DateTime a, DateTime b) {
-  return a.year == b.year && a.month == b.month && a.day == b.day;
+bool _itemIntersects(AgendaItem item, DateTime start, DateTime endExclusive) {
+  if (item.type == ItemType.memo) {
+    final date = DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
+    return !date.isBefore(start) && date.isBefore(endExclusive);
+  }
+  return item.endAt.isAfter(start) && item.startAt.isBefore(endExclusive);
 }
 
-String _weekdayLabel(Locale locale, int weekday) {
-  final zh = locale.languageCode.startsWith('zh');
+bool _itemInDay(AgendaItem item, DateTime day) {
+  final dayStart = DateTime(day.year, day.month, day.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  if (item.type == ItemType.memo) {
+    final target = DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
+    return target.year == dayStart.year &&
+        target.month == dayStart.month &&
+        target.day == dayStart.day;
+  }
+  return item.endAt.isAfter(dayStart) && item.startAt.isBefore(dayEnd);
+}
+
+DateTime _sortStart(AgendaItem item, DateTime day) {
+  final dayStart = DateTime(day.year, day.month, day.day);
+  if (item.type == ItemType.memo) {
+    return dayStart.add(const Duration(hours: 23, minutes: 59));
+  }
+  return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
+}
+
+String _toListRow(AgendaItem item, DateTime today, bool zh) {
+  final typeLabel = switch (item.type) {
+    ItemType.schedule => zh ? '日程' : 'Sch',
+    ItemType.task => zh ? '任务' : 'Task',
+    ItemType.memo => zh ? '备忘' : 'Memo',
+    ItemType.course => zh ? '课程' : 'Course',
+  };
+  final status = item.isCompleted
+      ? (zh ? '已完成' : 'Done')
+      : (item.isImportant ? (zh ? '重要' : 'Important') : (zh ? '待办' : 'Open'));
+  final when = _buildItemTimeText(item, today, zh);
+  final title = item.title.trim().isEmpty ? (zh ? '未命名事项' : 'Untitled') : item.title.trim();
+  return '[$typeLabel][$status] $when $title';
+}
+
+String _toCompactDayLine(AgendaItem item, DateTime day, bool zh) {
+  final prefix = switch (item.type) {
+    ItemType.schedule => zh ? '日' : 'S',
+    ItemType.task => zh ? '任' : 'T',
+    ItemType.memo => zh ? '备' : 'M',
+    ItemType.course => zh ? '课' : 'C',
+  };
+  final when = _buildItemTimeText(item, day, zh);
+  final title = item.title.trim().isEmpty ? (zh ? '未命名' : 'Untitled') : item.title.trim();
+  return '[$prefix] $when $title';
+}
+
+String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
+  if (item.type == ItemType.memo) {
+    final minutes = item.estimatedDuration.inMinutes;
+    return zh ? '全天/$minutes分' : 'AllDay/$minutesm';
+  }
+  if (item.isAllDay) {
+    return zh ? '全天' : 'All day';
+  }
+  final dayStart = DateTime(day.year, day.month, day.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
+  final effectiveEnd = item.endAt.isAfter(dayEnd) ? dayEnd : item.endAt;
+  return '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
+}
+
+String _weekdayShort(bool zh, int weekday) {
   if (zh) {
     return switch (weekday) {
-      DateTime.monday => '周一',
-      DateTime.tuesday => '周二',
-      DateTime.wednesday => '周三',
-      DateTime.thursday => '周四',
-      DateTime.friday => '周五',
-      DateTime.saturday => '周六',
-      _ => '周日',
+      DateTime.monday => '一',
+      DateTime.tuesday => '二',
+      DateTime.wednesday => '三',
+      DateTime.thursday => '四',
+      DateTime.friday => '五',
+      DateTime.saturday => '六',
+      _ => '日',
     };
   }
   return switch (weekday) {
@@ -311,81 +305,20 @@ String _weekdayLabel(Locale locale, int weekday) {
   };
 }
 
-bool _isItemInDay(AgendaItem item, DateTime day) {
-  final dayStart = DateTime(day.year, day.month, day.day);
-  final dayEnd = dayStart.add(const Duration(days: 1));
-  if (item.type == ItemType.memo) {
-    return _sameDay(item.targetDate, dayStart);
+String _weekdayLabel(bool zh, int weekday) {
+  if (zh) {
+    return '周${_weekdayShort(true, weekday)}';
   }
-  return item.endAt.isAfter(dayStart) && item.startAt.isBefore(dayEnd);
+  return _weekdayShort(false, weekday);
 }
 
-DateTime _sortKeyInDay(AgendaItem item, DateTime day) {
-  if (item.type == ItemType.memo) {
-    return DateTime(day.year, day.month, day.day, 23, 59);
-  }
-  final dayStart = DateTime(day.year, day.month, day.day);
-  return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
-}
-
-String _buildListItemBlock(AgendaItem item, DateTime day, Locale locale) {
-  final zh = locale.languageCode.startsWith('zh');
-  final title = item.title.trim().isEmpty ? (zh ? '未命名事项' : 'Untitled') : item.title.trim();
-  final timeText = _buildItemTimeText(item, day, zh);
-  final detailText = _buildItemDetailText(item, zh);
-  if (detailText.isEmpty) {
-    return '$title\n$timeText';
-  }
-  return '$title\n$timeText\n$detailText';
-}
-
-String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
-  if (item.type == ItemType.memo) {
-    final minutes = item.estimatedDuration.inMinutes;
-    return zh ? '全天 · 预计 ${minutes} 分钟' : 'All day · Est. ${minutes} min';
-  }
-  if (item.isAllDay) {
-    return zh ? '全天' : 'All day';
-  }
-  final dayStart = DateTime(day.year, day.month, day.day);
-  final dayEnd = dayStart.add(const Duration(days: 1));
-  final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
-  final effectiveEnd = item.endAt.isAfter(dayEnd) ? dayEnd : item.endAt;
-  return '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
-}
-
-String _buildItemDetailText(AgendaItem item, bool zh) {
-  if (item.type == ItemType.course) {
-    final teacher = item.courseDetails.instructor.trim();
-    final location = item.location.trim().isNotEmpty
-        ? item.location.trim()
-        : item.courseDetails.classroomRaw.trim();
-    final teacherText = teacher.isEmpty ? (zh ? '教师待定' : 'Teacher TBD') : teacher;
-    final locationText = location.isEmpty ? (zh ? '地点待定' : 'Location TBD') : location;
-    return zh ? '教师: $teacherText · 地点: $locationText' : 'Teacher: $teacherText · Location: $locationText';
-  }
-  if (item.type == ItemType.task && item.deadline != null) {
-    return zh ? '截止: ${_formatMdHm(item.deadline!)}' : 'Due: ${_formatMdHm(item.deadline!)}';
-  }
-  final location = item.location.trim();
-  if (location.isNotEmpty) {
-    return zh ? '地点: $location' : 'Location: $location';
-  }
-  final details = item.details.trim();
-  if (details.isNotEmpty) {
-    return details;
-  }
-  return '';
+String _formatWidgetTimestamp(DateTime time, bool zh) {
+  final hhmm = _formatHm(time);
+  return zh ? '更新于 $hhmm' : 'Updated $hhmm';
 }
 
 String _formatHm(DateTime time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
-}
-
-String _formatMdHm(DateTime time) {
-  final mm = time.month.toString().padLeft(2, '0');
-  final dd = time.day.toString().padLeft(2, '0');
-  return '$mm/$dd ${_formatHm(time)}';
 }

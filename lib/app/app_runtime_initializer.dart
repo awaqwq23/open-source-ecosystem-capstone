@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/router/app_router.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
@@ -36,9 +35,8 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       return;
     }
     _initialized = true;
-    final router = ref.read(appRouterProvider);
     final service = ref.read(homeWidgetSyncServiceProvider);
-    await service.initialize(router);
+    await service.initialize();
     _subs.add(
       ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.sync()),
     );

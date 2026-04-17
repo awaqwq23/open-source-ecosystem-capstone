@@ -26,6 +26,7 @@ import 'package:huajuan_agenda/features/settings/presentation/pages/settings_pag
 import 'package:huajuan_agenda/features/settings/presentation/pages/settings_widgets_page.dart';
 import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:huajuan_agenda/features/time_picker/presentation/pages/time_picker_page.dart';
+import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
 import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 
@@ -70,15 +71,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutePaths.itemEditor,
                 builder: (context, state) {
                   final showTypePicker = state.uri.queryParameters['showTypePicker'] == '1';
+                  final presetType = _parsePresetType(
+                    state.uri.queryParameters['presetType'],
+                  );
+                  final presetPrefill = presetType == null
+                      ? null
+                      : ItemEditorPrefill(type: presetType);
                   final args = switch (state.extra) {
                     final ItemEditorArgs value =>
-                      value.copyWith(showTypePickerOnLaunch: showTypePicker),
+                      value.copyWith(
+                        showTypePickerOnLaunch: showTypePicker,
+                        prefill: presetPrefill ?? value.prefill,
+                      ),
                     final ItemEditorPrefill prefill =>
                       ItemEditorArgs(
-                        prefill: prefill,
+                        prefill: presetPrefill ?? prefill,
                         showTypePickerOnLaunch: showTypePicker,
                       ),
-                    _ => showTypePicker ? const ItemEditorArgs(showTypePickerOnLaunch: true) : null,
+                    _ => (showTypePicker || presetPrefill != null)
+                        ? ItemEditorArgs(
+                            prefill: presetPrefill,
+                            showTypePickerOnLaunch: showTypePicker,
+                          )
+                        : null,
                   };
                   return ItemEditorPage(args: args);
                 },
@@ -185,3 +200,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+ItemType? _parsePresetType(String? value) {
+  return switch (value?.toLowerCase().trim()) {
+    'schedule' => ItemType.schedule,
+    'task' => ItemType.task,
+    'memo' => ItemType.memo,
+    _ => null,
+  };
+}
