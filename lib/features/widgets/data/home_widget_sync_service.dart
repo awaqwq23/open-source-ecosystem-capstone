@@ -205,14 +205,14 @@ bool _shouldShowInLeftColumn(
   required DateTime now,
   required DateTime leftDay,
 }) {
+  if (item.isCompleted) {
+    return false;
+  }
   if (!_itemInDay(item, leftDay)) {
     return false;
   }
   if (item.type == ItemType.course) {
     return true;
-  }
-  if (item.type == ItemType.task && item.isCompleted) {
-    return false;
   }
   final today = DateTime(now.year, now.month, now.day);
   if (_isSameDay(leftDay, today) && item.type != ItemType.memo) {
@@ -226,10 +226,10 @@ bool _shouldShowInRightColumn(
   required DateTime now,
   required DateTime rightStart,
 }) {
-  if (item.type == ItemType.course) {
+  if (item.isCompleted) {
     return false;
   }
-  if (item.type == ItemType.task && item.isCompleted) {
+  if (item.type == ItemType.course) {
     return false;
   }
   if (!_itemIntersects(item, rightStart, rightStart.add(const Duration(days: 3650)))) {

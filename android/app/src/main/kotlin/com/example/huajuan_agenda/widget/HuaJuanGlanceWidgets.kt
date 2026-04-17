@@ -26,6 +26,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.defaultWeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.fillMaxHeight
@@ -394,9 +395,6 @@ private fun AgendaTwoColumnPanel(
     rightMaxRows: Int,
     locale: String,
 ) {
-    val size = LocalSize.current
-    val columnWidth = ((size.width.value - 15f) / 2f).coerceAtLeast(96f).dp
-
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
@@ -404,7 +402,7 @@ private fun AgendaTwoColumnPanel(
     ) {
         Box(
             modifier = GlanceModifier
-                .width(columnWidth)
+                .defaultWeight()
                 .fillMaxHeight()
                 .padding(end = 6.dp),
             contentAlignment = Alignment.BottomStart,
@@ -424,7 +422,7 @@ private fun AgendaTwoColumnPanel(
         ) {}
         Box(
             modifier = GlanceModifier
-                .width(columnWidth)
+                .defaultWeight()
                 .fillMaxHeight()
                 .padding(start = 6.dp),
             contentAlignment = Alignment.TopStart,
@@ -561,7 +559,7 @@ private fun titleStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
+        fontSize = 15.sp,
     )
 }
 
@@ -569,7 +567,7 @@ private fun bodyStrongStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
     )
 }
 
@@ -577,7 +575,7 @@ private fun sectionTitleStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
     )
 }
 
@@ -585,7 +583,7 @@ private fun rowTitleStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
         fontWeight = FontWeight.Bold,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
     )
 }
 
@@ -593,7 +591,7 @@ private fun topMetaPrimaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_meta_highlight),
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
+        fontSize = 16.sp,
     )
 }
 
@@ -601,35 +599,35 @@ private fun topMetaSecondaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
     )
 }
 
 private fun bodyStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_primary),
-        fontSize = 11.sp,
+        fontSize = 12.sp,
     )
 }
 
 private fun metaStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_secondary),
-        fontSize = 9.sp,
+        fontSize = 11.sp,
     )
 }
 
 private fun secondaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_secondary),
-        fontSize = 12.sp,
+        fontSize = 13.sp,
     )
 }
 
 private fun tertiaryStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_tertiary),
-        fontSize = 9.sp,
+        fontSize = 11.sp,
     )
 }
 
