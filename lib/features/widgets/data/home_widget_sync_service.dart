@@ -270,7 +270,7 @@ String _toCompactDayLine(AgendaItem item, DateTime day, bool zh) {
 String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
   if (item.type == ItemType.memo) {
     final minutes = item.estimatedDuration.inMinutes;
-    return zh ? '全天/$minutes分' : 'AllDay/$minutesm';
+    return zh ? '全天/${minutes}分' : 'AllDay/${minutes}m';
   }
   if (item.isAllDay) {
     return zh ? '全天' : 'All day';
