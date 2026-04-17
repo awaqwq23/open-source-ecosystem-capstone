@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
@@ -131,7 +132,7 @@ class _AiPageState extends ConsumerState<AiPage> {
                             ),
                             ui.GhostButton(
                               onPressed: () async {
-                                final result = await context.push<TimePickerSelection>(
+                                final result = await context.openModal<TimePickerSelection>(
                                   AppRoutePaths.timePicker,
                                   extra: TimePickerArgs(
                                     mode: switch (state.period) {

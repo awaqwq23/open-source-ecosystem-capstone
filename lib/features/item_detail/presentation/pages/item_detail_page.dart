@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
@@ -69,8 +70,7 @@ class ItemDetailPage extends ConsumerWidget {
   }
 
   void _editItem(BuildContext context, AgendaItem item) {
-    context.push(
-      AppRoutePaths.itemEditor,
+    context.openItemEditorFlow(
       extra: ItemEditorArgs(
         itemId: item.id,
         prefill: ItemEditorPrefill(

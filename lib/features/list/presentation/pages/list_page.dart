@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
@@ -470,7 +471,7 @@ class ListPage extends ConsumerWidget {
               isImportant: item.isImportant,
             ),
           );
-    context.push(AppRoutePaths.itemEditor, extra: extra);
+    context.openItemEditorFlow(extra: extra);
   }
 }
 
@@ -561,8 +562,7 @@ class _PendingTaskRowList extends ConsumerWidget {
     if (item == null) {
       return;
     }
-    context.push(
-      AppRoutePaths.itemEditor,
+    context.openItemEditorFlow(
       extra: ItemEditorArgs(
         itemId: item.id,
         prefill: ItemEditorPrefill(

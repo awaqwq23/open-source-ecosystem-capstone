@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
@@ -142,8 +143,7 @@ class HomePage extends ConsumerWidget {
                       );
                     },
                     onEditItem: (item) {
-                      context.push(
-                        AppRoutePaths.itemEditor,
+                      context.openItemEditorFlow(
                         extra: ItemEditorArgs(
                           itemId: item.item.id,
                           prefill: ItemEditorPrefill(
@@ -167,8 +167,7 @@ class HomePage extends ConsumerWidget {
                       );
                     },
                     onCreateFromCell: (date, slot) {
-                      context.push(
-                        AppRoutePaths.itemEditor,
+                      context.openItemEditorFlow(
                         extra: ItemEditorPrefill(
                           startAt: DateTime(
                             date.year,
@@ -202,7 +201,7 @@ class HomePage extends ConsumerWidget {
     WidgetRef ref,
     HomeViewData viewData,
   ) async {
-    final result = await context.push<TimePickerSelection>(
+    final result = await context.openModal<TimePickerSelection>(
       AppRoutePaths.timePicker,
       extra: TimePickerArgs(
         mode: switch (viewData.scope) {

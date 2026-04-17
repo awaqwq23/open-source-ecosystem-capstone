@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:date_field/date_field.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
@@ -583,7 +584,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     RepeatRule current,
   ) async {
-    final result = await context.push<RepeatRule>(
+    final result = await context.openModal<RepeatRule>(
       AppRoutePaths.repeatSettings,
       extra: current,
     );
@@ -597,7 +598,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ReminderOption current,
   ) async {
-    final result = await context.push<ReminderOption>(
+    final result = await context.openModal<ReminderOption>(
       AppRoutePaths.reminderSettings,
       extra: current,
     );

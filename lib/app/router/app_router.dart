@@ -8,6 +8,7 @@ import 'package:huajuan_agenda/features/ai/presentation/pages/ai_page.dart';
 import 'package:huajuan_agenda/features/course_import/presentation/pages/course_import_wakeup_page.dart';
 import 'package:huajuan_agenda/features/course_import/presentation/pages/course_import_whu_page.dart';
 import 'package:huajuan_agenda/features/course_import/presentation/pages/course_timetables_page.dart';
+import 'package:huajuan_agenda/features/course_import/presentation/pages/whu_login_webview_page.dart';
 import 'package:huajuan_agenda/features/home/presentation/pages/home_page.dart';
 import 'package:huajuan_agenda/features/item_detail/domain/models/item_detail_args.dart';
 import 'package:huajuan_agenda/features/item_detail/presentation/pages/item_detail_page.dart';
@@ -70,32 +71,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.itemEditor,
                 builder: (context, state) {
-                  final showTypePicker = state.uri.queryParameters['showTypePicker'] == '1';
-                  final presetType = _parsePresetType(
-                    state.uri.queryParameters['presetType'],
-                  );
-                  final presetPrefill = presetType == null
-                      ? null
-                      : ItemEditorPrefill(type: presetType);
-                  final args = switch (state.extra) {
-                    final ItemEditorArgs value =>
-                      value.copyWith(
-                        showTypePickerOnLaunch: showTypePicker,
-                        prefill: presetPrefill ?? value.prefill,
-                      ),
-                    final ItemEditorPrefill prefill =>
-                      ItemEditorArgs(
-                        prefill: presetPrefill ?? prefill,
-                        showTypePickerOnLaunch: showTypePicker,
-                      ),
-                    _ => (showTypePicker || presetPrefill != null)
-                        ? ItemEditorArgs(
-                            prefill: presetPrefill,
-                            showTypePickerOnLaunch: showTypePicker,
-                          )
-                        : null,
-                  };
-                  return ItemEditorPage(args: args);
+                  return ItemEditorPage(args: _resolveItemEditorArgs(state));
                 },
               ),
             ],
@@ -129,6 +105,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'course-import-whu',
                     builder: (context, state) => const CourseImportWhuPage(),
+                    routes: [
+                      GoRoute(
+                        path: 'login',
+                        builder: (context, state) => const WhuLoginWebViewPage(),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'course-import-wakeup',
@@ -147,6 +129,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutePaths.itemEditorFlow,
+        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
+          context,
+          state,
+          ItemEditorPage(args: _resolveItemEditorArgs(state)),
+          type: SharedAxisTransitionType.horizontal,
+        ),
       ),
       GoRoute(
         path: AppRoutePaths.itemDetail,
@@ -207,5 +198,30 @@ ItemType? _parsePresetType(String? value) {
     'task' => ItemType.task,
     'memo' => ItemType.memo,
     _ => null,
+  };
+}
+
+ItemEditorArgs? _resolveItemEditorArgs(GoRouterState state) {
+  final showTypePicker = state.uri.queryParameters['showTypePicker'] == '1';
+  final presetType = _parsePresetType(
+    state.uri.queryParameters['presetType'],
+  );
+  final presetPrefill = presetType == null ? null : ItemEditorPrefill(type: presetType);
+
+  return switch (state.extra) {
+    final ItemEditorArgs value => value.copyWith(
+        showTypePickerOnLaunch: showTypePicker,
+        prefill: presetPrefill ?? value.prefill,
+      ),
+    final ItemEditorPrefill prefill => ItemEditorArgs(
+        prefill: presetPrefill ?? prefill,
+        showTypePickerOnLaunch: showTypePicker,
+      ),
+    _ => (showTypePicker || presetPrefill != null)
+        ? ItemEditorArgs(
+            prefill: presetPrefill,
+            showTypePickerOnLaunch: showTypePicker,
+          )
+        : null,
   };
 }
