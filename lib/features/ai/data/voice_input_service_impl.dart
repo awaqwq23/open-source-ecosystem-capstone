@@ -48,13 +48,14 @@ class MobileVoiceInputService implements VoiceInputService {
       return false;
     }
     _transcript = '';
-    return _speech.listen(
+    await _speech.listen(
       localeId: localeId,
       onResult: (result) {
         _transcript = result.recognizedWords.trim();
       },
       partialResults: true,
     );
+    return true;
   }
 
   @override

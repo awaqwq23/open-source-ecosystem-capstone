@@ -27,8 +27,13 @@ final aiChatBootstrapMessagesProvider = Provider<List<AiChatMessage>>((ref) {
 
 class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
     implements AiChatRepository {
+  var _hasMutated = false;
+  var _hydratedDeferred = false;
+
   @override
   List<AiChatMessage> build() {
+    _hasMutated = false;
+    _hydratedDeferred = false;
     return ref.read(aiChatBootstrapMessagesProvider);
   }
 
@@ -47,6 +52,7 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
 
   @override
   Future<void> append(AiChatMessage message) async {
+    _hasMutated = true;
     state = [...state, message];
     await _prefs?.setString(
       AppBootstrapStorageKeys.aiMessages,
@@ -72,6 +78,17 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
           },
       ]),
     );
+  }
+
+  void hydrateFromBootstrap(List<AiChatMessage> messages) {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.isNotEmpty) {
+      return;
+    }
+    state = [...messages];
   }
 
   SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);

@@ -9,6 +9,7 @@ import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
