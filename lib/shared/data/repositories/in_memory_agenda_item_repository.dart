@@ -16,6 +16,8 @@ final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
 
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
+  static const _hydrateChunkSize = 200;
+
   var _idSeed = 0;
   var _hasMutated = false;
   var _hydratedDeferred = false;
@@ -219,6 +221,34 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
     state = items;
     _idSeed = items.length;
+  }
+
+  Future<void> hydrateFromSerializedBootstrap(List<Map<String, dynamic>> itemsJson) async {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.isNotEmpty || itemsJson.isEmpty) {
+      return;
+    }
+
+    final hydratedItems = <AgendaItem>[];
+    for (var index = 0; index < itemsJson.length; index += _hydrateChunkSize) {
+      final end = (index + _hydrateChunkSize).clamp(0, itemsJson.length);
+      final chunk = itemsJson.sublist(index, end);
+      for (final itemJson in chunk) {
+        final item = AgendaItemStorageMapper.fromJson(itemJson);
+        if (item != null) {
+          hydratedItems.add(item);
+        }
+      }
+      if (end < itemsJson.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    state = hydratedItems;
+    _idSeed = hydratedItems.length;
   }
 
   Future<void> _persist() {

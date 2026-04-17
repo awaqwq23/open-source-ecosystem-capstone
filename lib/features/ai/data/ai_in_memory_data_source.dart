@@ -27,6 +27,8 @@ final aiChatBootstrapMessagesProvider = Provider<List<AiChatMessage>>((ref) {
 
 class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
     implements AiChatRepository {
+  static const _hydrateChunkSize = 200;
+
   var _hasMutated = false;
   var _hydratedDeferred = false;
 
@@ -89,6 +91,84 @@ class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
       return;
     }
     state = [...messages];
+  }
+
+  Future<void> hydrateFromSerializedBootstrap(List<Map<String, dynamic>> itemsJson) async {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.isNotEmpty || itemsJson.isEmpty) {
+      return;
+    }
+
+    final messages = <AiChatMessage>[];
+    for (var index = 0; index < itemsJson.length; index += _hydrateChunkSize) {
+      final end = (index + _hydrateChunkSize).clamp(0, itemsJson.length);
+      final chunk = itemsJson.sublist(index, end);
+      for (final item in chunk) {
+        final message = AiChatMessage(
+          id: item['id'] as String? ?? '',
+          content: item['content'] as String? ?? '',
+          createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0),
+          role: switch (item['role']) {
+            'assistant' => AiChatRole.assistant,
+            _ => AiChatRole.user,
+          },
+          kind: switch (item['kind']) {
+            'answer' => AiMessageKind.answer,
+            'system' => AiMessageKind.system,
+            _ => AiMessageKind.chat,
+          },
+          citations: _decodeCitations(item['citations']),
+        );
+        if (message.id.isNotEmpty) {
+          messages.add(message);
+        }
+      }
+      if (end < itemsJson.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+    state = messages;
+  }
+
+  List<AiCitation> _decodeCitations(Object? raw) {
+    if (raw is! List<dynamic>) {
+      return const [];
+    }
+    final citations = <AiCitation>[];
+    for (final row in raw) {
+      if (row is! Map<String, dynamic>) {
+        continue;
+      }
+      final type = _itemTypeFromString(row['type'] as String?);
+      if (type == null) {
+        continue;
+      }
+      citations.add(
+        AiCitation(
+          itemId: row['itemId'] as String? ?? '',
+          title: row['title'] as String? ?? '',
+          type: type,
+          startAt: DateTime.tryParse(row['startAt'] as String? ?? ''),
+          endAt: DateTime.tryParse(row['endAt'] as String? ?? ''),
+          reason: row['reason'] as String?,
+        ),
+      );
+    }
+    return citations;
+  }
+
+  ItemType? _itemTypeFromString(String? value) {
+    return switch (value) {
+      'schedule' => ItemType.schedule,
+      'task' => ItemType.task,
+      'memo' => ItemType.memo,
+      'course' => ItemType.course,
+      _ => null,
+    };
   }
 
   SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);

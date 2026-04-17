@@ -12,6 +12,16 @@ import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_re
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum AppBootstrapPhase {
+  startup,
+  hydrating,
+  ready,
+}
+
+final appBootstrapPhaseProvider = StateProvider<AppBootstrapPhase>((ref) {
+  return AppBootstrapPhase.startup;
+});
+
 class AppRuntimeInitializer extends ConsumerStatefulWidget {
   const AppRuntimeInitializer({
     required this.preferences,
@@ -46,34 +56,50 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     final service = ref.read(homeWidgetSyncServiceProvider);
     unawaited(service.initialize());
     _subs.add(
-      ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.sync()),
+      ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appHomeSettingsProvider, (_, __) => service.sync()),
+      ref.listenManual(appHomeSettingsProvider, (_, __) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appWidgetSettingsProvider, (_, __) => service.sync()),
+      ref.listenManual(appWidgetSettingsProvider, (_, __) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appLocaleProvider, (_, __) => service.sync()),
+      ref.listenManual(appLocaleProvider, (_, __) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appThemeModeProvider, (_, __) => service.sync()),
+      ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
     unawaited(_hydrateDeferredBootstrapData(service));
   }
 
   Future<void> _hydrateDeferredBootstrapData(HomeWidgetSyncService service) async {
-    final data = AppBootstrapLoader.loadDeferredData(widget.preferences);
-    if (!mounted) {
-      return;
+    ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.hydrating;
+    try {
+      final payload = await AppBootstrapLoader.loadDeferredPayloadInBackground(widget.preferences);
+      if (!mounted) {
+        return;
+      }
+      await ref
+          .read(agendaItemRepositoryProvider.notifier)
+          .hydrateFromSerializedBootstrap(payload.agendaItemsJson);
+      await ref
+          .read(courseTimetableRepositoryProvider.notifier)
+          .hydrateFromSerializedBootstrap(
+            timetablesJson: payload.courseTimetablesJson,
+            activeTimetableId: payload.activeCourseTimetableId,
+          );
+      await ref
+          .read(aiChatRepositoryProvider.notifier)
+          .hydrateFromSerializedBootstrap(payload.aiMessagesJson);
+    } finally {
+      if (mounted) {
+        ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
+      }
     }
-    ref.read(agendaItemRepositoryProvider.notifier).hydrateFromBootstrap(data.agendaItems);
-    ref
-        .read(courseTimetableRepositoryProvider.notifier)
-        .hydrateFromBootstrap(data.courseTimetableStore);
-    ref.read(aiChatRepositoryProvider.notifier).hydrateFromBootstrap(data.aiMessages);
-    unawaited(service.sync());
+    if (mounted) {
+      service.syncDebounced();
+    }
   }
 
   @override

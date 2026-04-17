@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
@@ -362,6 +363,9 @@ final aiHeaderViewModelProvider =
 );
 
 final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
+  if (ref.watch(appBootstrapPhaseProvider) != AppBootstrapPhase.ready) {
+    return const [];
+  }
   final range = ref.read(aiHeaderViewModelProvider.notifier).visibleRange();
   final messages = ref.watch(aiChatRepositoryProvider).where((message) {
     return !message.createdAt.isBefore(range.start) && message.createdAt.isBefore(range.end);

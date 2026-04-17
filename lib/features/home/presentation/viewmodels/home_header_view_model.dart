@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/features/home/data/home_demo_items.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
 import 'package:huajuan_agenda/features/home/domain/use_cases/build_home_grid.dart';
@@ -143,6 +144,7 @@ final homeHeaderViewModelProvider =
 );
 
 final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, query) {
+  final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
   final repositoryItems = ref.watch(agendaItemRepositoryProvider);
@@ -160,7 +162,10 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: const [],
   );
-  final visibleItems = settings.showDemoData
+  final shouldLoadItems = bootstrapPhase == AppBootstrapPhase.ready;
+  final visibleItems = !shouldLoadItems
+      ? const <AgendaItem>[]
+      : settings.showDemoData
       ? HomeHeaderViewModel._demoItemsSource.buildForRange(previewGrid.visibleRange)
       : [
           for (final item in repositoryItems)
@@ -206,7 +211,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     scope: scope,
     visibleRangeStart: baseViewData.visibleRange.start,
     activeTimetableId: activeTimetableId,
-    timetabledCourseItems: [
+    timetabledCourseItems: !shouldLoadItems
+        ? const <AgendaItem>[]
+        : [
       for (final item in repositoryItems)
         if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
     ],

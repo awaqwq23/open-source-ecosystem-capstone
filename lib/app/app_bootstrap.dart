@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
@@ -69,6 +70,20 @@ class AppDeferredBootstrapData {
   final CourseTimetableStore courseTimetableStore;
 }
 
+class AppDeferredBootstrapPayload {
+  const AppDeferredBootstrapPayload({
+    required this.aiMessagesJson,
+    required this.agendaItemsJson,
+    required this.courseTimetablesJson,
+    required this.activeCourseTimetableId,
+  });
+
+  final List<Map<String, dynamic>> aiMessagesJson;
+  final List<Map<String, dynamic>> agendaItemsJson;
+  final List<Map<String, dynamic>> courseTimetablesJson;
+  final String? activeCourseTimetableId;
+}
+
 abstract final class AppBootstrapStorageKeys {
   static const locale = 'settings.locale';
   static const themeMode = 'settings.themeMode';
@@ -119,6 +134,48 @@ class AppBootstrapLoader {
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
     );
+  }
+
+  static Future<AppDeferredBootstrapPayload> loadDeferredPayloadInBackground(
+    SharedPreferences preferences,
+  ) async {
+    final rawPayload = <String, String?>{
+      AppBootstrapStorageKeys.aiMessages:
+          preferences.getString(AppBootstrapStorageKeys.aiMessages),
+      AppBootstrapStorageKeys.agendaItems:
+          preferences.getString(AppBootstrapStorageKeys.agendaItems),
+      AppBootstrapStorageKeys.courseTimetables:
+          preferences.getString(AppBootstrapStorageKeys.courseTimetables),
+      AppBootstrapStorageKeys.activeCourseTimetableId:
+          preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId),
+    };
+    final decoded = await compute(_decodeDeferredPayloadRaw, rawPayload);
+    final activeId = decoded[AppBootstrapStorageKeys.activeCourseTimetableId] as String?;
+    return AppDeferredBootstrapPayload(
+      aiMessagesJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.aiMessages]),
+      agendaItemsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.agendaItems]),
+      courseTimetablesJson: _castJsonObjectList(
+        decoded[AppBootstrapStorageKeys.courseTimetables],
+      ),
+      activeCourseTimetableId: (activeId == null || activeId.isEmpty) ? null : activeId,
+    );
+  }
+
+  static List<Map<String, dynamic>> _castJsonObjectList(Object? value) {
+    final raw = value;
+    if (raw is! List<dynamic>) {
+      return const [];
+    }
+    return [
+      for (final item in raw)
+        if (item is Map<Object?, Object?>)
+          item.map(
+            (key, value) => MapEntry(
+              key is String ? key : key.toString(),
+              value,
+            ),
+          ),
+    ];
   }
 
   static Locale _readLocale(SharedPreferences preferences) {
@@ -176,12 +233,12 @@ class AppBootstrapLoader {
 
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
+      const defaults = AiSettings.defaults();
       return AiSettings(
-        baseUrl: json['baseUrl'] as String? ?? '',
+        baseUrl: json['baseUrl'] as String? ?? defaults.baseUrl,
         apiKey: json['apiKey'] as String? ?? '',
-        model: json['model'] as String? ?? 'gpt-4o-mini',
-        systemPrompt: json['systemPrompt'] as String? ??
-            const AiSettings.defaults().systemPrompt,
+        model: json['model'] as String? ?? defaults.model,
+        systemPrompt: json['systemPrompt'] as String? ?? defaults.systemPrompt,
       );
     } catch (_) {
       return const AiSettings.defaults();
@@ -327,4 +384,30 @@ class AppBootstrapLoader {
       return const CourseTimetableStore(timetables: []);
     }
   }
+}
+
+Map<String, dynamic> _decodeDeferredPayloadRaw(Map<String, String?> rawPayload) {
+  List<dynamic> decodeList(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return const [];
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is List<dynamic> ? decoded : const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  final activeIdRaw = rawPayload[AppBootstrapStorageKeys.activeCourseTimetableId];
+  final activeId = (activeIdRaw == null || activeIdRaw.isEmpty) ? null : activeIdRaw;
+  return <String, dynamic>{
+    AppBootstrapStorageKeys.aiMessages:
+        decodeList(rawPayload[AppBootstrapStorageKeys.aiMessages]),
+    AppBootstrapStorageKeys.agendaItems:
+        decodeList(rawPayload[AppBootstrapStorageKeys.agendaItems]),
+    AppBootstrapStorageKeys.courseTimetables:
+        decodeList(rawPayload[AppBootstrapStorageKeys.courseTimetables]),
+    AppBootstrapStorageKeys.activeCourseTimetableId: activeId,
+  };
 }

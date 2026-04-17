@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -27,6 +28,8 @@ class HomeWidgetSyncService {
   final Ref _ref;
   bool _isSyncing = false;
   bool _syncQueued = false;
+  Timer? _debounceTimer;
+  String? _lastPayloadHash;
 
   bool get _supported => !kIsWeb && Platform.isAndroid;
 
@@ -34,7 +37,17 @@ class HomeWidgetSyncService {
     if (!_supported) {
       return;
     }
-    await sync();
+    syncDebounced(delay: const Duration(milliseconds: 800));
+  }
+
+  void syncDebounced({Duration delay = const Duration(milliseconds: 700)}) {
+    if (!_supported) {
+      return;
+    }
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(delay, () {
+      unawaited(sync());
+    });
   }
 
   Future<void> sync() async {
@@ -94,6 +107,11 @@ class HomeWidgetSyncService {
         ),
       };
 
+      final payloadHash = jsonEncode(payload);
+      if (payloadHash == _lastPayloadHash) {
+        return;
+      }
+      _lastPayloadHash = payloadHash;
       await _channel.invokeMethod<void>('syncWidgets', payload);
     } finally {
       _isSyncing = false;
@@ -104,7 +122,9 @@ class HomeWidgetSyncService {
     }
   }
 
-  void dispose() {}
+  void dispose() {
+    _debounceTimer?.cancel();
+  }
 
   Locale _resolveLocale(WidgetSettings settings) {
     if (settings.followAppLanguage) {

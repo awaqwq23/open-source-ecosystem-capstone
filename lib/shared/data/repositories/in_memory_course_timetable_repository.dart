@@ -13,6 +13,8 @@ final courseTimetableBootstrapProvider = Provider<CourseTimetableStore>((ref) {
 
 class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     implements CourseTimetableRepository {
+  static const _hydrateChunkSize = 100;
+
   var _idSeed = 0;
   var _hasMutated = false;
   var _hydratedDeferred = false;
@@ -119,6 +121,46 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     }
     state = store;
     _idSeed = store.timetables.length;
+  }
+
+  Future<void> hydrateFromSerializedBootstrap({
+    required List<Map<String, dynamic>> timetablesJson,
+    required String? activeTimetableId,
+  }) async {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated ||
+        state.timetables.isNotEmpty ||
+        state.activeTimetableId != null ||
+        timetablesJson.isEmpty) {
+      return;
+    }
+
+    final timetables = <CourseTimetable>[];
+    for (var index = 0; index < timetablesJson.length; index += _hydrateChunkSize) {
+      final end = (index + _hydrateChunkSize).clamp(0, timetablesJson.length);
+      for (final item in timetablesJson.sublist(index, end)) {
+        final parsed = CourseTimetableStorageMapper.fromJson(item);
+        if (parsed != null) {
+          timetables.add(parsed);
+        }
+      }
+      if (end < timetablesJson.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    final normalizedActiveId = activeTimetableId != null &&
+            timetables.any((timetable) => timetable.id == activeTimetableId)
+        ? activeTimetableId
+        : (timetables.isEmpty ? null : timetables.first.id);
+    state = CourseTimetableStore(
+      timetables: timetables,
+      activeTimetableId: normalizedActiveId,
+    );
+    _idSeed = timetables.length;
   }
 
   Future<void> _persist() {
