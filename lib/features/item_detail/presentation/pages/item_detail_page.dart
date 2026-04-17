@@ -108,6 +108,7 @@ class _ItemDetailContent extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final repository = ref.read(agendaItemRepositoryProvider.notifier);
+    final isCourse = item.type == ItemType.course;
     final canToggleCompleted = item.supportsManualCompletion;
     final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
     final isCompleted = item.isEffectivelyCompleted(now);
@@ -157,14 +158,15 @@ class _ItemDetailContent extends ConsumerWidget {
                                 ? l10n.listStatusCompleted
                                 : l10n.listStatusPending,
                           ),
-                        _MetaChip(
-                          icon: item.isImportant
-                              ? AppIcons.importantFilled
-                              : AppIcons.importantOutlined,
-                          label: item.isImportant
-                              ? l10n.listImportantEnabled
-                              : l10n.listImportantDisabled,
-                        ),
+                        if (!isCourse)
+                          _MetaChip(
+                            icon: item.isImportant
+                                ? AppIcons.importantFilled
+                                : AppIcons.importantOutlined,
+                            label: item.isImportant
+                                ? l10n.listImportantEnabled
+                                : l10n.listImportantDisabled,
+                          ),
                         _MetaChip(
                           icon: _typeIcon(item.type),
                           label: _typeLabel(l10n, item.type),
@@ -231,46 +233,48 @@ class _ItemDetailContent extends ConsumerWidget {
               value: _repeatLabel(l10n, item),
             ),
           ],
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              if (canToggleCompleted)
-                ui.PrimaryButton(
-                  onPressed: () => repository.toggleCompleted(item.id),
-                  leading: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
+          if (!isCourse) ...[
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (canToggleCompleted)
+                  ui.PrimaryButton(
+                    onPressed: () => repository.toggleCompleted(item.id),
+                    leading: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
+                    child: Text(
+                      isCompleted
+                          ? l10n.detailMarkIncomplete
+                          : l10n.detailMarkComplete,
+                    ),
+                  ),
+                ui.OutlineButton(
+                  onPressed: () => repository.toggleImportant(item.id),
+                  leading: Icon(
+                    item.isImportant
+                        ? AppIcons.importantOutlined
+                        : AppIcons.importantFilled,
+                  ),
                   child: Text(
-                    isCompleted
-                        ? l10n.detailMarkIncomplete
-                        : l10n.detailMarkComplete,
+                    item.isImportant
+                        ? l10n.detailUnmarkImportant
+                        : l10n.detailMarkImportant,
                   ),
                 ),
-              ui.OutlineButton(
-                onPressed: () => repository.toggleImportant(item.id),
-                leading: Icon(
-                  item.isImportant
-                      ? AppIcons.importantOutlined
-                      : AppIcons.importantFilled,
+                ui.DestructiveButton(
+                  onPressed: () async {
+                    await repository.deleteItem(item.id);
+                    if (context.mounted && context.canPop()) {
+                      context.pop();
+                    }
+                  },
+                  leading: const Icon(AppIcons.delete),
+                  child: Text(l10n.detailDelete),
                 ),
-                child: Text(
-                  item.isImportant
-                      ? l10n.detailUnmarkImportant
-                      : l10n.detailMarkImportant,
-                ),
-              ),
-              ui.DestructiveButton(
-                onPressed: () async {
-                  await repository.deleteItem(item.id);
-                  if (context.mounted && context.canPop()) {
-                    context.pop();
-                  }
-                },
-                leading: const Icon(AppIcons.delete),
-                child: Text(l10n.detailDelete),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

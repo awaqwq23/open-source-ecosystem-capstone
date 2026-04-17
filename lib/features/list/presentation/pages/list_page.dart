@@ -661,6 +661,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
     final canToggleCompleted = item.supportsManualCompletion;
+    final canToggleImportant = item.type != ItemType.course;
     final isManuallyCompleted = item.isCompleted && canToggleCompleted;
     final cardColor = Color.alphaBlend(
       theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
@@ -767,15 +768,20 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                         ),
                       ],
                       const SizedBox(width: 4),
-                      _ActionIconButton(
-                        onPressed: widget.onToggleImportant,
-                        icon: item.isImportant
-                            ? AppIcons.importantFilled
-                            : AppIcons.importantOutlined,
-                        color: item.isImportant
-                            ? AppSemanticColors.listImportantStar(theme)
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
+                      canToggleImportant
+                          ? _ActionIconButton(
+                              onPressed: widget.onToggleImportant,
+                              icon: item.isImportant
+                                  ? AppIcons.importantFilled
+                                  : AppIcons.importantOutlined,
+                              color: item.isImportant
+                                  ? AppSemanticColors.listImportantStar(theme)
+                                  : theme.colorScheme.onSurfaceVariant,
+                            )
+                          : const SizedBox(
+                              width: 28,
+                              height: 28,
+                            ),
                     ],
                   ),
                 ),

@@ -149,6 +149,9 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
 
     final current = state[index];
+    if (current.type == ItemType.course) {
+      return current;
+    }
     final updated = current.copyWith(
       isImportant: !current.isImportant,
       updatedAt: DateTime.now(),
@@ -216,10 +219,13 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   AgendaItem _normalizeCompletionByType(AgendaItem item) {
-    if (item.supportsManualCompletion) {
-      return item;
+    final normalized = item.type == ItemType.course
+        ? item.copyWith(isImportant: false)
+        : item;
+    if (normalized.supportsManualCompletion) {
+      return normalized;
     }
-    return item.copyWith(
+    return normalized.copyWith(
       isCompleted: false,
       clearCompletedAt: true,
     );
