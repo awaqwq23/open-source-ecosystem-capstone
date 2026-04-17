@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
-import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
+import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 
@@ -11,41 +12,68 @@ enum AiHeaderPeriod {
   month,
 }
 
+enum AiWorkflowPhase {
+  idle,
+  parsing,
+  awaitingConfirm,
+  creating,
+  answering,
+  failed,
+}
+
 class AiHeaderState {
   const AiHeaderState({
     required this.period,
     required this.anchor,
     this.input = '',
-    this.isSending = false,
-    this.streamingReply,
+    this.phase = AiWorkflowPhase.idle,
+    this.pendingDraft,
     this.lastError,
+    this.composerEnabled = true,
+    this.composerDisabledReason,
   });
 
   final AiHeaderPeriod period;
   final DateTime anchor;
   final String input;
-  final bool isSending;
-  final String? streamingReply;
+  final AiWorkflowPhase phase;
+  final AiCreateItemDraft? pendingDraft;
   final String? lastError;
+  final bool composerEnabled;
+  final String? composerDisabledReason;
+
+  bool get isBusy {
+    return phase == AiWorkflowPhase.parsing ||
+        phase == AiWorkflowPhase.creating ||
+        phase == AiWorkflowPhase.answering;
+  }
+
+  bool get canSend => composerEnabled && !isBusy && input.trim().isNotEmpty;
 
   AiHeaderState copyWith({
     AiHeaderPeriod? period,
     DateTime? anchor,
     String? input,
-    bool? isSending,
-    String? streamingReply,
+    AiWorkflowPhase? phase,
+    AiCreateItemDraft? pendingDraft,
+    bool clearPendingDraft = false,
     String? lastError,
-    bool clearStreamingReply = false,
     bool clearError = false,
+    bool? composerEnabled,
+    String? composerDisabledReason,
+    bool clearComposerDisabledReason = false,
   }) {
     return AiHeaderState(
       period: period ?? this.period,
       anchor: anchor ?? this.anchor,
       input: input ?? this.input,
-      isSending: isSending ?? this.isSending,
-      streamingReply:
-          clearStreamingReply ? null : (streamingReply ?? this.streamingReply),
+      phase: phase ?? this.phase,
+      pendingDraft: clearPendingDraft ? null : (pendingDraft ?? this.pendingDraft),
       lastError: clearError ? null : (lastError ?? this.lastError),
+      composerEnabled: composerEnabled ?? this.composerEnabled,
+      composerDisabledReason: clearComposerDisabledReason
+          ? null
+          : (composerDisabledReason ?? this.composerDisabledReason),
     );
   }
 }
@@ -53,9 +81,13 @@ class AiHeaderState {
 class AiHeaderViewModel extends Notifier<AiHeaderState> {
   @override
   AiHeaderState build() {
+    final now = DateTime.now();
+    final settings = ref.watch(appAiSettingsProvider);
     return AiHeaderState(
       period: AiHeaderPeriod.day,
-      anchor: DateTime(2026, 3, 20),
+      anchor: DateTime(now.year, now.month, now.day),
+      composerEnabled: settings.isConfigured,
+      composerDisabledReason: settings.isConfigured ? null : '请先在设置中完成 AI 配置。',
     );
   }
 
@@ -71,17 +103,48 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     state = state.copyWith(anchor: DateTime(date.year, date.month, date.day));
   }
 
+  void refreshComposerAvailability() {
+    final settings = ref.read(appAiSettingsProvider);
+    if (settings.isConfigured && !state.composerEnabled) {
+      state = state.copyWith(
+        composerEnabled: true,
+        clearComposerDisabledReason: true,
+      );
+      return;
+    }
+    if (!settings.isConfigured &&
+        (state.composerEnabled || state.composerDisabledReason != '请先在设置中完成 AI 配置。')) {
+      state = state.copyWith(
+        composerEnabled: false,
+        composerDisabledReason: '请先在设置中完成 AI 配置。',
+      );
+    }
+  }
+
+  void retryEnableComposer() {
+    final settings = ref.read(appAiSettingsProvider);
+    state = state.copyWith(
+      composerEnabled: settings.isConfigured,
+      composerDisabledReason: settings.isConfigured ? null : '请先在设置中完成 AI 配置。',
+      clearError: true,
+      phase: state.pendingDraft == null ? AiWorkflowPhase.idle : AiWorkflowPhase.awaitingConfirm,
+    );
+  }
+
   Future<void> sendMessage() async {
+    refreshComposerAvailability();
+    if (!state.composerEnabled) {
+      return;
+    }
+
     final content = state.input.trim();
     if (content.isEmpty) {
       return;
     }
 
-    state = state.copyWith(isSending: true, clearError: true);
     final repository = ref.read(aiChatRepositoryNotifierProvider);
     final service = ref.read(aiServiceProvider);
     final now = DateTime.now();
-
     await repository.append(
       AiChatMessage(
         id: 'user_${now.microsecondsSinceEpoch}',
@@ -91,62 +154,161 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       ),
     );
 
+    state = state.copyWith(
+      phase: AiWorkflowPhase.parsing,
+      clearError: true,
+      clearPendingDraft: true,
+    );
+
     try {
-      state = state.copyWith(
-        isSending: true,
-        streamingReply: '',
-        clearError: true,
+      final items = ref.read(agendaItemRepositoryProvider);
+      final resolved = await service.resolveMessage(
+        message: content,
+        items: items,
       );
 
-      await for (final event in service.sendMessage(
-        message: content,
-        items: ref.read(agendaItemRepositoryProvider),
-      )) {
-        switch (event) {
-          case AiStreamStarted():
-            state = state.copyWith(streamingReply: '', isSending: true);
-          case AiStreamDelta(:final text):
-            state = state.copyWith(
-              streamingReply: '${state.streamingReply ?? ''}$text',
-              isSending: true,
-            );
-          case AiStreamCompleted(:final text):
-            final reply = text.trim();
-            if (reply.isNotEmpty) {
-              await repository.append(
-                AiChatMessage(
-                  id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
-                  content: reply,
-                  createdAt: DateTime.now(),
-                  role: AiChatRole.assistant,
-                ),
-              );
-            }
-            state = state.copyWith(
-              input: '',
-              isSending: false,
-              clearStreamingReply: true,
-            );
-        }
+      switch (resolved.intent) {
+        case AiResolvedIntentType.createItem:
+          await _onCreateItemResolved(resolved);
+        case AiResolvedIntentType.answer:
+          await _appendAssistantMessage(
+            content: resolved.reply,
+            kind: AiMessageKind.answer,
+            citations: resolved.citations,
+          );
+          state = state.copyWith(
+            input: '',
+            phase: AiWorkflowPhase.idle,
+            clearError: true,
+          );
+        case AiResolvedIntentType.fallback:
+          await _appendAssistantMessage(
+            content: resolved.reply,
+            kind: AiMessageKind.chat,
+          );
+          state = state.copyWith(
+            input: '',
+            phase: AiWorkflowPhase.idle,
+            clearError: true,
+          );
       }
-      state = state.copyWith(
-        input: '',
-        isSending: false,
-        clearStreamingReply: true,
-      );
     } on OpenAiConfigurationException catch (error) {
       state = state.copyWith(
-        isSending: false,
-        clearStreamingReply: true,
+        phase: AiWorkflowPhase.failed,
+        composerEnabled: false,
+        composerDisabledReason: error.message,
+        lastError: error.message,
+      );
+    } on AiServiceException catch (error) {
+      final shouldDisableComposer = error.code == AiServiceErrorCode.network ||
+          error.code == AiServiceErrorCode.configuration;
+      state = state.copyWith(
+        phase: AiWorkflowPhase.failed,
+        composerEnabled: !shouldDisableComposer,
+        composerDisabledReason: shouldDisableComposer ? 'AI 服务暂不可用，请先修复配置或网络。' : null,
+        clearComposerDisabledReason: !shouldDisableComposer,
         lastError: error.message,
       );
     } catch (_) {
       state = state.copyWith(
-        isSending: false,
-        clearStreamingReply: true,
-        lastError: 'AI 服务暂不可用，请检查接口地址和密钥。',
+        phase: AiWorkflowPhase.failed,
+        composerEnabled: false,
+        composerDisabledReason: 'AI 服务暂不可用，请先修复配置或网络。',
+        lastError: 'AI 服务暂不可用，请稍后重试。',
       );
     }
+  }
+
+  Future<void> confirmCreateDraft() async {
+    final pendingDraft = state.pendingDraft;
+    if (pendingDraft == null || pendingDraft.missingRequired.isNotEmpty) {
+      return;
+    }
+
+    state = state.copyWith(
+      phase: AiWorkflowPhase.creating,
+      clearError: true,
+    );
+
+    try {
+      final created = await ref.read(agendaItemRepositoryNotifierProvider).createItem(
+            pendingDraft.draft,
+            isImportant: pendingDraft.isImportant,
+          );
+      await _appendAssistantMessage(
+        content: '已创建事项：${created.title}',
+        kind: AiMessageKind.system,
+      );
+      state = state.copyWith(
+        phase: AiWorkflowPhase.idle,
+        clearPendingDraft: true,
+        clearError: true,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        phase: AiWorkflowPhase.failed,
+        lastError: '创建事项失败，请稍后再试。',
+      );
+    }
+  }
+
+  void discardCreateDraft() {
+    state = state.copyWith(
+      clearPendingDraft: true,
+      phase: AiWorkflowPhase.idle,
+    );
+  }
+
+  Future<void> _onCreateItemResolved(AiResolvedMessage resolved) async {
+    final draft = resolved.createItemDraft;
+    await _appendAssistantMessage(
+      content: resolved.reply,
+      kind: AiMessageKind.system,
+    );
+
+    if (draft == null) {
+      state = state.copyWith(
+        input: '',
+        phase: AiWorkflowPhase.idle,
+      );
+      return;
+    }
+
+    if (draft.missingRequired.isNotEmpty) {
+      state = state.copyWith(
+        phase: AiWorkflowPhase.idle,
+        clearPendingDraft: true,
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      input: '',
+      phase: AiWorkflowPhase.awaitingConfirm,
+      pendingDraft: draft,
+    );
+  }
+
+  Future<void> _appendAssistantMessage({
+    required String content,
+    required AiMessageKind kind,
+    List<AiCitation> citations = const <AiCitation>[],
+  }) {
+    final repository = ref.read(aiChatRepositoryNotifierProvider);
+    final text = content.trim();
+    if (text.isEmpty) {
+      return Future<void>.value();
+    }
+    return repository.append(
+      AiChatMessage(
+        id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
+        content: text,
+        createdAt: DateTime.now(),
+        role: AiChatRole.assistant,
+        kind: kind,
+        citations: citations,
+      ),
+    );
   }
 
   DateTimeRangeValue visibleRange() {
@@ -205,4 +367,3 @@ final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
   }).toList()
     ..sort((left, right) => left.range.start.compareTo(right.range.start));
 });
-

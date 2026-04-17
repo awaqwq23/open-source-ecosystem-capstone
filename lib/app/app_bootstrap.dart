@@ -10,6 +10,7 @@ import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.da
 import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
+import 'package:huajuan_agenda/shared/enums/item_type.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -247,6 +248,28 @@ class AppBootstrapLoader {
                 'assistant' => AiChatRole.assistant,
                 _ => AiChatRole.user,
               },
+              kind: switch (item['kind']) {
+                'answer' => AiMessageKind.answer,
+                'system' => AiMessageKind.system,
+                _ => AiMessageKind.chat,
+              },
+              citations: [
+                for (final citation in (item['citations'] as List<dynamic>? ?? const []))
+                  if (citation is Map<String, dynamic>)
+                    AiCitation(
+                      itemId: citation['itemId'] as String? ?? '',
+                      title: citation['title'] as String? ?? '',
+                      type: switch (citation['type']) {
+                        'task' => ItemType.task,
+                        'memo' => ItemType.memo,
+                        'course' => ItemType.course,
+                        _ => ItemType.schedule,
+                      },
+                      startAt: DateTime.tryParse(citation['startAt'] as String? ?? ''),
+                      endAt: DateTime.tryParse(citation['endAt'] as String? ?? ''),
+                      reason: citation['reason'] as String?,
+                    ),
+              ].where((citation) => citation.itemId.isNotEmpty).toList(growable: false),
             ),
           )
           .where((message) => message.id.isNotEmpty)
