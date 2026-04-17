@@ -23,8 +23,6 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.defaultWeight
-import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -79,7 +77,7 @@ private class HuaJuanAiEntryWidget : GlanceAppWidget() {
                     maxLines = 2,
                 )
                 if (payload.meta.updatedLabel.isNotBlank()) {
-                    Spacer(modifier = GlanceModifier.defaultWeight())
+                    Spacer(modifier = GlanceModifier.height(6.dp))
                     Text(
                         text = payload.meta.updatedLabel,
                         style = tertiaryStyle(),
@@ -277,21 +275,18 @@ private fun TrioButtons(model: QuickCreateWidgetModel, compact: Boolean) {
             text = model.scheduleLabel,
             clickUri = WidgetDeepLinkFactory.createSchedule(),
             compact = compact,
-            modifier = GlanceModifier.defaultWeight(),
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         QuickCreateButton(
             text = model.taskLabel,
             clickUri = WidgetDeepLinkFactory.createTask(),
             compact = compact,
-            modifier = GlanceModifier.defaultWeight(),
         )
         Spacer(modifier = GlanceModifier.width(4.dp))
         QuickCreateButton(
             text = model.memoLabel,
             clickUri = WidgetDeepLinkFactory.createMemo(),
             compact = compact,
-            modifier = GlanceModifier.defaultWeight(),
         )
     }
 }
@@ -299,35 +294,31 @@ private fun TrioButtons(model: QuickCreateWidgetModel, compact: Boolean) {
 @Composable
 private fun QuadButtons(model: QuickCreateWidgetModel) {
     Column(modifier = GlanceModifier.fillMaxSize()) {
-        Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
             QuickCreateButton(
                 text = "+",
                 clickUri = WidgetDeepLinkFactory.createChooser(),
                 compact = false,
-                modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             QuickCreateButton(
                 text = model.scheduleLabel,
                 clickUri = WidgetDeepLinkFactory.createSchedule(),
                 compact = true,
-                modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
             )
         }
         Spacer(modifier = GlanceModifier.height(4.dp))
-        Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
             QuickCreateButton(
                 text = model.taskLabel,
                 clickUri = WidgetDeepLinkFactory.createTask(),
                 compact = true,
-                modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
             )
             Spacer(modifier = GlanceModifier.width(4.dp))
             QuickCreateButton(
                 text = model.memoLabel,
                 clickUri = WidgetDeepLinkFactory.createMemo(),
                 compact = true,
-                modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
             )
         }
     }
@@ -350,7 +341,6 @@ private fun QuickCreateLine(icon: String, text: String, clickUri: String) {
             text = text,
             clickUri = clickUri,
             compact = false,
-            modifier = GlanceModifier.defaultWeight(),
         )
     }
     Spacer(modifier = GlanceModifier.height(4.dp))
@@ -414,7 +404,6 @@ private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int) {
         days.forEach { day ->
             Column(
                 modifier = GlanceModifier
-                    .defaultWeight()
                     .padding(horizontal = 2.dp),
             ) {
                 Text(text = day.weekdayLabel, style = tertiaryStyle(), maxLines = 1)
