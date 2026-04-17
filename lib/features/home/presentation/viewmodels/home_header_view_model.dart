@@ -171,9 +171,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: const [],
   );
-  final shouldLoadItems = bootstrapPhase == AppBootstrapPhase.ready;
+  final shouldLoadItems = bootstrapPhase.hasHomeMinimalData;
   if (shouldLoadItems) {
-    probe.markOnce('home_viewdata_ready_phase_observed');
+    probe.markOnce('home_viewdata_minimal_ready_phase_observed');
   }
   final visibleItems = !shouldLoadItems
       ? const <AgendaItem>[]

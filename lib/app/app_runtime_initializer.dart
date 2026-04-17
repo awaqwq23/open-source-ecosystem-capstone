@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
@@ -15,8 +15,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppBootstrapPhase {
   startup,
-  hydrating,
+  homeMinimalHydrating,
+  homeMinimalReady,
+  fullHydrating,
   ready,
+}
+
+extension AppBootstrapPhaseX on AppBootstrapPhase {
+  bool get hasHomeMinimalData =>
+      this == AppBootstrapPhase.homeMinimalReady ||
+      this == AppBootstrapPhase.fullHydrating ||
+      this == AppBootstrapPhase.ready;
+
+  bool get hasFullData => this == AppBootstrapPhase.ready;
 }
 
 final appBootstrapPhaseProvider = StateProvider<AppBootstrapPhase>((ref) {
@@ -73,13 +84,59 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
     StartupPerfProbe.instance.markOnce('runtime_setup_end');
-    unawaited(_hydrateDeferredBootstrapData(service));
+    unawaited(_hydrateBootstrapData(service));
+  }
+
+  Future<void> _hydrateBootstrapData(HomeWidgetSyncService service) async {
+    final probe = StartupPerfProbe.instance;
+    probe.markOnce('home_minimal_hydrate_start');
+    ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.homeMinimalHydrating;
+    try {
+      probe.markOnce('home_minimal_payload_decode_start');
+      final now = DateUtils.dateOnly(DateTime.now());
+      final weekStart = now.subtract(Duration(days: now.weekday - DateTime.monday));
+      final weekEndExclusive = weekStart.add(const Duration(days: 7));
+      final minimalPayload = await AppBootstrapLoader.loadHomeMinimalPayloadInBackground(
+        widget.preferences,
+        weekStart: weekStart,
+        weekEndExclusive: weekEndExclusive,
+      );
+      probe.markOnce(
+        'home_minimal_payload_decode_end',
+        extras: <String, Object?>{
+          'agenda_json_count': minimalPayload.agendaItemsJson.length,
+        },
+      );
+      if (!mounted) {
+        return;
+      }
+      probe.markOnce('home_minimal_agenda_hydrate_start');
+      await ref
+          .read(agendaItemRepositoryProvider.notifier)
+          .hydrateMinimalFromSerializedBootstrap(minimalPayload.agendaItemsJson);
+      probe.markOnce('home_minimal_agenda_hydrate_end');
+      ref
+          .read(courseTimetableRepositoryProvider.notifier)
+          .hydrateActiveTimetableFromBootstrapHint(minimalPayload.activeCourseTimetableId);
+      probe.markOnce('home_minimal_course_hint_ready');
+    } finally {
+      if (mounted) {
+        ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.homeMinimalReady;
+        probe.markOnce('home_minimal_ready');
+      }
+    }
+    if (mounted) {
+      service.syncDebounced();
+    }
+    await _hydrateDeferredBootstrapData(service);
   }
 
   Future<void> _hydrateDeferredBootstrapData(HomeWidgetSyncService service) async {
     final probe = StartupPerfProbe.instance;
     probe.markOnce('deferred_hydrate_start');
-    ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.hydrating;
+    if (mounted) {
+      ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.fullHydrating;
+    }
     try {
       probe.markOnce('deferred_payload_decode_start');
       final payload = await AppBootstrapLoader.loadDeferredPayloadInBackground(widget.preferences);
@@ -97,12 +154,12 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       probe.markOnce('agenda_hydrate_start');
       await ref
           .read(agendaItemRepositoryProvider.notifier)
-          .hydrateFromSerializedBootstrap(payload.agendaItemsJson);
+          .hydrateRemainingFromSerializedBootstrap(payload.agendaItemsJson);
       probe.markOnce('agenda_hydrate_end');
       probe.markOnce('course_hydrate_start');
       await ref
           .read(courseTimetableRepositoryProvider.notifier)
-          .hydrateFromSerializedBootstrap(
+          .hydrateRemainingFromSerializedBootstrap(
             timetablesJson: payload.courseTimetablesJson,
             activeTimetableId: payload.activeCourseTimetableId,
           );
@@ -115,6 +172,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     } finally {
       if (mounted) {
         ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.ready;
+        probe.markOnce('home_full_ready');
         probe.markOnce('bootstrap_phase_ready');
       }
     }

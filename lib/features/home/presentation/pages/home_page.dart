@@ -135,7 +135,7 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
-                    isBootstrapReady: bootstrapPhase == AppBootstrapPhase.ready,
+                    isBootstrapReady: bootstrapPhase.hasHomeMinimalData,
                     itemOpacityFactor: (homeSettings.itemOpacityPercent.clamp(0, 100) as int) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),
@@ -433,7 +433,7 @@ class _HomeGridState extends State<_HomeGrid> {
         endEvent: 'home_grid_with_items_visible',
         extras: <String, Object?>{
           'sla_target_ms': 500,
-          'sla_type': 'grid_with_items_visible',
+          'sla_type': 'grid_with_minimal_items_visible',
         },
       );
     });

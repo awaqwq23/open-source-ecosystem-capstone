@@ -20,14 +20,16 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   var _idSeed = 0;
   var _hasMutated = false;
-  var _hydratedDeferred = false;
+  var _hydratedMinimal = false;
+  var _hydratedFull = false;
 
   @override
   List<AgendaItem> build() {
     final items = ref.read(agendaItemsBootstrapProvider);
     _idSeed = items.length;
     _hasMutated = false;
-    _hydratedDeferred = false;
+    _hydratedMinimal = false;
+    _hydratedFull = false;
     return items;
   }
 
@@ -212,26 +214,64 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   void hydrateFromBootstrap(List<AgendaItem> items) {
-    if (_hydratedDeferred) {
+    if (_hydratedFull || _hydratedMinimal) {
       return;
     }
-    _hydratedDeferred = true;
     if (_hasMutated || state.isNotEmpty) {
       return;
     }
+    _hydratedMinimal = true;
+    _hydratedFull = true;
     state = items;
     _idSeed = items.length;
   }
 
-  Future<void> hydrateFromSerializedBootstrap(List<Map<String, dynamic>> itemsJson) async {
-    if (_hydratedDeferred) {
+  Future<void> hydrateMinimalFromSerializedBootstrap(
+    List<Map<String, dynamic>> itemsJson,
+  ) async {
+    if (_hydratedMinimal) {
       return;
     }
-    _hydratedDeferred = true;
-    if (_hasMutated || state.isNotEmpty || itemsJson.isEmpty) {
+    _hydratedMinimal = true;
+    if (_hasMutated || itemsJson.isEmpty) {
       return;
     }
 
+    final hydratedItems = await _decodeItemsFromJson(itemsJson);
+    if (hydratedItems.isEmpty) {
+      return;
+    }
+    state = hydratedItems;
+    _idSeed = hydratedItems.length;
+  }
+
+  Future<void> hydrateRemainingFromSerializedBootstrap(
+    List<Map<String, dynamic>> itemsJson,
+  ) async {
+    if (_hydratedFull) {
+      return;
+    }
+    _hydratedFull = true;
+    if (_hasMutated || state.isNotEmpty || itemsJson.isEmpty) {
+      if (_hasMutated || itemsJson.isEmpty) {
+        return;
+      }
+      // state 非空代表此前有最小数据，允许继续全量覆盖。
+    }
+
+    final hydratedItems = await _decodeItemsFromJson(itemsJson);
+    if (hydratedItems.isEmpty) {
+      return;
+    }
+    state = hydratedItems;
+    _idSeed = hydratedItems.length;
+  }
+
+  Future<void> hydrateFromSerializedBootstrap(List<Map<String, dynamic>> itemsJson) async {
+    await hydrateRemainingFromSerializedBootstrap(itemsJson);
+  }
+
+  Future<List<AgendaItem>> _decodeItemsFromJson(List<Map<String, dynamic>> itemsJson) async {
     final hydratedItems = <AgendaItem>[];
     for (var index = 0; index < itemsJson.length; index += _hydrateChunkSize) {
       final end = (index + _hydrateChunkSize).clamp(0, itemsJson.length);
@@ -246,9 +286,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         await Future<void>.delayed(Duration.zero);
       }
     }
-
-    state = hydratedItems;
-    _idSeed = hydratedItems.length;
+    return hydratedItems;
   }
 
   Future<void> _persist() {

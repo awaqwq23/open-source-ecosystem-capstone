@@ -84,6 +84,16 @@ class AppDeferredBootstrapPayload {
   final String? activeCourseTimetableId;
 }
 
+class AppHomeMinimalBootstrapPayload {
+  const AppHomeMinimalBootstrapPayload({
+    required this.agendaItemsJson,
+    required this.activeCourseTimetableId,
+  });
+
+  final List<Map<String, dynamic>> agendaItemsJson;
+  final String? activeCourseTimetableId;
+}
+
 abstract final class AppBootstrapStorageKeys {
   static const locale = 'settings.locale';
   static const themeMode = 'settings.themeMode';
@@ -157,6 +167,27 @@ class AppBootstrapLoader {
       courseTimetablesJson: _castJsonObjectList(
         decoded[AppBootstrapStorageKeys.courseTimetables],
       ),
+      activeCourseTimetableId: (activeId == null || activeId.isEmpty) ? null : activeId,
+    );
+  }
+
+  static Future<AppHomeMinimalBootstrapPayload> loadHomeMinimalPayloadInBackground(
+    SharedPreferences preferences, {
+    required DateTime weekStart,
+    required DateTime weekEndExclusive,
+  }) async {
+    final rawPayload = <String, String?>{
+      AppBootstrapStorageKeys.agendaItems:
+          preferences.getString(AppBootstrapStorageKeys.agendaItems),
+      AppBootstrapStorageKeys.activeCourseTimetableId:
+          preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId),
+      'weekStartIso': weekStart.toIso8601String(),
+      'weekEndIso': weekEndExclusive.toIso8601String(),
+    };
+    final decoded = await compute(_decodeHomeMinimalPayloadRaw, rawPayload);
+    final activeId = decoded[AppBootstrapStorageKeys.activeCourseTimetableId] as String?;
+    return AppHomeMinimalBootstrapPayload(
+      agendaItemsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.agendaItems]),
       activeCourseTimetableId: (activeId == null || activeId.isEmpty) ? null : activeId,
     );
   }
@@ -408,6 +439,72 @@ Map<String, dynamic> _decodeDeferredPayloadRaw(Map<String, String?> rawPayload) 
         decodeList(rawPayload[AppBootstrapStorageKeys.agendaItems]),
     AppBootstrapStorageKeys.courseTimetables:
         decodeList(rawPayload[AppBootstrapStorageKeys.courseTimetables]),
+    AppBootstrapStorageKeys.activeCourseTimetableId: activeId,
+  };
+}
+
+Map<String, dynamic> _decodeHomeMinimalPayloadRaw(Map<String, String?> rawPayload) {
+  final activeIdRaw = rawPayload[AppBootstrapStorageKeys.activeCourseTimetableId];
+  final activeId = (activeIdRaw == null || activeIdRaw.isEmpty) ? null : activeIdRaw;
+  final weekStart = DateTime.tryParse(rawPayload['weekStartIso'] ?? '');
+  final weekEndExclusive = DateTime.tryParse(rawPayload['weekEndIso'] ?? '');
+  final agendaRaw = rawPayload[AppBootstrapStorageKeys.agendaItems];
+
+  List<dynamic> decodedAgenda = const [];
+  if (agendaRaw != null && agendaRaw.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(agendaRaw);
+      if (decoded is List<dynamic>) {
+        decodedAgenda = decoded;
+      }
+    } catch (_) {
+      decodedAgenda = const [];
+    }
+  }
+
+  bool intersectsWeek(Map<Object?, Object?> item) {
+    if (weekStart == null || weekEndExclusive == null) {
+      return false;
+    }
+    final type = item['type']?.toString() ?? '';
+    if (type != 'task' && type != 'schedule' && type != 'course') {
+      return false;
+    }
+
+    Object? startRaw;
+    Object? endRaw;
+    if (type == 'task') {
+      final taskDetails = item['taskDetails'];
+      if (taskDetails is Map<Object?, Object?>) {
+        final schedule = taskDetails['schedule'];
+        if (schedule is Map<Object?, Object?>) {
+          startRaw = schedule['start'];
+          endRaw = schedule['end'];
+        }
+      }
+    } else {
+      final schedule = item['scheduleDetails'];
+      if (schedule is Map<Object?, Object?>) {
+        startRaw = schedule['start'];
+        endRaw = schedule['end'];
+      }
+    }
+
+    final start = DateTime.tryParse(startRaw?.toString() ?? '');
+    final end = DateTime.tryParse(endRaw?.toString() ?? '');
+    if (start == null || end == null) {
+      return false;
+    }
+    return end.isAfter(weekStart) && start.isBefore(weekEndExclusive);
+  }
+
+  final minimalAgenda = <Map<Object?, Object?>>[
+    for (final item in decodedAgenda)
+      if (item is Map<Object?, Object?> && intersectsWeek(item)) item,
+  ];
+
+  return <String, dynamic>{
+    AppBootstrapStorageKeys.agendaItems: minimalAgenda,
     AppBootstrapStorageKeys.activeCourseTimetableId: activeId,
   };
 }

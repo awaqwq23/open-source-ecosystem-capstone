@@ -17,14 +17,16 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
 
   var _idSeed = 0;
   var _hasMutated = false;
-  var _hydratedDeferred = false;
+  var _hydratedMinimal = false;
+  var _hydratedFull = false;
 
   @override
   CourseTimetableStore build() {
     final boot = ref.read(courseTimetableBootstrapProvider);
     _idSeed = boot.timetables.length;
     _hasMutated = false;
-    _hydratedDeferred = false;
+    _hydratedMinimal = false;
+    _hydratedFull = false;
     return boot;
   }
 
@@ -112,29 +114,44 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
   }
 
   void hydrateFromBootstrap(CourseTimetableStore store) {
-    if (_hydratedDeferred) {
+    if (_hydratedFull || _hydratedMinimal) {
       return;
     }
-    _hydratedDeferred = true;
     if (_hasMutated || state.timetables.isNotEmpty || state.activeTimetableId != null) {
       return;
     }
+    _hydratedMinimal = true;
+    _hydratedFull = true;
     state = store;
     _idSeed = store.timetables.length;
   }
 
-  Future<void> hydrateFromSerializedBootstrap({
+  void hydrateActiveTimetableFromBootstrapHint(String? activeTimetableId) {
+    if (_hydratedMinimal) {
+      return;
+    }
+    _hydratedMinimal = true;
+    if (_hasMutated) {
+      return;
+    }
+    final normalized = (activeTimetableId == null || activeTimetableId.isEmpty)
+        ? null
+        : activeTimetableId;
+    if (normalized == null) {
+      return;
+    }
+    state = state.copyWith(activeTimetableId: normalized);
+  }
+
+  Future<void> hydrateRemainingFromSerializedBootstrap({
     required List<Map<String, dynamic>> timetablesJson,
     required String? activeTimetableId,
   }) async {
-    if (_hydratedDeferred) {
+    if (_hydratedFull) {
       return;
     }
-    _hydratedDeferred = true;
-    if (_hasMutated ||
-        state.timetables.isNotEmpty ||
-        state.activeTimetableId != null ||
-        timetablesJson.isEmpty) {
+    _hydratedFull = true;
+    if (_hasMutated || timetablesJson.isEmpty) {
       return;
     }
 
@@ -161,6 +178,16 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       activeTimetableId: normalizedActiveId,
     );
     _idSeed = timetables.length;
+  }
+
+  Future<void> hydrateFromSerializedBootstrap({
+    required List<Map<String, dynamic>> timetablesJson,
+    required String? activeTimetableId,
+  }) async {
+    await hydrateRemainingFromSerializedBootstrap(
+      timetablesJson: timetablesJson,
+      activeTimetableId: activeTimetableId,
+    );
   }
 
   Future<void> _persist() {

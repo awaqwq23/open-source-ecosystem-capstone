@@ -191,7 +191,7 @@ final listHeaderViewModelProvider =
 final listPageViewDataProvider = Provider<ListPageViewData>((ref) {
   final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
   final uiState = ref.watch(listHeaderViewModelProvider);
-  final section = bootstrapPhase == AppBootstrapPhase.ready
+  final section = bootstrapPhase.hasFullData
       ? () {
           final items = ref.watch(agendaItemRepositoryProvider);
           final now = ref.watch(nowTickerProvider).value ?? DateTime.now();

@@ -363,7 +363,7 @@ final aiHeaderViewModelProvider =
 );
 
 final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
-  if (ref.watch(appBootstrapPhaseProvider) != AppBootstrapPhase.ready) {
+  if (!ref.watch(appBootstrapPhaseProvider).hasFullData) {
     return const [];
   }
   final range = ref.read(aiHeaderViewModelProvider.notifier).visibleRange();
