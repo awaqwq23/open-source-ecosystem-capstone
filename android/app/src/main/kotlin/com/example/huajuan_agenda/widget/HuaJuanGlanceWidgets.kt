@@ -515,7 +515,7 @@ private object WidgetDeepLinkFactory {
 
     fun createMemo(): String = "huajuan://app/item-editor/flow?presetType=memo&source=widget"
 
-    fun list(): String = "huajuan://app/list?source=widget"
+    fun list(): String = "huajuan://app/?source=widget"
 
     fun homeWeek(weekStartIso: String): String {
         return if (weekStartIso.isBlank()) {

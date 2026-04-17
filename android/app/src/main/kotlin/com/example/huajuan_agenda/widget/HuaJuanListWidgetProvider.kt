@@ -53,7 +53,7 @@ class HuaJuanListWidgetProvider : HomeWidgetProvider() {
                 val pendingIntent = HomeWidgetLaunchIntent.getActivity(
                     context,
                     MainActivity::class.java,
-                    Uri.parse("huajuan://app/list?source=home_widget"),
+                    Uri.parse("huajuan://app/?source=home_widget"),
                 )
                 setOnClickPendingIntent(R.id.widget_list_root, pendingIntent)
             }
