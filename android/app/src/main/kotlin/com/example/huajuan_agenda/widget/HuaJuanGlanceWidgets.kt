@@ -26,7 +26,6 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.defaultWeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.fillMaxHeight
@@ -395,6 +394,7 @@ private fun AgendaTwoColumnPanel(
     rightMaxRows: Int,
     locale: String,
 ) {
+    val columnWidth = max(1f, (LocalSize.current.width.value - 1f) / 2f).dp
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
@@ -402,7 +402,7 @@ private fun AgendaTwoColumnPanel(
     ) {
         Box(
             modifier = GlanceModifier
-                .defaultWeight()
+                .width(columnWidth)
                 .fillMaxHeight()
                 .padding(end = 6.dp),
             contentAlignment = Alignment.BottomStart,
@@ -422,7 +422,7 @@ private fun AgendaTwoColumnPanel(
         ) {}
         Box(
             modifier = GlanceModifier
-                .defaultWeight()
+                .width(columnWidth)
                 .fillMaxHeight()
                 .padding(start = 6.dp),
             contentAlignment = Alignment.TopStart,
