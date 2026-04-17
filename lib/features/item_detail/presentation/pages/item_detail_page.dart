@@ -113,184 +113,129 @@ class _ItemDetailContent extends ConsumerWidget {
     final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
     final isCompleted = item.isEffectivelyCompleted(now);
 
-    return ui.Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: item.color.resolve(theme.brightness).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  _typeIcon(item.type),
-                  color: item.color.resolve(theme.brightness),
+    final detailRows = <_DetailValueEntry>[];
+
+    void addDetail(IconData icon, String value) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return;
+      }
+      detailRows.add(_DetailValueEntry(icon: icon, value: trimmed));
+    }
+
+    if (item.type == ItemType.memo) {
+      addDetail(AppIcons.calendar, _formatDateTime(context, item.targetDate, allDay: true));
+      addDetail(AppIcons.clock, _formatDuration(context, item.estimatedDuration));
+    } else {
+      addDetail(AppIcons.calendar, _formatDateTime(context, item.startAt, allDay: item.isAllDay));
+      addDetail(AppIcons.clock, _formatDateTime(context, item.endAt, allDay: item.isAllDay));
+    }
+
+    if (isCourse) {
+      addDetail(AppIcons.info, item.courseDetails.courseNature);
+      addDetail(AppIcons.person, item.courseDetails.instructor);
+      addDetail(AppIcons.location, _courseLocation(item));
+    } else {
+      if (item.deadline != null) {
+        addDetail(AppIcons.clock, _formatDateTime(context, item.deadline!, allDay: item.isAllDay));
+      }
+      addDetail(AppIcons.location, item.location);
+      addDetail(AppIcons.info, item.details);
+      if (item.reminder != ReminderOption.none) {
+        addDetail(AppIcons.clock, _reminderLabel(l10n, item));
+      }
+      if (item.repeatRule != RepeatRule.none) {
+        addDetail(AppIcons.calendar, _repeatLabel(l10n, item));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: item.color.resolve(theme.brightness).withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _typeIcon(item.type),
+                color: item.color.resolve(theme.brightness),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  item.title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    decoration: canToggleCompleted && isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        decoration: canToggleCompleted && isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (canToggleCompleted)
-                          _MetaChip(
-                            icon: isCompleted ? AppIcons.complete : AppIcons.incomplete,
-                            label: isCompleted
-                                ? l10n.listStatusCompleted
-                                : l10n.listStatusPending,
-                          ),
-                        if (!isCourse)
-                          _MetaChip(
-                            icon: item.isImportant
-                                ? AppIcons.importantFilled
-                                : AppIcons.importantOutlined,
-                            label: item.isImportant
-                                ? l10n.listImportantEnabled
-                                : l10n.listImportantDisabled,
-                          ),
-                        _MetaChip(
-                          icon: _typeIcon(item.type),
-                          label: _typeLabel(l10n, item.type),
-                        ),
-                      ],
-                    ),
-                  ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        for (var index = 0; index < detailRows.length; index++) ...[
+          if (index > 0)
+            Divider(
+              height: 1,
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.32),
+            ),
+          _DetailValueRow(
+            icon: detailRows[index].icon,
+            value: detailRows[index].value,
+          ),
+        ],
+        if (!isCourse) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              if (canToggleCompleted)
+                _ActionIconButton(
+                  tooltip: isCompleted
+                      ? l10n.detailMarkIncomplete
+                      : l10n.detailMarkComplete,
+                  icon: isCompleted ? AppIcons.incomplete : AppIcons.complete,
+                  onPressed: () => repository.toggleCompleted(item.id),
                 ),
+              const SizedBox(width: 8),
+              _ActionIconButton(
+                tooltip: item.isImportant
+                    ? l10n.detailUnmarkImportant
+                    : l10n.detailMarkImportant,
+                icon: item.isImportant
+                    ? AppIcons.importantOutlined
+                    : AppIcons.importantFilled,
+                onPressed: () => repository.toggleImportant(item.id),
+              ),
+              const SizedBox(width: 8),
+              _ActionIconButton(
+                tooltip: l10n.detailDelete,
+                icon: AppIcons.delete,
+                iconColor: theme.colorScheme.error,
+                onPressed: () async {
+                  await repository.deleteItem(item.id);
+                  if (context.mounted && context.canPop()) {
+                    context.pop();
+                  }
+                },
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          _DetailRow(
-            icon: AppIcons.calendar,
-            label: l10n.detailTimeLabel,
-            value: _dateSummary(context, item),
-          ),
-          if (item.type == ItemType.course) ...[
-            if (item.courseDetails.courseNature.trim().isNotEmpty)
-              _DetailRow(
-                icon: AppIcons.info,
-                label: _isChinese(l10n) ? '性质' : 'Nature',
-                value: item.courseDetails.courseNature.trim(),
-              ),
-            if (item.courseDetails.instructor.trim().isNotEmpty)
-              _DetailRow(
-                icon: AppIcons.person,
-                label: _isChinese(l10n) ? '教师' : 'Instructor',
-                value: item.courseDetails.instructor.trim(),
-              ),
-            if (_courseLocation(item).isNotEmpty)
-              _DetailRow(
-                icon: AppIcons.location,
-                label: _isChinese(l10n) ? '地点' : 'Location',
-                value: _courseLocation(item),
-              ),
-          ] else ...[
-            if (item.deadline != null)
-              _DetailRow(
-                icon: AppIcons.clock,
-                label: l10n.detailDeadlineLabel,
-                value: _formatDateTime(context, item.deadline!, allDay: item.isAllDay),
-              ),
-            if (item.location.isNotEmpty)
-              _DetailRow(
-                icon: AppIcons.location,
-                label: l10n.detailLocationLabel,
-                value: item.location,
-              ),
-            if (item.details.isNotEmpty)
-              _DetailRow(
-                icon: AppIcons.info,
-                label: l10n.detailNotesLabel,
-                value: item.details,
-              ),
-            _DetailRow(
-              icon: AppIcons.clock,
-              label: l10n.detailReminderLabel,
-              value: _reminderLabel(l10n, item),
-            ),
-            _DetailRow(
-              icon: AppIcons.calendar,
-              label: l10n.detailRepeatLabel,
-              value: _repeatLabel(l10n, item),
-            ),
-          ],
-          if (!isCourse) ...[
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                if (canToggleCompleted)
-                  ui.PrimaryButton(
-                    onPressed: () => repository.toggleCompleted(item.id),
-                    leading: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
-                    child: Text(
-                      isCompleted
-                          ? l10n.detailMarkIncomplete
-                          : l10n.detailMarkComplete,
-                    ),
-                  ),
-                ui.OutlineButton(
-                  onPressed: () => repository.toggleImportant(item.id),
-                  leading: Icon(
-                    item.isImportant
-                        ? AppIcons.importantOutlined
-                        : AppIcons.importantFilled,
-                  ),
-                  child: Text(
-                    item.isImportant
-                        ? l10n.detailUnmarkImportant
-                        : l10n.detailMarkImportant,
-                  ),
-                ),
-                ui.DestructiveButton(
-                  onPressed: () async {
-                    await repository.deleteItem(item.id);
-                    if (context.mounted && context.canPop()) {
-                      context.pop();
-                    }
-                  },
-                  leading: const Icon(AppIcons.delete),
-                  child: Text(l10n.detailDelete),
-                ),
-              ],
-            ),
-          ],
         ],
-      ),
+      ],
     );
-  }
-
-  String _dateSummary(BuildContext context, AgendaItem item) {
-    return switch (item.type) {
-      ItemType.memo => context.l10n.detailMemoDate(
-          _formatDateTime(context, item.targetDate, allDay: true),
-          _formatDuration(context, item.estimatedDuration),
-        ),
-      _ => context.l10n.detailRangeDate(
-          _formatDateTime(context, item.startAt, allDay: item.isAllDay),
-          _formatDateTime(context, item.endAt, allDay: item.isAllDay),
-        ),
-    };
   }
 
   String _formatDateTime(BuildContext context, DateTime value, {required bool allDay}) {
@@ -316,15 +261,6 @@ class _ItemDetailContent extends ConsumerWidget {
       return context.l10n.editorDurationHours(hours);
     }
     return context.l10n.editorDurationMinutes(value.inMinutes);
-  }
-
-  String _typeLabel(AppLocalizations l10n, ItemType type) {
-    return switch (type) {
-      ItemType.task => l10n.listTabTasks,
-      ItemType.schedule => l10n.listTabSchedules,
-      ItemType.memo => l10n.listTabMemos,
-      ItemType.course => _isChinese(l10n) ? '课程' : 'Course',
-    };
   }
 
   String _courseLocation(AgendaItem item) {
@@ -365,50 +301,50 @@ class _ItemDetailContent extends ConsumerWidget {
       ItemType.course => AppIcons.itemTypeCourse,
     };
   }
-
-  bool _isChinese(AppLocalizations l10n) {
-    return l10n.localeName.toLowerCase().startsWith('zh');
-  }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({
+class _DetailValueEntry {
+  const _DetailValueEntry({
     required this.icon,
-    required this.label,
+    required this.value,
   });
 
   final IconData icon;
-  final String label;
+  final String value;
+}
+
+class _ActionIconButton extends StatelessWidget {
+  const _ActionIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.iconColor,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
+    return ui.Tooltip(
+      tooltip: (context) => Text(tooltip),
+      child: ui.IconButton.ghost(
+        icon: Icon(icon, color: iconColor),
+        onPressed: onPressed,
       ),
     );
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
+class _DetailValueRow extends StatelessWidget {
+  const _DetailValueRow({
     required this.icon,
-    required this.label,
     required this.value,
   });
 
   final IconData icon;
-  final String label;
   final String value;
 
   @override
@@ -423,21 +359,12 @@ class _DetailRow extends StatelessWidget {
           Icon(icon, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: theme.textTheme.titleMedium,
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                value,
+                style: theme.textTheme.titleMedium,
+              ),
             ),
           ),
         ],
@@ -455,11 +382,9 @@ class _EmptyDetailState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ui.Card(
-      child: Text(
-        message,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
+    return Text(
+      message,
+      style: Theme.of(context).textTheme.titleMedium,
     );
   }
 }
