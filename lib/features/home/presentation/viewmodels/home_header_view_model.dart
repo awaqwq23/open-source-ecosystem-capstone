@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/features/home/data/home_demo_items.dart';
 import 'package:huajuan_agenda/features/home/domain/models/home_view_data.dart';
@@ -153,10 +154,10 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       'locale': query.localeTag,
     },
   );
-  final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
   final repositoryItems = ref.watch(agendaItemRepositoryProvider);
+  final repository = ref.read(agendaItemRepositoryProvider.notifier);
   final timetableStore = ref.watch(courseTimetableRepositoryProvider);
   final activeTimetableId = timetableStore.activeTimetableId;
   final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
@@ -171,9 +172,28 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: const [],
   );
-  final shouldLoadItems = bootstrapPhase.hasHomeMinimalData;
+  final windowKey = _homeWindowKey(
+    scope: scope,
+    anchor: previewGrid.visibleRange.start,
+  );
+  if (!settings.showDemoData && !repository.hasLoadedWindow(windowKey)) {
+    probe.mark(
+      'home_window_load_requested',
+      extras: <String, Object?>{
+        'window_key': windowKey,
+      },
+    );
+    unawaited(
+      repository.loadWindowFromStorage(
+        windowKey: windowKey,
+        startInclusive: previewGrid.visibleRange.start,
+        endExclusive: previewGrid.visibleRange.end,
+      ),
+    );
+  }
+  final shouldLoadItems = settings.showDemoData || repository.hasLoadedWindow(windowKey);
   if (shouldLoadItems) {
-    probe.markOnce('home_viewdata_minimal_ready_phase_observed');
+    probe.markOnce('home_viewdata_window_ready_phase_observed');
   }
   final visibleItems = !shouldLoadItems
       ? const <AgendaItem>[]
@@ -267,6 +287,33 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     items: baseViewData.items,
   );
 });
+
+final homeWindowLoadedProvider = Provider.family<bool, HomeViewQuery>((ref, query) {
+  final state = ref.watch(homeHeaderViewModelProvider);
+  final settings = ref.watch(appHomeSettingsProvider);
+  ref.watch(agendaItemRepositoryProvider);
+  final repository = ref.read(agendaItemRepositoryProvider.notifier);
+  final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
+      ? HomeDisplayScope.month
+      : HomeDisplayScope.week;
+  final visibleRange = HomeHeaderViewModel._gridBuilder.visibleDateRange(state.anchor, scope);
+  if (settings.showDemoData) {
+    return true;
+  }
+  final windowKey = _homeWindowKey(scope: scope, anchor: visibleRange.start);
+  return repository.hasLoadedWindow(windowKey);
+});
+
+String _homeWindowKey({
+  required HomeDisplayScope scope,
+  required DateTime anchor,
+}) {
+  final date = DateUtils.dateOnly(anchor);
+  return switch (scope) {
+    HomeDisplayScope.week => 'week:${date.toIso8601String()}',
+    HomeDisplayScope.month => 'month:${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}',
+  };
+}
 
 String? _buildSemesterWeekLabel({
   required String localeTag,

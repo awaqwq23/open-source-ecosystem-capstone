@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
-import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
@@ -32,15 +31,14 @@ class HomePage extends ConsumerWidget {
     final allowMonthLayout = _HomeGridLayoutSpec.canFitMonthLayout(width) &&
         ResponsiveBreakpoints.of(context).largerThan(TABLET);
     final homeSettings = ref.watch(appHomeSettingsProvider);
-    final bootstrapPhase = ref.watch(appBootstrapPhaseProvider);
-    final viewData = ref.watch(
-      homeViewDataProvider(
-        HomeViewQuery(
-          localeTag: localeTag,
-          allowMonthLayout: allowMonthLayout,
-        ),
-      ),
+    final query = HomeViewQuery(
+      localeTag: localeTag,
+      allowMonthLayout: allowMonthLayout,
     );
+    final viewData = ref.watch(
+      homeViewDataProvider(query),
+    );
+    final isWindowLoaded = ref.watch(homeWindowLoadedProvider(query));
     final theme = Theme.of(context);
 
     return ui.Scaffold(
@@ -135,7 +133,7 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
-                    isBootstrapReady: bootstrapPhase.hasHomeMinimalData,
+                    isBootstrapReady: isWindowLoaded,
                     itemOpacityFactor: (homeSettings.itemOpacityPercent.clamp(0, 100) as int) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),

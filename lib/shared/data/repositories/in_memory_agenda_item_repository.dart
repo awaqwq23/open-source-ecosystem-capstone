@@ -22,6 +22,8 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   var _hasMutated = false;
   var _hydratedMinimal = false;
   var _hydratedFull = false;
+  final Set<String> _loadedWindowKeys = <String>{};
+  final Set<String> _loadingWindowKeys = <String>{};
 
   @override
   List<AgendaItem> build() {
@@ -30,6 +32,8 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     _hasMutated = false;
     _hydratedMinimal = false;
     _hydratedFull = false;
+    _loadedWindowKeys.clear();
+    _loadingWindowKeys.clear();
     return items;
   }
 
@@ -318,6 +322,90 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         weekStart.toIso8601String(),
       ),
     ]).then((_) {});
+  }
+
+  bool hasLoadedWindow(String windowKey) {
+    return _loadedWindowKeys.contains(windowKey);
+  }
+
+  Future<void> loadWindowFromStorage({
+    required String windowKey,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+  }) async {
+    if (_loadedWindowKeys.contains(windowKey) || _loadingWindowKeys.contains(windowKey)) {
+      return;
+    }
+    _loadingWindowKeys.add(windowKey);
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (prefs == null) {
+        _loadedWindowKeys.add(windowKey);
+        return;
+      }
+
+      final raw = prefs.getString(AppBootstrapStorageKeys.agendaItems);
+      if (raw == null || raw.isEmpty) {
+        _loadedWindowKeys.add(windowKey);
+        return;
+      }
+
+      List<dynamic> decoded;
+      try {
+        final json = jsonDecode(raw);
+        decoded = json is List<dynamic> ? json : const [];
+      } catch (_) {
+        decoded = const [];
+      }
+
+      if (decoded.isEmpty) {
+        _loadedWindowKeys.add(windowKey);
+        return;
+      }
+
+      final windowItems = <AgendaItem>[];
+      for (var index = 0; index < decoded.length; index += _hydrateChunkSize) {
+        final end = (index + _hydrateChunkSize).clamp(0, decoded.length);
+        for (final itemRaw in decoded.sublist(index, end)) {
+          if (itemRaw is! Map<Object?, Object?>) {
+            continue;
+          }
+          final map = itemRaw.map(
+            (key, value) => MapEntry(key is String ? key : key.toString(), value),
+          );
+          final parsed = AgendaItemStorageMapper.fromJson(map);
+          if (parsed == null) {
+            continue;
+          }
+          if (parsed.type != ItemType.task &&
+              parsed.type != ItemType.schedule &&
+              parsed.type != ItemType.course) {
+            continue;
+          }
+          if (!parsed.endAt.isAfter(startInclusive) || !parsed.startAt.isBefore(endExclusive)) {
+            continue;
+          }
+          windowItems.add(parsed);
+        }
+        if (end < decoded.length) {
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
+
+      if (windowItems.isNotEmpty) {
+        final byId = <String, AgendaItem>{
+          for (final item in state) item.id: item,
+        };
+        for (final item in windowItems) {
+          byId[item.id] = item;
+        }
+        state = byId.values.toList(growable: false);
+        _idSeed = state.length;
+      }
+      _loadedWindowKeys.add(windowKey);
+    } finally {
+      _loadingWindowKeys.remove(windowKey);
+    }
   }
 
   DateTime _currentWeekStart() {
