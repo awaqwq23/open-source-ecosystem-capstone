@@ -92,8 +92,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
         _syncControllers(next);
         if (next.submitSucceeded && mounted) {
           notifier.clearSubmitSucceeded();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.editorSubmitSuccess)),
+          _showSnackBarIfPossible(
+            context,
+            context.l10n.editorSubmitSuccess,
           );
           if (widget.autoPopOnSubmit) {
             context.pop();
@@ -339,9 +340,22 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
         .submit(errors);
 
     if (!success && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.editorSubmitInvalid)),
+      _showSnackBarIfPossible(
+        context,
+        l10n.editorSubmitInvalid,
       );
+    }
+  }
+
+  void _showSnackBarIfPossible(BuildContext context, String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) {
+      return;
+    }
+    try {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      // 当前层级没有可展示 SnackBar 的 Material Scaffold 时静默跳过，避免阻断提交流程。
     }
   }
 
