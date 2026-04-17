@@ -6,15 +6,17 @@ abstract final class AppSemanticColors {
   }
 
   static Color settingsSectionDivider(ThemeData theme) {
+    final alpha = theme.brightness == Brightness.dark ? 0.46 : 0.28;
     return Color.alphaBlend(
-      theme.colorScheme.outlineVariant.withValues(alpha: 0.28),
+      theme.colorScheme.outlineVariant.withValues(alpha: alpha),
       theme.colorScheme.surfaceContainerLowest,
     );
   }
 
   static Color listSwipeBackground(ThemeData theme) {
+    final alpha = theme.brightness == Brightness.dark ? 0.42 : 0.24;
     return Color.alphaBlend(
-      theme.colorScheme.outlineVariant.withValues(alpha: 0.24),
+      theme.colorScheme.outlineVariant.withValues(alpha: alpha),
       theme.colorScheme.surfaceContainerHighest,
     );
   }

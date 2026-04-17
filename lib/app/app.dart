@@ -36,15 +36,69 @@ class HuaJuanAgendaApp extends ConsumerWidget {
       darkTheme: AppThemeFactory.dark(),
       routerConfig: router,
       builder: (context, child) {
-        return ResponsiveBreakpoints.builder(
-          child: child!,
-          breakpoints: const [
-            Breakpoint(start: 0, end: 599, name: MOBILE),
-            Breakpoint(start: 600, end: 1023, name: TABLET),
-            Breakpoint(start: 1024, end: double.infinity, name: DESKTOP),
-          ],
+        final shadTheme = ui.Theme.of(context);
+        return Theme(
+          data: _materialThemeFromShadcn(shadTheme),
+          child: ResponsiveBreakpoints.builder(
+            child: child!,
+            breakpoints: const [
+              Breakpoint(start: 0, end: 599, name: MOBILE),
+              Breakpoint(start: 600, end: 1023, name: TABLET),
+              Breakpoint(start: 1024, end: double.infinity, name: DESKTOP),
+            ],
+          ),
         );
       },
     );
   }
+}
+
+ThemeData _materialThemeFromShadcn(ui.ThemeData shadTheme) {
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: shadTheme.colorScheme.primary,
+    brightness: shadTheme.brightness,
+    surface: shadTheme.colorScheme.background,
+    primary: shadTheme.colorScheme.primary,
+    secondary: shadTheme.colorScheme.secondary,
+    error: shadTheme.colorScheme.destructive,
+  );
+  final base = ThemeData.from(
+    colorScheme: colorScheme,
+    useMaterial3: true,
+  );
+  final borderColor = shadTheme.colorScheme.border;
+  final overlayColor = shadTheme.colorScheme.popover;
+  final foreground = shadTheme.colorScheme.foreground;
+
+  return base.copyWith(
+    scaffoldBackgroundColor: shadTheme.colorScheme.background,
+    canvasColor: overlayColor,
+    cardColor: shadTheme.colorScheme.card,
+    dividerColor: borderColor,
+    dialogTheme: base.dialogTheme.copyWith(
+      backgroundColor: overlayColor,
+      surfaceTintColor: Colors.transparent,
+    ),
+    popupMenuTheme: base.popupMenuTheme.copyWith(
+      color: overlayColor,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dropdownMenuTheme: base.dropdownMenuTheme.copyWith(
+      textStyle: base.textTheme.bodyMedium?.copyWith(color: foreground),
+      menuStyle: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll<Color>(overlayColor),
+        side: WidgetStatePropertyAll<BorderSide>(
+          BorderSide(color: borderColor),
+        ),
+        surfaceTintColor: const WidgetStatePropertyAll<Color>(
+          Colors.transparent,
+        ),
+      ),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: shadTheme.colorScheme.primary,
+      selectionColor: shadTheme.colorScheme.primary.withValues(alpha: 0.3),
+      selectionHandleColor: shadTheme.colorScheme.primary,
+    ),
+  );
 }
