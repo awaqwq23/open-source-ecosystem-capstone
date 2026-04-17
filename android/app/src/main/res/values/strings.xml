@@ -5,6 +5,5 @@
     <string name="widget_ai_entry_name">AI快捷入口</string>
     <string name="widget_quick_create_name">快速创建事项</string>
     <string name="widget_agenda_list_name">事项列表</string>
-    <string name="widget_week_list_name">周视图（列表版）</string>
-    <string name="widget_week_grid_name">周视图（表格版）</string>
+    <string name="widget_week_grid_name">周视图表格</string>
 </resources>

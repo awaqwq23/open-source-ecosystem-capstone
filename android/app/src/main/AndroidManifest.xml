@@ -67,17 +67,6 @@
                 android:resource="@xml/huajuan_agenda_list_widget_info" />
         </receiver>
         <receiver
-            android:name=".widget.HuaJuanWeekListWidgetReceiver"
-            android:exported="false"
-            android:label="@string/widget_week_list_name">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/huajuan_week_list_widget_info" />
-        </receiver>
-        <receiver
             android:name=".widget.HuaJuanWeekGridWidgetReceiver"
             android:exported="false"
             android:label="@string/widget_week_grid_name">

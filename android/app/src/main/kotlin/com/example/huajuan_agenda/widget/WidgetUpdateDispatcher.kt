@@ -10,7 +10,6 @@ object WidgetUpdateDispatcher {
         refreshReceiver(context, HuaJuanAiEntryWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanQuickCreateWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanAgendaListWidgetReceiver::class.java)
-        refreshReceiver(context, HuaJuanWeekListWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanWeekGridWidgetReceiver::class.java)
     }
 

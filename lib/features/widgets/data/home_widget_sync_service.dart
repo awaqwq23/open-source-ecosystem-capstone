@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
@@ -51,22 +51,27 @@ class HomeWidgetSyncService {
       if (!settings.enabled) {
         return;
       }
+
       final locale = _resolveLocale(settings);
+      final languageCode = locale.languageCode.toLowerCase();
+      final zh = languageCode.startsWith('zh');
       final themeMode = _ref.read(appThemeModeProvider);
       final items = _ref.read(agendaItemRepositoryProvider);
       final now = DateTime.now();
-      final zh = locale.languageCode.startsWith('zh');
+      final week = _weekRange(now);
 
       final payload = <String, dynamic>{
+        'version': 3,
         'meta': {
-          'languageCode': locale.languageCode,
+          'languageCode': languageCode,
           'darkMode': _isDarkMode(themeMode),
+          'timezone': _timezoneLabel(),
           'updatedAt': now.toIso8601String(),
           'updatedLabel': _formatWidgetTimestamp(now, zh),
         },
-        'ai': {
-          'title': zh ? 'AI 快速入口' : 'AI Entry',
-          'subtitle': zh ? '点击直达 AI 页面' : 'Tap to open AI page',
+        'aiEntry': {
+          'title': zh ? 'AI 快速进入' : 'AI Quick Entry',
+          'subtitle': zh ? '点击进入 AI 页' : 'Tap to open AI page',
         },
         'quickCreate': {
           'title': zh ? '快速创建事项' : 'Quick Create',
@@ -75,9 +80,13 @@ class HomeWidgetSyncService {
           'taskLabel': zh ? '任务' : 'Task',
           'memoLabel': zh ? '备忘' : 'Memo',
         },
-        'list': _buildListWidgetPayload(items: items, now: now, zh: zh),
-        'weekList': _buildWeekListWidgetPayload(items: items, now: now, zh: zh),
-        'weekGrid': _buildWeekGridWidgetPayload(items: items, now: now, zh: zh),
+        'agendaList': _buildAgendaListPayload(items: items, now: now, zh: zh),
+        'weekGrid': _buildWeekGridPayload(
+          items: items,
+          week: week,
+          now: now,
+          zh: zh,
+        ),
       };
 
       await _channel.invokeMethod<void>('syncWidgets', payload);
@@ -103,21 +112,23 @@ class HomeWidgetSyncService {
     return switch (themeMode) {
       ui.ThemeMode.dark => true,
       ui.ThemeMode.light => false,
-      ui.ThemeMode.system => PlatformDispatcher.instance.platformBrightness == Brightness.dark,
+      ui.ThemeMode.system =>
+        PlatformDispatcher.instance.platformBrightness == Brightness.dark,
     };
   }
 }
 
-Map<String, dynamic> _buildListWidgetPayload({
+Map<String, dynamic> _buildAgendaListPayload({
   required List<AgendaItem> items,
   required DateTime now,
   required bool zh,
 }) {
   final today = DateTime(now.year, now.month, now.day);
-  final endDay = today.add(const Duration(days: 7));
+  final end = today.add(const Duration(days: 7));
+
   final filtered = items
       .where((item) => item.type != ItemType.course)
-      .where((item) => _itemIntersects(item, today, endDay))
+      .where((item) => _itemIntersects(item, today, end))
       .toList(growable: false)
     ..sort((a, b) {
       if (a.isCompleted != b.isCompleted) {
@@ -130,86 +141,97 @@ Map<String, dynamic> _buildListWidgetPayload({
       return a.manualOrder.compareTo(b.manualOrder);
     });
 
-  final todayOpen = filtered.where((item) => !item.isCompleted && _itemInDay(item, today)).length;
-  final rows = [
-    for (final item in filtered.take(80)) _toListRow(item, today, zh),
-  ];
+  final openToday = filtered
+      .where((item) => !item.isCompleted && _itemInDay(item, today))
+      .length;
 
   return {
     'title': zh ? '事项列表' : 'Agenda List',
     'subtitle': zh
-        ? '今日未完成 $todayOpen 条 · 未来 7 天'
-        : '$todayOpen open today · next 7 days',
-    'rows': rows,
+        ? '今日未完成 $openToday 条 · 7天内'
+        : '$openToday open today · next 7 days',
+    'rows': [
+      for (final item in filtered.take(120)) _toAgendaListRow(item, today, zh),
+    ],
   };
 }
 
-Map<String, dynamic> _buildWeekListWidgetPayload({
-  required List<AgendaItem> items,
-  required DateTime now,
-  required bool zh,
-}) {
-  final week = _weekRange(now);
-  final rows = <String>[];
-  final filtered = items.where((item) => item.type != ItemType.course);
+Map<String, dynamic> _toAgendaListRow(AgendaItem item, DateTime today, bool zh) {
+  final tag = switch (item.type) {
+    ItemType.schedule => zh ? '日程' : 'Schedule',
+    ItemType.task => zh ? '任务' : 'Task',
+    ItemType.memo => zh ? '备忘' : 'Memo',
+    ItemType.course => zh ? '课程' : 'Course',
+  };
 
-  for (var i = 0; i < 7; i++) {
-    final day = week.start.add(Duration(days: i));
-    final dayItems = [
-      for (final item in filtered)
-        if (_itemInDay(item, day)) item,
-    ]..sort((a, b) => _sortStart(a, day).compareTo(_sortStart(b, day)));
+  final title = item.title.trim().isEmpty
+      ? (zh ? '未命名事项' : 'Untitled')
+      : item.title.trim();
 
-    rows.add('${_weekdayLabel(zh, day.weekday)} ${day.month}/${day.day} (${dayItems.length})');
-    for (final item in dayItems.take(6)) {
-      rows.add('  ${_toCompactDayLine(item, day, zh)}');
-    }
+  final location = item.location.trim();
+  final status = item.isCompleted
+      ? (zh ? '已完成' : 'Done')
+      : (item.isImportant ? (zh ? '重要' : 'Important') : (zh ? '待办' : 'Open'));
+
+  final timeText = _buildItemTimeText(item, today, zh);
+  final metaParts = <String>[timeText, status];
+  if (location.isNotEmpty) {
+    metaParts.add(location);
   }
 
   return {
-    'title': zh ? '周视图（列表版）' : 'Week View (List)',
-    'subtitle': zh ? '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}' : '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}',
-    'rows': rows,
+    'id': item.id,
+    'title': title,
+    'meta': metaParts.join(' · '),
+    'tag': tag,
   };
 }
 
-Map<String, dynamic> _buildWeekGridWidgetPayload({
+Map<String, dynamic> _buildWeekGridPayload({
   required List<AgendaItem> items,
+  required DateTimeRange week,
   required DateTime now,
   required bool zh,
 }) {
-  final week = _weekRange(now);
-  final filtered = items.where((item) => item.type != ItemType.course).toList(growable: false);
-  final headers = <String>[];
-  final cells = <String>[];
-  final rows = <String>[];
+  final filtered = items
+      .where((item) => item.type != ItemType.course)
+      .toList(growable: false);
 
+  final days = <Map<String, dynamic>>[];
   for (var i = 0; i < 7; i++) {
     final day = week.start.add(Duration(days: i));
-    final dayItems = filtered.where((item) => _itemInDay(item, day)).toList(growable: false);
-    headers.add(_weekdayShort(zh, day.weekday));
-    cells.add('${day.month}/${day.day}\n${dayItems.length}');
+    final dayItems = filtered.where((item) => _itemInDay(item, day)).toList(growable: false)
+      ..sort((a, b) => _sortStart(a, day).compareTo(_sortStart(b, day)));
 
-    final top = dayItems.take(2).map((item) => _toCompactDayLine(item, day, zh)).join(' | ');
-    if (top.isNotEmpty) {
-      rows.add('${_weekdayShort(zh, day.weekday)} $top');
-    }
+    days.add({
+      'weekdayLabel': _weekdayShort(zh, day.weekday),
+      'dateLabel': '${day.month}/${day.day}',
+      'items': [
+        for (final item in dayItems.take(8)) _toCompactDayLine(item, day, zh),
+      ],
+    });
   }
 
   return {
-    'title': zh ? '周视图（表格版）' : 'Week View (Grid)',
-    'subtitle': zh ? '本周事项总览' : 'Weekly overview',
-    'headers': headers,
-    'cells': cells,
-    'rows': rows,
+    'title': zh ? '周视图表格' : 'Week Grid',
+    'subtitle': zh
+        ? '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}'
+        : '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}',
+    'weekStartIso': DateTime(
+      week.start.year,
+      week.start.month,
+      week.start.day,
+    ).toIso8601String(),
+    'days': days,
+    'generatedAt': now.toIso8601String(),
   };
 }
 
 DateTimeRange _weekRange(DateTime now) {
   final start = DateTime(now.year, now.month, now.day)
       .subtract(Duration(days: now.weekday - DateTime.monday));
-  final inclusiveEnd = start.add(const Duration(days: 6));
-  return DateTimeRange(start: start, end: inclusiveEnd);
+  final end = start.add(const Duration(days: 6));
+  return DateTimeRange(start: start, end: end);
 }
 
 bool _itemIntersects(AgendaItem item, DateTime start, DateTime endExclusive) {
@@ -240,21 +262,6 @@ DateTime _sortStart(AgendaItem item, DateTime day) {
   return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
 }
 
-String _toListRow(AgendaItem item, DateTime today, bool zh) {
-  final typeLabel = switch (item.type) {
-    ItemType.schedule => zh ? '日程' : 'Sch',
-    ItemType.task => zh ? '任务' : 'Task',
-    ItemType.memo => zh ? '备忘' : 'Memo',
-    ItemType.course => zh ? '课程' : 'Course',
-  };
-  final status = item.isCompleted
-      ? (zh ? '已完成' : 'Done')
-      : (item.isImportant ? (zh ? '重要' : 'Important') : (zh ? '待办' : 'Open'));
-  final when = _buildItemTimeText(item, today, zh);
-  final title = item.title.trim().isEmpty ? (zh ? '未命名事项' : 'Untitled') : item.title.trim();
-  return '[$typeLabel][$status] $when $title';
-}
-
 String _toCompactDayLine(AgendaItem item, DateTime day, bool zh) {
   final prefix = switch (item.type) {
     ItemType.schedule => zh ? '日' : 'S',
@@ -275,6 +282,7 @@ String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
   if (item.isAllDay) {
     return zh ? '全天' : 'All day';
   }
+
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
   final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
@@ -285,13 +293,13 @@ String _buildItemTimeText(AgendaItem item, DateTime day, bool zh) {
 String _weekdayShort(bool zh, int weekday) {
   if (zh) {
     return switch (weekday) {
-      DateTime.monday => '一',
-      DateTime.tuesday => '二',
-      DateTime.wednesday => '三',
-      DateTime.thursday => '四',
-      DateTime.friday => '五',
-      DateTime.saturday => '六',
-      _ => '日',
+      DateTime.monday => '周一',
+      DateTime.tuesday => '周二',
+      DateTime.wednesday => '周三',
+      DateTime.thursday => '周四',
+      DateTime.friday => '周五',
+      DateTime.saturday => '周六',
+      _ => '周日',
     };
   }
   return switch (weekday) {
@@ -305,13 +313,6 @@ String _weekdayShort(bool zh, int weekday) {
   };
 }
 
-String _weekdayLabel(bool zh, int weekday) {
-  if (zh) {
-    return '周${_weekdayShort(true, weekday)}';
-  }
-  return _weekdayShort(false, weekday);
-}
-
 String _formatWidgetTimestamp(DateTime time, bool zh) {
   final hhmm = _formatHm(time);
   return zh ? '更新于 $hhmm' : 'Updated $hhmm';
@@ -321,4 +322,13 @@ String _formatHm(DateTime time) {
   final h = time.hour.toString().padLeft(2, '0');
   final m = time.minute.toString().padLeft(2, '0');
   return '$h:$m';
+}
+
+String _timezoneLabel() {
+  final duration = DateTime.now().timeZoneOffset;
+  final sign = duration.isNegative ? '-' : '+';
+  final totalMinutes = duration.inMinutes.abs();
+  final hours = (totalMinutes ~/ 60).toString().padLeft(2, '0');
+  final minutes = (totalMinutes % 60).toString().padLeft(2, '0');
+  return 'UTC$sign$hours:$minutes';
 }
