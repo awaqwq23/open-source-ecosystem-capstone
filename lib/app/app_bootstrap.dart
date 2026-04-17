@@ -58,6 +58,30 @@ class AppStartupSettingsData {
   final NavigationSettings navigationSettings;
 }
 
+class AppCriticalStartupSettingsData {
+  const AppCriticalStartupSettingsData({
+    required this.locale,
+    required this.themeMode,
+    required this.homeSettings,
+  });
+
+  final Locale locale;
+  final ui.ThemeMode themeMode;
+  final HomeSettings homeSettings;
+}
+
+class AppNonCriticalStartupSettingsData {
+  const AppNonCriticalStartupSettingsData({
+    required this.aiSettings,
+    required this.widgetSettings,
+    required this.navigationSettings,
+  });
+
+  final AiSettings aiSettings;
+  final WidgetSettings widgetSettings;
+  final NavigationSettings navigationSettings;
+}
+
 class AppDeferredBootstrapData {
   const AppDeferredBootstrapData({
     required this.aiMessages,
@@ -103,6 +127,8 @@ abstract final class AppBootstrapStorageKeys {
   static const navigationSettings = 'settings.navigation';
   static const aiMessages = 'ai.messages';
   static const agendaItems = 'agenda.items';
+  static const agendaItemsCurrentWeek = 'agenda.items.currentWeek';
+  static const agendaItemsCurrentWeekStart = 'agenda.items.currentWeek.start';
   static const courseTimetables = 'course.timetables';
   static const activeCourseTimetableId = 'course.activeTimetableId';
   static const whuCourseCookieHeader = 'course.whu.cookieHeader';
@@ -171,6 +197,26 @@ class AppBootstrapLoader {
     );
   }
 
+  static AppCriticalStartupSettingsData loadCriticalStartupSettings(
+    SharedPreferences preferences,
+  ) {
+    return AppCriticalStartupSettingsData(
+      locale: _readLocale(preferences),
+      themeMode: _readThemeMode(preferences),
+      homeSettings: _readHomeSettings(preferences),
+    );
+  }
+
+  static AppNonCriticalStartupSettingsData loadNonCriticalStartupSettings(
+    SharedPreferences preferences,
+  ) {
+    return AppNonCriticalStartupSettingsData(
+      aiSettings: _readAiSettings(preferences),
+      widgetSettings: _readWidgetSettings(preferences),
+      navigationSettings: _readNavigationSettings(preferences),
+    );
+  }
+
   static Future<AppHomeMinimalBootstrapPayload> loadHomeMinimalPayloadInBackground(
     SharedPreferences preferences, {
     required DateTime weekStart,
@@ -179,6 +225,10 @@ class AppBootstrapLoader {
     final rawPayload = <String, String?>{
       AppBootstrapStorageKeys.agendaItems:
           preferences.getString(AppBootstrapStorageKeys.agendaItems),
+      AppBootstrapStorageKeys.agendaItemsCurrentWeek:
+          preferences.getString(AppBootstrapStorageKeys.agendaItemsCurrentWeek),
+      AppBootstrapStorageKeys.agendaItemsCurrentWeekStart:
+          preferences.getString(AppBootstrapStorageKeys.agendaItemsCurrentWeekStart),
       AppBootstrapStorageKeys.activeCourseTimetableId:
           preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId),
       'weekStartIso': weekStart.toIso8601String(),
@@ -449,6 +499,9 @@ Map<String, dynamic> _decodeHomeMinimalPayloadRaw(Map<String, String?> rawPayloa
   final weekStart = DateTime.tryParse(rawPayload['weekStartIso'] ?? '');
   final weekEndExclusive = DateTime.tryParse(rawPayload['weekEndIso'] ?? '');
   final agendaRaw = rawPayload[AppBootstrapStorageKeys.agendaItems];
+  final agendaCurrentWeekRaw = rawPayload[AppBootstrapStorageKeys.agendaItemsCurrentWeek];
+  final agendaCurrentWeekStartRaw =
+      rawPayload[AppBootstrapStorageKeys.agendaItemsCurrentWeekStart];
 
   List<dynamic> decodedAgenda = const [];
   if (agendaRaw != null && agendaRaw.isNotEmpty) {
@@ -459,6 +512,18 @@ Map<String, dynamic> _decodeHomeMinimalPayloadRaw(Map<String, String?> rawPayloa
       }
     } catch (_) {
       decodedAgenda = const [];
+    }
+  }
+
+  List<dynamic> decodedCurrentWeekAgenda = const [];
+  if (agendaCurrentWeekRaw != null && agendaCurrentWeekRaw.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(agendaCurrentWeekRaw);
+      if (decoded is List<dynamic>) {
+        decodedCurrentWeekAgenda = decoded;
+      }
+    } catch (_) {
+      decodedCurrentWeekAgenda = const [];
     }
   }
 
@@ -498,10 +563,20 @@ Map<String, dynamic> _decodeHomeMinimalPayloadRaw(Map<String, String?> rawPayloa
     return end.isAfter(weekStart) && start.isBefore(weekEndExclusive);
   }
 
-  final minimalAgenda = <Map<Object?, Object?>>[
-    for (final item in decodedAgenda)
-      if (item is Map<Object?, Object?> && intersectsWeek(item)) item,
-  ];
+  final canUseCurrentWeekCache =
+      weekStart != null &&
+      agendaCurrentWeekRaw != null &&
+      agendaCurrentWeekStartRaw != null &&
+      agendaCurrentWeekStartRaw == weekStart.toIso8601String();
+  final minimalAgenda = canUseCurrentWeekCache
+      ? <Map<Object?, Object?>>[
+          for (final item in decodedCurrentWeekAgenda)
+            if (item is Map<Object?, Object?>) item,
+        ]
+      : <Map<Object?, Object?>>[
+          for (final item in decodedAgenda)
+            if (item is Map<Object?, Object?> && intersectsWeek(item)) item,
+        ];
 
   return <String, dynamic>{
     AppBootstrapStorageKeys.agendaItems: minimalAgenda,

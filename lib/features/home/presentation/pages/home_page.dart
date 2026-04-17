@@ -303,7 +303,7 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
-  bool _gridVisibleMarked = false;
+  bool _minimalGridVisibleMarked = false;
 
   @override
   void dispose() {
@@ -411,15 +411,24 @@ class _HomeGridState extends State<_HomeGrid> {
   }
 
   void _scheduleGridVisibleMarkIfNeeded() {
-    if (_gridVisibleMarked || !widget.isBootstrapReady || !mounted) {
+    if (_minimalGridVisibleMarked || !widget.isBootstrapReady || !mounted) {
       return;
     }
-    _gridVisibleMarked = true;
+    _minimalGridVisibleMarked = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       final probe = StartupPerfProbe.instance;
+      probe.markOnce(
+        'home_grid_with_minimal_items_visible',
+        extras: <String, Object?>{
+          'columns': widget.viewData.columns.length,
+          'time_slots': widget.viewData.timeSlots.length,
+          'item_count': widget.viewData.items.length,
+          'scope': widget.viewData.scope.name,
+        },
+      );
       probe.markOnce(
         'home_grid_with_items_visible',
         extras: <String, Object?>{
@@ -430,7 +439,7 @@ class _HomeGridState extends State<_HomeGrid> {
         },
       );
       probe.emitSummary(
-        endEvent: 'home_grid_with_items_visible',
+        endEvent: 'home_grid_with_minimal_items_visible',
         extras: <String, Object?>{
           'sla_target_ms': 500,
           'sla_type': 'grid_with_minimal_items_visible',

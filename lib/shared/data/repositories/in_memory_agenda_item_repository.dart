@@ -291,13 +291,51 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   Future<void> _persist() {
     final prefs = ref.read(sharedPreferencesProvider);
-    return prefs?.setString(
-          AppBootstrapStorageKeys.agendaItems,
-          jsonEncode([
-            for (final item in state) AgendaItemStorageMapper.toJson(item),
-          ]),
-        ) ??
-        Future<void>.value();
+    if (prefs == null) {
+      return Future<void>.value();
+    }
+    final allItemsJson = [
+      for (final item in state) AgendaItemStorageMapper.toJson(item),
+    ];
+    final weekStart = _currentWeekStart();
+    final weekEndExclusive = weekStart.add(const Duration(days: 7));
+    final currentWeekItemsJson = [
+      for (final item in state)
+        if (_belongsToCurrentWeek(item, weekStart: weekStart, weekEndExclusive: weekEndExclusive))
+          AgendaItemStorageMapper.toJson(item),
+    ];
+    return Future.wait([
+      prefs.setString(
+        AppBootstrapStorageKeys.agendaItems,
+        jsonEncode(allItemsJson),
+      ),
+      prefs.setString(
+        AppBootstrapStorageKeys.agendaItemsCurrentWeek,
+        jsonEncode(currentWeekItemsJson),
+      ),
+      prefs.setString(
+        AppBootstrapStorageKeys.agendaItemsCurrentWeekStart,
+        weekStart.toIso8601String(),
+      ),
+    ]).then((_) {});
+  }
+
+  DateTime _currentWeekStart() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return today.subtract(Duration(days: today.weekday - DateTime.monday));
+  }
+
+  bool _belongsToCurrentWeek(
+    AgendaItem item, {
+    required DateTime weekStart,
+    required DateTime weekEndExclusive,
+  }) {
+    return switch (item.type) {
+      ItemType.task || ItemType.schedule || ItemType.course =>
+        item.endAt.isAfter(weekStart) && item.startAt.isBefore(weekEndExclusive),
+      _ => false,
+    };
   }
 
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {

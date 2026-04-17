@@ -7,6 +7,9 @@ import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/core/theme/theme_controller.dart';
 import 'package:huajuan_agenda/features/ai/data/ai_in_memory_data_source.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -23,8 +26,8 @@ Future<void> main() async {
   await startupProbe.bootstrapAndroidStart();
 
   final preferences = await SharedPreferences.getInstance();
-  startupProbe.markOnce('shared_preferences_ready');
-  final startup = AppBootstrapLoader.loadStartupSettings(preferences);
+  final startup = AppBootstrapLoader.loadCriticalStartupSettings(preferences);
+  startupProbe.markOnce('shared_preferences_minimal_ready');
   startupProbe.markOnce('startup_settings_ready');
 
   startupProbe.markOnce('run_app_called');
@@ -35,9 +38,9 @@ Future<void> main() async {
         appLocaleProvider.overrideWith((ref) => startup.locale),
         appThemeModeProvider.overrideWith((ref) => startup.themeMode),
         appHomeSettingsProvider.overrideWith((ref) => startup.homeSettings),
-        appAiSettingsProvider.overrideWith((ref) => startup.aiSettings),
-        appWidgetSettingsProvider.overrideWith((ref) => startup.widgetSettings),
-        appNavigationSettingsProvider.overrideWith((ref) => startup.navigationSettings),
+        appAiSettingsProvider.overrideWith((ref) => const AiSettings.defaults()),
+        appWidgetSettingsProvider.overrideWith((ref) => const WidgetSettings.defaults()),
+        appNavigationSettingsProvider.overrideWith((ref) => const NavigationSettings.defaults()),
         aiChatBootstrapMessagesProvider.overrideWithValue(const []),
         agendaItemsBootstrapProvider.overrideWithValue(const []),
         courseTimetableBootstrapProvider.overrideWithValue(

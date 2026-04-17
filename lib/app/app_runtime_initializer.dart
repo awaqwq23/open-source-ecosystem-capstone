@@ -51,6 +51,7 @@ class AppRuntimeInitializer extends ConsumerStatefulWidget {
 class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
   final List<ProviderSubscription<dynamic>> _subs = [];
   bool _initialized = false;
+  bool _fullHydrateScheduled = false;
 
   @override
   void initState() {
@@ -84,7 +85,21 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
     StartupPerfProbe.instance.markOnce('runtime_setup_end');
+    unawaited(_loadNonCriticalStartupSettings());
     unawaited(_hydrateBootstrapData(service));
+  }
+
+  Future<void> _loadNonCriticalStartupSettings() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final settings = AppBootstrapLoader.loadNonCriticalStartupSettings(widget.preferences);
+      ref.read(appAiSettingsProvider.notifier).state = settings.aiSettings;
+      ref.read(appWidgetSettingsProvider.notifier).state = settings.widgetSettings;
+      ref.read(appNavigationSettingsProvider.notifier).state = settings.navigationSettings;
+      StartupPerfProbe.instance.markOnce('shared_preferences_noncritical_ready');
+    });
   }
 
   Future<void> _hydrateBootstrapData(HomeWidgetSyncService service) async {
@@ -128,11 +143,32 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     if (mounted) {
       service.syncDebounced();
     }
-    await _hydrateDeferredBootstrapData(service);
+    _scheduleDeferredHydration(service);
+  }
+
+  void _scheduleDeferredHydration(HomeWidgetSyncService service) {
+    if (_fullHydrateScheduled || !mounted) {
+      return;
+    }
+    _fullHydrateScheduled = true;
+    final probe = StartupPerfProbe.instance;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      probe.markOnce('full_hydrate_scheduled_after_first_frame');
+      Future<void>.delayed(const Duration(milliseconds: 80), () {
+        if (!mounted) {
+          return;
+        }
+        unawaited(_hydrateDeferredBootstrapData(service));
+      });
+    });
   }
 
   Future<void> _hydrateDeferredBootstrapData(HomeWidgetSyncService service) async {
     final probe = StartupPerfProbe.instance;
+    probe.markOnce('full_hydrate_actual_start');
     probe.markOnce('deferred_hydrate_start');
     if (mounted) {
       ref.read(appBootstrapPhaseProvider.notifier).state = AppBootstrapPhase.fullHydrating;
