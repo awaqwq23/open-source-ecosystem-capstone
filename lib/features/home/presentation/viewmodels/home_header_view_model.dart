@@ -232,15 +232,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     );
   }
 
-  final prefixedSemesterLabel = _withCurrentWeekPrefixIfNeeded(
-    label: semesterWeekLabel,
-    localeTag: query.localeTag,
-    scope: scope,
-    visibleRangeStart: baseViewData.visibleRange.start,
-  );
   return HomeViewData(
     scope: baseViewData.scope,
-    periodLabel: prefixedSemesterLabel,
+    periodLabel: semesterWeekLabel,
     periodSubtitle: baseViewData.periodSubtitle,
     metrics: baseViewData.metrics,
     visibleRange: baseViewData.visibleRange,
@@ -299,7 +293,15 @@ String? _buildSemesterWeekLabel({
     return null;
   }
 
-  return localeTag.startsWith('zh') ? '第 $weekIndex 周' : 'Week $weekIndex';
+  if (!localeTag.startsWith('zh')) {
+    return 'Week $weekIndex';
+  }
+  final today = DateUtils.dateOnly(DateTime.now());
+  final todayMonday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+  if (DateUtils.isSameDay(todayMonday, currentMonday)) {
+    return '本周·第 $weekIndex 周';
+  }
+  return '第 $weekIndex 周';
 }
 
 String _withCurrentWeekPrefixIfNeeded({
