@@ -341,12 +341,15 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       final prefs = ref.read(sharedPreferencesProvider);
       if (prefs == null) {
         _loadedWindowKeys.add(windowKey);
+        // 触发依赖刷新，让 Home 看到窗口已加载状态。
+        state = [...state];
         return;
       }
 
       final raw = prefs.getString(AppBootstrapStorageKeys.agendaItems);
       if (raw == null || raw.isEmpty) {
         _loadedWindowKeys.add(windowKey);
+        state = [...state];
         return;
       }
 
@@ -360,6 +363,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
       if (decoded.isEmpty) {
         _loadedWindowKeys.add(windowKey);
+        state = [...state];
         return;
       }
 
@@ -392,6 +396,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         }
       }
 
+      _loadedWindowKeys.add(windowKey);
       if (windowItems.isNotEmpty) {
         final byId = <String, AgendaItem>{
           for (final item in state) item.id: item,
@@ -401,8 +406,10 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         }
         state = byId.values.toList(growable: false);
         _idSeed = state.length;
+      } else {
+        // 窗口内无数据时也要刷新一次，避免页面永远等待“加载完成”。
+        state = [...state];
       }
-      _loadedWindowKeys.add(windowKey);
     } finally {
       _loadingWindowKeys.remove(windowKey);
     }
