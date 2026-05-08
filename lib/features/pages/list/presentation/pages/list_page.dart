@@ -654,11 +654,6 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
       theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
       theme.colorScheme.surface,
     );
-    final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.18);
-    final itemBorderColor = Color.alphaBlend(
-      accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.58 : 0.42),
-      borderColor,
-    );
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
@@ -707,7 +702,6 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
-                  border: Border.all(color: itemBorderColor, width: 1),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -718,7 +712,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                     children: [
                       Icon(
                         _typeIcon(item.type),
-                        size: 20,
+                        size: 22,
                         color: accent,
                       ),
                       const SizedBox(width: 12),
