@@ -40,13 +40,8 @@ final aiChatBootstrapSessionStoreProvider = Provider<AiChatSessionStore>((ref) {
 
 class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
     implements AiChatRepository {
-  var _hasMutated = false;
-  var _hydratedDeferred = false;
-
   @override
   AiChatSessionStore build() {
-    _hasMutated = false;
-    _hydratedDeferred = false;
     return ref.read(aiChatBootstrapSessionStoreProvider);
   }
 
@@ -65,7 +60,6 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
       updatedAt: now,
       messages: const [],
     );
-    _hasMutated = true;
     state = AiChatSessionStore(
       sessions: [session, ...state.sessions],
       activeSessionId: session.id,
@@ -79,7 +73,6 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
     if (!state.sessions.any((session) => session.id == sessionId)) {
       return;
     }
-    _hasMutated = true;
     state = state.copyWith(activeSessionId: sessionId);
     await _persistActiveSessionId();
   }
@@ -87,7 +80,6 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
   @override
   Future<void> appendToActiveSession(AiChatMessage message) async {
     final active = state.activeSession ?? await createSession();
-    _hasMutated = true;
     final updatedMessage = message.sessionId == active.id
         ? message
         : AiChatMessage(
@@ -113,34 +105,6 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
       activeSessionId: active.id,
     );
     await _persist();
-  }
-
-  void hydrateFromBootstrap(AiChatSessionStore store) {
-    if (_hydratedDeferred) {
-      return;
-    }
-    _hydratedDeferred = true;
-    if (_hasMutated || state.activeSession?.messages.isNotEmpty == true) {
-      return;
-    }
-    state = store;
-  }
-
-  Future<void> hydrateFromSerializedBootstrap({
-    required List<Map<String, dynamic>> sessionsJson,
-    required String? activeSessionId,
-  }) async {
-    if (_hydratedDeferred) {
-      return;
-    }
-    _hydratedDeferred = true;
-    if (_hasMutated || state.activeSession?.messages.isNotEmpty == true) {
-      return;
-    }
-    state = AppBootstrapLoader.decodeAiSessionStoreFromJson(
-      sessionsJson,
-      activeSessionId,
-    );
   }
 
   Future<void> _persist() async {

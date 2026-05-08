@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
@@ -12,7 +12,6 @@ import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapp
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -40,86 +39,6 @@ class AppBootstrapData {
   final CourseTimetableStore courseTimetableStore;
 }
 
-class AppStartupSettingsData {
-  const AppStartupSettingsData({
-    required this.locale,
-    required this.themeMode,
-    required this.homeSettings,
-    required this.aiSettings,
-    required this.widgetSettings,
-    required this.navigationSettings,
-  });
-
-  final Locale locale;
-  final ui.ThemeMode themeMode;
-  final HomeSettings homeSettings;
-  final AiSettings aiSettings;
-  final WidgetSettings widgetSettings;
-  final NavigationSettings navigationSettings;
-}
-
-class AppCriticalStartupSettingsData {
-  const AppCriticalStartupSettingsData({
-    required this.locale,
-    required this.themeMode,
-    required this.homeSettings,
-  });
-
-  final Locale locale;
-  final ui.ThemeMode themeMode;
-  final HomeSettings homeSettings;
-}
-
-class AppNonCriticalStartupSettingsData {
-  const AppNonCriticalStartupSettingsData({
-    required this.aiSettings,
-    required this.widgetSettings,
-    required this.navigationSettings,
-  });
-
-  final AiSettings aiSettings;
-  final WidgetSettings widgetSettings;
-  final NavigationSettings navigationSettings;
-}
-
-class AppDeferredBootstrapData {
-  const AppDeferredBootstrapData({
-    required this.aiSessionStore,
-    required this.agendaItems,
-    required this.courseTimetableStore,
-  });
-
-  final AiChatSessionStore aiSessionStore;
-  final List<AgendaItem> agendaItems;
-  final CourseTimetableStore courseTimetableStore;
-}
-
-class AppDeferredBootstrapPayload {
-  const AppDeferredBootstrapPayload({
-    required this.aiSessionsJson,
-    required this.activeAiSessionId,
-    required this.agendaItemsJson,
-    required this.courseTimetablesJson,
-    required this.activeCourseTimetableId,
-  });
-
-  final List<Map<String, dynamic>> aiSessionsJson;
-  final String? activeAiSessionId;
-  final List<Map<String, dynamic>> agendaItemsJson;
-  final List<Map<String, dynamic>> courseTimetablesJson;
-  final String? activeCourseTimetableId;
-}
-
-class AppHomeMinimalBootstrapPayload {
-  const AppHomeMinimalBootstrapPayload({
-    required this.agendaItemsJson,
-    required this.activeCourseTimetableId,
-  });
-
-  final List<Map<String, dynamic>> agendaItemsJson;
-  final String? activeCourseTimetableId;
-}
-
 abstract final class AppBootstrapStorageKeys {
   static const locale = 'settings.locale';
   static const themeMode = 'settings.themeMode';
@@ -130,8 +49,6 @@ abstract final class AppBootstrapStorageKeys {
   static const aiSessions = 'ai.sessions';
   static const activeAiSessionId = 'ai.activeSessionId';
   static const agendaItems = 'agenda.items';
-  static const agendaItemsCurrentWeek = 'agenda.items.currentWeek';
-  static const agendaItemsCurrentWeekStart = 'agenda.items.currentWeek.start';
   static const courseTimetables = 'course.timetables';
   static const activeCourseTimetableId = 'course.activeTimetableId';
   static const whuCourseCookieHeader = 'course.whu.cookieHeader';
@@ -141,135 +58,17 @@ class AppBootstrapLoader {
   const AppBootstrapLoader._();
 
   static Future<AppBootstrapData> load(SharedPreferences preferences) async {
-    final startup = loadStartupSettings(preferences);
-    final deferred = loadDeferredData(preferences);
     return AppBootstrapData(
-      locale: startup.locale,
-      themeMode: startup.themeMode,
-      homeSettings: startup.homeSettings,
-      aiSettings: startup.aiSettings,
-      widgetSettings: startup.widgetSettings,
-      navigationSettings: startup.navigationSettings,
-      aiSessionStore: deferred.aiSessionStore,
-      agendaItems: deferred.agendaItems,
-      courseTimetableStore: deferred.courseTimetableStore,
-    );
-  }
-
-  static AppStartupSettingsData loadStartupSettings(SharedPreferences preferences) {
-    return AppStartupSettingsData(
       locale: _readLocale(preferences),
       themeMode: _readThemeMode(preferences),
       homeSettings: _readHomeSettings(preferences),
       aiSettings: _readAiSettings(preferences),
       widgetSettings: _readWidgetSettings(preferences),
       navigationSettings: _readNavigationSettings(preferences),
-    );
-  }
-
-  static AppDeferredBootstrapData loadDeferredData(SharedPreferences preferences) {
-    return AppDeferredBootstrapData(
       aiSessionStore: _readAiSessionStore(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
     );
-  }
-
-  static AiChatSessionStore loadAiSessionStore(SharedPreferences preferences) {
-    return _readAiSessionStore(preferences);
-  }
-
-  static Future<AppDeferredBootstrapPayload> loadDeferredPayloadInBackground(
-    SharedPreferences preferences,
-  ) async {
-    final rawPayload = <String, String?>{
-      AppBootstrapStorageKeys.aiSessions:
-          preferences.getString(AppBootstrapStorageKeys.aiSessions),
-      AppBootstrapStorageKeys.activeAiSessionId:
-          preferences.getString(AppBootstrapStorageKeys.activeAiSessionId),
-      AppBootstrapStorageKeys.agendaItems:
-          preferences.getString(AppBootstrapStorageKeys.agendaItems),
-      AppBootstrapStorageKeys.courseTimetables:
-          preferences.getString(AppBootstrapStorageKeys.courseTimetables),
-      AppBootstrapStorageKeys.activeCourseTimetableId:
-          preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId),
-    };
-    final decoded = await compute(_decodeDeferredPayloadRaw, rawPayload);
-    final activeId = decoded[AppBootstrapStorageKeys.activeCourseTimetableId] as String?;
-    final activeAiSessionId = decoded[AppBootstrapStorageKeys.activeAiSessionId] as String?;
-    return AppDeferredBootstrapPayload(
-      aiSessionsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.aiSessions]),
-      activeAiSessionId: (activeAiSessionId == null || activeAiSessionId.isEmpty)
-          ? null
-          : activeAiSessionId,
-      agendaItemsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.agendaItems]),
-      courseTimetablesJson: _castJsonObjectList(
-        decoded[AppBootstrapStorageKeys.courseTimetables],
-      ),
-      activeCourseTimetableId: (activeId == null || activeId.isEmpty) ? null : activeId,
-    );
-  }
-
-  static AppCriticalStartupSettingsData loadCriticalStartupSettings(
-    SharedPreferences preferences,
-  ) {
-    return AppCriticalStartupSettingsData(
-      locale: _readLocale(preferences),
-      themeMode: _readThemeMode(preferences),
-      homeSettings: _readHomeSettings(preferences),
-    );
-  }
-
-  static AppNonCriticalStartupSettingsData loadNonCriticalStartupSettings(
-    SharedPreferences preferences,
-  ) {
-    return AppNonCriticalStartupSettingsData(
-      aiSettings: _readAiSettings(preferences),
-      widgetSettings: _readWidgetSettings(preferences),
-      navigationSettings: _readNavigationSettings(preferences),
-    );
-  }
-
-  static Future<AppHomeMinimalBootstrapPayload> loadHomeMinimalPayloadInBackground(
-    SharedPreferences preferences, {
-    required DateTime weekStart,
-    required DateTime weekEndExclusive,
-  }) async {
-    final rawPayload = <String, String?>{
-      AppBootstrapStorageKeys.agendaItems:
-          preferences.getString(AppBootstrapStorageKeys.agendaItems),
-      AppBootstrapStorageKeys.agendaItemsCurrentWeek:
-          preferences.getString(AppBootstrapStorageKeys.agendaItemsCurrentWeek),
-      AppBootstrapStorageKeys.agendaItemsCurrentWeekStart:
-          preferences.getString(AppBootstrapStorageKeys.agendaItemsCurrentWeekStart),
-      AppBootstrapStorageKeys.activeCourseTimetableId:
-          preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId),
-      'weekStartIso': weekStart.toIso8601String(),
-      'weekEndIso': weekEndExclusive.toIso8601String(),
-    };
-    final decoded = await compute(_decodeHomeMinimalPayloadRaw, rawPayload);
-    final activeId = decoded[AppBootstrapStorageKeys.activeCourseTimetableId] as String?;
-    return AppHomeMinimalBootstrapPayload(
-      agendaItemsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.agendaItems]),
-      activeCourseTimetableId: (activeId == null || activeId.isEmpty) ? null : activeId,
-    );
-  }
-
-  static List<Map<String, dynamic>> _castJsonObjectList(Object? value) {
-    final raw = value;
-    if (raw is! List<dynamic>) {
-      return const [];
-    }
-    return [
-      for (final item in raw)
-        if (item is Map<Object?, Object?>)
-          item.map(
-            (key, value) => MapEntry(
-              key is String ? key : key.toString(),
-              value,
-            ),
-          ),
-    ];
   }
 
   static Locale _readLocale(SharedPreferences preferences) {
@@ -397,20 +196,12 @@ class AppBootstrapLoader {
     }
   }
 
-  static AiChatSessionStore decodeAiSessionStoreFromJson(
-    List<Map<String, dynamic>> sessionsJson,
-    String? activeSessionId,
-  ) {
-    return _decodeAiSessionStore(sessionsJson, activeSessionId);
-  }
-
   static AiChatSessionStore _decodeAiSessionStore(
     List<Map<String, dynamic>> sessionsJson,
     String? activeSessionId,
   ) {
     final sessions = [
-      for (final item in sessionsJson)
-        _decodeAiSession(item),
+      for (final item in sessionsJson) _decodeAiSession(item),
     ].whereType<AiChatSession>().toList(growable: false)
       ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
 
@@ -556,123 +347,21 @@ class AppBootstrapLoader {
       return const CourseTimetableStore(timetables: []);
     }
   }
-}
 
-Map<String, dynamic> _decodeDeferredPayloadRaw(Map<String, String?> rawPayload) {
-  List<dynamic> decodeList(String? raw) {
-    if (raw == null || raw.isEmpty) {
+  static List<Map<String, dynamic>> _castJsonObjectList(Object? value) {
+    final raw = value;
+    if (raw is! List<dynamic>) {
       return const [];
     }
-    try {
-      final decoded = jsonDecode(raw);
-      return decoded is List<dynamic> ? decoded : const [];
-    } catch (_) {
-      return const [];
-    }
+    return [
+      for (final item in raw)
+        if (item is Map<Object?, Object?>)
+          item.map(
+            (key, value) => MapEntry(
+              key is String ? key : key.toString(),
+              value,
+            ),
+          ),
+    ];
   }
-
-  final activeIdRaw = rawPayload[AppBootstrapStorageKeys.activeCourseTimetableId];
-  final activeId = (activeIdRaw == null || activeIdRaw.isEmpty) ? null : activeIdRaw;
-  return <String, dynamic>{
-    AppBootstrapStorageKeys.aiSessions:
-        decodeList(rawPayload[AppBootstrapStorageKeys.aiSessions]),
-    AppBootstrapStorageKeys.activeAiSessionId:
-        rawPayload[AppBootstrapStorageKeys.activeAiSessionId],
-    AppBootstrapStorageKeys.agendaItems:
-        decodeList(rawPayload[AppBootstrapStorageKeys.agendaItems]),
-    AppBootstrapStorageKeys.courseTimetables:
-        decodeList(rawPayload[AppBootstrapStorageKeys.courseTimetables]),
-    AppBootstrapStorageKeys.activeCourseTimetableId: activeId,
-  };
-}
-
-Map<String, dynamic> _decodeHomeMinimalPayloadRaw(Map<String, String?> rawPayload) {
-  final activeIdRaw = rawPayload[AppBootstrapStorageKeys.activeCourseTimetableId];
-  final activeId = (activeIdRaw == null || activeIdRaw.isEmpty) ? null : activeIdRaw;
-  final weekStart = DateTime.tryParse(rawPayload['weekStartIso'] ?? '');
-  final weekEndExclusive = DateTime.tryParse(rawPayload['weekEndIso'] ?? '');
-  final agendaRaw = rawPayload[AppBootstrapStorageKeys.agendaItems];
-  final agendaCurrentWeekRaw = rawPayload[AppBootstrapStorageKeys.agendaItemsCurrentWeek];
-  final agendaCurrentWeekStartRaw =
-      rawPayload[AppBootstrapStorageKeys.agendaItemsCurrentWeekStart];
-
-  List<dynamic> decodedAgenda = const [];
-  if (agendaRaw != null && agendaRaw.isNotEmpty) {
-    try {
-      final decoded = jsonDecode(agendaRaw);
-      if (decoded is List<dynamic>) {
-        decodedAgenda = decoded;
-      }
-    } catch (_) {
-      decodedAgenda = const [];
-    }
-  }
-
-  List<dynamic> decodedCurrentWeekAgenda = const [];
-  if (agendaCurrentWeekRaw != null && agendaCurrentWeekRaw.isNotEmpty) {
-    try {
-      final decoded = jsonDecode(agendaCurrentWeekRaw);
-      if (decoded is List<dynamic>) {
-        decodedCurrentWeekAgenda = decoded;
-      }
-    } catch (_) {
-      decodedCurrentWeekAgenda = const [];
-    }
-  }
-
-  bool intersectsWeek(Map<Object?, Object?> item) {
-    if (weekStart == null || weekEndExclusive == null) {
-      return false;
-    }
-    final type = item['type']?.toString() ?? '';
-    if (type != 'task' && type != 'schedule' && type != 'course') {
-      return false;
-    }
-
-    Object? startRaw;
-    Object? endRaw;
-    if (type == 'task') {
-      final taskDetails = item['taskDetails'];
-      if (taskDetails is Map<Object?, Object?>) {
-        final schedule = taskDetails['schedule'];
-        if (schedule is Map<Object?, Object?>) {
-          startRaw = schedule['start'];
-          endRaw = schedule['end'];
-        }
-      }
-    } else {
-      final schedule = item['scheduleDetails'];
-      if (schedule is Map<Object?, Object?>) {
-        startRaw = schedule['start'];
-        endRaw = schedule['end'];
-      }
-    }
-
-    final start = DateTime.tryParse(startRaw?.toString() ?? '');
-    final end = DateTime.tryParse(endRaw?.toString() ?? '');
-    if (start == null || end == null) {
-      return false;
-    }
-    return end.isAfter(weekStart) && start.isBefore(weekEndExclusive);
-  }
-
-  final canUseCurrentWeekCache =
-      weekStart != null &&
-      agendaCurrentWeekRaw != null &&
-      agendaCurrentWeekStartRaw != null &&
-      agendaCurrentWeekStartRaw == weekStart.toIso8601String();
-  final minimalAgenda = canUseCurrentWeekCache
-      ? <Map<Object?, Object?>>[
-          for (final item in decodedCurrentWeekAgenda)
-            if (item is Map<Object?, Object?>) item,
-        ]
-      : <Map<Object?, Object?>>[
-          for (final item in decodedAgenda)
-            if (item is Map<Object?, Object?> && intersectsWeek(item)) item,
-        ];
-
-  return <String, dynamic>{
-    AppBootstrapStorageKeys.agendaItems: minimalAgenda,
-    AppBootstrapStorageKeys.activeCourseTimetableId: activeId,
-  };
 }

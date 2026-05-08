@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
@@ -382,15 +381,9 @@ final aiHeaderViewModelProvider =
 );
 
 final aiActiveSessionProvider = Provider<AiChatSession?>((ref) {
-  if (!ref.watch(appBootstrapPhaseProvider).hasFullData) {
-    return null;
-  }
   return ref.watch(aiChatRepositoryProvider).activeSession;
 });
 
 final aiSessionsProvider = Provider<List<AiChatSession>>((ref) {
-  if (!ref.watch(appBootstrapPhaseProvider).hasFullData) {
-    return const [];
-  }
   return ref.watch(aiChatRepositoryProvider).sessions;
 });

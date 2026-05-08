@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/shell/app_shell_destination.dart';
 import 'package:huajuan_agenda/core/motion/app_motion.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/perf/startup_perf_probe.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -31,7 +30,6 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    StartupPerfProbe.instance.markOnce('app_shell_build_first');
     final destinations = AppShellDestination.values;
     final current = destinations[navigationShell.currentIndex];
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
