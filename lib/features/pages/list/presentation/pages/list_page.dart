@@ -663,6 +663,10 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final canToggleCompleted = item.supportsManualCompletion;
     final canToggleImportant = item.type != ItemType.course;
     final isManuallyCompleted = item.isCompleted && canToggleCompleted;
+    final editSwipeBackground = Color.alphaBlend(
+      accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.34 : 0.18),
+      theme.colorScheme.surfaceContainerHighest,
+    );
     final cardColor = Color.alphaBlend(
       theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
       theme.colorScheme.surface,
@@ -681,9 +685,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
           closeThreshold: 0.999,
           motion: _PhasedSwipeMotion(
             controller: _slidableController,
-            backgroundColor: AppSemanticColors.listSwipeBackground(theme),
-            actionColor: AppSemanticColors.listSwipeEditAction(theme),
-            committedIconColor: theme.colorScheme.onPrimary,
+            backgroundColor: editSwipeBackground,
+            actionColor: accent,
+            committedIconColor: AppSemanticColors.onAgendaAccent(accent),
             icon: AppIcons.edit,
             alignment: Alignment.centerLeft,
           ),
@@ -730,8 +734,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                               onPressed: widget.onToggleComplete,
                               icon:
                                   isManuallyCompleted ? AppIcons.complete : AppIcons.incomplete,
-                              color:
-                                  isManuallyCompleted ? theme.colorScheme.primary : accent,
+                              color: accent,
                             )
                           : const SizedBox(
                               width: 28,
