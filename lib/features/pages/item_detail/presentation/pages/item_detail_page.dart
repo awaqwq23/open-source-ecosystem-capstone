@@ -1,3 +1,5 @@
+import 'dart:math' show pi;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -110,6 +112,7 @@ class _ItemDetailContent extends ConsumerWidget {
     final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
     final isCompleted = item.isEffectivelyCompleted(now);
     final canToggle = item.supportsManualCompletion;
+    final isCourse = item.type == ItemType.course;
     final color = item.color.resolve(theme.brightness);
 
     final infoRows = _buildInfoRows(context);
@@ -184,6 +187,14 @@ class _ItemDetailContent extends ConsumerWidget {
 
         // ── Time meta ──
         _buildTimeMeta(context),
+
+        // ── Course grading & reviews ──
+        if (isCourse) ...[
+          const SizedBox(height: 20),
+          _CourseGradingSection(),
+          const SizedBox(height: 20),
+          _CourseReviewsSection(),
+        ],
       ],
     );
   }
@@ -423,6 +434,385 @@ class _EmptyDetailState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Course grading section ─────────────────────────────────────────────────────
+
+class _CourseGradingSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: '课程给分'),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              // ── Overall score ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _ScoreRing(score: 85, label: '总评'),
+                  const SizedBox(width: 24),
+                  _ScoreRing(score: 90, label: '平时'),
+                  const SizedBox(width: 24),
+                  _ScoreRing(score: 82, label: '期末'),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 16),
+              // ── Score distribution ──
+              Text(
+                '成绩分布',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _DistributionBar(
+                label: '90-100',
+                fraction: 0.25,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 8),
+              _DistributionBar(
+                label: '80-89',
+                fraction: 0.40,
+                color: theme.colorScheme.primary.withValues(alpha: 0.8),
+              ),
+              const SizedBox(height: 8),
+              _DistributionBar(
+                label: '70-79',
+                fraction: 0.20,
+                color: theme.colorScheme.primary.withValues(alpha: 0.6),
+              ),
+              const SizedBox(height: 8),
+              _DistributionBar(
+                label: '60-69',
+                fraction: 0.10,
+                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+              ),
+              const SizedBox(height: 8),
+              _DistributionBar(
+                label: '<60',
+                fraction: 0.05,
+                color: theme.colorScheme.error.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScoreRing extends StatelessWidget {
+  const _ScoreRing({required this.score, required this.label});
+
+  final int score;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = score >= 90
+        ? theme.colorScheme.primary
+        : score >= 80
+            ? theme.colorScheme.tertiary
+            : theme.colorScheme.error;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 56,
+          height: 56,
+          child: CustomPaint(
+            painter: _RingPainter(
+              progress: score / 100.0,
+              color: color,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+            child: Center(
+              child: Text(
+                '$score',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
+    required this.progress,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  final double progress;
+  final Color color;
+  final Color backgroundColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 4;
+    final strokeWidth = 6.0;
+
+    final bgPaint = Paint()
+      ..color = backgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    final fgPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -pi / 2,
+      2 * pi * progress,
+      false,
+      fgPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.color != color ||
+        oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
+class _DistributionBar extends StatelessWidget {
+  const _DistributionBar({
+    required this.label,
+    required this.fraction,
+    required this.color,
+  });
+
+  final String label;
+  final double fraction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 48,
+          child: Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: fraction,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              color: color,
+              minHeight: 10,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 36,
+          child: Text(
+            '${(fraction * 100).toInt()}%',
+            textAlign: TextAlign.right,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Course reviews section ────────────────────────────────────────────────────
+
+class _CourseReviewsSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: '课程评价'),
+        const SizedBox(height: 10),
+        _ReviewCard(
+          rating: 4.5,
+          content: '老师讲得很清楚，课件制作精良，给分也不错。每节课都有课堂练习，对理解概念帮助很大。',
+          reviewer: '匿名同学',
+          date: '2025-12',
+        ),
+        const SizedBox(height: 10),
+        _ReviewCard(
+          rating: 3.5,
+          content: '课程内容比较充实，但期末考试有一定难度。平时作业量适中，建议提前复习。',
+          reviewer: '匿名同学',
+          date: '2025-11',
+        ),
+        const SizedBox(height: 10),
+        _ReviewCard(
+          rating: 5.0,
+          content: '强烈推荐！这门课让我对专业方向有了更清晰的认识，实验环节设计得很好。',
+          reviewer: '匿名同学',
+          date: '2025-10',
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.rating,
+    required this.content,
+    required this.reviewer,
+    required this.date,
+  });
+
+  final double rating;
+  final String content;
+  final String reviewer;
+  final String date;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (index) {
+                  final filled = index < rating.floor();
+                  final half = !filled && index < rating;
+                  return Icon(
+                    half ? Icons.star_half : Icons.star,
+                    size: 16,
+                    color: filled || half
+                        ? Colors.amber
+                        : theme.colorScheme.surfaceContainerHighest,
+                  );
+                }),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                rating.toStringAsFixed(1),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                date,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            content,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              height: 1.5,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            reviewer,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

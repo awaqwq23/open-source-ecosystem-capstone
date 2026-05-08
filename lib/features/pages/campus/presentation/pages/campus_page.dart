@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CampusPage extends StatelessWidget {
