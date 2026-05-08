@@ -110,6 +110,7 @@ class _ItemDetailContent extends ConsumerWidget {
     final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
     final isCompleted = item.isEffectivelyCompleted(now);
     final canToggle = item.supportsManualCompletion;
+    final color = item.color.resolve(theme.brightness);
 
     final infoRows = _buildInfoRows(context);
 
@@ -123,6 +124,7 @@ class _ItemDetailContent extends ConsumerWidget {
             Icon(
               _typeIcon(item.type),
               size: 24,
+              color: color,
             ),
             const SizedBox(width: 12),
             Expanded(
