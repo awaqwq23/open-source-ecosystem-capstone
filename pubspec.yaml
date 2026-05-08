@@ -53,6 +53,7 @@ dependencies:
   webview_cookie_manager_flutter: ^3.0.1
   home_widget: ^0.7.0
   speech_to_text: ^7.0.0
+  flutter_markdown_plus: ^1.0.7
 
 dev_dependencies:
   flutter_test:

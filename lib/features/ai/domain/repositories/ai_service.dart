@@ -1,4 +1,5 @@
 import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
 
@@ -24,6 +25,11 @@ class AiServiceException implements Exception {
 
 abstract class AiService {
   Future<AiResolvedMessage> resolveMessage({
+    required String message,
+    required List<AgendaItem> items,
+  });
+
+  Stream<AiStreamEvent> streamMessage({
     required String message,
     required List<AgendaItem> items,
   });

@@ -1,3 +1,5 @@
+import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
+
 sealed class AiStreamEvent {
   const AiStreamEvent();
 }
@@ -13,7 +15,8 @@ class AiStreamDelta extends AiStreamEvent {
 }
 
 class AiStreamCompleted extends AiStreamEvent {
-  const AiStreamCompleted(this.text);
+  const AiStreamCompleted(this.fullText, this.result);
 
-  final String text;
+  final String fullText;
+  final AiResolvedMessage result;
 }

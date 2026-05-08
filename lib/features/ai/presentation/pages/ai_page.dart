@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:huajuan_agenda/app/router/app_navigator.dart';
@@ -9,6 +10,7 @@ import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
+import 'package:huajuan_agenda/features/ai/presentation/widgets/ai_item_visualizer.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:intl/intl.dart';
@@ -93,6 +95,7 @@ class _AiPageState extends ConsumerState<AiPage> {
               child: _ConversationTimeline(
                 session: session,
                 pendingDraft: state.pendingDraft,
+                streamingContent: state.streamingContent,
                 onOpenDraft: ref.read(aiHeaderViewModelProvider.notifier).requestOpenDraftEditor,
               ),
             ),
@@ -201,22 +204,57 @@ class _AiPageState extends ConsumerState<AiPage> {
   }
 }
 
-class _ConversationTimeline extends StatelessWidget {
+class _ConversationTimeline extends StatefulWidget {
   const _ConversationTimeline({
     required this.session,
     required this.pendingDraft,
     required this.onOpenDraft,
+    this.streamingContent,
   });
 
   final AiChatSession? session;
   final AiCreateItemDraft? pendingDraft;
   final VoidCallback onOpenDraft;
+  final String? streamingContent;
+
+  @override
+  State<_ConversationTimeline> createState() => _ConversationTimelineState();
+}
+
+class _ConversationTimelineState extends State<_ConversationTimeline> {
+  final _scrollController = ScrollController();
+  var _autoScroll = true;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConversationTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.streamingContent != null &&
+        widget.streamingContent != oldWidget.streamingContent &&
+        _autoScroll) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 50),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final messages = session?.messages ?? const <AiChatMessage>[];
+    final messages = widget.session?.messages ?? const <AiChatMessage>[];
     final hasHistory = messages.isNotEmpty;
-    if (!hasHistory && pendingDraft == null) {
+    final hasStreaming = widget.streamingContent != null;
+    if (!hasHistory && widget.pendingDraft == null && !hasStreaming) {
       return Center(
         child: Text(
           _text(context, zh: '当前对话还没有消息。', en: 'No messages in this chat yet.'),
@@ -225,21 +263,69 @@ class _ConversationTimeline extends StatelessWidget {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      children: [
-        for (final message in messages) _MessageLine(message: message),
-        if (pendingDraft != null)
-          _DraftEntryLine(
-            pendingDraft: pendingDraft!,
-            onOpenDraft: onOpenDraft,
-          ),
-      ],
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is UserScrollNotification) {
+          final isAtBottom = _scrollController.hasClients &&
+              _scrollController.position.pixels >=
+                  _scrollController.position.maxScrollExtent - 20;
+          _autoScroll = isAtBottom;
+        }
+        return false;
+      },
+      child: ListView(
+        controller: _scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        children: [
+          for (final message in messages) _MessageLine(message: message),
+          if (hasStreaming)
+            _StreamingMessage(content: widget.streamingContent!),
+          if (widget.pendingDraft != null)
+            _DraftEntryLine(
+              pendingDraft: widget.pendingDraft!,
+              onOpenDraft: widget.onOpenDraft,
+            ),
+        ],
+      ),
     );
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
     return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+  }
+}
+
+class _StreamingMessage extends StatelessWidget {
+  const _StreamingMessage({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MarkdownContent(message: content),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -255,19 +341,10 @@ class _MessageLine extends StatefulWidget {
 }
 
 class _MessageLineState extends State<_MessageLine> {
-  var _showCitations = false;
-
   @override
   Widget build(BuildContext context) {
     final isUser = widget.message.role == AiChatRole.user;
     final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final style = Theme.of(context).textTheme.bodyLarge?.copyWith(
-          height: 1.5,
-          color: isUser
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.onSurface,
-          fontWeight: isUser ? FontWeight.w600 : FontWeight.w400,
-        );
 
     return Align(
       alignment: align,
@@ -278,46 +355,64 @@ class _MessageLineState extends State<_MessageLine> {
           child: Column(
             crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              Text(widget.message.content, style: style),
-              if (widget.message.citations.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                ui.GhostButton(
-                  onPressed: () {
-                    setState(() {
-                      _showCitations = !_showCitations;
-                    });
-                  },
-                  child: Text(
-                    _showCitations
-                        ? _text(context, zh: '收起引用', en: 'Hide references')
-                        : _text(
-                            context,
-                            zh: '引用了 ${widget.message.citations.length} 条事项',
-                            en: '${widget.message.citations.length} references',
-                          ),
-                  ),
-                ),
-                if (_showCitations)
-                  for (final citation in widget.message.citations)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        '· ${citation.title}${citation.reason == null || citation.reason!.trim().isEmpty ? '' : '  ${citation.reason!.trim()}'}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+              if (isUser)
+                Text(
+                  widget.message.content,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        height: 1.5,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-              ],
+                )
+              else
+                _MarkdownContent(message: widget.message.content),
+              if (widget.message.citations.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: AiItemVisualizer(citations: widget.message.citations),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+class _MarkdownContent extends StatelessWidget {
+  const _MarkdownContent({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MarkdownBody(
+      data: message,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+        h1: theme.textTheme.headlineSmall,
+        h2: theme.textTheme.titleLarge,
+        h3: theme.textTheme.titleMedium,
+        code: theme.textTheme.bodyMedium?.copyWith(
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          fontFamily: 'monospace',
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        blockquoteDecoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+        ),
+        listBullet: theme.textTheme.bodyLarge,
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+        ),
+      ),
+    );
   }
 }
 

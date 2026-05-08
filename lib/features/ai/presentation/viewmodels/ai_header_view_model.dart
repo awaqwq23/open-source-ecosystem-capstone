@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_runtime_initializer.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/ai/domain/models/ai_stream_event.dart';
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
@@ -24,6 +25,7 @@ class AiHeaderState {
     this.lastError,
     this.composerEnabled = true,
     this.composerDisabledReason,
+    this.streamingContent,
   });
 
   final String input;
@@ -33,6 +35,7 @@ class AiHeaderState {
   final String? lastError;
   final bool composerEnabled;
   final String? composerDisabledReason;
+  final String? streamingContent;
 
   bool get isBusy {
     return phase == AiWorkflowPhase.parsing ||
@@ -54,6 +57,8 @@ class AiHeaderState {
     bool? composerEnabled,
     String? composerDisabledReason,
     bool clearComposerDisabledReason = false,
+    String? streamingContent,
+    bool clearStreamingContent = false,
   }) {
     return AiHeaderState(
       input: input ?? this.input,
@@ -67,6 +72,7 @@ class AiHeaderState {
       composerDisabledReason: clearComposerDisabledReason
           ? null
           : (composerDisabledReason ?? this.composerDisabledReason),
+      streamingContent: clearStreamingContent ? null : (streamingContent ?? this.streamingContent),
     );
   }
 }
@@ -151,6 +157,8 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     final now = DateTime.now();
     final sessionId = repository.getActiveSession()?.id ??
         (await repository.createSession()).id;
+
+    // 添加用户消息
     await repository.appendToActiveSession(
       AiChatMessage(
         id: 'user_${now.microsecondsSinceEpoch}',
@@ -162,46 +170,38 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
 
     state = state.copyWith(
+      input: '',
       phase: AiWorkflowPhase.parsing,
       clearError: true,
       clearPendingDraft: true,
+      streamingContent: '',
     );
 
     try {
       final items = ref.read(agendaItemRepositoryProvider);
-      final resolved = await service.resolveMessage(
+      final stream = service.streamMessage(
         message: content,
         items: items,
       );
 
-      switch (resolved.intent) {
-        case AiResolvedIntentType.createItem:
-          await _onCreateItemResolved(resolved);
-        case AiResolvedIntentType.answer:
-          await _appendAssistantMessage(
-            content: resolved.reply,
-            kind: AiMessageKind.answer,
-            citations: resolved.citations,
-          );
-          state = state.copyWith(
-            input: '',
-            phase: AiWorkflowPhase.idle,
-            clearError: true,
-          );
-        case AiResolvedIntentType.fallback:
-          await _appendAssistantMessage(
-            content: resolved.reply,
-            kind: AiMessageKind.chat,
-          );
-          state = state.copyWith(
-            input: '',
-            phase: AiWorkflowPhase.idle,
-            clearError: true,
-          );
+      String fullContent = '';
+      await for (final event in stream) {
+        switch (event) {
+          case AiStreamDelta(:final text):
+            fullContent += text;
+            state = state.copyWith(streamingContent: fullContent);
+          case AiStreamCompleted(:final result):
+            fullContent = event.fullText;
+            await _onStreamCompleted(result, sessionId);
+          default:
+            break;
+        }
       }
     } on OpenAiConfigurationException catch (error) {
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
+        streamingContent: null,
+        clearStreamingContent: true,
         composerEnabled: false,
         composerDisabledReason: error.message,
         lastError: error.message,
@@ -211,6 +211,7 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
           error.code == AiServiceErrorCode.configuration;
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
+        clearStreamingContent: true,
         composerEnabled: !shouldDisableComposer,
         composerDisabledReason: shouldDisableComposer ? 'AI 服务暂不可用，请先修复配置或网络。' : null,
         clearComposerDisabledReason: !shouldDisableComposer,
@@ -219,11 +220,76 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     } catch (_) {
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
+        clearStreamingContent: true,
         composerEnabled: false,
         composerDisabledReason: 'AI 服务暂不可用，请先修复配置或网络。',
         lastError: 'AI 服务暂不可用，请稍后重试。',
       );
     }
+  }
+
+  Future<void> _onStreamCompleted(
+    AiResolvedMessage resolved,
+    String sessionId,
+  ) async {
+    switch (resolved.intent) {
+      case AiResolvedIntentType.createItem:
+        await _onStreamCreateItemResolved(resolved);
+      case AiResolvedIntentType.answer:
+        await _appendAssistantMessage(
+          content: resolved.reply,
+          kind: AiMessageKind.answer,
+          sessionId: sessionId,
+          citations: resolved.citations,
+        );
+        state = state.copyWith(
+          phase: AiWorkflowPhase.idle,
+          clearError: true,
+          clearStreamingContent: true,
+        );
+      case AiResolvedIntentType.fallback:
+        await _appendAssistantMessage(
+          content: resolved.reply,
+          kind: AiMessageKind.chat,
+          sessionId: sessionId,
+        );
+        state = state.copyWith(
+          phase: AiWorkflowPhase.idle,
+          clearError: true,
+          clearStreamingContent: true,
+        );
+    }
+  }
+
+  Future<void> _onStreamCreateItemResolved(AiResolvedMessage resolved) async {
+    final draft = resolved.createItemDraft;
+    final repository = ref.read(aiChatRepositoryNotifierProvider);
+    final sessionId = repository.getActiveSession()?.id;
+
+    if (sessionId != null) {
+      await _appendAssistantMessage(
+        content: resolved.reply,
+        kind: AiMessageKind.system,
+        sessionId: sessionId,
+      );
+    }
+
+    if (draft == null || draft.missingRequired.isNotEmpty) {
+      state = state.copyWith(
+        phase: AiWorkflowPhase.idle,
+        clearStreamingContent: true,
+        clearPendingDraft: true,
+        clearPendingDraftNavigation: true,
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      phase: AiWorkflowPhase.awaitingConfirm,
+      clearStreamingContent: true,
+      pendingDraft: draft,
+      pendingDraftNavigationId: DateTime.now().microsecondsSinceEpoch,
+    );
   }
 
   Future<void> confirmCreateDraft() async {
@@ -281,41 +347,10 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
   }
 
-  Future<void> _onCreateItemResolved(AiResolvedMessage resolved) async {
-    final draft = resolved.createItemDraft;
-    await _appendAssistantMessage(
-      content: resolved.reply,
-      kind: AiMessageKind.system,
-    );
-
-    if (draft == null) {
-      state = state.copyWith(
-        input: '',
-        phase: AiWorkflowPhase.idle,
-      );
-      return;
-    }
-
-    if (draft.missingRequired.isNotEmpty) {
-      state = state.copyWith(
-        phase: AiWorkflowPhase.idle,
-        clearPendingDraft: true,
-        clearPendingDraftNavigation: true,
-      );
-      return;
-    }
-
-    state = state.copyWith(
-      input: '',
-      phase: AiWorkflowPhase.awaitingConfirm,
-      pendingDraft: draft,
-      pendingDraftNavigationId: DateTime.now().microsecondsSinceEpoch,
-    );
-  }
-
   Future<void> _appendAssistantMessage({
     required String content,
     required AiMessageKind kind,
+    String? sessionId,
     List<AiCitation> citations = const <AiCitation>[],
   }) {
     final repository = ref.read(aiChatRepositoryNotifierProvider);
@@ -323,14 +358,14 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     if (text.isEmpty) {
       return Future<void>.value();
     }
-    final sessionId = repository.getActiveSession()?.id;
-    if (sessionId == null) {
+    final sid = sessionId ?? repository.getActiveSession()?.id;
+    if (sid == null) {
       return Future<void>.value();
     }
     return repository.appendToActiveSession(
       AiChatMessage(
         id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
-        sessionId: sessionId,
+        sessionId: sid,
         content: text,
         createdAt: DateTime.now(),
         role: AiChatRole.assistant,
