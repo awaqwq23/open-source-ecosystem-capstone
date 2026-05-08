@@ -15,7 +15,6 @@ import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_ar
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -227,28 +226,70 @@ class HomePage extends ConsumerWidget {
     WidgetRef ref,
     HomeViewData viewData,
   ) async {
-    final result = await context.openModal<TimePickerSelection>(
-      AppRoutePaths.timePicker,
-      extra: TimePickerArgs(
-        mode: switch (viewData.scope) {
-          HomeDisplayScope.week => TimePickerMode.week,
-          HomeDisplayScope.month => TimePickerMode.month,
-        },
-        initialDate: viewData.periodSelection.anchor,
-      ),
-    );
-    if (result == null || !context.mounted) {
-      return;
-    }
-    ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
-          HomePeriodSelection(
-            anchor: result.anchor,
-            scope: switch (result.mode) {
-              TimePickerMode.month => HomeDisplayScope.month,
-              _ => HomeDisplayScope.week,
-            },
+    final initialDate = viewData.periodSelection.anchor;
+    final controller = ui.DatePickerController(initialDate);
+
+    await ui.openSheet<void>(
+      context: context,
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.timePickerTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ui.ControlledDatePicker(
+                  controller: controller,
+                  initialValue: initialDate,
+                  initialViewType: ui.CalendarViewType.date,
+                  stateBuilder: (date) {
+                    final now = DateTime.now();
+                    return date.isAfter(now.add(const Duration(days: 365))) ||
+                            date.isBefore(now.subtract(const Duration(days: 365)))
+                        ? ui.DateState.disabled
+                        : ui.DateState.enabled;
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ui.OutlineButton(
+                    onPressed: () => ui.closeDrawer(sheetContext),
+                    child: Text(context.l10n.commonBack),
+                  ),
+                  const SizedBox(width: 12),
+                  ui.PrimaryButton(
+                    onPressed: () {
+                      final selected = controller.value ?? initialDate;
+                      ui.closeDrawer(sheetContext);
+                      ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
+                            HomePeriodSelection(
+                              anchor: selected,
+                              scope: viewData.scope,
+                            ),
+                          );
+                    },
+                    child: Text(context.l10n.editorPickerConfirm),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
+      },
+    );
   }
 }
 
