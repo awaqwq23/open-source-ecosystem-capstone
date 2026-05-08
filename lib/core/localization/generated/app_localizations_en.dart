@@ -200,12 +200,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get detailMarkIncomplete => 'Mark incomplete';
 
   @override
-  String get detailMarkImportant => 'Mark important';
-
-  @override
-  String get detailUnmarkImportant => 'Remove importance';
-
-  @override
   String get detailDelete => 'Delete item';
 
   @override
@@ -295,9 +289,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listTabMemos => 'Memos';
 
   @override
-  String get listTabImportant => 'Important';
-
-  @override
   String get listMenuTitle => 'Switch list tab';
 
   @override
@@ -357,9 +348,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listActionDelete => 'Delete';
 
   @override
-  String get listSortImportance => 'Importance';
-
-  @override
   String get listSortDueDate => 'Due date';
 
   @override
@@ -383,12 +371,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listStatusCompleted => 'Completed';
-
-  @override
-  String get listImportantEnabled => 'Important';
-
-  @override
-  String get listImportantDisabled => 'Normal';
 
   @override
   String get editorTypePickerTitle => 'Switch item type';
@@ -484,9 +466,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorFieldEstimatedDuration => 'Estimated duration';
 
   @override
-  String get editorFieldImportant => 'Important item';
-
-  @override
   String get editorHintTitle => 'What needs to be done?';
 
   @override
@@ -524,6 +503,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editorColorSlate => 'Slate';
+
+  @override
+  String get editorColorRose => 'Rose';
+
+  @override
+  String get editorColorLime => 'Lime';
+
+  @override
+  String get editorColorIndigo => 'Indigo';
+
+  @override
+  String get editorColorTeal => 'Teal';
+
+  @override
+  String get editorColorCrimson => 'Crimson';
+
+  @override
+  String get editorColorViolet => 'Violet';
 
   @override
   String get editorColorPickerTitle => 'Choose color';

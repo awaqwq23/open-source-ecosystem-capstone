@@ -187,12 +187,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get detailMarkIncomplete => '恢复未完成';
 
   @override
-  String get detailMarkImportant => '标记重要';
-
-  @override
-  String get detailUnmarkImportant => '取消重要';
-
-  @override
   String get detailDelete => '删除事项';
 
   @override
@@ -280,9 +274,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listTabMemos => '备忘列表';
 
   @override
-  String get listTabImportant => '重要事项';
-
-  @override
   String get listMenuTitle => '切换标签页';
 
   @override
@@ -340,9 +331,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listActionDelete => '删除';
 
   @override
-  String get listSortImportance => '重要性';
-
-  @override
   String get listSortDueDate => '到期日期';
 
   @override
@@ -365,12 +353,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listStatusCompleted => '已完成';
-
-  @override
-  String get listImportantEnabled => '重要';
-
-  @override
-  String get listImportantDisabled => '普通';
 
   @override
   String get editorTypePickerTitle => '切换事项类型';
@@ -466,9 +448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorFieldEstimatedDuration => '预计时长';
 
   @override
-  String get editorFieldImportant => '重要事项';
-
-  @override
   String get editorHintTitle => '这件事叫什么？';
 
   @override
@@ -506,6 +485,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get editorColorSlate => '石板灰';
+
+  @override
+  String get editorColorRose => '玫瑰粉';
+
+  @override
+  String get editorColorLime => '酸橙绿';
+
+  @override
+  String get editorColorIndigo => '靛蓝';
+
+  @override
+  String get editorColorTeal => '鸭绿';
+
+  @override
+  String get editorColorCrimson => '绯红';
+
+  @override
+  String get editorColorViolet => '紫罗兰';
 
   @override
   String get editorColorPickerTitle => '选择事项颜色';

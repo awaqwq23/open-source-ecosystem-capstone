@@ -658,6 +658,12 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       ItemColorOption.coral => l10n.editorColorCoral,
       ItemColorOption.orchid => l10n.editorColorOrchid,
       ItemColorOption.slate => l10n.editorColorSlate,
+      ItemColorOption.rose => l10n.editorColorRose,
+      ItemColorOption.lime => l10n.editorColorLime,
+      ItemColorOption.indigo => l10n.editorColorIndigo,
+      ItemColorOption.teal => l10n.editorColorTeal,
+      ItemColorOption.crimson => l10n.editorColorCrimson,
+      ItemColorOption.violet => l10n.editorColorViolet,
     };
   }
 

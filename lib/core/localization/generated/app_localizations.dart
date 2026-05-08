@@ -446,18 +446,6 @@ abstract class AppLocalizations {
   /// **'Mark incomplete'**
   String get detailMarkIncomplete;
 
-  /// No description provided for @detailMarkImportant.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark important'**
-  String get detailMarkImportant;
-
-  /// No description provided for @detailUnmarkImportant.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove importance'**
-  String get detailUnmarkImportant;
-
   /// No description provided for @detailDelete.
   ///
   /// In en, this message translates to:
@@ -632,12 +620,6 @@ abstract class AppLocalizations {
   /// **'Memos'**
   String get listTabMemos;
 
-  /// No description provided for @listTabImportant.
-  ///
-  /// In en, this message translates to:
-  /// **'Important'**
-  String get listTabImportant;
-
   /// No description provided for @listMenuTitle.
   ///
   /// In en, this message translates to:
@@ -740,12 +722,6 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get listActionDelete;
 
-  /// No description provided for @listSortImportance.
-  ///
-  /// In en, this message translates to:
-  /// **'Importance'**
-  String get listSortImportance;
-
   /// No description provided for @listSortDueDate.
   ///
   /// In en, this message translates to:
@@ -793,18 +769,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Completed'**
   String get listStatusCompleted;
-
-  /// No description provided for @listImportantEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Important'**
-  String get listImportantEnabled;
-
-  /// No description provided for @listImportantDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Normal'**
-  String get listImportantDisabled;
 
   /// No description provided for @editorTypePickerTitle.
   ///
@@ -992,12 +956,6 @@ abstract class AppLocalizations {
   /// **'Estimated duration'**
   String get editorFieldEstimatedDuration;
 
-  /// No description provided for @editorFieldImportant.
-  ///
-  /// In en, this message translates to:
-  /// **'Important item'**
-  String get editorFieldImportant;
-
   /// No description provided for @editorHintTitle.
   ///
   /// In en, this message translates to:
@@ -1075,6 +1033,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Slate'**
   String get editorColorSlate;
+
+  /// No description provided for @editorColorRose.
+  ///
+  /// In en, this message translates to:
+  /// **'Rose'**
+  String get editorColorRose;
+
+  /// No description provided for @editorColorLime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lime'**
+  String get editorColorLime;
+
+  /// No description provided for @editorColorIndigo.
+  ///
+  /// In en, this message translates to:
+  /// **'Indigo'**
+  String get editorColorIndigo;
+
+  /// No description provided for @editorColorTeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Teal'**
+  String get editorColorTeal;
+
+  /// No description provided for @editorColorCrimson.
+  ///
+  /// In en, this message translates to:
+  /// **'Crimson'**
+  String get editorColorCrimson;
+
+  /// No description provided for @editorColorViolet.
+  ///
+  /// In en, this message translates to:
+  /// **'Violet'**
+  String get editorColorViolet;
 
   /// No description provided for @editorColorPickerTitle.
   ///

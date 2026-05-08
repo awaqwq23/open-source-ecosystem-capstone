@@ -98,6 +98,10 @@ class AppBootstrapLoader {
           _ => HomeWideLayoutScope.week,
         },
         showDemoData: json['showDemoData'] as bool? ?? false,
+        gridMode: switch (json['gridMode']) {
+          'courseGrid' => HomeGridMode.courseGrid,
+          _ => HomeGridMode.timeGrid,
+        },
         itemOpacityPercent:
             ((json['itemOpacityPercent'] as int? ?? 100).clamp(0, 100) as int),
       );
