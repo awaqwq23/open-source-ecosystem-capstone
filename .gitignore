@@ -48,3 +48,6 @@ app.*.map.json
 # Local environment files
 /android/local.properties
 **/Flutter/ephemeral/
+
+# Claude
+.claude/
