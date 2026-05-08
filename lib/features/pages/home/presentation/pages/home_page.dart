@@ -430,17 +430,15 @@ class _HomeGridState extends State<_HomeGrid> {
                           height: layout.headerCellHeight,
                         ),
                       for (final slot in widget.viewData.timeSlots)
-                        GestureDetector(
+                        _TimelineLabel(
+                          slot: slot,
+                          top: layout.rowTop(slot.index),
+                          width: layout.timelineLabelWidth,
+                          height: layout.cellSize,
+                          showPeriodNumber: widget.viewData.isCourseGrid && _showPeriodNumber,
                           onTap: widget.viewData.isCourseGrid
                               ? () => setState(() => _showPeriodNumber = !_showPeriodNumber)
                               : null,
-                          child: _TimelineLabel(
-                            slot: slot,
-                            top: layout.rowTop(slot.index),
-                            width: layout.timelineLabelWidth,
-                            height: layout.cellSize,
-                            showPeriodNumber: widget.viewData.isCourseGrid && _showPeriodNumber,
-                          ),
                         ),
                       for (var columnIndex = 0;
                           columnIndex < widget.viewData.columns.length;
@@ -657,6 +655,7 @@ class _TimelineLabel extends StatelessWidget {
     required this.width,
     required this.height,
     this.showPeriodNumber = false,
+    this.onTap,
   });
 
   final HomeTimeSlot slot;
@@ -664,6 +663,7 @@ class _TimelineLabel extends StatelessWidget {
   final double width;
   final double height;
   final bool showPeriodNumber;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -676,12 +676,14 @@ class _TimelineLabel extends StatelessWidget {
       top: top,
       width: width,
       height: height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
-        ),
-        child: LayoutBuilder(
+      child: GestureDetector(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
+          ),
+          child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxHeight < HomeGridMetrics.timelineCompactHeight;
             return Padding(
@@ -765,6 +767,7 @@ class _TimelineLabel extends StatelessWidget {
             );
           },
         ),
+      ),
       ),
     );
   }
