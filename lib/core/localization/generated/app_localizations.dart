@@ -161,7 +161,7 @@ abstract class AppLocalizations {
   /// No description provided for @forumTitle.
   ///
   /// In en, this message translates to:
-  /// **'Forum'**
+  /// **'Luojia Shelter'**
   String get forumTitle;
 
   /// No description provided for @campusTitle.

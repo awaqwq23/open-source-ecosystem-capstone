@@ -39,7 +39,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescription => '这里将承载任务、日程、备忘和标签页驱动的列表体验。';
 
   @override
-  String get forumTitle => '论坛';
+  String get forumTitle => '珞珈防空洞';
 
   @override
   String get campusTitle => '校园';

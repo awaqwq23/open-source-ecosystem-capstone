@@ -10,8 +10,8 @@ abstract final class AppIcons {
   static const IconData listOutlined = Icons.checklist_rtl_outlined;
   static const IconData listFilled = Icons.checklist_rtl;
 
-  static const IconData forumOutlined = Icons.forum_outlined;
-  static const IconData forumFilled = Icons.forum;
+  static const IconData forumOutlined = Icons.shield_outlined;
+  static const IconData forumFilled = Icons.shield;
 
   static const IconData campusOutlined = Icons.apps_outlined;
   static const IconData campusFilled = Icons.apps;

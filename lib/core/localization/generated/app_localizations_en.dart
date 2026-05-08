@@ -41,7 +41,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Task, schedule, memo and tag-based lists will be organized here.';
 
   @override
-  String get forumTitle => 'Forum';
+  String get forumTitle => 'Luojia Shelter';
 
   @override
   String get campusTitle => 'Campus';
