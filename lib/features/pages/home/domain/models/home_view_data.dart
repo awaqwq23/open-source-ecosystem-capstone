@@ -118,6 +118,7 @@ class HomeViewData {
     required this.columns,
     required this.timeSlots,
     required this.items,
+    this.isCourseGrid = false,
   });
 
   final HomeDisplayScope scope;
@@ -130,5 +131,6 @@ class HomeViewData {
   final List<HomeDayColumn> columns;
   final List<HomeTimeSlot> timeSlots;
   final List<HomeLaidOutItem> items;
+  final bool isCourseGrid;
 }
 

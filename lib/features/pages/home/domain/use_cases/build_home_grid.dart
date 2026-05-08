@@ -51,6 +51,7 @@ class BuildHomeGridUseCase {
       columns: columns,
       timeSlots: timeSlots,
       items: items,
+      isCourseGrid: settings.gridMode == HomeGridMode.courseGrid,
     );
   }
 
@@ -76,9 +77,74 @@ class BuildHomeGridUseCase {
     required String localeTag,
     required HomeSettings settings,
   }) {
+    if (settings.gridMode == HomeGridMode.courseGrid) {
+      return _buildCourseTimeSlots(anchor: anchor, localeTag: localeTag);
+    }
+    return _buildDefaultTimeSlots(anchor: anchor, settings: settings);
+  }
+
+  List<HomeTimeSlot> _buildCourseTimeSlots({
+    required DateTime anchor,
+    required String localeTag,
+  }) {
+    final base = DateUtils.dateOnly(anchor);
+    // 13 fixed course periods with specific times
+    const coursePeriods = <(int start, int end)>[
+      (480, 525),   // 1:  8:00-8:45
+      (530, 575),   // 2:  8:50-9:35
+      (590, 635),   // 3:  9:50-10:35
+      (640, 685),   // 4: 10:40-11:25
+      (690, 735),   // 5: 11:30-12:15
+      (845, 890),   // 6: 14:05-14:50
+      (895, 940),   // 7: 14:55-15:40
+      (945, 990),   // 8: 15:45-16:30
+      (1000, 1045), // 9: 16:40-17:25
+      (1050, 1095), //10: 17:30-18:15
+      (1110, 1155), //11: 18:30-19:15
+      (1160, 1205), //12: 19:20-20:05
+      (1210, 1255), //13: 20:10-20:55
+    ];
+    final localeIsChinese = localeTag.startsWith('zh');
+
+    return [
+      for (var index = 0; index < coursePeriods.length; index++)
+        () {
+          final (slotStartMinute, slotEndMinute) = coursePeriods[index];
+          final start = DateTime(
+            base.year,
+            base.month,
+            base.day,
+            slotStartMinute ~/ 60,
+            slotStartMinute % 60,
+          );
+          final end = DateTime(
+            base.year,
+            base.month,
+            base.day,
+            slotEndMinute ~/ 60,
+            slotEndMinute % 60,
+          );
+          final startLabel = _formatMinute(slotStartMinute);
+          final endLabel = _formatMinute(slotEndMinute);
+          return HomeTimeSlot(
+            label: '$startLabel~$endLabel',
+            shortLabel: localeIsChinese ? '第${index + 1}节' : 'Period ${index + 1}',
+            start: start,
+            end: end,
+            startMinute: slotStartMinute,
+            endMinute: slotEndMinute,
+            index: index,
+          );
+        }(),
+    ];
+  }
+
+  List<HomeTimeSlot> _buildDefaultTimeSlots({
+    required DateTime anchor,
+    required HomeSettings settings,
+  }) {
     final base = DateUtils.dateOnly(anchor);
     final startMinute = settings.dayStartTime.hour * 60 + settings.dayStartTime.minute;
-    final localeIsChinese = localeTag.startsWith('zh');
 
     return [
       for (var index = 0; index < settings.blockCount; index++)
@@ -104,7 +170,7 @@ class BuildHomeGridUseCase {
           final endLabel = _formatMinute(slotEndMinute);
           return HomeTimeSlot(
             label: '$startLabel~$endLabel',
-            shortLabel: localeIsChinese ? '第${index + 1}块' : 'Block ${index + 1}',
+            shortLabel: '第${index + 1}块',
             start: start,
             end: end,
             startMinute: slotStartMinute,

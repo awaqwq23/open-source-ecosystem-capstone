@@ -13,6 +13,7 @@ import 'package:luotopia/features/pages/home/presentation/viewmodels/home_header
 import 'package:luotopia/features/pages/item_detail/domain/models/item_detail_args.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
@@ -97,9 +98,36 @@ class HomePage extends ConsumerWidget {
                 ),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: ui.IconButton.ghost(
-                    icon: const Icon(AppIcons.nextPeriod),
-                    onPressed: () => viewModel.showNext(viewData.scope),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ui.Tooltip(
+                        tooltip: (context) => Text(
+                          homeSettings.gridMode == HomeGridMode.courseGrid
+                              ? '切换为时间方格'
+                              : '切换为课程方格',
+                        ),
+                        child: ui.IconButton.ghost(
+                          icon: Icon(
+                            homeSettings.gridMode == HomeGridMode.courseGrid
+                                ? Icons.view_module
+                                : Icons.view_agenda,
+                          ),
+                          onPressed: () {
+                            ref.read(appHomeSettingsProvider.notifier).state =
+                                homeSettings.copyWith(
+                              gridMode: homeSettings.gridMode == HomeGridMode.courseGrid
+                                  ? HomeGridMode.timeGrid
+                                  : HomeGridMode.courseGrid,
+                            );
+                          },
+                        ),
+                      ),
+                      ui.IconButton.ghost(
+                        icon: const Icon(AppIcons.nextPeriod),
+                        onPressed: () => viewModel.showNext(viewData.scope),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -131,7 +159,7 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
-                    itemOpacityFactor: (homeSettings.itemOpacityPercent.clamp(0, 100) as int) / 100,
+                    itemOpacityFactor: homeSettings.itemOpacityPercent.clamp(0, 100) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),
                     onSelectCell: (date, slotIndex) => viewModel.selectCell(date, slotIndex),
@@ -295,6 +323,7 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
+  bool _showPeriodNumber = false;
 
   @override
   void dispose() {
@@ -360,11 +389,17 @@ class _HomeGridState extends State<_HomeGrid> {
                           height: layout.headerCellHeight,
                         ),
                       for (final slot in widget.viewData.timeSlots)
-                        _TimelineLabel(
-                          slot: slot,
-                          top: layout.rowTop(slot.index),
-                          width: layout.timelineLabelWidth,
-                          height: layout.cellSize,
+                        GestureDetector(
+                          onTap: widget.viewData.isCourseGrid
+                              ? () => setState(() => _showPeriodNumber = !_showPeriodNumber)
+                              : null,
+                          child: _TimelineLabel(
+                            slot: slot,
+                            top: layout.rowTop(slot.index),
+                            width: layout.timelineLabelWidth,
+                            height: layout.cellSize,
+                            showPeriodNumber: widget.viewData.isCourseGrid && _showPeriodNumber,
+                          ),
                         ),
                       for (var columnIndex = 0;
                           columnIndex < widget.viewData.columns.length;
@@ -580,18 +615,19 @@ class _TimelineLabel extends StatelessWidget {
     required this.top,
     required this.width,
     required this.height,
+    this.showPeriodNumber = false,
   });
 
   final HomeTimeSlot slot;
   final double top;
   final double width;
   final double height;
+  final bool showPeriodNumber;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final start = _formatMinute(slot.startMinute);
-    final end = _formatMinute(slot.endMinute);
+    final displayText = showPeriodNumber ? slot.shortLabel : slot.label;
     final backgroundColor = theme.colorScheme.surfaceContainerLow;
 
     return Positioned(
@@ -616,51 +652,75 @@ class _TimelineLabel extends StatelessWidget {
                     ? HomeGridMetrics.timelineCompactHorizontalPadding
                     : HomeGridMetrics.timelineHorizontalPadding,
               ),
-              child: compact
-                  ? Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        start,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.clip,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
-                          height: HomeGridMetrics.timelineCompactLineHeight,
-                          fontSize: HomeGridMetrics.timelineCompactFontSize,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                child: compact
+                    ? Align(
+                        key: ValueKey('compact_$showPeriodNumber'),
+                        alignment: Alignment.center,
+                        child: Text(
+                          displayText,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            height: HomeGridMetrics.timelineCompactLineHeight,
+                            fontSize: HomeGridMetrics.timelineCompactFontSize,
+                          ),
                         ),
+                      )
+                    : Column(
+                        key: ValueKey('full_$showPeriodNumber'),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: showPeriodNumber
+                            ? [
+                                Text(
+                                  slot.shortLabel,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                    height: HomeGridMetrics.timelineLineHeight,
+                                    fontSize: HomeGridMetrics.timelineFontSize,
+                                  ),
+                                ),
+                              ]
+                            : [
+                                Text(
+                                  slot.label.split('~').first,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                    height: HomeGridMetrics.timelineLineHeight,
+                                    fontSize: HomeGridMetrics.timelineFontSize,
+                                  ),
+                                ),
+                                const SizedBox(
+                                  height: _HomeGridLayoutSpec.timelineDividerMargin * 2 + 1,
+                                ),
+                                Text(
+                                  slot.label.split('~').last,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                    height: HomeGridMetrics.timelineLineHeight,
+                                    fontSize: HomeGridMetrics.timelineFontSize,
+                                  ),
+                                ),
+                              ],
                       ),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          start,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                            height: HomeGridMetrics.timelineLineHeight,
-                            fontSize: HomeGridMetrics.timelineFontSize,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: _HomeGridLayoutSpec.timelineDividerMargin * 2 + 1,
-                        ),
-                        Text(
-                          end,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                            height: HomeGridMetrics.timelineLineHeight,
-                            fontSize: HomeGridMetrics.timelineFontSize,
-                          ),
-                        ),
-                      ],
-                    ),
+              ),
             );
           },
         ),
@@ -668,13 +728,6 @@ class _TimelineLabel extends StatelessWidget {
     );
   }
 
-  String _formatMinute(int minute) {
-    final normalizedHour = minute ~/ 60;
-    final normalizedMinute = minute % 60;
-    final hourText = normalizedHour.toString();
-    final minuteText = normalizedMinute.toString().padLeft(2, '0');
-    return '$hourText:$minuteText';
-  }
 }
 
 class _HomeGridLayout {

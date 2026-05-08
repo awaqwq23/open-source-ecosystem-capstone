@@ -5,6 +5,11 @@ enum HomeWideLayoutScope {
   month,
 }
 
+enum HomeGridMode {
+  timeGrid,
+  courseGrid,
+}
+
 @immutable
 class HomeSettings {
   const HomeSettings({
@@ -13,6 +18,7 @@ class HomeSettings {
     required this.blockGapMinutes,
     required this.blockCount,
     required this.wideLayoutScope,
+    required this.gridMode,
     required this.showDemoData,
     required this.itemOpacityPercent,
   });
@@ -23,6 +29,7 @@ class HomeSettings {
         blockGapMinutes = 0,
         blockCount = 12,
         wideLayoutScope = HomeWideLayoutScope.week,
+        gridMode = HomeGridMode.timeGrid,
         showDemoData = false,
         itemOpacityPercent = 100;
 
@@ -31,6 +38,7 @@ class HomeSettings {
   final int blockGapMinutes;
   final int blockCount;
   final HomeWideLayoutScope wideLayoutScope;
+  final HomeGridMode gridMode;
   final bool showDemoData;
   final int itemOpacityPercent;
 
@@ -40,6 +48,7 @@ class HomeSettings {
     int? blockGapMinutes,
     int? blockCount,
     HomeWideLayoutScope? wideLayoutScope,
+    HomeGridMode? gridMode,
     bool? showDemoData,
     int? itemOpacityPercent,
   }) {
@@ -49,6 +58,7 @@ class HomeSettings {
       blockGapMinutes: blockGapMinutes ?? this.blockGapMinutes,
       blockCount: blockCount ?? this.blockCount,
       wideLayoutScope: wideLayoutScope ?? this.wideLayoutScope,
+      gridMode: gridMode ?? this.gridMode,
       showDemoData: showDemoData ?? this.showDemoData,
       itemOpacityPercent: itemOpacityPercent ?? this.itemOpacityPercent,
     );
