@@ -197,6 +197,10 @@ final agendaItemRepositoryNotifierProvider = Provider<AgendaItemRepository>((ref
 });
 
 final agendaItemByIdProvider = Provider.family<AgendaItem?, String>((ref, id) {
-  final repository = ref.watch(agendaItemRepositoryProvider.notifier);
-  return repository.findById(id);
+  final items = ref.watch(agendaItemRepositoryProvider);
+  try {
+    return items.firstWhere((item) => item.id == id);
+  } catch (_) {
+    return null;
+  }
 });
