@@ -7,6 +7,7 @@ import 'package:luotopia/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
