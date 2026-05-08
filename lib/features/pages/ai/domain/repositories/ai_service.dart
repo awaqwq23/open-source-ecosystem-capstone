@@ -1,7 +1,7 @@
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_action_models.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_stream_event.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_stream_event.dart';
+import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 
 enum AiServiceErrorCode {
   configuration,

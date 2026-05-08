@@ -1,5 +1,5 @@
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 
 enum AiResolvedIntentType {
   createItem,

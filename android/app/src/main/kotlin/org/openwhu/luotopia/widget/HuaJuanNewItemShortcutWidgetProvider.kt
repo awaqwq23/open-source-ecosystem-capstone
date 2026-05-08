@@ -1,4 +1,4 @@
-package com.example.huajuan_agenda.widget
+package org.openwhu.luotopia.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -6,8 +6,8 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
-import com.example.huajuan_agenda.MainActivity
-import com.example.huajuan_agenda.R
+import org.openwhu.luotopia.MainActivity
+import org.openwhu.luotopia.R
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
@@ -44,7 +44,7 @@ class HuaJuanNewItemShortcutWidgetProvider : HomeWidgetProvider() {
                     val pendingIntent = HomeWidgetLaunchIntent.getActivity(
                         context,
                         MainActivity::class.java,
-                        Uri.parse("huajuan://app/item-editor?showTypePicker=1&source=home_widget"),
+                        Uri.parse("luotopia://app/item-editor?showTypePicker=1&source=home_widget"),
                     )
                     setOnClickPendingIntent(R.id.widget_new_item_root, pendingIntent)
                 }

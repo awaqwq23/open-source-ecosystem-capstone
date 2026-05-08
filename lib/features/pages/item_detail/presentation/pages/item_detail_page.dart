@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/app/router/app_navigator.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
-import 'package:huajuan_agenda/core/time/now_ticker_provider.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/pages/item_detail/domain/models/item_detail_args.dart';
-import 'package:huajuan_agenda/features/pages/item_detail/presentation/viewmodels/item_detail_view_model.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/models/item_editor_args.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
-import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/motion/app_motion_widgets.dart';
+import 'package:luotopia/core/time/now_ticker_provider.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/item_detail/domain/models/item_detail_args.dart';
+import 'package:luotopia/features/pages/item_detail/presentation/viewmodels/item_detail_view_model.dart';
+import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
+import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/value_objects/reminder_option.dart';
+import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ItemDetailPage extends ConsumerWidget {

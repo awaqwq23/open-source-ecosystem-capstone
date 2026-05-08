@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:huajuan_agenda/app/app.dart';
+import 'package:luotopia/app/app.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 void main() {
@@ -12,7 +12,7 @@ void main() {
 
     await tester.pumpWidget(
       const ProviderScope(
-        child: HuaJuanAgendaApp(),
+        child: LuotopiaApp(),
       ),
     );
     await tester.pumpAndSettle();

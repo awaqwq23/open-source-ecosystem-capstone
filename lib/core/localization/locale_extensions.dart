@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
-import 'package:huajuan_agenda/app/shell/app_shell_destination.dart';
-import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
+import 'package:luotopia/app/shell/app_shell_destination.dart';
+import 'package:luotopia/core/localization/generated/app_localizations.dart';
 
-export 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
+export 'package:luotopia/core/localization/generated/app_localizations.dart';
 
 extension AppLocalizationsX on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;

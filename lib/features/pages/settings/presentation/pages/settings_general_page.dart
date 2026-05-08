@@ -1,13 +1,13 @@
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/navigation_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
-import 'package:huajuan_agenda/features/pages/settings/presentation/widgets/settings_flat_list.dart';
+import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
+import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsGeneralPage extends ConsumerWidget {

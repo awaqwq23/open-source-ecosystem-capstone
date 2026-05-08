@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
 
 enum AppShellDestination {
   home(

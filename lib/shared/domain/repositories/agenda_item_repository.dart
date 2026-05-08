@@ -1,6 +1,6 @@
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 abstract class AgendaItemRepository {
   List<AgendaItem> get items;

@@ -1,5 +1,5 @@
-import 'package:huajuan_agenda/features/components/course_import/domain/models/course_import_models.dart';
-import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/features/components/course_import/domain/models/course_import_models.dart';
+import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 
 class WakeupCourseImportAdapter implements CourseImportAdapter {
   const WakeupCourseImportAdapter();

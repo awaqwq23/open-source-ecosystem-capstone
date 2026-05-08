@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
-import 'package:huajuan_agenda/features/pages/settings/presentation/widgets/settings_flat_list.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/core/theme/app_semantic_colors.dart';
+import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
+import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
+import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsAiPage extends ConsumerStatefulWidget {

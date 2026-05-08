@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:huajuan_agenda/features/pages/home/domain/models/home_view_data.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 class LayoutHomeItemsUseCase {
   const LayoutHomeItemsUseCase();

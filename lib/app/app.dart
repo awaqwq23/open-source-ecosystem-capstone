@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/router/app_router.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/localization/shadcn_localizations_fallback_delegate.dart';
-import 'package:huajuan_agenda/core/theme/theme_controller.dart';
-import 'package:huajuan_agenda/core/theme/theme_factory.dart';
+import 'package:luotopia/app/router/app_router.dart';
+import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/localization/shadcn_localizations_fallback_delegate.dart';
+import 'package:luotopia/core/theme/theme_controller.dart';
+import 'package:luotopia/core/theme/theme_factory.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class HuaJuanAgendaApp extends ConsumerWidget {
-  const HuaJuanAgendaApp({super.key});
+class LuotopiaApp extends ConsumerWidget {
+  const LuotopiaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +20,7 @@ class HuaJuanAgendaApp extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
 
     return ui.ShadcnApp.router(
-      title: 'HuaJuan Agenda',
+      title: 'Luotopia',
       debugShowCheckedModeBanner: false,
       locale: locale,
       supportedLocales: AppLocale.supportedLocales,

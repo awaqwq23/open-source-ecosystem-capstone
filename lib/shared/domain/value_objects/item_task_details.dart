@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/shared/domain/value_objects/item_schedule_details.dart';
+import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 
 class ItemTaskDetails {
   const ItemTaskDetails({

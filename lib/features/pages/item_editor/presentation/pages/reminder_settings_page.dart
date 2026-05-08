@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/motion/app_motion_widgets.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/motion/app_motion_widgets.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ReminderSettingsPage extends StatelessWidget {

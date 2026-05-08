@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/navigation_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/widget_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 abstract class SettingsRepository {

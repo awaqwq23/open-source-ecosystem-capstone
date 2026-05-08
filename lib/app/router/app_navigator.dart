@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 
 extension AppNavigatorX on BuildContext {
   Future<T?> openSecondary<T>(

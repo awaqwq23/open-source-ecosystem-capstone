@@ -1,8 +1,8 @@
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/domain/value_objects/item_course_details.dart';
-import 'package:huajuan_agenda/shared/value_objects/item_color_option.dart';
-import 'package:huajuan_agenda/shared/value_objects/reminder_option.dart';
-import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
+import 'package:luotopia/shared/value_objects/item_color_option.dart';
+import 'package:luotopia/shared/value_objects/reminder_option.dart';
+import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
 class ItemEditorPrefill {
   const ItemEditorPrefill({

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/pages/home/data/home_demo_items.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/models/home_view_data.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/use_cases/build_home_grid.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/use_cases/layout_home_items.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/features/pages/home/data/home_demo_items.dart';
+import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
+import 'package:luotopia/features/pages/home/domain/use_cases/build_home_grid.dart';
+import 'package:luotopia/features/pages/home/domain/use_cases/layout_home_items.dart';
+import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 class HomeHeaderState {
   const HomeHeaderState({

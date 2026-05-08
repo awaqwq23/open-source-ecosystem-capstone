@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
-import 'package:huajuan_agenda/core/localization/shadcn_localizations_fallback_delegate.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/presentation/pages/item_editor_page.dart';
+import 'package:luotopia/core/localization/generated/app_localizations.dart';
+import 'package:luotopia/core/localization/shadcn_localizations_fallback_delegate.dart';
+import 'package:luotopia/features/pages/item_editor/presentation/pages/item_editor_page.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 

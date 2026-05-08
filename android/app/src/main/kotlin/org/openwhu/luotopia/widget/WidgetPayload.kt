@@ -1,4 +1,4 @@
-package com.example.huajuan_agenda.widget
+package org.openwhu.luotopia.widget
 
 import org.json.JSONObject
 

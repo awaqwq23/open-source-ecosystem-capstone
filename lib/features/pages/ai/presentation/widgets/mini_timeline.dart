@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 
 Color _colorForType(ItemType type, Brightness brightness) {
   const light = <ItemType, Color>{

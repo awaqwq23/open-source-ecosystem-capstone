@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/app/app_bootstrap.dart';
-import 'package:huajuan_agenda/app/router/app_route_paths.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/components/course_import/data/whu_course_import_service.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_course_timetable_repository.dart';
-import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/app/app_bootstrap.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CourseImportWhuPage extends ConsumerStatefulWidget {

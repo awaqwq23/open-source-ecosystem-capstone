@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 class ItemScheduleDetails {
   const ItemScheduleDetails({

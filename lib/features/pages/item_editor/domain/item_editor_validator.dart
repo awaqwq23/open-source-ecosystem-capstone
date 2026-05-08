@@ -1,6 +1,6 @@
-import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/core/localization/generated/app_localizations.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 
 class ItemEditorValidationErrors {
   const ItemEditorValidationErrors({

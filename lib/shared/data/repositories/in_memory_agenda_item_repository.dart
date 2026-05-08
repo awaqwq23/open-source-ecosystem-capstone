@@ -1,14 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/app_bootstrap.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
-import 'package:huajuan_agenda/shared/domain/repositories/agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/app/app_bootstrap.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/mappers/agenda_item_storage_mapper.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
   return const [];

@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 
 class AiChatMessage {
   const AiChatMessage({

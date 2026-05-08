@@ -2,15 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/app/app_bootstrap.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/core/theme/theme_controller.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/navigation_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/widget_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/repositories/settings_repository.dart';
+import 'package:luotopia/app/app_bootstrap.dart';
+import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/core/theme/theme_controller.dart';
+import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/features/pages/settings/domain/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 

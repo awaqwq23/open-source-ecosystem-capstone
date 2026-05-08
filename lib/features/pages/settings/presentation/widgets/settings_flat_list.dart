@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/core/theme/app_semantic_colors.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/core/theme/app_semantic_colors.dart';
 
 class SettingsFlatSection extends StatelessWidget {
   const SettingsFlatSection({

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:huajuan_agenda/core/motion/app_motion.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 
 class AppEntrance extends StatelessWidget {
   const AppEntrance({

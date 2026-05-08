@@ -1,9 +1,9 @@
-package com.example.huajuan_agenda.widget
+package org.openwhu.luotopia.widget
 
 import android.content.Context
 
 object WidgetStore {
-    private const val PREFS_NAME = "huajuan_widget_store"
+    private const val PREFS_NAME = "luotopia_widget_store"
     private const val KEY_PAYLOAD_V3 = "payload_v3"
     private const val KEY_PAYLOAD_V2 = "payload_v2"
 

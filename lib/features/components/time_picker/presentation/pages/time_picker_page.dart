@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
-import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/components/time_picker/domain/models/time_picker_args.dart';
-import 'package:huajuan_agenda/features/components/time_picker/presentation/viewmodels/time_picker_view_model.dart';
+import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
+import 'package:luotopia/features/components/time_picker/presentation/viewmodels/time_picker_view_model.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 

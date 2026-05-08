@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 
 class ItemEditorArgs {
   const ItemEditorArgs({

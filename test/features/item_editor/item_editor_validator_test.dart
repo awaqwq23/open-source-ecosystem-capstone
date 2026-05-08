@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/item_editor_defaults.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/item_editor_validator.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:luotopia/core/localization/generated/app_localizations.dart';
+import 'package:luotopia/features/pages/item_editor/domain/item_editor_defaults.dart';
+import 'package:luotopia/features/pages/item_editor/domain/item_editor_validator.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 
 void main() {
   group('ItemEditorValidator', () {

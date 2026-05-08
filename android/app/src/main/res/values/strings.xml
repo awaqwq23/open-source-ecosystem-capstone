@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">HuaJuan Agenda</string>
-    <string name="widget_description">HuaJuan Agenda Widget</string>
+    <string name="app_name">Luotopia</string>
+    <string name="widget_description">Luotopia Widget</string>
     <string name="widget_ai_entry_name">AI快捷入口</string>
     <string name="widget_quick_create_name">快速创建事项</string>
     <string name="widget_agenda_list_name">事项列表</string>

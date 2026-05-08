@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_action_models.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_stream_event.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_stream_event.dart';
+import 'package:luotopia/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 
 enum AiWorkflowPhase {
   idle,

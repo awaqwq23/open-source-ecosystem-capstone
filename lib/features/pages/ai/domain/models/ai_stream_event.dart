@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_action_models.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
 
 sealed class AiStreamEvent {
   const AiStreamEvent();

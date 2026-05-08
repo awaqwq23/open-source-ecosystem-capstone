@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/components/time_picker/domain/models/time_picker_args.dart';
+import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 
 class TimePickerState {
   const TimePickerState({

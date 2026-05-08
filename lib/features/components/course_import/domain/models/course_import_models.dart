@@ -1,4 +1,4 @@
-import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 
 class CourseImportResult {
   const CourseImportResult({

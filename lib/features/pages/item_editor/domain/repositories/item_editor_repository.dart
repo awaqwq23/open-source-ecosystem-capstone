@@ -1,5 +1,5 @@
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 
 abstract class ItemEditorRepository {
   Future<AgendaItem> createItem(

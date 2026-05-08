@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:huajuan_agenda/features/pages/home/presentation/layout/home_grid_metrics.dart';
+import 'package:luotopia/features/pages/home/presentation/layout/home_grid_metrics.dart';
 
 void main() {
   test('时间列宽度固定为单元格宽度的 0.7 倍', () {

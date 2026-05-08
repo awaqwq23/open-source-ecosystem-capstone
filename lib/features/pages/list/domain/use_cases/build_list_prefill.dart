@@ -1,6 +1,6 @@
-import 'package:huajuan_agenda/features/pages/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/features/pages/list/domain/models/list_filters.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/features/pages/list/domain/models/list_filters.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 
 class BuildListPrefillUseCase {
   const BuildListPrefillUseCase();

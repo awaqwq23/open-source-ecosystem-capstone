@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/pages/item_detail/domain/models/item_detail_args.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/features/pages/item_detail/domain/models/item_detail_args.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 
 class ItemDetailState {
   const ItemDetailState({

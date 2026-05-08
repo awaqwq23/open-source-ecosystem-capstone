@@ -1,10 +1,10 @@
-package com.example.huajuan_agenda
+package org.openwhu.luotopia
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import com.example.huajuan_agenda.widget.WidgetStore
-import com.example.huajuan_agenda.widget.WidgetUpdateDispatcher
+import org.openwhu.luotopia.widget.WidgetStore
+import org.openwhu.luotopia.widget.WidgetUpdateDispatcher
 import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
@@ -12,7 +12,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "huajuan/widget_sync",
+            "luotopia/widget_sync",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "syncWidgets" -> {

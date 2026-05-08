@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/repositories/item_editor_repository.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
-import 'package:huajuan_agenda/shared/domain/repositories/agenda_item_repository.dart';
+import 'package:luotopia/features/pages/item_editor/domain/repositories/item_editor_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
 
 class SharedItemEditorRepository implements ItemEditorRepository {
   const SharedItemEditorRepository(this._repository);

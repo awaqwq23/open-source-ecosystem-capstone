@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:huajuan_agenda/core/motion/app_motion.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 
 abstract final class AppRouteTransitions {
   static CustomTransitionPage<T> fadeThrough<T>({

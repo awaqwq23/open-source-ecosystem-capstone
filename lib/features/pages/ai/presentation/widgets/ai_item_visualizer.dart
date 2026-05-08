@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/features/pages/ai/presentation/widgets/citation_card.dart';
-import 'package:huajuan_agenda/features/pages/ai/presentation/widgets/mini_timeline.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:luotopia/features/pages/ai/presentation/widgets/citation_card.dart';
+import 'package:luotopia/features/pages/ai/presentation/widgets/mini_timeline.dart';
 
 class AiItemVisualizer extends StatelessWidget {
   const AiItemVisualizer({

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/features/pages/ai/domain/repositories/voice_input_service.dart';
+import 'package:luotopia/features/pages/ai/domain/repositories/voice_input_service.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class UnsupportedVoiceInputService implements VoiceInputService {

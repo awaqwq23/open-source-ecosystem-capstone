@@ -1,4 +1,4 @@
-package com.example.huajuan_agenda.widget
+package org.openwhu.luotopia.widget
 
 import android.content.Context
 import android.content.Intent
@@ -37,8 +37,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.text.TextAlign
 import androidx.glance.unit.ColorProvider
-import com.example.huajuan_agenda.MainActivity
-import com.example.huajuan_agenda.R
+import org.openwhu.luotopia.MainActivity
+import org.openwhu.luotopia.R
 import kotlin.math.max
 
 class HuaJuanAiEntryWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -505,23 +505,23 @@ private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int, loca
 }
 
 private object WidgetDeepLinkFactory {
-    fun ai(): String = "huajuan://app/ai?focusInput=1&source=widget"
+    fun ai(): String = "luotopia://app/ai?focusInput=1&source=widget"
 
-    fun createChooser(): String = "huajuan://app/item-editor/flow?showTypePicker=1&source=widget"
+    fun createChooser(): String = "luotopia://app/item-editor/flow?showTypePicker=1&source=widget"
 
-    fun createSchedule(): String = "huajuan://app/item-editor/flow?presetType=schedule&source=widget"
+    fun createSchedule(): String = "luotopia://app/item-editor/flow?presetType=schedule&source=widget"
 
-    fun createTask(): String = "huajuan://app/item-editor/flow?presetType=task&source=widget"
+    fun createTask(): String = "luotopia://app/item-editor/flow?presetType=task&source=widget"
 
-    fun createMemo(): String = "huajuan://app/item-editor/flow?presetType=memo&source=widget"
+    fun createMemo(): String = "luotopia://app/item-editor/flow?presetType=memo&source=widget"
 
-    fun list(): String = "huajuan://app/?source=widget"
+    fun list(): String = "luotopia://app/?source=widget"
 
     fun homeWeek(weekStartIso: String): String {
         return if (weekStartIso.isBlank()) {
-            "huajuan://app/?source=widget"
+            "luotopia://app/?source=widget"
         } else {
-            "huajuan://app/?source=widget&weekStart=${Uri.encode(weekStartIso)}"
+            "luotopia://app/?source=widget&weekStart=${Uri.encode(weekStartIso)}"
         }
     }
 }

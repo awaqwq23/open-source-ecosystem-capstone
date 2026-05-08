@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/models/home_view_data.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
+import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:intl/intl.dart';
 
 class BuildHomeGridUseCase {

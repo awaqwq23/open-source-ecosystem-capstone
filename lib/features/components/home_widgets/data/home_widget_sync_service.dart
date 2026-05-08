@@ -7,13 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/core/theme/theme_controller.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/models/widget_settings.dart';
-import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';
-import 'package:huajuan_agenda/shared/enums/item_type.dart';
+import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/core/theme/theme_controller.dart';
+import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
@@ -23,7 +23,7 @@ final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
 class HomeWidgetSyncService {
   HomeWidgetSyncService(this._ref);
 
-  static const MethodChannel _channel = MethodChannel('huajuan/widget_sync');
+  static const MethodChannel _channel = MethodChannel('luotopia/widget_sync');
 
   final Ref _ref;
   bool _isSyncing = false;

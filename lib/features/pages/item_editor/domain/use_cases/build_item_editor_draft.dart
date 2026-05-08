@@ -1,6 +1,6 @@
-import 'package:huajuan_agenda/features/pages/item_editor/domain/item_editor_defaults.dart';
-import 'package:huajuan_agenda/features/pages/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/features/pages/item_editor/domain/item_editor_defaults.dart';
+import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 
 class BuildItemEditorDraftUseCase {
   const BuildItemEditorDraftUseCase();

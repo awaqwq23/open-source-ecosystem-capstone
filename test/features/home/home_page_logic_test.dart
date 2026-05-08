@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:huajuan_agenda/features/pages/home/data/home_demo_items.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/models/home_view_data.dart';
-import 'package:huajuan_agenda/features/pages/home/domain/use_cases/layout_home_items.dart';
-import 'package:huajuan_agenda/features/pages/home/presentation/viewmodels/home_header_view_model.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/features/pages/home/data/home_demo_items.dart';
+import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
+import 'package:luotopia/features/pages/home/domain/use_cases/layout_home_items.dart';
+import 'package:luotopia/features/pages/home/presentation/viewmodels/home_header_view_model.dart';
+import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 void main() {
   test('重叠事项会保持全宽叠压', () {
