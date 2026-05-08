@@ -866,36 +866,6 @@ abstract class AppLocalizations {
   /// **'Normal'**
   String get listImportantDisabled;
 
-  /// No description provided for @aiPeriodPickerTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Select time range'**
-  String get aiPeriodPickerTitle;
-
-  /// No description provided for @aiPeriodSummary.
-  ///
-  /// In en, this message translates to:
-  /// **'Chat history grouped by {period}. Current groups: {count}.'**
-  String aiPeriodSummary(Object period, int count);
-
-  /// No description provided for @aiPeriodDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Day'**
-  String get aiPeriodDay;
-
-  /// No description provided for @aiPeriodWeek.
-  ///
-  /// In en, this message translates to:
-  /// **'Week'**
-  String get aiPeriodWeek;
-
-  /// No description provided for @aiPeriodMonth.
-  ///
-  /// In en, this message translates to:
-  /// **'Month'**
-  String get aiPeriodMonth;
-
   /// No description provided for @aiInputHint.
   ///
   /// In en, this message translates to:
@@ -917,7 +887,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiEmptyState.
   ///
   /// In en, this message translates to:
-  /// **'No chat history in the current time range.'**
+  /// **'No messages in this chat yet.'**
   String get aiEmptyState;
 
   /// No description provided for @editorTypePickerTitle.

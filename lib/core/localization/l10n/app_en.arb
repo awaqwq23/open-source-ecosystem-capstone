@@ -166,23 +166,10 @@
   "listStatusCompleted": "Completed",
   "listImportantEnabled": "Important",
   "listImportantDisabled": "Normal",
-  "aiPeriodPickerTitle": "Select time range",
-  "@aiPeriodSummary": {
-    "placeholders": {
-      "period": {},
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "aiPeriodSummary": "Chat history grouped by {period}. Current groups: {count}.",
-  "aiPeriodDay": "Day",
-  "aiPeriodWeek": "Week",
-  "aiPeriodMonth": "Month",
   "aiInputHint": "Write a message for AI to create an item or answer a schedule question",
   "aiSendButton": "Send",
   "aiSendingButton": "Sending...",
-  "aiEmptyState": "No chat history in the current time range.",
+  "aiEmptyState": "No messages in this chat yet.",
   "editorTypePickerTitle": "Switch item type",
   "editorTypeTask": "Task",
   "editorTypeSchedule": "Schedule",

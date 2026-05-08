@@ -423,23 +423,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listImportantDisabled => 'Normal';
 
   @override
-  String get aiPeriodPickerTitle => 'Select time range';
-
-  @override
-  String aiPeriodSummary(Object period, int count) {
-    return 'Chat history grouped by $period. Current groups: $count.';
-  }
-
-  @override
-  String get aiPeriodDay => 'Day';
-
-  @override
-  String get aiPeriodWeek => 'Week';
-
-  @override
-  String get aiPeriodMonth => 'Month';
-
-  @override
   String get aiInputHint =>
       'Write a message for AI to create an item or answer a schedule question';
 
@@ -450,7 +433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiSendingButton => 'Sending...';
 
   @override
-  String get aiEmptyState => 'No chat history in the current time range.';
+  String get aiEmptyState => 'No messages in this chat yet.';
 
   @override
   String get editorTypePickerTitle => 'Switch item type';

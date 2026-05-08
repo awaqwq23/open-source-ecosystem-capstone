@@ -5,13 +5,12 @@ import 'package:huajuan_agenda/app/router/app_navigator.dart';
 import 'package:huajuan_agenda/app/router/app_route_paths.dart';
 import 'package:huajuan_agenda/core/localization/locale_extensions.dart';
 import 'package:huajuan_agenda/core/theme/app_icons.dart';
-import 'package:huajuan_agenda/features/ai/data/voice_input_service_impl.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_action_models.dart';
 import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/ai/presentation/viewmodels/ai_header_view_model.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_args.dart';
 import 'package:huajuan_agenda/features/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:huajuan_agenda/features/time_picker/domain/models/time_picker_args.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -31,8 +30,6 @@ class _AiPageState extends ConsumerState<AiPage> {
   late final TextEditingController _controller;
   late final FocusNode _inputFocusNode;
   bool _focusRequested = false;
-  bool _isVoiceSupported = false;
-  bool _isListening = false;
   bool _isDraftRouteOpening = false;
   int? _lastHandledDraftNavigationId;
 
@@ -41,9 +38,6 @@ class _AiPageState extends ConsumerState<AiPage> {
     super.initState();
     _controller = TextEditingController();
     _inputFocusNode = FocusNode();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _prepareVoiceSupport();
-    });
   }
 
   @override
@@ -56,7 +50,7 @@ class _AiPageState extends ConsumerState<AiPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(aiHeaderViewModelProvider);
-    final groups = ref.watch(aiConversationGroupsProvider);
+    final session = ref.watch(aiActiveSessionProvider);
     _syncController(state.input);
     _tryAutoFocus();
     _setupDraftNavigationListener();
@@ -67,10 +61,17 @@ class _AiPageState extends ConsumerState<AiPage> {
           title: Text(context.l10n.aiTitle),
           trailing: [
             ui.Tooltip(
-              tooltip: (context) => Text(context.l10n.headerOpenTimePicker),
+              tooltip: (context) => Text(_text(context, zh: '对话列表', en: 'Conversations')),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.openTimePicker),
-                onPressed: () => _showPeriodPicker(context, ref),
+                onPressed: () => context.push(AppRoutePaths.aiSessions),
+              ),
+            ),
+            ui.Tooltip(
+              tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.add),
+                onPressed: ref.read(aiHeaderViewModelProvider.notifier).createSession,
               ),
             ),
           ],
@@ -80,26 +81,6 @@ class _AiPageState extends ConsumerState<AiPage> {
         top: false,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _periodLabel(context, state),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  ui.GhostButton(
-                    onPressed: () => _openTimePicker(context, state),
-                    child: Text(context.l10n.timePickerTitle),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
             if (!state.composerEnabled || state.lastError != null)
               _ErrorBanner(
                 message: state.composerDisabledReason ??
@@ -110,7 +91,7 @@ class _AiPageState extends ConsumerState<AiPage> {
               ),
             Expanded(
               child: _ConversationTimeline(
-                groups: groups,
+                session: session,
                 pendingDraft: state.pendingDraft,
                 onOpenDraft: ref.read(aiHeaderViewModelProvider.notifier).requestOpenDraftEditor,
               ),
@@ -121,12 +102,8 @@ class _AiPageState extends ConsumerState<AiPage> {
               focusNode: _inputFocusNode,
               canSend: state.canSend,
               isBusy: state.isBusy,
-              isVoiceSupported: _isVoiceSupported,
-              isListening: _isListening,
               onChanged: ref.read(aiHeaderViewModelProvider.notifier).updateInput,
               onSend: ref.read(aiHeaderViewModelProvider.notifier).sendMessage,
-              onLongPressStart: () => _startVoice(Localizations.localeOf(context).toLanguageTag()),
-              onLongPressEnd: _stopVoice,
             ),
           ],
         ),
@@ -219,135 +196,6 @@ class _AiPageState extends ConsumerState<AiPage> {
     );
   }
 
-  String _periodLabel(BuildContext context, AiHeaderState state) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    return switch (state.period) {
-      AiHeaderPeriod.day => DateFormat.yMd(locale).format(state.anchor),
-      AiHeaderPeriod.week => locale.startsWith('zh')
-          ? '${DateFormat.yM(locale).format(state.anchor)} 第${_weekOfMonth(state.anchor)}周'
-          : 'Week ${_weekOfMonth(state.anchor)} of ${DateFormat.yMMMM(locale).format(state.anchor)}',
-      AiHeaderPeriod.month => DateFormat.yMMMM(locale).format(state.anchor),
-    };
-  }
-
-  int _weekOfMonth(DateTime date) {
-    final firstDay = DateTime(date.year, date.month, 1);
-    final offset = firstDay.weekday - DateTime.monday;
-    return ((date.day + offset - 1) ~/ 7) + 1;
-  }
-
-  Future<void> _showPeriodPicker(BuildContext context, WidgetRef ref) {
-    final state = ref.read(aiHeaderViewModelProvider);
-    final l10n = context.l10n;
-
-    return ui.openSheet<void>(
-      context: context,
-      position: ui.OverlayPosition.bottom,
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: RadioGroup<AiHeaderPeriod>(
-            groupValue: state.period,
-            onChanged: (value) {
-              if (value == null) return;
-              ref.read(aiHeaderViewModelProvider.notifier).select(value);
-              ui.closeDrawer(sheetContext);
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.aiPeriodPickerTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 16),
-                RadioListTile<AiHeaderPeriod>(
-                  value: AiHeaderPeriod.day,
-                  title: Text(l10n.aiPeriodDay),
-                ),
-                RadioListTile<AiHeaderPeriod>(
-                  value: AiHeaderPeriod.week,
-                  title: Text(l10n.aiPeriodWeek),
-                ),
-                RadioListTile<AiHeaderPeriod>(
-                  value: AiHeaderPeriod.month,
-                  title: Text(l10n.aiPeriodMonth),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _openTimePicker(BuildContext context, AiHeaderState state) async {
-    final result = await context.openModal<TimePickerSelection>(
-      AppRoutePaths.timePicker,
-      extra: TimePickerArgs(
-        mode: switch (state.period) {
-          AiHeaderPeriod.day => TimePickerMode.day,
-          AiHeaderPeriod.week => TimePickerMode.week,
-          AiHeaderPeriod.month => TimePickerMode.month,
-        },
-        initialDate: state.anchor,
-      ),
-    );
-    if (result != null && mounted) {
-      ref.read(aiHeaderViewModelProvider.notifier).selectAnchor(result.anchor);
-    }
-  }
-
-  Future<void> _prepareVoiceSupport() async {
-    final supported = await ref.read(voiceInputServiceProvider).isSupported();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isVoiceSupported = supported;
-    });
-  }
-
-  Future<void> _startVoice(String localeId) async {
-    if (!_isVoiceSupported || _isListening) {
-      return;
-    }
-    final started = await ref.read(voiceInputServiceProvider).startListening(
-          localeId: localeId,
-        );
-    if (!mounted) {
-      return;
-    }
-    if (started) {
-      setState(() {
-        _isListening = true;
-      });
-    }
-  }
-
-  Future<void> _stopVoice() async {
-    if (!_isListening) {
-      return;
-    }
-    final text = await ref.read(voiceInputServiceProvider).stopListening();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isListening = false;
-    });
-    if (text == null || text.trim().isEmpty) {
-      return;
-    }
-    final merged = _controller.text.trim().isEmpty
-        ? text.trim()
-        : '${_controller.text.trim()} ${text.trim()}';
-    ref.read(aiHeaderViewModelProvider.notifier).updateInput(merged);
-  }
-
   static String _text(BuildContext context, {required String zh, required String en}) {
     return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
   }
@@ -355,22 +203,23 @@ class _AiPageState extends ConsumerState<AiPage> {
 
 class _ConversationTimeline extends StatelessWidget {
   const _ConversationTimeline({
-    required this.groups,
+    required this.session,
     required this.pendingDraft,
     required this.onOpenDraft,
   });
 
-  final List<AiConversationGroup> groups;
+  final AiChatSession? session;
   final AiCreateItemDraft? pendingDraft;
   final VoidCallback onOpenDraft;
 
   @override
   Widget build(BuildContext context) {
-    final hasHistory = groups.isNotEmpty && groups.any((group) => group.messages.isNotEmpty);
+    final messages = session?.messages ?? const <AiChatMessage>[];
+    final hasHistory = messages.isNotEmpty;
     if (!hasHistory && pendingDraft == null) {
       return Center(
         child: Text(
-          context.l10n.aiEmptyState,
+          _text(context, zh: '当前对话还没有消息。', en: 'No messages in this chat yet.'),
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
@@ -379,19 +228,7 @@ class _ConversationTimeline extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
-        for (final group in groups) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              group.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
-          for (final message in group.messages)
-            _MessageLine(message: message),
-        ],
+        for (final message in messages) _MessageLine(message: message),
         if (pendingDraft != null)
           _DraftEntryLine(
             pendingDraft: pendingDraft!,
@@ -399,6 +236,10 @@ class _ConversationTimeline extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  String _text(BuildContext context, {required String zh, required String en}) {
+    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
   }
 }
 
@@ -542,24 +383,16 @@ class _ComposerBar extends StatelessWidget {
     required this.focusNode,
     required this.canSend,
     required this.isBusy,
-    required this.isVoiceSupported,
-    required this.isListening,
     required this.onChanged,
     required this.onSend,
-    required this.onLongPressStart,
-    required this.onLongPressEnd,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool canSend;
   final bool isBusy;
-  final bool isVoiceSupported;
-  final bool isListening;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
-  final VoidCallback onLongPressStart;
-  final VoidCallback onLongPressEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -569,42 +402,136 @@ class _ComposerBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
+            child: ui.TextField(
               controller: controller,
               focusNode: focusNode,
               onChanged: onChanged,
               minLines: 1,
               maxLines: 5,
-              decoration: InputDecoration(
-                hintText: context.l10n.aiInputHint,
-                border: const UnderlineInputBorder(),
-                isDense: true,
-              ),
+              hintText: context.l10n.aiInputHint,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) {
+                if (canSend) {
+                  onSend();
+                }
+              },
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onLongPressStart: (_) => onLongPressStart(),
-            onLongPressEnd: (_) => onLongPressEnd(),
-            child: ui.IconButton.ghost(
-              icon: Icon(
-                Icons.mic_none,
-                color: isListening ? Colors.red : null,
-              ),
-              onPressed: isVoiceSupported ? () {} : null,
-            ),
-          ),
-          ui.PrimaryButton(
-            onPressed: canSend ? onSend : null,
-            child: Text(
+          ui.Tooltip(
+            tooltip: (context) => Text(
               isBusy
                   ? _text(context, zh: '发送中', en: 'Sending')
                   : _text(context, zh: '发送', en: 'Send'),
+            ),
+            child: ui.IconButton.primary(
+              icon: Icon(isBusy ? Icons.hourglass_empty : Icons.send_outlined),
+              onPressed: canSend ? onSend : null,
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _text(BuildContext context, {required String zh, required String en}) {
+    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+  }
+}
+
+class AiSessionsPage extends ConsumerWidget {
+  const AiSessionsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessions = ref.watch(aiSessionsProvider);
+    final activeSessionId = ref.watch(aiChatRepositoryProvider).activeSessionId;
+
+    return ui.Scaffold(
+      headers: [
+        ui.AppBar(
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => context.pop(),
+            ),
+          ],
+          title: Text(_text(context, zh: '对话列表', en: 'Conversations')),
+          trailing: [
+            ui.Tooltip(
+              tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.add),
+                onPressed: () async {
+                  await ref.read(aiHeaderViewModelProvider.notifier).createSession();
+                  if (context.mounted) {
+                    context.pop();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+      child: SafeArea(
+        top: false,
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          itemCount: sessions.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final session = sessions[index];
+            final selected = session.id == activeSessionId;
+            return ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              leading: Icon(
+                selected ? AppIcons.selected : AppIcons.aiOutlined,
+                color: selected ? Theme.of(context).colorScheme.primary : null,
+              ),
+              title: Text(
+                _sessionTitle(context, session),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                _sessionSubtitle(context, session),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(AppIcons.drillIn, size: 18),
+              onTap: () async {
+                await ref
+                    .read(aiHeaderViewModelProvider.notifier)
+                    .selectSession(session.id);
+                if (context.mounted) {
+                  context.pop();
+                }
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String _sessionTitle(BuildContext context, AiChatSession session) {
+    for (final message in session.messages) {
+      if (message.role == AiChatRole.user && message.content.trim().isNotEmpty) {
+        final content = message.content.trim();
+        return content.length > 28 ? '${content.substring(0, 28)}...' : content;
+      }
+    }
+    return _text(context, zh: '新对话', en: 'New chat');
+  }
+
+  String _sessionSubtitle(BuildContext context, AiChatSession session) {
+    final count = session.messages.length;
+    if (count == 0) {
+      return _text(context, zh: '没有消息', en: 'No messages');
+    }
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? '$count 条消息'
+        : '$count messages';
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {

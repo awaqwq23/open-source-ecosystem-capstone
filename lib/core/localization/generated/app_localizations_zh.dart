@@ -403,23 +403,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listImportantDisabled => '普通';
 
   @override
-  String get aiPeriodPickerTitle => '选择时间范围';
-
-  @override
-  String aiPeriodSummary(Object period, int count) {
-    return '按 $period 聚合聊天记录。当前分组 $count 个。';
-  }
-
-  @override
-  String get aiPeriodDay => '按日';
-
-  @override
-  String get aiPeriodWeek => '按周';
-
-  @override
-  String get aiPeriodMonth => '按月';
-
-  @override
   String get aiInputHint => '输入一句话，让 AI 帮你创建事项或查询日程';
 
   @override
@@ -429,7 +412,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiSendingButton => '发送中...';
 
   @override
-  String get aiEmptyState => '当前时间范围内还没有聊天记录。';
+  String get aiEmptyState => '当前对话还没有消息。';
 
   @override
   String get editorTypePickerTitle => '切换事项类型';

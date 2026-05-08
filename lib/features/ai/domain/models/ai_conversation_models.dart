@@ -1,9 +1,9 @@
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
 import 'package:huajuan_agenda/shared/enums/item_type.dart';
 
 class AiChatMessage {
   const AiChatMessage({
     required this.id,
+    required this.sessionId,
     required this.content,
     required this.createdAt,
     required this.role,
@@ -12,6 +12,7 @@ class AiChatMessage {
   });
 
   final String id;
+  final String sessionId;
   final String content;
   final DateTime createdAt;
   final AiChatRole role;
@@ -48,14 +49,60 @@ class AiCitation {
   final String? reason;
 }
 
-class AiConversationGroup {
-  const AiConversationGroup({
-    required this.label,
-    required this.range,
+class AiChatSession {
+  const AiChatSession({
+    required this.id,
+    required this.createdAt,
+    required this.updatedAt,
     required this.messages,
   });
 
-  final String label;
-  final DateTimeRangeValue range;
+  final String id;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   final List<AiChatMessage> messages;
+
+  bool get isEmpty => messages.isEmpty;
+
+  AiChatSession copyWith({
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<AiChatMessage>? messages,
+  }) {
+    return AiChatSession(
+      id: id,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      messages: messages ?? this.messages,
+    );
+  }
+}
+
+class AiChatSessionStore {
+  const AiChatSessionStore({
+    required this.sessions,
+    required this.activeSessionId,
+  });
+
+  final List<AiChatSession> sessions;
+  final String activeSessionId;
+
+  AiChatSession? get activeSession {
+    for (final session in sessions) {
+      if (session.id == activeSessionId) {
+        return session;
+      }
+    }
+    return sessions.isEmpty ? null : sessions.first;
+  }
+
+  AiChatSessionStore copyWith({
+    List<AiChatSession>? sessions,
+    String? activeSessionId,
+  }) {
+    return AiChatSessionStore(
+      sessions: sessions ?? this.sessions,
+      activeSessionId: activeSessionId ?? this.activeSessionId,
+    );
+  }
 }

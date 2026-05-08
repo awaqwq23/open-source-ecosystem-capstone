@@ -117,17 +117,17 @@ class _TimePickerPageState extends ConsumerState<TimePickerPage> {
                       runSpacing: 8,
                       children: [
                         _ModeChip(
-                          label: context.l10n.aiPeriodDay,
+                          label: _text(context, zh: '日', en: 'Day'),
                           selected: state.mode == TimePickerMode.day,
                           onTap: () => notifier.selectMode(TimePickerMode.day),
                         ),
                         _ModeChip(
-                          label: context.l10n.aiPeriodWeek,
+                          label: _text(context, zh: '周', en: 'Week'),
                           selected: state.mode == TimePickerMode.week,
                           onTap: () => notifier.selectMode(TimePickerMode.week),
                         ),
                         _ModeChip(
-                          label: context.l10n.aiPeriodMonth,
+                          label: _text(context, zh: '月', en: 'Month'),
                           selected: state.mode == TimePickerMode.month,
                           onTap: () => notifier.selectMode(TimePickerMode.month),
                         ),
@@ -281,6 +281,10 @@ class _ModeChip extends StatelessWidget {
             child: Text(label),
           );
   }
+}
+
+String _text(BuildContext context, {required String zh, required String en}) {
+  return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
 }
 
 class _SelectionCell extends StatelessWidget {

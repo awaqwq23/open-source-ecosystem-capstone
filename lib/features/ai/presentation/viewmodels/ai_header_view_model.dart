@@ -5,13 +5,6 @@ import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.
 import 'package:huajuan_agenda/features/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:huajuan_agenda/shared/value_objects/date_time_range.dart';
-
-enum AiHeaderPeriod {
-  day,
-  week,
-  month,
-}
 
 enum AiWorkflowPhase {
   idle,
@@ -24,8 +17,6 @@ enum AiWorkflowPhase {
 
 class AiHeaderState {
   const AiHeaderState({
-    required this.period,
-    required this.anchor,
     this.input = '',
     this.phase = AiWorkflowPhase.idle,
     this.pendingDraft,
@@ -35,8 +26,6 @@ class AiHeaderState {
     this.composerDisabledReason,
   });
 
-  final AiHeaderPeriod period;
-  final DateTime anchor;
   final String input;
   final AiWorkflowPhase phase;
   final AiCreateItemDraft? pendingDraft;
@@ -54,8 +43,6 @@ class AiHeaderState {
   bool get canSend => composerEnabled && !isBusy && input.trim().isNotEmpty;
 
   AiHeaderState copyWith({
-    AiHeaderPeriod? period,
-    DateTime? anchor,
     String? input,
     AiWorkflowPhase? phase,
     AiCreateItemDraft? pendingDraft,
@@ -69,8 +56,6 @@ class AiHeaderState {
     bool clearComposerDisabledReason = false,
   }) {
     return AiHeaderState(
-      period: period ?? this.period,
-      anchor: anchor ?? this.anchor,
       input: input ?? this.input,
       phase: phase ?? this.phase,
       pendingDraft: clearPendingDraft ? null : (pendingDraft ?? this.pendingDraft),
@@ -89,26 +74,15 @@ class AiHeaderState {
 class AiHeaderViewModel extends Notifier<AiHeaderState> {
   @override
   AiHeaderState build() {
-    final now = DateTime.now();
     final settings = ref.watch(appAiSettingsProvider);
     return AiHeaderState(
-      period: AiHeaderPeriod.day,
-      anchor: DateTime(now.year, now.month, now.day),
       composerEnabled: settings.isConfigured,
       composerDisabledReason: settings.isConfigured ? null : '请先在设置中完成 AI 配置。',
     );
   }
 
-  void select(AiHeaderPeriod period) {
-    state = state.copyWith(period: period);
-  }
-
   void updateInput(String value) {
     state = state.copyWith(input: value, clearError: true);
-  }
-
-  void selectAnchor(DateTime date) {
-    state = state.copyWith(anchor: DateTime(date.year, date.month, date.day));
   }
 
   void refreshComposerAvailability() {
@@ -127,6 +101,28 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
         composerDisabledReason: '请先在设置中完成 AI 配置。',
       );
     }
+  }
+
+  Future<void> createSession() async {
+    await ref.read(aiChatRepositoryNotifierProvider).createSession();
+    state = state.copyWith(
+      input: '',
+      phase: AiWorkflowPhase.idle,
+      clearPendingDraft: true,
+      clearPendingDraftNavigation: true,
+      clearError: true,
+    );
+  }
+
+  Future<void> selectSession(String sessionId) async {
+    await ref.read(aiChatRepositoryNotifierProvider).selectSession(sessionId);
+    state = state.copyWith(
+      input: '',
+      phase: AiWorkflowPhase.idle,
+      clearPendingDraft: true,
+      clearPendingDraftNavigation: true,
+      clearError: true,
+    );
   }
 
   void retryEnableComposer() {
@@ -153,9 +149,12 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     final repository = ref.read(aiChatRepositoryNotifierProvider);
     final service = ref.read(aiServiceProvider);
     final now = DateTime.now();
-    await repository.append(
+    final sessionId = repository.getActiveSession()?.id ??
+        (await repository.createSession()).id;
+    await repository.appendToActiveSession(
       AiChatMessage(
         id: 'user_${now.microsecondsSinceEpoch}',
+        sessionId: sessionId,
         content: content,
         createdAt: now,
         role: AiChatRole.user,
@@ -324,9 +323,14 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     if (text.isEmpty) {
       return Future<void>.value();
     }
-    return repository.append(
+    final sessionId = repository.getActiveSession()?.id;
+    if (sessionId == null) {
+      return Future<void>.value();
+    }
+    return repository.appendToActiveSession(
       AiChatMessage(
         id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
+        sessionId: sessionId,
         content: text,
         createdAt: DateTime.now(),
         role: AiChatRole.assistant,
@@ -335,26 +339,6 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       ),
     );
   }
-
-  DateTimeRangeValue visibleRange() {
-    final anchor = DateTime(state.anchor.year, state.anchor.month, state.anchor.day);
-    return switch (state.period) {
-      AiHeaderPeriod.day => DateTimeRangeValue(
-          start: anchor,
-          end: anchor.add(const Duration(days: 1)),
-        ),
-      AiHeaderPeriod.week => DateTimeRangeValue(
-          start: anchor.subtract(Duration(days: anchor.weekday - DateTime.monday)),
-          end: anchor
-              .subtract(Duration(days: anchor.weekday - DateTime.monday))
-              .add(const Duration(days: 7)),
-        ),
-      AiHeaderPeriod.month => DateTimeRangeValue(
-          start: DateTime(anchor.year, anchor.month, 1),
-          end: DateTime(anchor.year, anchor.month + 1, 1),
-        ),
-    };
-  }
 }
 
 final aiHeaderViewModelProvider =
@@ -362,36 +346,16 @@ final aiHeaderViewModelProvider =
   AiHeaderViewModel.new,
 );
 
-final aiConversationGroupsProvider = Provider<List<AiConversationGroup>>((ref) {
+final aiActiveSessionProvider = Provider<AiChatSession?>((ref) {
+  if (!ref.watch(appBootstrapPhaseProvider).hasFullData) {
+    return null;
+  }
+  return ref.watch(aiChatRepositoryProvider).activeSession;
+});
+
+final aiSessionsProvider = Provider<List<AiChatSession>>((ref) {
   if (!ref.watch(appBootstrapPhaseProvider).hasFullData) {
     return const [];
   }
-  final range = ref.read(aiHeaderViewModelProvider.notifier).visibleRange();
-  final messages = ref.watch(aiChatRepositoryProvider).where((message) {
-    return !message.createdAt.isBefore(range.start) && message.createdAt.isBefore(range.end);
-  }).toList()
-    ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
-
-  final groups = <DateTime, List<AiChatMessage>>{};
-  for (final message in messages) {
-    final day = DateTime(
-      message.createdAt.year,
-      message.createdAt.month,
-      message.createdAt.day,
-    );
-    groups.putIfAbsent(day, () => <AiChatMessage>[]).add(message);
-  }
-
-  return groups.entries.map((entry) {
-    final day = entry.key;
-    return AiConversationGroup(
-      label: '${day.year}/${day.month}/${day.day}',
-      range: DateTimeRangeValue(
-        start: day,
-        end: day.add(const Duration(days: 1)),
-      ),
-      messages: entry.value,
-    );
-  }).toList()
-    ..sort((left, right) => left.range.start.compareTo(right.range.start));
+  return ref.watch(aiChatRepositoryProvider).sessions;
 });

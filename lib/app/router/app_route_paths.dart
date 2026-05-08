@@ -3,6 +3,7 @@ abstract final class AppRoutePaths {
   static const home = '/';
   static const list = '/list';
   static const ai = '/ai';
+  static const aiSessions = '/ai/sessions';
   static const itemEditor = '/item-editor';
   static const settings = '/settings';
 

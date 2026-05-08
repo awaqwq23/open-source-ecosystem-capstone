@@ -48,7 +48,9 @@ Future<void> main() async {
         appAiSettingsProvider.overrideWith((ref) => const AiSettings.defaults()),
         appWidgetSettingsProvider.overrideWith((ref) => const WidgetSettings.defaults()),
         appNavigationSettingsProvider.overrideWith((ref) => const NavigationSettings.defaults()),
-        aiChatBootstrapMessagesProvider.overrideWithValue(const []),
+        aiChatBootstrapSessionStoreProvider.overrideWithValue(
+          AppBootstrapLoader.loadAiSessionStore(preferences),
+        ),
         agendaItemsBootstrapProvider.overrideWithValue(const []),
         courseTimetableBootstrapProvider.overrideWithValue(
           const CourseTimetableStore(timetables: []),

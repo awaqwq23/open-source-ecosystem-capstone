@@ -24,7 +24,7 @@ class AppBootstrapData {
     required this.aiSettings,
     required this.widgetSettings,
     required this.navigationSettings,
-    required this.aiMessages,
+    required this.aiSessionStore,
     required this.agendaItems,
     required this.courseTimetableStore,
   });
@@ -35,7 +35,7 @@ class AppBootstrapData {
   final AiSettings aiSettings;
   final WidgetSettings widgetSettings;
   final NavigationSettings navigationSettings;
-  final List<AiChatMessage> aiMessages;
+  final AiChatSessionStore aiSessionStore;
   final List<AgendaItem> agendaItems;
   final CourseTimetableStore courseTimetableStore;
 }
@@ -84,25 +84,27 @@ class AppNonCriticalStartupSettingsData {
 
 class AppDeferredBootstrapData {
   const AppDeferredBootstrapData({
-    required this.aiMessages,
+    required this.aiSessionStore,
     required this.agendaItems,
     required this.courseTimetableStore,
   });
 
-  final List<AiChatMessage> aiMessages;
+  final AiChatSessionStore aiSessionStore;
   final List<AgendaItem> agendaItems;
   final CourseTimetableStore courseTimetableStore;
 }
 
 class AppDeferredBootstrapPayload {
   const AppDeferredBootstrapPayload({
-    required this.aiMessagesJson,
+    required this.aiSessionsJson,
+    required this.activeAiSessionId,
     required this.agendaItemsJson,
     required this.courseTimetablesJson,
     required this.activeCourseTimetableId,
   });
 
-  final List<Map<String, dynamic>> aiMessagesJson;
+  final List<Map<String, dynamic>> aiSessionsJson;
+  final String? activeAiSessionId;
   final List<Map<String, dynamic>> agendaItemsJson;
   final List<Map<String, dynamic>> courseTimetablesJson;
   final String? activeCourseTimetableId;
@@ -125,7 +127,8 @@ abstract final class AppBootstrapStorageKeys {
   static const aiSettings = 'settings.ai';
   static const widgetSettings = 'settings.widget';
   static const navigationSettings = 'settings.navigation';
-  static const aiMessages = 'ai.messages';
+  static const aiSessions = 'ai.sessions';
+  static const activeAiSessionId = 'ai.activeSessionId';
   static const agendaItems = 'agenda.items';
   static const agendaItemsCurrentWeek = 'agenda.items.currentWeek';
   static const agendaItemsCurrentWeekStart = 'agenda.items.currentWeek.start';
@@ -147,7 +150,7 @@ class AppBootstrapLoader {
       aiSettings: startup.aiSettings,
       widgetSettings: startup.widgetSettings,
       navigationSettings: startup.navigationSettings,
-      aiMessages: deferred.aiMessages,
+      aiSessionStore: deferred.aiSessionStore,
       agendaItems: deferred.agendaItems,
       courseTimetableStore: deferred.courseTimetableStore,
     );
@@ -166,18 +169,24 @@ class AppBootstrapLoader {
 
   static AppDeferredBootstrapData loadDeferredData(SharedPreferences preferences) {
     return AppDeferredBootstrapData(
-      aiMessages: _readAiMessages(preferences),
+      aiSessionStore: _readAiSessionStore(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
     );
+  }
+
+  static AiChatSessionStore loadAiSessionStore(SharedPreferences preferences) {
+    return _readAiSessionStore(preferences);
   }
 
   static Future<AppDeferredBootstrapPayload> loadDeferredPayloadInBackground(
     SharedPreferences preferences,
   ) async {
     final rawPayload = <String, String?>{
-      AppBootstrapStorageKeys.aiMessages:
-          preferences.getString(AppBootstrapStorageKeys.aiMessages),
+      AppBootstrapStorageKeys.aiSessions:
+          preferences.getString(AppBootstrapStorageKeys.aiSessions),
+      AppBootstrapStorageKeys.activeAiSessionId:
+          preferences.getString(AppBootstrapStorageKeys.activeAiSessionId),
       AppBootstrapStorageKeys.agendaItems:
           preferences.getString(AppBootstrapStorageKeys.agendaItems),
       AppBootstrapStorageKeys.courseTimetables:
@@ -187,8 +196,12 @@ class AppBootstrapLoader {
     };
     final decoded = await compute(_decodeDeferredPayloadRaw, rawPayload);
     final activeId = decoded[AppBootstrapStorageKeys.activeCourseTimetableId] as String?;
+    final activeAiSessionId = decoded[AppBootstrapStorageKeys.activeAiSessionId] as String?;
     return AppDeferredBootstrapPayload(
-      aiMessagesJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.aiMessages]),
+      aiSessionsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.aiSessions]),
+      activeAiSessionId: (activeAiSessionId == null || activeAiSessionId.isEmpty)
+          ? null
+          : activeAiSessionId,
       agendaItemsJson: _castJsonObjectList(decoded[AppBootstrapStorageKeys.agendaItems]),
       courseTimetablesJson: _castJsonObjectList(
         decoded[AppBootstrapStorageKeys.courseTimetables],
@@ -366,55 +379,133 @@ class AppBootstrapLoader {
     }
   }
 
-  static List<AiChatMessage> _readAiMessages(SharedPreferences preferences) {
-    final raw = preferences.getString(AppBootstrapStorageKeys.aiMessages);
+  static AiChatSessionStore _readAiSessionStore(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.aiSessions);
+    final activeSessionId = preferences.getString(AppBootstrapStorageKeys.activeAiSessionId);
     if (raw == null || raw.isEmpty) {
-      return const [];
+      return _emptyAiSessionStore();
     }
 
     try {
       final json = jsonDecode(raw) as List<dynamic>;
-      return json
-          .whereType<Map<String, dynamic>>()
-          .map(
-            (item) => AiChatMessage(
-              id: item['id'] as String? ?? '',
-              content: item['content'] as String? ?? '',
-              createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
-                  DateTime.fromMillisecondsSinceEpoch(0),
-              role: switch (item['role']) {
-                'assistant' => AiChatRole.assistant,
-                _ => AiChatRole.user,
-              },
-              kind: switch (item['kind']) {
-                'answer' => AiMessageKind.answer,
-                'system' => AiMessageKind.system,
-                _ => AiMessageKind.chat,
-              },
-              citations: [
-                for (final citation in (item['citations'] as List<dynamic>? ?? const []))
-                  if (citation is Map<String, dynamic>)
-                    AiCitation(
-                      itemId: citation['itemId'] as String? ?? '',
-                      title: citation['title'] as String? ?? '',
-                      type: switch (citation['type']) {
-                        'task' => ItemType.task,
-                        'memo' => ItemType.memo,
-                        'course' => ItemType.course,
-                        _ => ItemType.schedule,
-                      },
-                      startAt: DateTime.tryParse(citation['startAt'] as String? ?? ''),
-                      endAt: DateTime.tryParse(citation['endAt'] as String? ?? ''),
-                      reason: citation['reason'] as String?,
-                    ),
-              ].where((citation) => citation.itemId.isNotEmpty).toList(growable: false),
-            ),
-          )
-          .where((message) => message.id.isNotEmpty)
-          .toList(growable: false);
+      return _decodeAiSessionStore(
+        _castJsonObjectList(json),
+        activeSessionId,
+      );
     } catch (_) {
-      return const [];
+      return _emptyAiSessionStore();
     }
+  }
+
+  static AiChatSessionStore decodeAiSessionStoreFromJson(
+    List<Map<String, dynamic>> sessionsJson,
+    String? activeSessionId,
+  ) {
+    return _decodeAiSessionStore(sessionsJson, activeSessionId);
+  }
+
+  static AiChatSessionStore _decodeAiSessionStore(
+    List<Map<String, dynamic>> sessionsJson,
+    String? activeSessionId,
+  ) {
+    final sessions = [
+      for (final item in sessionsJson)
+        _decodeAiSession(item),
+    ].whereType<AiChatSession>().toList(growable: false)
+      ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+
+    if (sessions.isEmpty) {
+      return _emptyAiSessionStore();
+    }
+
+    final normalizedActiveId =
+        activeSessionId != null && sessions.any((session) => session.id == activeSessionId)
+            ? activeSessionId
+            : sessions.first.id;
+    return AiChatSessionStore(
+      sessions: sessions,
+      activeSessionId: normalizedActiveId,
+    );
+  }
+
+  static AiChatSession? _decodeAiSession(Map<String, dynamic> item) {
+    final id = item['id'] as String? ?? '';
+    if (id.isEmpty) {
+      return null;
+    }
+    final createdAt = DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final messages = [
+      for (final message in (item['messages'] as List<dynamic>? ?? const []))
+        if (message is Map<String, dynamic>) _decodeAiMessage(message, id),
+    ].whereType<AiChatMessage>().toList(growable: false)
+      ..sort((left, right) => left.createdAt.compareTo(right.createdAt));
+    final fallbackUpdatedAt = messages.isEmpty ? createdAt : messages.last.createdAt;
+    return AiChatSession(
+      id: id,
+      createdAt: createdAt,
+      updatedAt: DateTime.tryParse(item['updatedAt'] as String? ?? '') ?? fallbackUpdatedAt,
+      messages: messages,
+    );
+  }
+
+  static AiChatMessage? _decodeAiMessage(
+    Map<String, dynamic> item,
+    String fallbackSessionId,
+  ) {
+    final id = item['id'] as String? ?? '';
+    if (id.isEmpty) {
+      return null;
+    }
+    return AiChatMessage(
+      id: id,
+      sessionId: item['sessionId'] as String? ?? fallbackSessionId,
+      content: item['content'] as String? ?? '',
+      createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      role: switch (item['role']) {
+        'assistant' => AiChatRole.assistant,
+        _ => AiChatRole.user,
+      },
+      kind: switch (item['kind']) {
+        'answer' => AiMessageKind.answer,
+        'system' => AiMessageKind.system,
+        _ => AiMessageKind.chat,
+      },
+      citations: [
+        for (final citation in (item['citations'] as List<dynamic>? ?? const []))
+          if (citation is Map<String, dynamic>)
+            AiCitation(
+              itemId: citation['itemId'] as String? ?? '',
+              title: citation['title'] as String? ?? '',
+              type: switch (citation['type']) {
+                'task' => ItemType.task,
+                'memo' => ItemType.memo,
+                'course' => ItemType.course,
+                _ => ItemType.schedule,
+              },
+              startAt: DateTime.tryParse(citation['startAt'] as String? ?? ''),
+              endAt: DateTime.tryParse(citation['endAt'] as String? ?? ''),
+              reason: citation['reason'] as String?,
+            ),
+      ].where((citation) => citation.itemId.isNotEmpty).toList(growable: false),
+    );
+  }
+
+  static AiChatSessionStore _emptyAiSessionStore() {
+    const sessionId = 'session_initial';
+    final now = DateTime.now();
+    return AiChatSessionStore(
+      sessions: [
+        AiChatSession(
+          id: sessionId,
+          createdAt: now,
+          updatedAt: now,
+          messages: const [],
+        ),
+      ],
+      activeSessionId: sessionId,
+    );
   }
 
   static List<AgendaItem> _readAgendaItems(SharedPreferences preferences) {
@@ -483,8 +574,10 @@ Map<String, dynamic> _decodeDeferredPayloadRaw(Map<String, String?> rawPayload) 
   final activeIdRaw = rawPayload[AppBootstrapStorageKeys.activeCourseTimetableId];
   final activeId = (activeIdRaw == null || activeIdRaw.isEmpty) ? null : activeIdRaw;
   return <String, dynamic>{
-    AppBootstrapStorageKeys.aiMessages:
-        decodeList(rawPayload[AppBootstrapStorageKeys.aiMessages]),
+    AppBootstrapStorageKeys.aiSessions:
+        decodeList(rawPayload[AppBootstrapStorageKeys.aiSessions]),
+    AppBootstrapStorageKeys.activeAiSessionId:
+        rawPayload[AppBootstrapStorageKeys.activeAiSessionId],
     AppBootstrapStorageKeys.agendaItems:
         decodeList(rawPayload[AppBootstrapStorageKeys.agendaItems]),
     AppBootstrapStorageKeys.courseTimetables:

@@ -63,6 +63,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => AiPage(
                   autoFocusInput: state.uri.queryParameters['focusInput'] == '1',
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'sessions',
+                    builder: (context, state) => const AiSessionsPage(),
+                  ),
+                ],
               ),
             ],
           ),

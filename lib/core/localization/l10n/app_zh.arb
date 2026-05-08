@@ -166,23 +166,10 @@
   "listStatusCompleted": "已完成",
   "listImportantEnabled": "重要",
   "listImportantDisabled": "普通",
-  "aiPeriodPickerTitle": "选择时间范围",
-  "@aiPeriodSummary": {
-    "placeholders": {
-      "period": {},
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "aiPeriodSummary": "按 {period} 聚合聊天记录。当前分组 {count} 个。",
-  "aiPeriodDay": "按日",
-  "aiPeriodWeek": "按周",
-  "aiPeriodMonth": "按月",
   "aiInputHint": "输入一句话，让 AI 帮你创建事项或查询日程",
   "aiSendButton": "发送",
   "aiSendingButton": "发送中...",
-  "aiEmptyState": "当前时间范围内还没有聊天记录。",
+  "aiEmptyState": "当前对话还没有消息。",
   "editorTypePickerTitle": "切换事项类型",
   "editorTypeTask": "任务",
   "editorTypeSchedule": "日程",

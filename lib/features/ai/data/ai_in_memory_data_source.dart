@@ -21,153 +21,173 @@ import 'package:huajuan_agenda/shared/value_objects/repeat_rule.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-final aiChatBootstrapMessagesProvider = Provider<List<AiChatMessage>>((ref) {
-  return const [];
+final aiChatBootstrapSessionStoreProvider = Provider<AiChatSessionStore>((ref) {
+  final now = DateTime.now();
+  return AiChatSessionStore(
+    sessions: [
+      AiChatSession(
+        id: 'session_initial',
+        createdAt: now,
+        updatedAt: now,
+        messages: const [],
+      ),
+    ],
+    activeSessionId: 'session_initial',
+  );
 });
 
-class InMemoryAiChatRepository extends Notifier<List<AiChatMessage>>
+class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
     implements AiChatRepository {
-  static const _hydrateChunkSize = 200;
-
   var _hasMutated = false;
   var _hydratedDeferred = false;
 
   @override
-  List<AiChatMessage> build() {
+  AiChatSessionStore build() {
     _hasMutated = false;
     _hydratedDeferred = false;
-    return ref.read(aiChatBootstrapMessagesProvider);
+    return ref.read(aiChatBootstrapSessionStoreProvider);
   }
 
   @override
-  List<AiChatMessage> getAll() => state;
+  List<AiChatSession> getSessions() => state.sessions;
 
   @override
-  List<AiChatMessage> getByRange(DateTimeRangeValue range) {
-    return [
-      for (final message in state)
-        if (!message.createdAt.isBefore(range.start) &&
-            message.createdAt.isBefore(range.end))
-          message,
-    ];
-  }
+  AiChatSession? getActiveSession() => state.activeSession;
 
   @override
-  Future<void> append(AiChatMessage message) async {
+  Future<AiChatSession> createSession() async {
+    final now = DateTime.now();
+    final session = AiChatSession(
+      id: 'session_${now.microsecondsSinceEpoch}',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+    );
     _hasMutated = true;
-    state = [...state, message];
-    await _prefs?.setString(
-      AppBootstrapStorageKeys.aiMessages,
-      jsonEncode([
-        for (final item in state)
-          {
-            'id': item.id,
-            'content': item.content,
-            'createdAt': item.createdAt.toIso8601String(),
-            'role': item.role.name,
-            'kind': item.kind.name,
-            'citations': [
-              for (final citation in item.citations)
-                {
-                  'itemId': citation.itemId,
-                  'title': citation.title,
-                  'type': citation.type.name,
-                  'startAt': citation.startAt?.toIso8601String(),
-                  'endAt': citation.endAt?.toIso8601String(),
-                  'reason': citation.reason,
-                },
-            ],
-          },
-      ]),
+    state = AiChatSessionStore(
+      sessions: [session, ...state.sessions],
+      activeSessionId: session.id,
+    );
+    await _persist();
+    return session;
+  }
+
+  @override
+  Future<void> selectSession(String sessionId) async {
+    if (!state.sessions.any((session) => session.id == sessionId)) {
+      return;
+    }
+    _hasMutated = true;
+    state = state.copyWith(activeSessionId: sessionId);
+    await _persistActiveSessionId();
+  }
+
+  @override
+  Future<void> appendToActiveSession(AiChatMessage message) async {
+    final active = state.activeSession ?? await createSession();
+    _hasMutated = true;
+    final updatedMessage = message.sessionId == active.id
+        ? message
+        : AiChatMessage(
+            id: message.id,
+            sessionId: active.id,
+            content: message.content,
+            createdAt: message.createdAt,
+            role: message.role,
+            kind: message.kind,
+            citations: message.citations,
+          );
+    final updatedSession = active.copyWith(
+      updatedAt: updatedMessage.createdAt,
+      messages: [...active.messages, updatedMessage],
+    );
+    final sessions = [
+      updatedSession,
+      for (final session in state.sessions)
+        if (session.id != active.id) session,
+    ]..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    state = AiChatSessionStore(
+      sessions: sessions,
+      activeSessionId: active.id,
+    );
+    await _persist();
+  }
+
+  void hydrateFromBootstrap(AiChatSessionStore store) {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.activeSession?.messages.isNotEmpty == true) {
+      return;
+    }
+    state = store;
+  }
+
+  Future<void> hydrateFromSerializedBootstrap({
+    required List<Map<String, dynamic>> sessionsJson,
+    required String? activeSessionId,
+  }) async {
+    if (_hydratedDeferred) {
+      return;
+    }
+    _hydratedDeferred = true;
+    if (_hasMutated || state.activeSession?.messages.isNotEmpty == true) {
+      return;
+    }
+    state = AppBootstrapLoader.decodeAiSessionStoreFromJson(
+      sessionsJson,
+      activeSessionId,
     );
   }
 
-  void hydrateFromBootstrap(List<AiChatMessage> messages) {
-    if (_hydratedDeferred) {
-      return;
-    }
-    _hydratedDeferred = true;
-    if (_hasMutated || state.isNotEmpty) {
-      return;
-    }
-    state = [...messages];
+  Future<void> _persist() async {
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.aiSessions,
+      jsonEncode([
+        for (final session in state.sessions) _sessionToJson(session),
+      ]),
+    );
+    await _persistActiveSessionId();
   }
 
-  Future<void> hydrateFromSerializedBootstrap(List<Map<String, dynamic>> itemsJson) async {
-    if (_hydratedDeferred) {
-      return;
-    }
-    _hydratedDeferred = true;
-    if (_hasMutated || state.isNotEmpty || itemsJson.isEmpty) {
-      return;
-    }
+  Future<void> _persistActiveSessionId() async {
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.activeAiSessionId,
+      state.activeSessionId,
+    );
+  }
 
-    final messages = <AiChatMessage>[];
-    for (var index = 0; index < itemsJson.length; index += _hydrateChunkSize) {
-      final end = (index + _hydrateChunkSize).clamp(0, itemsJson.length);
-      final chunk = itemsJson.sublist(index, end);
-      for (final item in chunk) {
-        final message = AiChatMessage(
-          id: item['id'] as String? ?? '',
-          content: item['content'] as String? ?? '',
-          createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0),
-          role: switch (item['role']) {
-            'assistant' => AiChatRole.assistant,
-            _ => AiChatRole.user,
+  Map<String, dynamic> _sessionToJson(AiChatSession session) {
+    return {
+      'id': session.id,
+      'createdAt': session.createdAt.toIso8601String(),
+      'updatedAt': session.updatedAt.toIso8601String(),
+      'messages': [
+        for (final message in session.messages) _messageToJson(message),
+      ],
+    };
+  }
+
+  Map<String, dynamic> _messageToJson(AiChatMessage item) {
+    return {
+      'id': item.id,
+      'sessionId': item.sessionId,
+      'content': item.content,
+      'createdAt': item.createdAt.toIso8601String(),
+      'role': item.role.name,
+      'kind': item.kind.name,
+      'citations': [
+        for (final citation in item.citations)
+          {
+            'itemId': citation.itemId,
+            'title': citation.title,
+            'type': citation.type.name,
+            'startAt': citation.startAt?.toIso8601String(),
+            'endAt': citation.endAt?.toIso8601String(),
+            'reason': citation.reason,
           },
-          kind: switch (item['kind']) {
-            'answer' => AiMessageKind.answer,
-            'system' => AiMessageKind.system,
-            _ => AiMessageKind.chat,
-          },
-          citations: _decodeCitations(item['citations']),
-        );
-        if (message.id.isNotEmpty) {
-          messages.add(message);
-        }
-      }
-      if (end < itemsJson.length) {
-        await Future<void>.delayed(Duration.zero);
-      }
-    }
-    state = messages;
-  }
-
-  List<AiCitation> _decodeCitations(Object? raw) {
-    if (raw is! List<dynamic>) {
-      return const [];
-    }
-    final citations = <AiCitation>[];
-    for (final row in raw) {
-      if (row is! Map<String, dynamic>) {
-        continue;
-      }
-      final type = _itemTypeFromString(row['type'] as String?);
-      if (type == null) {
-        continue;
-      }
-      citations.add(
-        AiCitation(
-          itemId: row['itemId'] as String? ?? '',
-          title: row['title'] as String? ?? '',
-          type: type,
-          startAt: DateTime.tryParse(row['startAt'] as String? ?? ''),
-          endAt: DateTime.tryParse(row['endAt'] as String? ?? ''),
-          reason: row['reason'] as String?,
-        ),
-      );
-    }
-    return citations;
-  }
-
-  ItemType? _itemTypeFromString(String? value) {
-    return switch (value) {
-      'schedule' => ItemType.schedule,
-      'task' => ItemType.task,
-      'memo' => ItemType.memo,
-      'course' => ItemType.course,
-      _ => null,
+      ],
     };
   }
 
@@ -607,7 +627,7 @@ ${basePrompt.trim()}
 }
 
 final aiChatRepositoryProvider =
-    NotifierProvider<InMemoryAiChatRepository, List<AiChatMessage>>(
+    NotifierProvider<InMemoryAiChatRepository, AiChatSessionStore>(
   InMemoryAiChatRepository.new,
 );
 
