@@ -15,13 +15,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navHome => '主页';
 
   @override
-  String get navList => '列表';
+  String get navList => '日程';
 
   @override
-  String get navAi => 'AI';
+  String get navForum => '论坛';
 
   @override
-  String get navAdd => '添加';
+  String get navCampus => '校园';
 
   @override
   String get navSettings => '设置';
@@ -39,10 +39,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listDescription => '这里将承载任务、日程、备忘和标签页驱动的列表体验。';
 
   @override
-  String get aiTitle => 'AI 助手';
+  String get forumTitle => '论坛';
 
   @override
-  String get aiDescription => '这里将承载 AI 对话、事项创建和问答能力。';
+  String get campusTitle => '校园';
 
   @override
   String get editorTitle => '新建事项';
@@ -54,7 +54,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '设置';
 
   @override
-  String get settingsDescription => '这里将承载全局、主页、列表页和 AI 的设置入口。';
+  String get settingsDescription => '这里将承载全局、主页和列表页的设置入口。';
 
   @override
   String get settingsSearchTooltip => '搜索设置';
@@ -81,9 +81,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsListEntrySubtitle => '列表排序、重排与展示偏好';
 
   @override
-  String get settingsAiEntrySubtitle => 'API 地址、密钥、模型与提示词';
-
-  @override
   String get settingsAboutEntryTitle => '关于';
 
   @override
@@ -105,7 +102,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsGeneralComingSoon => '该能力将在后续版本开放。';
 
   @override
-  String get settingsAboutProductSubtitle => '全屏纵览表格化规划与 AI 辅助管理';
+  String get settingsAboutProductSubtitle => '全屏纵览表格化校园规划';
 
   @override
   String get settingsAboutVersionTitle => '版本';
@@ -145,33 +142,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHomeWideLayout => '超宽屏默认范围';
-
-  @override
-  String get settingsAiSectionTitle => 'AI 设置';
-
-  @override
-  String get settingsAiSectionDescription => '配置兼容 OpenAI 的接口地址、密钥、模型和系统提示词。';
-
-  @override
-  String get settingsAiBaseUrlLabel => 'API 地址';
-
-  @override
-  String get settingsAiApiKeyLabel => 'API 密钥';
-
-  @override
-  String get settingsAiModelLabel => '模型';
-
-  @override
-  String get settingsAiSystemPromptLabel => '系统提示词';
-
-  @override
-  String get settingsAiTestButton => '测试连接';
-
-  @override
-  String get settingsAiTestingButton => '测试中...';
-
-  @override
-  String get settingsAiSaveButton => '保存 AI 设置';
 
   @override
   String settingsMinutesValue(int value) {
@@ -401,18 +371,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listImportantDisabled => '普通';
-
-  @override
-  String get aiInputHint => '输入一句话，让 AI 帮你创建事项或查询日程';
-
-  @override
-  String get aiSendButton => '发送';
-
-  @override
-  String get aiSendingButton => '发送中...';
-
-  @override
-  String get aiEmptyState => '当前对话还没有消息。';
 
   @override
   String get editorTypePickerTitle => '切换事项类型';

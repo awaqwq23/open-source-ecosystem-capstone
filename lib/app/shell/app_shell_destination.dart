@@ -13,15 +13,15 @@ enum AppShellDestination {
     icon: AppIcons.listOutlined,
     selectedIcon: AppIcons.listFilled,
   ),
-  ai(
-    route: AppRoutePaths.ai,
-    icon: AppIcons.aiOutlined,
-    selectedIcon: AppIcons.aiFilled,
+  forum(
+    route: AppRoutePaths.forum,
+    icon: AppIcons.forumOutlined,
+    selectedIcon: AppIcons.forumFilled,
   ),
-  itemEditor(
-    route: AppRoutePaths.itemEditor,
-    icon: AppIcons.itemEditorOutlined,
-    selectedIcon: AppIcons.itemEditorFilled,
+  campus(
+    route: AppRoutePaths.campus,
+    icon: AppIcons.campusOutlined,
+    selectedIcon: AppIcons.campusFilled,
   ),
   settings(
     route: AppRoutePaths.settings,

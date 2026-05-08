@@ -82,10 +82,6 @@ class HomeWidgetSyncService {
           'updatedAt': now.toIso8601String(),
           'updatedLabel': _formatWidgetTimestamp(now, zh),
         },
-        'aiEntry': {
-          'title': zh ? 'AI 快速进入' : 'AI Quick Entry',
-          'subtitle': zh ? '点击进入 AI 页' : 'Tap to open AI page',
-        },
         'quickCreate': {
           'title': zh ? '快速创建事项' : 'Quick Create',
           'newItemLabel': zh ? '新建事项' : 'New Item',

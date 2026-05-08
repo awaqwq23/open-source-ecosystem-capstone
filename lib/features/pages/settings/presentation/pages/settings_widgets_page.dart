@@ -86,11 +86,6 @@ class SettingsWidgetsPage extends ConsumerWidget {
               title: _isChinese(context) ? '显示范围' : 'Display ranges',
               children: [
                 SettingsFlatTile(
-                  title: _isChinese(context) ? 'AI 快捷入口' : 'AI quick entry',
-                  subtitle: _isChinese(context) ? '支持 1x1 / 1x2，点击直达 AI 页' : 'Supports 1x1 / 1x2, opens AI page',
-                  leading: const Icon(Icons.smart_toy_outlined),
-                ),
-                SettingsFlatTile(
                   title: _isChinese(context) ? '快速创建事项' : 'Quick create item',
                   subtitle: _isChinese(context)
                       ? '覆盖 1x1 到 6x1、2x2、2x3、3x2、3x3 等尺寸'

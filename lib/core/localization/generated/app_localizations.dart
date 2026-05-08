@@ -112,21 +112,13 @@ abstract class AppLocalizations {
 
   /// No description provided for @navList.
   ///
-  /// In en, this message translates to:
-  /// **'List'**
   String get navList;
 
-  /// No description provided for @navAi.
-  ///
-  /// In en, this message translates to:
-  /// **'AI'**
-  String get navAi;
+  /// No description provided for @navForum.
+  String get navForum;
 
-  /// No description provided for @navAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Add'**
-  String get navAdd;
+  /// No description provided for @navCampus.
+  String get navCampus;
 
   /// No description provided for @navSettings.
   ///
@@ -158,17 +150,11 @@ abstract class AppLocalizations {
   /// **'Task, schedule, memo and tag-based lists will be organized here.'**
   String get listDescription;
 
-  /// No description provided for @aiTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Assistant'**
-  String get aiTitle;
+  /// No description provided for @forumTitle.
+  String get forumTitle;
 
-  /// No description provided for @aiDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'AI conversations and schedule commands will be handled here.'**
-  String get aiDescription;
+  /// No description provided for @campusTitle.
+  String get campusTitle;
 
   /// No description provided for @editorTitle.
   ///
@@ -191,7 +177,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Global, list, home and AI settings will be grouped here.'**
+  /// **'Global, schedule, and home settings will be grouped here.'**
   String get settingsDescription;
 
   /// No description provided for @settingsSearchTooltip.
@@ -242,12 +228,6 @@ abstract class AppLocalizations {
   /// **'Sort, reorder and list display preferences'**
   String get settingsListEntrySubtitle;
 
-  /// No description provided for @settingsAiEntrySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'API URL, key, model and system prompt'**
-  String get settingsAiEntrySubtitle;
-
   /// No description provided for @settingsAboutEntryTitle.
   ///
   /// In en, this message translates to:
@@ -293,7 +273,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAboutProductSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Grid-based planning at a glance with AI assistance'**
+  /// **'Grid-based campus planning at a glance'**
   String get settingsAboutProductSubtitle;
 
   /// No description provided for @settingsAboutVersionTitle.
@@ -373,60 +353,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ultra-wide default range'**
   String get settingsHomeWideLayout;
-
-  /// No description provided for @settingsAiSectionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'AI settings'**
-  String get settingsAiSectionTitle;
-
-  /// No description provided for @settingsAiSectionDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Configure the OpenAI-compatible base URL, API key, model, and system prompt.'**
-  String get settingsAiSectionDescription;
-
-  /// No description provided for @settingsAiBaseUrlLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'API URL'**
-  String get settingsAiBaseUrlLabel;
-
-  /// No description provided for @settingsAiApiKeyLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'API key'**
-  String get settingsAiApiKeyLabel;
-
-  /// No description provided for @settingsAiModelLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Model'**
-  String get settingsAiModelLabel;
-
-  /// No description provided for @settingsAiSystemPromptLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'System prompt'**
-  String get settingsAiSystemPromptLabel;
-
-  /// No description provided for @settingsAiTestButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Test connection'**
-  String get settingsAiTestButton;
-
-  /// No description provided for @settingsAiTestingButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Testing...'**
-  String get settingsAiTestingButton;
-
-  /// No description provided for @settingsAiSaveButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Save AI settings'**
-  String get settingsAiSaveButton;
 
   /// No description provided for @settingsMinutesValue.
   ///
@@ -865,30 +791,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Normal'**
   String get listImportantDisabled;
-
-  /// No description provided for @aiInputHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Write a message for AI to create an item or answer a schedule question'**
-  String get aiInputHint;
-
-  /// No description provided for @aiSendButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Send'**
-  String get aiSendButton;
-
-  /// No description provided for @aiSendingButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Sending...'**
-  String get aiSendingButton;
-
-  /// No description provided for @aiEmptyState.
-  ///
-  /// In en, this message translates to:
-  /// **'No messages in this chat yet.'**
-  String get aiEmptyState;
 
   /// No description provided for @editorTypePickerTitle.
   ///

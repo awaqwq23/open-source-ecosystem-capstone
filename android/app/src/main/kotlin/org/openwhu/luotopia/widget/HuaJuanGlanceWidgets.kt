@@ -41,10 +41,6 @@ import org.openwhu.luotopia.MainActivity
 import org.openwhu.luotopia.R
 import kotlin.math.max
 
-class HuaJuanAiEntryWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = HuaJuanAiEntryWidget()
-}
-
 class HuaJuanQuickCreateWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HuaJuanQuickCreateWidget()
 }
@@ -55,42 +51,6 @@ class HuaJuanAgendaListWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class HuaJuanWeekGridWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HuaJuanWeekGridWidget()
-}
-
-private class HuaJuanAiEntryWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(72.dp, 72.dp),
-            DpSize(156.dp, 72.dp),
-        ),
-    )
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val payload = WidgetPayloadReader.read(context)
-        provideContent {
-            CardShell(clickUri = WidgetDeepLinkFactory.ai()) {
-                Text(
-                    text = payload.aiEntry.title,
-                    style = titleStyle(),
-                    maxLines = 1,
-                )
-                Spacer(modifier = GlanceModifier.height(6.dp))
-                Text(
-                    text = payload.aiEntry.subtitle,
-                    style = secondaryStyle(),
-                    maxLines = 2,
-                )
-                if (payload.meta.updatedLabel.isNotBlank()) {
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-                    Text(
-                        text = payload.meta.updatedLabel,
-                        style = tertiaryStyle(),
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
 }
 
 private class HuaJuanQuickCreateWidget : GlanceAppWidget() {
@@ -505,8 +465,6 @@ private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int, loca
 }
 
 private object WidgetDeepLinkFactory {
-    fun ai(): String = "luotopia://app/ai?focusInput=1&source=widget"
-
     fun createChooser(): String = "luotopia://app/item-editor/flow?showTypePicker=1&source=widget"
 
     fun createSchedule(): String = "luotopia://app/item-editor/flow?presetType=schedule&source=widget"

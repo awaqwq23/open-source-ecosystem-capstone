@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app_bootstrap.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
-import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
@@ -27,9 +26,6 @@ class RiverpodSettingsRepository implements SettingsRepository {
 
   @override
   HomeSettings get homeSettings => _ref.read(appHomeSettingsProvider);
-
-  @override
-  AiSettings get aiSettings => _ref.read(appAiSettingsProvider);
 
   @override
   WidgetSettings get widgetSettings => _ref.read(appWidgetSettingsProvider);
@@ -63,20 +59,6 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'wideLayoutScope': settings.wideLayoutScope.name,
         'showDemoData': settings.showDemoData,
         'itemOpacityPercent': settings.itemOpacityPercent,
-      }),
-    );
-  }
-
-  @override
-  Future<void> saveAiSettings(AiSettings settings) async {
-    _ref.read(appAiSettingsProvider.notifier).state = settings;
-    await _prefs?.setString(
-      AppBootstrapStorageKeys.aiSettings,
-      jsonEncode({
-        'baseUrl': settings.baseUrl,
-        'apiKey': settings.apiKey,
-        'model': settings.model,
-        'systemPrompt': settings.systemPrompt,
       }),
     );
   }

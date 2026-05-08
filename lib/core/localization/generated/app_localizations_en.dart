@@ -15,13 +15,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHome => 'Home';
 
   @override
-  String get navList => 'List';
+  String get navList => 'Schedule';
 
   @override
-  String get navAi => 'AI';
+  String get navForum => 'Forum';
 
   @override
-  String get navAdd => 'Add';
+  String get navCampus => 'Campus';
 
   @override
   String get navSettings => 'Settings';
@@ -41,11 +41,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Task, schedule, memo and tag-based lists will be organized here.';
 
   @override
-  String get aiTitle => 'AI Assistant';
+  String get forumTitle => 'Forum';
 
   @override
-  String get aiDescription =>
-      'AI conversations and schedule commands will be handled here.';
+  String get campusTitle => 'Campus';
 
   @override
   String get editorTitle => 'Create Item';
@@ -59,7 +58,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDescription =>
-      'Global, list, home and AI settings will be grouped here.';
+      'Global, schedule, and home settings will be grouped here.';
 
   @override
   String get settingsSearchTooltip => 'Search settings';
@@ -89,9 +88,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sort, reorder and list display preferences';
 
   @override
-  String get settingsAiEntrySubtitle => 'API URL, key, model and system prompt';
-
-  @override
   String get settingsAboutEntryTitle => 'About';
 
   @override
@@ -115,7 +111,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAboutProductSubtitle =>
-      'Grid-based planning at a glance with AI assistance';
+      'Grid-based campus planning at a glance';
 
   @override
   String get settingsAboutVersionTitle => 'Version';
@@ -157,34 +153,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHomeWideLayout => 'Ultra-wide default range';
-
-  @override
-  String get settingsAiSectionTitle => 'AI settings';
-
-  @override
-  String get settingsAiSectionDescription =>
-      'Configure the OpenAI-compatible base URL, API key, model, and system prompt.';
-
-  @override
-  String get settingsAiBaseUrlLabel => 'API URL';
-
-  @override
-  String get settingsAiApiKeyLabel => 'API key';
-
-  @override
-  String get settingsAiModelLabel => 'Model';
-
-  @override
-  String get settingsAiSystemPromptLabel => 'System prompt';
-
-  @override
-  String get settingsAiTestButton => 'Test connection';
-
-  @override
-  String get settingsAiTestingButton => 'Testing...';
-
-  @override
-  String get settingsAiSaveButton => 'Save AI settings';
 
   @override
   String settingsMinutesValue(int value) {
@@ -421,19 +389,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listImportantDisabled => 'Normal';
-
-  @override
-  String get aiInputHint =>
-      'Write a message for AI to create an item or answer a schedule question';
-
-  @override
-  String get aiSendButton => 'Send';
-
-  @override
-  String get aiSendingButton => 'Sending...';
-
-  @override
-  String get aiEmptyState => 'No messages in this chat yet.';
 
   @override
   String get editorTypePickerTitle => 'Switch item type';

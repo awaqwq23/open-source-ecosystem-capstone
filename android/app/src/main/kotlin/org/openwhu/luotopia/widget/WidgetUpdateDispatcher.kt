@@ -7,7 +7,6 @@ import android.content.Intent
 
 object WidgetUpdateDispatcher {
     fun refreshAll(context: Context) {
-        refreshReceiver(context, HuaJuanAiEntryWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanQuickCreateWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanAgendaListWidgetReceiver::class.java)
         refreshReceiver(context, HuaJuanWeekGridWidgetReceiver::class.java)

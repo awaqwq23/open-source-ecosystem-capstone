@@ -15,8 +15,8 @@ extension AppShellDestinationLabelX on AppShellDestination {
     return switch (this) {
       AppShellDestination.home => l10n.navHome,
       AppShellDestination.list => l10n.navList,
-      AppShellDestination.ai => l10n.navAi,
-      AppShellDestination.itemEditor => l10n.navAdd,
+      AppShellDestination.forum => l10n.navForum,
+      AppShellDestination.campus => l10n.navCampus,
       AppShellDestination.settings => l10n.navSettings,
     };
   }

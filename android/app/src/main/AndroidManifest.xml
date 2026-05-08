@@ -34,17 +34,6 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".widget.HuaJuanAiEntryWidgetReceiver"
-            android:exported="false"
-            android:label="@string/widget_ai_entry_name">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/huajuan_ai_entry_widget_info" />
-        </receiver>
-        <receiver
             android:name=".widget.HuaJuanQuickCreateWidgetReceiver"
             android:exported="false"
             android:label="@string/widget_quick_create_name">

@@ -37,10 +37,6 @@ abstract final class AppSemanticColors {
     return theme.colorScheme.onSurfaceVariant;
   }
 
-  static Color aiConnectionSuccessText(ThemeData theme) {
-    return theme.colorScheme.tertiary;
-  }
-
   static Color onAgendaAccent(Color accent) {
     final brightness = ThemeData.estimateBrightnessForColor(accent);
     return brightness == Brightness.dark ? Colors.white : Colors.black;

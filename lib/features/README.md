@@ -5,8 +5,9 @@
 ### 页面型模块
 
 - `pages/home/`：主页表格页。
-- `pages/list/`：列表页。
-- `pages/ai/`：AI 页。
+- `pages/list/`：日程列表页。
+- `pages/forum/`：论坛页。
+- `pages/campus/`：校园页。
 - `pages/item_editor/`：事项添加与编辑页。
 - `pages/item_detail/`：事项详情页。
 - `pages/settings/`：设置页及设置二级页。

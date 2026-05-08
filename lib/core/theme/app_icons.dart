@@ -10,11 +10,11 @@ abstract final class AppIcons {
   static const IconData listOutlined = Icons.checklist_rtl_outlined;
   static const IconData listFilled = Icons.checklist_rtl;
 
-  static const IconData aiOutlined = Icons.auto_awesome_outlined;
-  static const IconData aiFilled = Icons.auto_awesome;
+  static const IconData forumOutlined = Icons.forum_outlined;
+  static const IconData forumFilled = Icons.forum;
 
-  static const IconData itemEditorOutlined = Icons.add_box_outlined;
-  static const IconData itemEditorFilled = Icons.add_box;
+  static const IconData campusOutlined = Icons.location_city_outlined;
+  static const IconData campusFilled = Icons.location_city;
 
   static const IconData settingsOutlined = Icons.settings_outlined;
   static const IconData settingsFilled = Icons.settings;

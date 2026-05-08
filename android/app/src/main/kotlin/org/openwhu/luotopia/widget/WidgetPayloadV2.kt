@@ -10,11 +10,6 @@ data class WidgetMetaModel(
     val timezone: String,
 )
 
-data class AiEntryWidgetModel(
-    val title: String,
-    val subtitle: String,
-)
-
 data class QuickCreateWidgetModel(
     val title: String,
     val newItemLabel: String,
@@ -61,7 +56,6 @@ data class WeekGridWidgetModel(
 data class WidgetPayloadV4(
     val version: Int,
     val meta: WidgetMetaModel,
-    val aiEntry: AiEntryWidgetModel,
     val quickCreate: QuickCreateWidgetModel,
     val agendaList: AgendaListWidgetModel,
     val weekGrid: WeekGridWidgetModel,
@@ -81,7 +75,6 @@ object WidgetPayloadReader {
             }
 
             val metaJson = root.optJSONObject("meta") ?: JSONObject()
-            val aiJson = root.optJSONObject("aiEntry") ?: JSONObject()
             val quickCreateJson = root.optJSONObject("quickCreate") ?: JSONObject()
             val agendaListJson = root.optJSONObject("agendaList") ?: JSONObject()
             val weekGridJson = root.optJSONObject("weekGrid") ?: JSONObject()
@@ -92,10 +85,6 @@ object WidgetPayloadReader {
                     updatedLabel = metaJson.optString("updatedLabel", ""),
                     locale = metaJson.optString("languageCode", "zh"),
                     timezone = metaJson.optString("timezone", ""),
-                ),
-                aiEntry = AiEntryWidgetModel(
-                    title = aiJson.optString("title", "AI 快速进入"),
-                    subtitle = aiJson.optString("subtitle", "点击打开 AI 页面"),
                 ),
                 quickCreate = QuickCreateWidgetModel(
                     title = quickCreateJson.optString("title", "快速创建事项"),
@@ -184,10 +173,6 @@ object WidgetPayloadReader {
                 updatedLabel = "",
                 locale = "zh",
                 timezone = "",
-            ),
-            aiEntry = AiEntryWidgetModel(
-                title = "AI 快速进入",
-                subtitle = "点击打开 AI 页面",
             ),
             quickCreate = QuickCreateWidgetModel(
                 title = "快速创建事项",

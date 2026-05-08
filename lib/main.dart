@@ -5,7 +5,6 @@ import 'package:luotopia/app/app_bootstrap.dart';
 import 'package:luotopia/app/app_runtime_initializer.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
-import 'package:luotopia/features/pages/ai/data/ai_in_memory_data_source.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -23,10 +22,8 @@ Future<void> main() async {
         appLocaleProvider.overrideWith((ref) => bootstrap.locale),
         appThemeModeProvider.overrideWith((ref) => bootstrap.themeMode),
         appHomeSettingsProvider.overrideWith((ref) => bootstrap.homeSettings),
-        appAiSettingsProvider.overrideWith((ref) => bootstrap.aiSettings),
         appWidgetSettingsProvider.overrideWith((ref) => bootstrap.widgetSettings),
         appNavigationSettingsProvider.overrideWith((ref) => bootstrap.navigationSettings),
-        aiChatBootstrapSessionStoreProvider.overrideWithValue(bootstrap.aiSessionStore),
         agendaItemsBootstrapProvider.overrideWithValue(bootstrap.agendaItems),
         courseTimetableBootstrapProvider.overrideWithValue(bootstrap.courseTimetableStore),
       ],

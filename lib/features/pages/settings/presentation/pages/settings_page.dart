@@ -87,12 +87,6 @@ class SettingsPage extends StatelessWidget {
         icon: AppIcons.itemTypeCourse,
       ),
       _SettingsEntry(
-        title: l10n.settingsAiSectionTitle,
-        subtitle: l10n.settingsAiEntrySubtitle,
-        route: AppRoutePaths.settingsAi,
-        icon: AppIcons.aiOutlined,
-      ),
-      _SettingsEntry(
         title: l10n.settingsAboutEntryTitle,
         subtitle: l10n.settingsAboutEntrySubtitle,
         route: AppRoutePaths.settingsAbout,

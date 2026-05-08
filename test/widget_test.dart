@@ -25,9 +25,9 @@ void main() {
 
     expect(find.byType(ui.NavigationBar), findsOneWidget);
     expect(find.text('主页'), findsWidgets);
-    expect(find.text('列表'), findsWidgets);
-    expect(find.text('AI'), findsWidgets);
-    expect(find.text('添加'), findsWidgets);
+    expect(find.text('日程'), findsWidgets);
+    expect(find.text('论坛'), findsWidgets);
+    expect(find.text('校园'), findsWidgets);
     expect(find.text('设置'), findsWidgets);
     expect(find.byIcon(Icons.chevron_left), findsOneWidget);
     expect(find.byIcon(Icons.chevron_right), findsOneWidget);
@@ -41,9 +41,9 @@ void main() {
 
     expect(find.byType(ui.NavigationSidebar), findsOneWidget);
     expect(find.text('主页'), findsWidgets);
-    expect(find.text('列表'), findsWidgets);
-    expect(find.text('AI'), findsWidgets);
-    expect(find.text('添加'), findsWidgets);
+    expect(find.text('日程'), findsWidgets);
+    expect(find.text('论坛'), findsWidgets);
+    expect(find.text('校园'), findsWidgets);
     expect(find.text('设置'), findsWidgets);
     expect(find.byIcon(Icons.chevron_left), findsOneWidget);
     expect(find.textContaining('/'), findsWidgets);

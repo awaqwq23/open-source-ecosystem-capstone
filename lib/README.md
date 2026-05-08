@@ -13,7 +13,7 @@
 
 - `presentation/`：页面、组件、`ViewModel`，只处理 UI 状态与交互编排。
 - `domain/`：业务规则、实体、仓储接口、用例，不依赖 Flutter UI。
-- `data/`：数据源、DTO、Mapper、仓储实现，负责对接本地存储、远端同步、AI API 等。
+- `data/`：数据源、DTO、Mapper、仓储实现，负责对接本地存储、远端同步等。
 
 ### 依赖方向
 
@@ -24,7 +24,7 @@
 
 ### features 归类
 
-- `features/pages/`：完整页面入口，例如主页、列表页、AI 页、事项编辑页、设置页。
+- `features/pages/`：完整页面入口，例如主页、日程页、论坛页、校园页、事项编辑页、设置页。
 - `features/components/`：可被页面调用的独立组件或跨端能力，例如时间选择器、课程导入、桌面小组件同步。
 - 页面型与组件型模块内部都按实际需要保留 `presentation / domain / data`，不为占位强行建目录。
 

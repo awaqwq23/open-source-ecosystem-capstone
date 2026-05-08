@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/app/shell/app_shell.dart';
 import 'package:luotopia/core/motion/app_route_transitions.dart';
-import 'package:luotopia/features/pages/ai/presentation/pages/ai_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_import_wakeup_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_import_whu_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_timetables_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/whu_login_webview_page.dart';
+import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
+import 'package:luotopia/features/pages/forum/presentation/pages/forum_page.dart';
 import 'package:luotopia/features/pages/home/presentation/pages/home_page.dart';
 import 'package:luotopia/features/pages/item_detail/domain/models/item_detail_args.dart';
 import 'package:luotopia/features/pages/item_detail/presentation/pages/item_detail_page.dart';
@@ -19,7 +20,6 @@ import 'package:luotopia/features/pages/item_editor/presentation/pages/reminder_
 import 'package:luotopia/features/pages/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:luotopia/features/pages/list/presentation/pages/list_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_about_page.dart';
-import 'package:luotopia/features/pages/settings/presentation/pages/settings_ai_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_general_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_home_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_list_page.dart';
@@ -59,32 +59,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutePaths.ai,
-                builder: (context, state) => AiPage(
-                  autoFocusInput: state.uri.queryParameters['focusInput'] == '1',
-                ),
-                routes: [
-                  GoRoute(
-                    path: 'sessions',
-                    builder: (context, state) => const AiSessionsPage(),
-                  ),
-                ],
+                path: AppRoutePaths.forum,
+                builder: (context, state) => const ForumPage(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutePaths.itemEditor,
-                builder: (context, state) {
-                  return ProviderScope(
-                    key: state.pageKey,
-                    child: ItemEditorPage(
-                      args: _resolveItemEditorArgs(state),
-                      autoPopOnSubmit: false,
-                    ),
-                  );
-                },
+                path: AppRoutePaths.campus,
+                builder: (context, state) => const CampusPage(),
               ),
             ],
           ),
@@ -127,10 +111,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'course-import-wakeup',
                     builder: (context, state) => const CourseImportWakeupPage(),
-                  ),
-                  GoRoute(
-                    path: 'ai',
-                    builder: (context, state) => const SettingsAiPage(),
                   ),
                   GoRoute(
                     path: 'about',
