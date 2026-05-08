@@ -208,19 +208,10 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
         if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
     ],
   );
-  if (semesterWeekLabel == null) {
-    final prefixedLabel = _withCurrentWeekPrefixIfNeeded(
-      label: baseViewData.periodLabel,
-      localeTag: query.localeTag,
-      scope: scope,
-      visibleRangeStart: baseViewData.visibleRange.start,
-    );
-    if (prefixedLabel == baseViewData.periodLabel) {
-      return baseViewData;
-    }
+  if (semesterWeekLabel != null) {
     return HomeViewData(
       scope: baseViewData.scope,
-      periodLabel: prefixedLabel,
+      periodLabel: semesterWeekLabel,
       periodSubtitle: baseViewData.periodSubtitle,
       metrics: baseViewData.metrics,
       visibleRange: baseViewData.visibleRange,
@@ -232,18 +223,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     );
   }
 
-  return HomeViewData(
-    scope: baseViewData.scope,
-    periodLabel: semesterWeekLabel,
-    periodSubtitle: baseViewData.periodSubtitle,
-    metrics: baseViewData.metrics,
-    visibleRange: baseViewData.visibleRange,
-    periodSelection: baseViewData.periodSelection,
-    selectedCell: baseViewData.selectedCell,
-    columns: baseViewData.columns,
-    timeSlots: baseViewData.timeSlots,
-    items: baseViewData.items,
-  );
+  return baseViewData;
 });
 
 String? _buildSemesterWeekLabel({
@@ -296,32 +276,5 @@ String? _buildSemesterWeekLabel({
   if (!localeTag.startsWith('zh')) {
     return 'Week $weekIndex';
   }
-  final today = DateUtils.dateOnly(DateTime.now());
-  final todayMonday = today.subtract(Duration(days: today.weekday - DateTime.monday));
-  if (DateUtils.isSameDay(todayMonday, currentMonday)) {
-    return '本周·第$weekIndex周';
-  }
   return '第$weekIndex周';
-}
-
-String _withCurrentWeekPrefixIfNeeded({
-  required String label,
-  required String localeTag,
-  required HomeDisplayScope scope,
-  required DateTime visibleRangeStart,
-}) {
-  if (!localeTag.startsWith('zh') || scope != HomeDisplayScope.week) {
-    return label;
-  }
-  if (label.startsWith('本周·')) {
-    return label;
-  }
-  final today = DateUtils.dateOnly(DateTime.now());
-  final todayMonday = today.subtract(Duration(days: today.weekday - DateTime.monday));
-  final visibleMonday = DateUtils.dateOnly(visibleRangeStart)
-      .subtract(Duration(days: visibleRangeStart.weekday - DateTime.monday));
-  if (!DateUtils.isSameDay(todayMonday, visibleMonday)) {
-    return label;
-  }
-  return '本周·$label';
 }

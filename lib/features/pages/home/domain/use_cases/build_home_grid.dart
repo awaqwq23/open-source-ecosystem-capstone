@@ -185,7 +185,7 @@ class BuildHomeGridUseCase {
     final weekEnd = visibleRange.end.subtract(const Duration(days: 1));
     if (localeTag.startsWith('zh')) {
       return weekStart.month == weekEnd.month
-          ? '${weekStart.year}年${weekStart.month}月第${_weekOfMonth(weekStart)}周'
+          ? '${weekStart.month}月第${_weekOfMonth(weekStart)}周'
           : '${weekStart.year}年第${_weekOfYear(weekStart)}周';
     }
     if (weekStart.month == weekEnd.month) {
@@ -206,11 +206,22 @@ class BuildHomeGridUseCase {
           : formatter.format(visibleRange.start);
     }
 
+    final isCurrentWeek = _isCurrentWeek(visibleRange.start);
+    if (isCurrentWeek && localeTag.startsWith('zh')) {
+      return '本周';
+    }
+
     final end = visibleRange.end.subtract(const Duration(days: 1));
     if (localeTag.startsWith('zh')) {
       return '${formatter.format(visibleRange.start)}-${formatter.format(end)}';
     }
     return '${formatter.format(visibleRange.start)}-${formatter.format(end)}';
+  }
+
+  bool _isCurrentWeek(DateTime visibleRangeStart) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    return DateUtils.isSameDay(monday, DateUtils.dateOnly(visibleRangeStart));
   }
 
   String _formatMinute(int minute) {
