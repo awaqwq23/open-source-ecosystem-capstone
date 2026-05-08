@@ -112,12 +112,20 @@ abstract class AppLocalizations {
 
   /// No description provided for @navList.
   ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
   String get navList;
 
   /// No description provided for @navForum.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum'**
   String get navForum;
 
   /// No description provided for @navCampus.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus'**
   String get navCampus;
 
   /// No description provided for @navSettings.
@@ -151,9 +159,15 @@ abstract class AppLocalizations {
   String get listDescription;
 
   /// No description provided for @forumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Forum'**
   String get forumTitle;
 
   /// No description provided for @campusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus'**
   String get campusTitle;
 
   /// No description provided for @editorTitle.

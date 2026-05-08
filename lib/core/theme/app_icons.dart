@@ -13,8 +13,8 @@ abstract final class AppIcons {
   static const IconData forumOutlined = Icons.forum_outlined;
   static const IconData forumFilled = Icons.forum;
 
-  static const IconData campusOutlined = Icons.location_city_outlined;
-  static const IconData campusFilled = Icons.location_city;
+  static const IconData campusOutlined = Icons.apps_outlined;
+  static const IconData campusFilled = Icons.apps;
 
   static const IconData settingsOutlined = Icons.settings_outlined;
   static const IconData settingsFilled = Icons.settings;
