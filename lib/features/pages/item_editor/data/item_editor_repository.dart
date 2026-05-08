@@ -11,20 +11,13 @@ class SharedItemEditorRepository implements ItemEditorRepository {
   final AgendaItemRepository _repository;
 
   @override
-  Future<AgendaItem> createItem(
-    ItemDraft draft, {
-    bool isImportant = false,
-  }) {
-    return _repository.createItem(draft, isImportant: isImportant);
+  Future<AgendaItem> createItem(ItemDraft draft) {
+    return _repository.createItem(draft);
   }
 
   @override
-  Future<AgendaItem?> updateItem(
-    String id,
-    ItemDraft draft, {
-    bool? isImportant,
-  }) {
-    return _repository.updateItem(id, draft, isImportant: isImportant);
+  Future<AgendaItem?> updateItem(String id, ItemDraft draft) {
+    return _repository.updateItem(id, draft);
   }
 }
 

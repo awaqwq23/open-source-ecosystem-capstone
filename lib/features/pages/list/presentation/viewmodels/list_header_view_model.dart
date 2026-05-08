@@ -69,7 +69,7 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
   ListHeaderState build() {
     return const ListHeaderState(
       currentTab: ListHeaderTab.myDay,
-      sortMode: ListSortMode.importance,
+      sortMode: ListSortMode.dueDate,
       isReorderEnabled: false,
       isCompletedExpanded: false,
     );
@@ -89,7 +89,7 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
   void setReorderEnabled(bool enabled) {
     state = state.copyWith(
       isReorderEnabled: enabled,
-      sortMode: enabled ? ListSortMode.manual : ListSortMode.importance,
+      sortMode: enabled ? ListSortMode.manual : ListSortMode.dueDate,
     );
   }
 
@@ -99,10 +99,6 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
 
   Future<void> toggleCompleted(String itemId) {
     return ref.read(agendaItemRepositoryProvider.notifier).toggleCompleted(itemId);
-  }
-
-  Future<void> toggleImportant(String itemId) {
-    return ref.read(agendaItemRepositoryProvider.notifier).toggleImportant(itemId);
   }
 
   Future<void> deleteItem(String itemId) {

@@ -89,7 +89,6 @@ class ItemDetailPage extends ConsumerWidget {
           targetDate: item.targetDate,
           estimatedDuration: item.estimatedDuration,
           courseDetails: item.courseDetails,
-          isImportant: item.isImportant,
         ),
       ),
     );
@@ -209,16 +208,6 @@ class _ItemDetailContent extends ConsumerWidget {
                   icon: isCompleted ? AppIcons.incomplete : AppIcons.complete,
                   onPressed: () => repository.toggleCompleted(item.id),
                 ),
-              const SizedBox(width: 8),
-              _ActionIconButton(
-                tooltip: item.isImportant
-                    ? l10n.detailUnmarkImportant
-                    : l10n.detailMarkImportant,
-                icon: item.isImportant
-                    ? AppIcons.importantOutlined
-                    : AppIcons.importantFilled,
-                onPressed: () => repository.toggleImportant(item.id),
-              ),
               const SizedBox(width: 8),
               _ActionIconButton(
                 tooltip: l10n.detailDelete,

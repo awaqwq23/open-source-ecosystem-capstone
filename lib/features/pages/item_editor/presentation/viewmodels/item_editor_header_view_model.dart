@@ -18,7 +18,6 @@ class ItemEditorPageState {
   const ItemEditorPageState({
     required this.itemId,
     required this.draft,
-    required this.isImportant,
     this.errors = const ItemEditorValidationErrors(),
     this.isSubmitting = false,
     this.submitSucceeded = false,
@@ -26,7 +25,6 @@ class ItemEditorPageState {
 
   final String? itemId;
   final ItemDraft draft;
-  final bool isImportant;
   final ItemEditorValidationErrors errors;
   final bool isSubmitting;
   final bool submitSucceeded;
@@ -38,7 +36,6 @@ class ItemEditorPageState {
     String? itemId,
     bool clearItemId = false,
     ItemDraft? draft,
-    bool? isImportant,
     ItemEditorValidationErrors? errors,
     bool? isSubmitting,
     bool? submitSucceeded,
@@ -46,7 +43,6 @@ class ItemEditorPageState {
     return ItemEditorPageState(
       itemId: clearItemId ? null : (itemId ?? this.itemId),
       draft: draft ?? this.draft,
-      isImportant: isImportant ?? this.isImportant,
       errors: errors ?? this.errors,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitSucceeded: submitSucceeded ?? this.submitSucceeded,
@@ -63,7 +59,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     return ItemEditorPageState(
       itemId: null,
       draft: _buildDraft(),
-      isImportant: false,
     );
   }
 
@@ -83,7 +78,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     state = ItemEditorPageState(
       itemId: args?.itemId,
       draft: _normalizeDraft(draft),
-      isImportant: prefill?.isImportant ?? false,
     );
   }
 
@@ -387,14 +381,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(state.draft.copyWith(estimatedDuration: duration));
   }
 
-  void toggleImportant(bool value) {
-    state = state.copyWith(
-      isImportant: value,
-      errors: const ItemEditorValidationErrors(),
-      submitSucceeded: false,
-    );
-  }
-
   Future<bool> submit(ItemEditorValidationErrors errors) async {
     state = state.copyWith(errors: errors, submitSucceeded: false);
     if (errors.hasErrors) {
@@ -429,11 +415,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
         courseDetails: draft.courseDetails.copyWith(timetableId: activeId),
       );
     }
-    final isImportant = draft.type == ItemType.course ? false : state.isImportant;
     await saveDraft(
       itemId: state.itemId,
       draft: draft,
-      isImportant: isImportant,
     );
     state = state.copyWith(
       isSubmitting: false,

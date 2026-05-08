@@ -9,17 +9,12 @@ class SaveItemDraftUseCase {
   Future<void> call({
     required String? itemId,
     required ItemDraft draft,
-    required bool isImportant,
   }) async {
     if (itemId == null) {
-      await _repository.createItem(draft, isImportant: isImportant);
+      await _repository.createItem(draft);
       return;
     }
-    await _repository.updateItem(
-      itemId,
-      draft,
-      isImportant: isImportant,
-    );
+    await _repository.updateItem(itemId, draft);
   }
 }
 

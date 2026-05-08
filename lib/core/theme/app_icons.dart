@@ -50,8 +50,6 @@ abstract final class AppIcons {
   static const IconData add = Icons.add;
   static const IconData complete = Icons.check_circle;
   static const IconData incomplete = Icons.radio_button_unchecked;
-  static const IconData importantFilled = Icons.star;
-  static const IconData importantOutlined = Icons.star_border;
   static const IconData delete = Icons.delete_outline;
   static const IconData edit = Icons.edit_outlined;
   static const IconData expandLess = Icons.expand_less;

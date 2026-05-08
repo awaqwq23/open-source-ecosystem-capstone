@@ -23,10 +23,7 @@ class SortListItemsUseCase {
     ListSortMode mode,
     DateTime now,
   ) {
-    final importanceOrder = _compareBool(b.isImportant, a.isImportant);
     switch (mode) {
-      case ListSortMode.importance:
-        return importanceOrder != 0 ? importanceOrder : _compareByTimeThenCreated(a, b);
       case ListSortMode.dueDate:
         return _compareNullableDate(_dueDateOf(a), _dueDateOf(b), fallback: () {
           return _compareByTimeThenCreated(a, b);
@@ -95,13 +92,7 @@ class SortListItemsUseCase {
     final targetDate = _primaryDateOf(item);
     final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final distance = target.difference(today).inDays.abs();
-    final dateScore = math.max(0, 100 - distance * 10);
-    final importantScore = item.isImportant ? 40 : 0;
-    return dateScore + importantScore;
-  }
-
-  int _compareBool(bool left, bool right) {
-    return left == right ? 0 : (left ? 1 : -1);
+    return math.max(0, 100 - distance * 10);
   }
 
   int _compareNullableDate(

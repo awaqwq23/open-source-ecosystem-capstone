@@ -30,12 +30,6 @@ class BuildListPrefillUseCase {
           targetDate: today,
           estimatedDuration: const Duration(hours: 1),
         ),
-      ListHeaderTab.important => ItemEditorPrefill(
-          isImportant: true,
-          startAt: today.add(const Duration(hours: 9)),
-          endAt: today.add(const Duration(hours: 10)),
-          targetDate: today,
-        ),
     };
   }
 }

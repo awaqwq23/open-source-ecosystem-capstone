@@ -20,7 +20,6 @@ class ItemEditorPrefill {
     this.targetDate,
     this.estimatedDuration,
     this.courseDetails,
-    this.isImportant,
   });
 
   final ItemType? type;
@@ -37,5 +36,4 @@ class ItemEditorPrefill {
   final DateTime? targetDate;
   final Duration? estimatedDuration;
   final ItemCourseDetails? courseDetails;
-  final bool? isImportant;
 }

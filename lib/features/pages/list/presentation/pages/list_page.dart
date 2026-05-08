@@ -119,9 +119,6 @@ class ListPage extends ConsumerWidget {
                                     onToggleComplete: () => ref
                                         .read(listHeaderViewModelProvider.notifier)
                                         .toggleCompleted(item.id),
-                                    onToggleImportant: () => ref
-                                        .read(listHeaderViewModelProvider.notifier)
-                                        .toggleImportant(item.id),
                                     onOpenDetail: () => _openDetail(context, item),
                                     onEdit: () => _openEditor(context, item: item),
                                     onDelete: () => ref
@@ -232,7 +229,6 @@ class ListPage extends ConsumerWidget {
       ListHeaderTab.tasks => l10n.listTabTasks,
       ListHeaderTab.schedules => l10n.listTabSchedules,
       ListHeaderTab.memos => l10n.listTabMemos,
-      ListHeaderTab.important => l10n.listTabImportant,
     };
   }
 
@@ -243,7 +239,6 @@ class ListPage extends ConsumerWidget {
 
   String _sortLabelByMode(AppLocalizations l10n, ListSortMode mode) {
     return switch (mode) {
-      ListSortMode.importance => l10n.listSortImportance,
       ListSortMode.dueDate => l10n.listSortDueDate,
       ListSortMode.todayFocus => l10n.listSortTodayFocus,
       ListSortMode.alphabetical => l10n.listSortAlphabetical,
@@ -468,7 +463,6 @@ class ListPage extends ConsumerWidget {
               targetDate: item.targetDate,
               estimatedDuration: item.estimatedDuration,
               courseDetails: item.courseDetails,
-              isImportant: item.isImportant,
             ),
           );
     context.openItemEditorFlow(extra: extra);
@@ -500,9 +494,6 @@ class _PendingTaskRowList extends ConsumerWidget {
               onToggleComplete: () => ref
                   .read(listHeaderViewModelProvider.notifier)
                   .toggleCompleted(item.id),
-              onToggleImportant: () => ref
-                  .read(listHeaderViewModelProvider.notifier)
-                  .toggleImportant(item.id),
               onOpenDetail: () => _openDetail(context, item),
               onEdit: () => _openEditor(context, item: item),
               onDelete: () => ref
@@ -533,9 +524,6 @@ class _PendingTaskRowList extends ConsumerWidget {
               onToggleComplete: () => ref
                   .read(listHeaderViewModelProvider.notifier)
                   .toggleCompleted(item.id),
-              onToggleImportant: () => ref
-                  .read(listHeaderViewModelProvider.notifier)
-                  .toggleImportant(item.id),
               onOpenDetail: () => _openDetail(context, item),
               onEdit: () => _openEditor(context, item: item),
               onDelete: () => ref
@@ -580,7 +568,6 @@ class _PendingTaskRowList extends ConsumerWidget {
           targetDate: item.targetDate,
           estimatedDuration: item.estimatedDuration,
           courseDetails: item.courseDetails,
-          isImportant: item.isImportant,
         ),
       ),
     );
@@ -592,7 +579,6 @@ class _ListItemRow extends StatefulWidget {
     required this.item,
     required this.dragIndex,
     required this.onToggleComplete,
-    required this.onToggleImportant,
     required this.onOpenDetail,
     required this.onEdit,
     required this.onDelete,
@@ -601,7 +587,6 @@ class _ListItemRow extends StatefulWidget {
   final AgendaItem item;
   final int? dragIndex;
   final VoidCallback onToggleComplete;
-  final VoidCallback onToggleImportant;
   final VoidCallback onOpenDetail;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -652,7 +637,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
       widget.onDelete();
       return;
     }
-    widget.onEdit();
+    widget.onToggleComplete();
   }
 
   @override
@@ -660,10 +645,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final item = widget.item;
     final theme = Theme.of(context);
     final accent = item.color.resolve(theme.brightness);
-    final canToggleCompleted = item.supportsManualCompletion;
-    final canToggleImportant = item.type != ItemType.course;
     final isEffectivelyCompleted = item.isEffectivelyCompleted(DateTime.now());
-    final isManuallyCompleted = item.isCompleted && canToggleCompleted;
     final editSwipeBackground = Color.alphaBlend(
       accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.34 : 0.18),
       theme.colorScheme.surfaceContainerHighest,
@@ -673,6 +655,10 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
       theme.colorScheme.surface,
     );
     final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.18);
+    final itemBorderColor = Color.alphaBlend(
+      accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.58 : 0.42),
+      borderColor,
+    );
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
@@ -689,7 +675,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
             backgroundColor: editSwipeBackground,
             actionColor: accent,
             committedIconColor: AppSemanticColors.onAgendaAccent(accent),
-            icon: AppIcons.edit,
+            icon: isEffectivelyCompleted ? AppIcons.incomplete : AppIcons.complete,
             alignment: Alignment.centerLeft,
           ),
           children: const [SizedBox.expand()],
@@ -721,7 +707,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
-                  border: Border.all(color: borderColor, width: 1),
+                  border: Border.all(color: itemBorderColor, width: 1),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -730,9 +716,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _ActionIconButton(
-                        onPressed: canToggleCompleted ? widget.onToggleComplete : null,
-                        icon: isEffectivelyCompleted ? AppIcons.complete : AppIcons.incomplete,
+                      Icon(
+                        _typeIcon(item.type),
+                        size: 20,
                         color: accent,
                       ),
                       const SizedBox(width: 12),
@@ -746,7 +732,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                             style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: theme.colorScheme.onSurface,
-                                  decoration: isManuallyCompleted
+                                  decoration: isEffectivelyCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
                                   height: 1,
@@ -766,20 +752,11 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                         ),
                       ],
                       const SizedBox(width: 4),
-                      canToggleImportant
-                          ? _ActionIconButton(
-                              onPressed: widget.onToggleImportant,
-                              icon: item.isImportant
-                                  ? AppIcons.importantFilled
-                                  : AppIcons.importantOutlined,
-                              color: item.isImportant
-                                  ? AppSemanticColors.listImportantStar(theme)
-                                  : theme.colorScheme.onSurfaceVariant,
-                            )
-                          : const SizedBox(
-                              width: 28,
-                              height: 28,
-                            ),
+                      _ActionIconButton(
+                        onPressed: widget.onEdit,
+                        icon: AppIcons.edit,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ],
                   ),
                 ),
@@ -790,6 +767,15 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
       ),
     );
   }
+}
+
+IconData _typeIcon(ItemType type) {
+  return switch (type) {
+    ItemType.task => AppIcons.itemTypeTask,
+    ItemType.schedule => AppIcons.itemTypeSchedule,
+    ItemType.memo => AppIcons.itemTypeMemo,
+    ItemType.course => AppIcons.itemTypeCourse,
+  };
 }
 
 class _CompletedToggleRow extends StatelessWidget {

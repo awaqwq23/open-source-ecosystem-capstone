@@ -7,7 +7,6 @@ import 'package:luotopia/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
-import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 
 final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
@@ -47,10 +46,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   @override
-  Future<AgendaItem> createItem(
-    ItemDraft draft, {
-    bool isImportant = false,
-  }) async {
+  Future<AgendaItem> createItem(ItemDraft draft) async {
     final now = DateTime.now();
     final nextOrder = state.isEmpty
         ? 0.0
@@ -64,7 +60,6 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         draft: draft,
         createdAt: now,
         manualOrder: nextOrder,
-        isImportant: isImportant,
       ),
     );
     state = [...state, item];
@@ -73,11 +68,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   @override
-  Future<AgendaItem?> updateItem(
-    String id,
-    ItemDraft draft, {
-    bool? isImportant,
-  }) async {
+  Future<AgendaItem?> updateItem(String id, ItemDraft draft) async {
     final index = state.indexWhere((item) => item.id == id);
     if (index < 0) {
       return null;
@@ -96,7 +87,6 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       taskDetails: draft.taskDetails,
       memoDetails: draft.memoDetails,
       courseDetails: draft.courseDetails,
-      isImportant: isImportant ?? current.isImportant,
       updatedAt: DateTime.now(),
     ));
     state = [
@@ -122,38 +112,11 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     }
 
     final current = state[index];
-    if (!current.supportsManualCompletion) {
-      return current;
-    }
     final completed = !current.isCompleted;
     final updated = current.copyWith(
       isCompleted: completed,
       completedAt: completed ? DateTime.now() : null,
       clearCompletedAt: !completed,
-      updatedAt: DateTime.now(),
-    );
-    state = [
-      ...state.take(index),
-      updated,
-      ...state.skip(index + 1),
-    ];
-    await _persist();
-    return updated;
-  }
-
-  @override
-  Future<AgendaItem?> toggleImportant(String id) async {
-    final index = state.indexWhere((item) => item.id == id);
-    if (index < 0) {
-      return null;
-    }
-
-    final current = state[index];
-    if (current.type == ItemType.course) {
-      return current;
-    }
-    final updated = current.copyWith(
-      isImportant: !current.isImportant,
       updatedAt: DateTime.now(),
     );
     state = [
@@ -219,16 +182,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   AgendaItem _normalizeCompletionByType(AgendaItem item) {
-    final normalized = item.type == ItemType.course
-        ? item.copyWith(isImportant: false)
-        : item;
-    if (normalized.supportsManualCompletion) {
-      return normalized;
-    }
-    return normalized.copyWith(
-      isCompleted: false,
-      clearCompletedAt: true,
-    );
+    return item;
   }
 }
 

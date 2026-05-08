@@ -6,17 +6,9 @@ abstract class AgendaItemRepository {
   List<AgendaItem> get items;
   AgendaItem? findById(String id);
   List<AgendaItem> findByRange(DateTimeRangeValue range);
-  Future<AgendaItem> createItem(
-    ItemDraft draft, {
-    bool isImportant = false,
-  });
-  Future<AgendaItem?> updateItem(
-    String id,
-    ItemDraft draft, {
-    bool? isImportant,
-  });
+  Future<AgendaItem> createItem(ItemDraft draft);
+  Future<AgendaItem?> updateItem(String id, ItemDraft draft);
   Future<void> deleteItem(String id);
   Future<AgendaItem?> toggleCompleted(String id);
-  Future<AgendaItem?> toggleImportant(String id);
   Future<void> reorderItems(List<String> orderedIds);
 }

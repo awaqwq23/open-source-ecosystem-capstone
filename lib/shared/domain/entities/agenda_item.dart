@@ -23,7 +23,6 @@ class AgendaItem {
     required this.memoDetails,
     this.courseDetails = const ItemCourseDetails(),
     required this.isCompleted,
-    required this.isImportant,
     required this.createdAt,
     required this.completedAt,
     required this.manualOrder,
@@ -45,7 +44,6 @@ class AgendaItem {
   final ItemMemoDetails memoDetails;
   final ItemCourseDetails courseDetails;
   final bool isCompleted;
-  final bool isImportant;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? completedAt;
@@ -61,8 +59,7 @@ class AgendaItem {
   Duration get estimatedDuration => memoDetails.estimatedDuration;
   bool get supportsManualCompletion {
     return switch (type) {
-      ItemType.task || ItemType.memo => true,
-      ItemType.schedule || ItemType.course => false,
+      ItemType.task || ItemType.memo || ItemType.schedule || ItemType.course => true,
     };
   }
 
@@ -96,7 +93,6 @@ class AgendaItem {
     ItemMemoDetails? memoDetails,
     ItemCourseDetails? courseDetails,
     bool? isCompleted,
-    bool? isImportant,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? completedAt,
@@ -120,7 +116,6 @@ class AgendaItem {
       memoDetails: memoDetails ?? this.memoDetails,
       courseDetails: courseDetails ?? this.courseDetails,
       isCompleted: isCompleted ?? this.isCompleted,
-      isImportant: isImportant ?? this.isImportant,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
@@ -152,7 +147,6 @@ class AgendaItem {
     required DateTime createdAt,
     required double manualOrder,
     bool isCompleted = false,
-    bool isImportant = false,
     DateTime? completedAt,
   }) {
     return AgendaItem(
@@ -169,7 +163,6 @@ class AgendaItem {
       memoDetails: draft.memoDetails,
       courseDetails: draft.courseDetails,
       isCompleted: isCompleted,
-      isImportant: isImportant,
       createdAt: createdAt,
       completedAt: completedAt,
       manualOrder: manualOrder,

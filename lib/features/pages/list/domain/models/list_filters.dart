@@ -4,11 +4,9 @@ enum ListHeaderTab {
   tasks,
   schedules,
   memos,
-  important,
 }
 
 enum ListSortMode {
-  importance,
   dueDate,
   todayFocus,
   alphabetical,

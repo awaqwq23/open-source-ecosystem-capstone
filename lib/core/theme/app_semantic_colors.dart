@@ -21,16 +21,8 @@ abstract final class AppSemanticColors {
     );
   }
 
-  static Color listSwipeEditAction(ThemeData theme) {
-    return theme.colorScheme.primary;
-  }
-
   static Color listSwipeDeleteAction(ThemeData theme) {
     return theme.colorScheme.error;
-  }
-
-  static Color listImportantStar(ThemeData theme) {
-    return theme.colorScheme.tertiary;
   }
 
   static Color listSwipePassiveIcon(ThemeData theme) {
