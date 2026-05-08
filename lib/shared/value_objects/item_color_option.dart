@@ -24,6 +24,30 @@ enum ItemColorOption {
   slate(
     light: Color(0xFF607D8B),
     dark: Color(0xFF90A4AE),
+  ),
+  rose(
+    light: Color(0xFFE84393),
+    dark: Color(0xFFFD79A8),
+  ),
+  lime(
+    light: Color(0xFF6AB04C),
+    dark: Color(0xFF8BC34A),
+  ),
+  indigo(
+    light: Color(0xFF5C6BC0),
+    dark: Color(0xFF7986CB),
+  ),
+  teal(
+    light: Color(0xFF00897B),
+    dark: Color(0xFF4DB6AC),
+  ),
+  crimson(
+    light: Color(0xFFD32F2F),
+    dark: Color(0xFFE57373),
+  ),
+  violet(
+    light: Color(0xFF8E24AA),
+    dark: Color(0xFFBA68C8),
   );
 
   const ItemColorOption({
