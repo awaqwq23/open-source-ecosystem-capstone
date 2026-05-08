@@ -662,6 +662,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final accent = item.color.resolve(theme.brightness);
     final canToggleCompleted = item.supportsManualCompletion;
     final canToggleImportant = item.type != ItemType.course;
+    final isEffectivelyCompleted = item.isEffectivelyCompleted(DateTime.now());
     final isManuallyCompleted = item.isCompleted && canToggleCompleted;
     final editSwipeBackground = Color.alphaBlend(
       accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.34 : 0.18),
@@ -729,17 +730,11 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      canToggleCompleted
-                          ? _ActionIconButton(
-                              onPressed: widget.onToggleComplete,
-                              icon:
-                                  isManuallyCompleted ? AppIcons.complete : AppIcons.incomplete,
-                              color: accent,
-                            )
-                          : const SizedBox(
-                              width: 28,
-                              height: 28,
-                            ),
+                      _ActionIconButton(
+                        onPressed: canToggleCompleted ? widget.onToggleComplete : null,
+                        icon: isEffectivelyCompleted ? AppIcons.complete : AppIcons.incomplete,
+                        color: accent,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(
