@@ -119,7 +119,7 @@ class WhuCourseImportService {
       final instructor = (item['xm'] as String? ?? '').trim();
       final location = (item['cdmc'] as String? ?? '').trim();
       final weekMeta = (item['zcd'] as String? ?? '').trim();
-      final color = _pickColor(title, courseId);
+      final color = _pickColor(title);
 
       for (final week in weeks) {
         final date = normalizedWeekOne.add(Duration(days: (week - 1) * 7 + (weekday - 1)));
@@ -408,8 +408,8 @@ class WhuCourseImportService {
     };
   }
 
-  ItemColorOption _pickColor(String title, String id) {
-    final seed = '$title#$id'.hashCode.abs();
+  ItemColorOption _pickColor(String title) {
+    final seed = title.hashCode.abs();
     return ItemColorOption.values[seed % ItemColorOption.values.length];
   }
 
