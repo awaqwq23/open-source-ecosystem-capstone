@@ -51,3 +51,5 @@ app.*.map.json
 
 # Claude
 .claude/
+docs/UIR.md
+docs/旧有UIR.md
