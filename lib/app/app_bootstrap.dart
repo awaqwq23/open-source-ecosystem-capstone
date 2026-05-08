@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:huajuan_agenda/core/localization/locale_controller.dart';
-import 'package:huajuan_agenda/features/ai/domain/models/ai_conversation_models.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/ai_settings.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/home_settings.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/navigation_settings.dart';
-import 'package:huajuan_agenda/features/settings/domain/models/widget_settings.dart';
+import 'package:huajuan_agenda/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:huajuan_agenda/features/pages/settings/domain/models/ai_settings.dart';
+import 'package:huajuan_agenda/features/pages/settings/domain/models/home_settings.dart';
+import 'package:huajuan_agenda/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:huajuan_agenda/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:huajuan_agenda/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/agenda_item.dart';

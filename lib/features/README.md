@@ -1,19 +1,25 @@
 ## features 目录说明
 
-这里按功能模块组织代码。每个模块内部统一采用 `data / domain / presentation` 三层结构。
+这里按“页面型功能”和“组件型功能”组织代码。模块内部按实际需要采用 `data / domain / presentation`，不为占位强行增加层级。
 
-### 当前规划模块
+### 页面型模块
 
-- `home/`：主页表格页。
-- `list/`：列表页。
-- `ai/`：AI 页。
-- `item_editor/`：事项添加与编辑页。
-- `settings/`：设置页。
-- `time_picker/`：日周月时间选择组件。
-- `item_detail/`：事项详情展示组件或页面。
+- `pages/home/`：主页表格页。
+- `pages/list/`：列表页。
+- `pages/ai/`：AI 页。
+- `pages/item_editor/`：事项添加与编辑页。
+- `pages/item_detail/`：事项详情页。
+- `pages/settings/`：设置页及设置二级页。
+
+### 组件型模块
+
+- `components/time_picker/`：日周月时间选择组件。
+- `components/course_import/`：课程导入相关页面、适配器与服务。
+- `components/home_widgets/`：系统桌面小组件同步能力。
 
 ### 模块边界规则
 
 - 每个模块优先自包含。
 - 跨模块通用能力抽到 `shared/` 或 `core/`。
 - 模块间不要直接依赖彼此的 `data/` 实现。
+- `components/home_widgets/` 的命名用于区别 Flutter `Widget` 概念，不再使用单独的 `features/widgets/`。

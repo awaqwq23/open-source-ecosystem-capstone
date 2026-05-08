@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:huajuan_agenda/core/localization/generated/app_localizations.dart';
 import 'package:huajuan_agenda/core/localization/shadcn_localizations_fallback_delegate.dart';
-import 'package:huajuan_agenda/features/item_editor/presentation/pages/item_editor_page.dart';
+import 'package:huajuan_agenda/features/pages/item_editor/presentation/pages/item_editor_page.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 

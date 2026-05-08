@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:huajuan_agenda/app/app_bootstrap.dart';
-import 'package:huajuan_agenda/features/settings/domain/providers/settings_state_providers.dart';
+import 'package:huajuan_agenda/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:huajuan_agenda/shared/data/mappers/course_timetable_storage_mapper.dart';
 import 'package:huajuan_agenda/shared/domain/entities/course_timetable.dart';
 import 'package:huajuan_agenda/shared/domain/repositories/course_timetable_repository.dart';
