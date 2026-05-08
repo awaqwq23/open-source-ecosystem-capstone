@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart'
     hide AppBar, NavigationBar, NavigationRail, Scaffold;
-import 'package:animations/animations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/shell/app_shell_destination.dart';
-import 'package:luotopia/core/motion/app_motion.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -71,21 +69,7 @@ class AppShell extends ConsumerWidget {
   }
 
   Widget _buildAnimatedContent(AppShellDestination current) {
-    return PageTransitionSwitcher(
-      duration: AppMotion.slow,
-      transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
-        return FadeThroughTransition(
-          animation: primaryAnimation,
-          secondaryAnimation: secondaryAnimation,
-          fillColor: Colors.transparent,
-          child: child,
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey(current.route),
-        child: navigationShell,
-      ),
-    );
+    return navigationShell;
   }
 
   ui.NavigationBar _buildNavigationBar(
