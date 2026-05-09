@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -76,10 +77,7 @@ class CampusPage extends StatelessWidget {
             top: 0,
             left: 0,
             right: 0,
-            child: ui.AppBar(
-              useSafeArea: true,
-              title: Text(context.l10n.campusTitle),
-            ),
+            child: buildTabAppBar(title: context.l10n.campusTitle),
           ),
         ],
       ),
@@ -263,48 +261,40 @@ class _AppGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final app = apps[index];
         final accent = app.colorAssoc.resolve(theme.brightness);
-        return Material(
-          color: Colors.transparent,
+        return ui.Card(
+          surfaceBlur: 10,
+          surfaceOpacity: 0.82,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             onTap: () => _openApp(context, app.name),
-            splashColor: accent.withValues(alpha: 0.10),
-            highlightColor: accent.withValues(alpha: 0.05),
-            child: Ink(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    app.icon,
+                    size: 26,
+                    color: accent,
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.13),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      app.icon,
-                      size: 26,
-                      color: accent,
-                    ),
+                const SizedBox(height: 10),
+                Text(
+                  app.name,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    app.name,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         );
