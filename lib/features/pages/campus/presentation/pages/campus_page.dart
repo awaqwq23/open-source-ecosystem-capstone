@@ -140,38 +140,43 @@ class _WeatherCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Main weather info ──
+          // ── Main weather info: single row ──
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Big weather icon
-              Icon(Icons.wb_sunny, size: 56, color: Colors.orange.shade300),
+              Icon(Icons.wb_sunny, size: 48, color: Colors.orange.shade300),
+              const SizedBox(width: 14),
+              Text(
+                '28°',
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.onSurface,
+                ),
+              ),
               const SizedBox(width: 16),
-              // Temp + condition + feels-like
+              // Middle: condition + feels-like + today's range
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '28°',
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: colors.onSurface,
-                      height: 1,
+                    '晴 · 体感 31°',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: colors.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '晴 · 体感 31°',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.7),
+                    '今日 18° ~ 30°',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  _WeatherTag(label: '今日 18° ~ 30°'),
                 ],
               ),
               const Spacer(),
-              // AQI + PM2.5 compact card
+              // AQI compact card
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -207,51 +212,49 @@ class _WeatherCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 20),
-          Divider(height: 1, color: colors.onSurface.withValues(alpha: 0.10)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
-          // ── 7-day forecast ──
+          // ── Hourly forecast (no divider) ──
           SizedBox(
-            height: 100,
+            height: 72,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: _mockForecast.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 4),
+              itemCount: _mockHourly.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 2),
               itemBuilder: (context, index) {
-                final day = _mockForecast[index];
-                final isToday = index == 0;
+                final h = _mockHourly[index];
+                final isNow = h.time == '现在';
                 return Container(
-                  width: 72,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                  width: 58,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: isToday
-                        ? colors.primary.withValues(alpha: 0.12)
-                        : null,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isToday
-                        ? Border.all(color: colors.primary.withValues(alpha: 0.25))
+                    color: isNow ? colors.primary.withValues(alpha: 0.10) : null,
+                    borderRadius: BorderRadius.circular(10),
+                    border: isNow
+                        ? Border.all(color: colors.primary.withValues(alpha: 0.2))
                         : null,
                   ),
                   child: Column(
                     children: [
                       Text(
-                        day.dayName,
+                        h.time,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                          color: isToday
+                          fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
+                          fontSize: 11,
+                          color: isNow
                               ? colors.primary
-                              : colors.onSurface.withValues(alpha: 0.75),
+                              : colors.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Icon(day.icon, size: 22, color: Colors.orange.shade300),
+                      const SizedBox(height: 4),
+                      Icon(h.icon, size: 20, color: Colors.orange.shade300),
                       const SizedBox(height: 4),
                       Text(
-                        day.tempRange,
+                        h.temp,
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
+                          fontSize: 11,
                           color: colors.onSurface.withValues(alpha: 0.8),
                         ),
                       ),
@@ -262,33 +265,41 @@ class _WeatherCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
-          Divider(height: 1, color: colors.onSurface.withValues(alpha: 0.10)),
           const SizedBox(height: 16),
 
-          // ── Interactive tiles ──
-          _InteractiveTile(
-            icon: Icons.wb_sunny,
-            iconColor: Colors.orange.shade400,
-            title: '紫外线指数高',
-            subtitle: '出门记得做好防晒措施，建议涂抹SPF30+防晒霜',
-            onTap: () => _showInteraction(context, '紫外线防护建议'),
-          ),
-          const SizedBox(height: 10),
-          _InteractiveTile(
-            icon: Icons.lightbulb_outline,
-            iconColor: Colors.amber.shade500,
-            title: '下午没课！要不要蹭课？',
-            subtitle: '王力 · 古代汉语 · 教三301 · 14:00',
-            onTap: () => _showInteraction(context, '蹭课详情：王力老师古代汉语'),
-          ),
-          const SizedBox(height: 10),
-          _InteractiveTile(
-            icon: Icons.music_note,
-            iconColor: Colors.purple.shade300,
-            title: '今日推荐BGM',
-            subtitle: '校园雨后的白噪音，比空调更适合图书馆循环',
-            onTap: () => _showInteraction(context, '播放推荐BGM歌单'),
+          // ── Compact interactive tiles row ──
+          Row(
+            children: [
+              Expanded(
+                child: _CompactTile(
+                  icon: Icons.wb_sunny,
+                  iconColor: Colors.orange.shade400,
+                  title: '紫外线强',
+                  subtitle: '注意防晒',
+                  onTap: () => _showInteraction(context, '紫外线防护建议'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CompactTile(
+                  icon: Icons.lightbulb_outline,
+                  iconColor: Colors.amber.shade500,
+                  title: '蹭课推荐',
+                  subtitle: '古代汉语·教三',
+                  onTap: () => _showInteraction(context, '蹭课详情：王力老师古代汉语'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CompactTile(
+                  icon: Icons.music_note,
+                  iconColor: Colors.purple.shade300,
+                  title: '今日BGM',
+                  subtitle: '校园雨声歌单',
+                  onTap: () => _showInteraction(context, '播放推荐BGM歌单'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -306,35 +317,9 @@ class _WeatherCard extends StatelessWidget {
   }
 }
 
-/// Small tag chip (e.g. temperature range)
-class _WeatherTag extends StatelessWidget {
-  const _WeatherTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: colors.onSurface.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.onSurface.withValues(alpha: 0.65),
-              fontWeight: FontWeight.w500,
-            ),
-      ),
-    );
-  }
-}
-
-/// An interactive info tile with visual affordance
-class _InteractiveTile extends StatelessWidget {
-  const _InteractiveTile({
+/// Compact interactive tile for the bottom row
+class _CompactTile extends StatelessWidget {
+  const _CompactTile({
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -353,44 +338,42 @@ class _InteractiveTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Material(
       color: colors.onSurface.withValues(alpha: 0.04),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22, color: iconColor),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: iconColor),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
                       title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: colors.onSurface,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.onSurface.withValues(alpha: 0.6),
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: colors.onSurface.withValues(alpha: 0.3),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.55),
+                      fontSize: 11,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -400,22 +383,22 @@ class _InteractiveTile extends StatelessWidget {
   }
 }
 
-/// Mock forecast data
-class _DayForecast {
-  const _DayForecast({required this.dayName, required this.icon, required this.tempRange});
-  final String dayName;
+/// Mock hourly forecast data
+class _HourForecast {
+  const _HourForecast({required this.time, required this.icon, required this.temp});
+  final String time;
   final IconData icon;
-  final String tempRange;
+  final String temp;
 }
 
-const _mockForecast = <_DayForecast>[
-  _DayForecast(dayName: '今天', icon: Icons.wb_sunny, tempRange: '18~30°'),
-  _DayForecast(dayName: '明天', icon: Icons.wb_sunny, tempRange: '20~32°'),
-  _DayForecast(dayName: '周日', icon: Icons.cloud, tempRange: '19~26°'),
-  _DayForecast(dayName: '周一', icon: Icons.water_drop, tempRange: '16~22°'),
-  _DayForecast(dayName: '周二', icon: Icons.wb_sunny, tempRange: '17~25°'),
-  _DayForecast(dayName: '周三', icon: Icons.cloud, tempRange: '18~24°'),
-  _DayForecast(dayName: '周四', icon: Icons.wb_cloudy, tempRange: '19~27°'),
+const _mockHourly = <_HourForecast>[
+  _HourForecast(time: '现在', icon: Icons.wb_sunny, temp: '28°'),
+  _HourForecast(time: '10:00', icon: Icons.wb_sunny, temp: '29°'),
+  _HourForecast(time: '11:00', icon: Icons.wb_sunny, temp: '30°'),
+  _HourForecast(time: '12:00', icon: Icons.wb_cloudy, temp: '31°'),
+  _HourForecast(time: '13:00', icon: Icons.cloud, temp: '30°'),
+  _HourForecast(time: '14:00', icon: Icons.water_drop, temp: '27°'),
+  _HourForecast(time: '15:00', icon: Icons.wb_sunny, temp: '28°'),
 ];
 
 class _AppGrid extends StatelessWidget {
