@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -16,8 +15,8 @@ class SettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(
-          title: context.l10n.settingsTitle,
+        ui.AppBar(
+          title: Text(context.l10n.settingsTitle),
           trailing: [
             ui.Tooltip(
               tooltip: (context) => Text(context.l10n.settingsSearchTooltip),

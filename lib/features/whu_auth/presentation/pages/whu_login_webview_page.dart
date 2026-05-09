@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -100,9 +99,14 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
     final isZh = _isChinese(context);
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
-          title: isZh ? '登录武大教务' : 'WHU Login',
+        ui.AppBar(
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
+          title: Text(isZh ? '登录武大教务' : 'WHU Login'),
           trailing: [
             ui.IconButton.ghost(
               icon: const Icon(AppIcons.selected),

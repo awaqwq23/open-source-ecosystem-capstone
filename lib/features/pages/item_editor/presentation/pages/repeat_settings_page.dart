@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -21,9 +20,17 @@ class RepeatSettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
-          title: l10n.editorRepeatPageTitle,
+        ui.AppBar(
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+          title: Text(l10n.editorRepeatPageTitle),
         ),
       ],
       child: AppEntrance(

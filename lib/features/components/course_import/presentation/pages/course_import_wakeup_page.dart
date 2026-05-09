@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/components/course_import/data/wakeup_course_import_adapter.dart';
 import 'package:luotopia/features/components/course_import/domain/models/course_import_models.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -32,9 +31,14 @@ class _CourseImportWakeupPageState extends ConsumerState<CourseImportWakeupPage>
     final isZh = _isChinese(context);
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
-          title: isZh ? 'Wakeup 导入' : 'Wakeup Import',
+        ui.AppBar(
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
+          title: Text(isZh ? 'Wakeup 导入' : 'Wakeup Import'),
         ),
       ],
       child: ListView(

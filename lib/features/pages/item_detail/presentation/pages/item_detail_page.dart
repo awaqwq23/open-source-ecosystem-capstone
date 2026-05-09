@@ -8,7 +8,6 @@ import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/core/time/now_ticker_provider.dart';
 import 'package:luotopia/features/pages/item_detail/domain/models/item_detail_args.dart';
 import 'package:luotopia/features/pages/item_detail/presentation/viewmodels/item_detail_view_model.dart';
@@ -36,9 +35,17 @@ class ItemDetailPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
-          title: context.l10n.detailTitle,
+        ui.AppBar(
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(context.l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.back),
+                onPressed: context.pop,
+              ),
+            ),
+          ],
+          title: Text(context.l10n.detailTitle),
           trailing: item == null
               ? const []
               : [
