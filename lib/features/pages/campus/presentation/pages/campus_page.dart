@@ -74,7 +74,7 @@ class CampusPage extends StatelessWidget {
           ),
           // AppBar — floats above the header image
           Positioned(
-            top: 0,
+            top: MediaQuery.of(context).padding.top,
             left: 0,
             right: 0,
             child: buildTabAppBar(title: context.l10n.campusTitle),
