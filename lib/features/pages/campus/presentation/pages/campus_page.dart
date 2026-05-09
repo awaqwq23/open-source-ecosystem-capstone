@@ -227,7 +227,7 @@ class _WeatherCard extends StatelessWidget {
                 final isNow = h.time == '现在';
                 return Container(
                   width: 58,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: BoxDecoration(
                     color: isNow ? colors.primary.withValues(alpha: 0.10) : null,
                     borderRadius: BorderRadius.circular(10),
