@@ -807,7 +807,7 @@ String _formatTimeOnly(BuildContext context, DateTime start, DateTime end) {
     TimeOfDay.fromDateTime(end),
     alwaysUse24HourFormat: true,
   );
-  return '$startTime — $endTime';
+  return '$startTime ~ $endTime';
 }
 
 String _formatDuration(BuildContext context, Duration value) {
@@ -827,12 +827,12 @@ String _formatDateWithWeekday(BuildContext context, DateTime value) {
   if (localeName.startsWith('zh')) {
     final date = DateFormat('M月d日', localeName).format(value);
     final weekday = DateFormat('EEE', localeName).format(value);
-    return '$weekday $date';
+    return '$date $weekday';
   }
   final localizations = MaterialLocalizations.of(context);
   final date = localizations.formatMediumDate(value);
   final weekday = DateFormat('EEE', localeName).format(value);
-  return '$weekday $date';
+  return '$date $weekday';
 }
 
 String _formatDeadline(BuildContext context, DateTime value) {
