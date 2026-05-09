@@ -270,39 +270,29 @@ class _WeatherCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ── Compact interactive tiles row ──
-          Row(
-            children: [
-              Expanded(
-                child: _CompactTile(
-                  icon: Icons.wb_sunny,
-                  iconColor: Colors.orange.shade400,
-                  title: '紫外线强',
-                  subtitle: '注意防晒',
-                  onTap: () => _showInteraction(context, '紫外线防护建议'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _CompactTile(
-                  icon: Icons.lightbulb_outline,
-                  iconColor: Colors.amber.shade500,
-                  title: '蹭课推荐',
-                  subtitle: '古代汉语·教三',
-                  onTap: () => _showInteraction(context, '蹭课详情：王力老师古代汉语'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _CompactTile(
-                  icon: Icons.music_note,
-                  iconColor: Colors.purple.shade300,
-                  title: '今日BGM',
-                  subtitle: '校园雨声歌单',
-                  onTap: () => _showInteraction(context, '播放推荐BGM歌单'),
-                ),
-              ),
-            ],
+          // ── App feature reminders ──
+          _ReminderTile(
+            icon: Icons.school,
+            iconColor: Colors.indigo.shade300,
+            title: '蹭课推荐',
+            subtitle: '下午没课 · 王力 古代汉语 · 教三301 14:00',
+            onTap: () => _showInteraction(context, '蹭课详情：王力老师古代汉语'),
+          ),
+          const SizedBox(height: 8),
+          _ReminderTile(
+            icon: Icons.newspaper,
+            iconColor: Colors.blue.shade400,
+            title: '今日校园',
+            subtitle: '图书馆B区自习室临时关闭改造至6月',
+            onTap: () => _showInteraction(context, '查看详情'),
+          ),
+          const SizedBox(height: 8),
+          _ReminderTile(
+            icon: Icons.local_library,
+            iconColor: Colors.teal.shade300,
+            title: '图书到期',
+            subtitle: '《数据结构与算法》将于3天后到期，请及时归还',
+            onTap: () => _showInteraction(context, '查看借阅详情'),
           ),
         ],
       ),
@@ -320,9 +310,9 @@ class _WeatherCard extends StatelessWidget {
   }
 }
 
-/// Compact interactive tile for the bottom row
-class _CompactTile extends StatelessWidget {
-  const _CompactTile({
+/// Compact reminder tile with chevron affordance
+class _ReminderTile extends StatelessWidget {
+  const _ReminderTile({
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -346,37 +336,40 @@ class _CompactTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 16, color: iconColor),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
+              Icon(icon, size: 20, color: iconColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
                       title,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: colors.onSurface,
+                          ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colors.onSurface.withValues(alpha: 0.6),
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.55),
-                      fontSize: 11,
-                    ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: colors.onSurface.withValues(alpha: 0.25),
               ),
             ],
           ),
@@ -385,7 +378,6 @@ class _CompactTile extends StatelessWidget {
     );
   }
 }
-
 /// Mock hourly forecast data
 class _HourForecast {
   const _HourForecast({required this.time, required this.icon, required this.temp});
