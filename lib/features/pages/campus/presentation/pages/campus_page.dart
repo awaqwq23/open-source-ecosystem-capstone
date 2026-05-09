@@ -274,25 +274,22 @@ class _WeatherCard extends StatelessWidget {
           _ReminderTile(
             icon: Icons.school,
             iconColor: Colors.indigo.shade300,
-            title: '蹭课推荐',
-            subtitle: '下午没课 · 王力 古代汉语 · 教三301 14:00',
-            onTap: () => _showInteraction(context, '蹭课详情：王力老师古代汉语'),
+            text: '下午没课，试试蹭一节感兴趣的课？',
+            onTap: () => _showInteraction(context, '蹭课推荐'),
           ),
           const SizedBox(height: 8),
           _ReminderTile(
             icon: Icons.newspaper,
             iconColor: Colors.blue.shade400,
-            title: '今日校园',
-            subtitle: '图书馆B区自习室临时关闭改造至6月',
-            onTap: () => _showInteraction(context, '查看详情'),
+            text: '樱花大道临时封闭，来看看校园今天发生了什么',
+            onTap: () => _showInteraction(context, '校园新闻'),
           ),
           const SizedBox(height: 8),
           _ReminderTile(
             icon: Icons.local_library,
             iconColor: Colors.teal.shade300,
-            title: '图书到期',
-            subtitle: '《数据结构与算法》将于3天后到期，请及时归还',
-            onTap: () => _showInteraction(context, '查看借阅详情'),
+            text: '借阅图书即将到期，记得及时归还',
+            onTap: () => _showInteraction(context, '借阅详情'),
           ),
         ],
       ),
@@ -310,20 +307,18 @@ class _WeatherCard extends StatelessWidget {
   }
 }
 
-/// Compact reminder tile with chevron affordance
+/// Compact single-line reminder tile
 class _ReminderTile extends StatelessWidget {
   const _ReminderTile({
     required this.icon,
     required this.iconColor,
-    required this.title,
-    required this.subtitle,
+    required this.text,
     required this.onTap,
   });
 
   final IconData icon;
   final Color iconColor;
-  final String title;
-  final String subtitle;
+  final String text;
   final VoidCallback onTap;
 
   @override
@@ -339,30 +334,16 @@ class _ReminderTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: iconColor),
+              Icon(icon, size: 18, color: iconColor),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: colors.onSurface,
-                          ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.onSurface.withValues(alpha: 0.6),
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: Text(
+                  text,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.75),
+                      ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
