@@ -147,7 +147,7 @@ class _WeatherCard extends StatelessWidget {
               Icon(Icons.wb_sunny, size: 48, color: Colors.orange.shade300),
               const SizedBox(width: 14),
               Text(
-                '28℃',
+                '28°',
                 style: theme.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: colors.onSurface,
@@ -160,7 +160,7 @@ class _WeatherCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '晴 · 体感 31℃',
+                    '晴 · 18°/30°',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: colors.onSurface.withValues(alpha: 0.7),
@@ -168,7 +168,7 @@ class _WeatherCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '今日 18℃ ~ 30℃',
+                    '武汉大学',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.55),
                     ),
@@ -201,7 +201,7 @@ class _WeatherCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'PM2.5 10',
+                      'AQI 25',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: colors.onSurface.withValues(alpha: 0.55),
                       ),
