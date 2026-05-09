@@ -227,42 +227,69 @@ class HomePage extends ConsumerWidget {
     HomeViewData viewData,
   ) async {
     final initialDate = viewData.periodSelection.anchor;
-    DateTime? selectedDate;
+    final controller = ui.DatePickerController(initialDate);
 
-    await showDialog<DateTime>(
+    await ui.openSheet<void>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          contentPadding: EdgeInsets.zero,
-          content: SizedBox(
-            width: 320,
-            child: ui.DatePickerDialog(
-              initialViewType: ui.CalendarViewType.date,
-              selectionMode: ui.CalendarSelectionMode.single,
-              initialValue: ui.CalendarValue.single(initialDate),
-              onChanged: (value) {
-                if (value == null) return;
-                selectedDate = (value as ui.SingleCalendarValue).date;
-                Navigator.of(dialogContext).pop();
-              },
-              stateBuilder: (date) {
-                final now = DateTime.now();
-                return date.isAfter(now.add(const Duration(days: 365))) ||
-                        date.isBefore(now.subtract(const Duration(days: 365)))
-                    ? ui.DateState.disabled
-                    : ui.DateState.enabled;
-              },
-            ),
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.timePickerTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ui.ControlledDatePicker(
+                  controller: controller,
+                  initialValue: initialDate,
+                  initialViewType: ui.CalendarViewType.date,
+                  stateBuilder: (date) {
+                    final now = DateTime.now();
+                    return date.isAfter(now.add(const Duration(days: 365))) ||
+                            date.isBefore(now.subtract(const Duration(days: 365)))
+                        ? ui.DateState.disabled
+                        : ui.DateState.enabled;
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ui.OutlineButton(
+                    onPressed: () => ui.closeDrawer(sheetContext),
+                    child: Text(context.l10n.commonBack),
+                  ),
+                  const SizedBox(width: 12),
+                  ui.PrimaryButton(
+                    onPressed: () {
+                      final selected = controller.value ?? initialDate;
+                      ui.closeDrawer(sheetContext);
+                      ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
+                            HomePeriodSelection(
+                              anchor: selected,
+                              scope: viewData.scope,
+                            ),
+                          );
+                    },
+                    child: Text(context.l10n.editorPickerConfirm),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
-
-    if (selectedDate != null) {
-      ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
-        HomePeriodSelection(anchor: selectedDate!, scope: viewData.scope),
-      );
-    }
   }
 }
 
@@ -337,15 +364,7 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
-  bool _showPeriodNumber = true;
-
-  @override
-  void didUpdateWidget(_HomeGrid oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.viewData.isCourseGrid != widget.viewData.isCourseGrid) {
-      _showPeriodNumber = true;
-    }
-  }
+  bool _showPeriodNumber = false;
 
   @override
   void dispose() {
@@ -1126,7 +1145,7 @@ class _AgendaBlock extends StatelessWidget {
                                           fontWeight: FontWeight.normal,
                                         ),
                                       ),
-                                
+
                               ),
                             ]
                           ],
