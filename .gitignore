@@ -51,5 +51,9 @@ app.*.map.json
 
 # Claude
 .claude/
-docs/UIR.md
-docs/旧有UIR.md
+
+# AI 开发文档
+/AGENTS.md
+
+# 本地开发文档与参考图片
+/docs/*
