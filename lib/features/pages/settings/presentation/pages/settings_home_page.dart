@@ -106,15 +106,6 @@ class SettingsHomePage extends ConsumerWidget {
                       )
                   : null,
             ),
-            SwitchListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              title: Text(context.l10n.settingsHomeDemoModeTitle),
-              value: settings.showDemoData,
-              onChanged: (value) => _saveHomeSettings(
-                ref,
-                settings.copyWith(showDemoData: value),
-              ),
-            ),
             SettingsFlatTile(
               title: context.l10n.settingsHomeGridMode,
               leading: const Icon(Icons.grid_view),

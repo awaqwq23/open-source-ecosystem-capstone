@@ -19,7 +19,6 @@ class HomeSettings {
     required this.blockCount,
     required this.wideLayoutScope,
     required this.gridMode,
-    required this.showDemoData,
     required this.itemOpacityPercent,
   });
 
@@ -30,7 +29,6 @@ class HomeSettings {
         blockCount = 12,
         wideLayoutScope = HomeWideLayoutScope.week,
         gridMode = HomeGridMode.timeGrid,
-        showDemoData = false,
         itemOpacityPercent = 100;
 
   final TimeOfDay dayStartTime;
@@ -39,7 +37,6 @@ class HomeSettings {
   final int blockCount;
   final HomeWideLayoutScope wideLayoutScope;
   final HomeGridMode gridMode;
-  final bool showDemoData;
   final int itemOpacityPercent;
 
   HomeSettings copyWith({
@@ -49,7 +46,6 @@ class HomeSettings {
     int? blockCount,
     HomeWideLayoutScope? wideLayoutScope,
     HomeGridMode? gridMode,
-    bool? showDemoData,
     int? itemOpacityPercent,
   }) {
     return HomeSettings(
@@ -59,7 +55,6 @@ class HomeSettings {
       blockCount: blockCount ?? this.blockCount,
       wideLayoutScope: wideLayoutScope ?? this.wideLayoutScope,
       gridMode: gridMode ?? this.gridMode,
-      showDemoData: showDemoData ?? this.showDemoData,
       itemOpacityPercent: itemOpacityPercent ?? this.itemOpacityPercent,
     );
   }

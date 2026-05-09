@@ -104,7 +104,6 @@ class AppBootstrapLoader {
           'month' => HomeWideLayoutScope.month,
           _ => HomeWideLayoutScope.week,
         },
-        showDemoData: json['showDemoData'] as bool? ?? false,
         gridMode: switch (json['gridMode']) {
           'courseGrid' => HomeGridMode.courseGrid,
           _ => HomeGridMode.timeGrid,
@@ -132,8 +131,6 @@ class AppBootstrapLoader {
           'hours3' => WidgetRefreshInterval.hours3,
           _ => WidgetRefreshInterval.hour1,
         },
-        gridShowThisWeek: json['gridShowThisWeek'] as bool? ?? true,
-        listShowTodayAndPending: json['listShowTodayAndPending'] as bool? ?? true,
         followAppLanguage: json['followAppLanguage'] as bool? ?? true,
         followAppTheme: json['followAppTheme'] as bool? ?? true,
       );

@@ -77,7 +77,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsGeneralEntrySubtitle =>
-      'Theme, language, sync, notifications and widgets';
+      'Theme, language, widgets and navigation';
 
   @override
   String get settingsHomeEntrySubtitle =>
@@ -97,20 +97,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAboutEntrySubtitle => 'App info, version and license';
 
   @override
-  String get settingsGeneralCapabilitiesTitle => 'Platform capabilities';
-
-  @override
-  String get settingsGeneralSyncTitle => 'Data sync';
-
-  @override
-  String get settingsGeneralNotificationTitle => 'Notifications';
-
-  @override
   String get settingsGeneralWidgetsTitle => 'Home-screen widgets';
-
-  @override
-  String get settingsGeneralComingSoon =>
-      'This capability will be available in a future release.';
 
   @override
   String get settingsAboutProductSubtitle =>
@@ -118,9 +105,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAboutVersionTitle => 'Version';
-
-  @override
-  String get settingsAboutLicenseTitle => 'Open-source license';
 
   @override
   String get settingsQuickActionsTitle => 'Quick access';
@@ -146,13 +130,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHomeItemOpacity => 'Home item block opacity';
-
-  @override
-  String get settingsHomeDemoModeTitle => 'Demo data mode';
-
-  @override
-  String get settingsHomeDemoModeDescription =>
-      'When enabled, the home page switches to built-in sample items for demos and walkthroughs.';
 
   @override
   String get settingsHomeGridMode => 'Grid mode';
@@ -282,10 +259,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeScopeMonth => 'Month';
 
   @override
-  String get homeDemoBanner =>
-      'Demo data mode is enabled. The home page is showing built-in sample items.';
-
-  @override
   String get listTabMyDay => 'My Day';
 
   @override
@@ -311,9 +284,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listSettingsReorder => 'Reorder tasks';
-
-  @override
-  String get listSettingsTheme => 'Change theme';
 
   @override
   String get listSettingsMore => 'More settings';
@@ -373,10 +343,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listSortManual => 'Manual order';
-
-  @override
-  String get listThemeComingSoon =>
-      'Tab themes are out of scope for this pass.';
 
   @override
   String get listStatusPending => 'Pending';

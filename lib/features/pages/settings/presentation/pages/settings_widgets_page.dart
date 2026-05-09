@@ -75,35 +75,6 @@ class SettingsWidgetsPage extends ConsumerWidget {
               ],
             ),
             SettingsFlatSection(
-              title: _isChinese(context) ? '显示范围' : 'Display ranges',
-              children: [
-                SettingsFlatTile(
-                  title: _isChinese(context) ? '快速创建事项' : 'Quick create item',
-                  subtitle: _isChinese(context)
-                      ? '覆盖 1x1 到 6x1、2x2、2x3、3x2、3x3 等尺寸'
-                      : 'Covers 1x1 to 6x1, plus 2x2 / 2x3 / 3x2 / 3x3',
-                  leading: const Icon(Icons.add_box_outlined),
-                ),
-                SettingsFlatTile(
-                  title: _isChinese(context) ? '事项列表组件' : 'Agenda list widget',
-                  subtitle: _isChinese(context)
-                      ? '高密度展示：今日优先 + 未来 7 天补充'
-                      : 'High density: today-first with next 7 days',
-                  leading: const Icon(Icons.view_list_outlined),
-                ),
-                SettingsFlatTile(
-                  title: _isChinese(context) ? '周视图（列表版）' : 'Week view (list)',
-                  subtitle: _isChinese(context) ? '按天分组展示本周事项' : 'Weekly items grouped by day',
-                  leading: const Icon(Icons.reorder_outlined),
-                ),
-                SettingsFlatTile(
-                  title: _isChinese(context) ? '周视图（表格版）' : 'Week view (grid)',
-                  subtitle: _isChinese(context) ? '表格化展示本周事项总览' : 'Grid overview for all weekly items',
-                  leading: const Icon(Icons.calendar_view_week_outlined),
-                ),
-              ],
-            ),
-            SettingsFlatSection(
               title: _isChinese(context) ? '继承策略' : 'Inheritance',
               children: [
                 SettingsFlatTile(

@@ -74,28 +74,13 @@ class SettingsGeneralPage extends ConsumerWidget {
                 ),
               ],
             ),
-            SettingsFlatSection(
-              title: l10n.settingsGeneralCapabilitiesTitle,
-              children: [
-                SettingsFlatTile(
-                  title: l10n.settingsGeneralSyncTitle,
-                  subtitle: l10n.settingsGeneralComingSoon,
-                  leading: const Icon(Icons.sync_outlined),
-                ),
-                SettingsFlatTile(
-                  title: l10n.settingsGeneralNotificationTitle,
-                  subtitle: l10n.settingsGeneralComingSoon,
-                  leading: const Icon(Icons.notifications_outlined),
-                ),
-                SettingsFlatTile(
-                  title: l10n.settingsGeneralWidgetsTitle,
-                  subtitle: _isChinese(context)
-                      ? '配置刷新策略、展示范围和跳转行为'
-                      : 'Configure refresh policy, ranges and launch actions',
-                  leading: const Icon(Icons.widgets_outlined),
-                  onTap: () => context.push(AppRoutePaths.settingsWidgets),
-                ),
-              ],
+            SettingsFlatTile(
+              title: l10n.settingsGeneralWidgetsTitle,
+              subtitle: _isChinese(context)
+                  ? '配置刷新策略、展示范围和跳转行为'
+                  : 'Configure refresh policy, ranges and launch actions',
+              leading: const Icon(Icons.widgets_outlined),
+              onTap: () => context.push(AppRoutePaths.settingsWidgets),
             ),
           ],
         ),

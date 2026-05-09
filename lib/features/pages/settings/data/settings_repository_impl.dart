@@ -61,7 +61,6 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'blockGapMinutes': settings.blockGapMinutes,
         'blockCount': settings.blockCount,
         'wideLayoutScope': settings.wideLayoutScope.name,
-        'showDemoData': settings.showDemoData,
         'itemOpacityPercent': settings.itemOpacityPercent,
       }),
     );
@@ -89,8 +88,6 @@ class RiverpodSettingsRepository implements SettingsRepository {
       jsonEncode({
         'enabled': settings.enabled,
         'refreshInterval': settings.refreshInterval.name,
-        'gridShowThisWeek': settings.gridShowThisWeek,
-        'listShowTodayAndPending': settings.listShowTodayAndPending,
         'followAppLanguage': settings.followAppLanguage,
         'followAppTheme': settings.followAppTheme,
       }),

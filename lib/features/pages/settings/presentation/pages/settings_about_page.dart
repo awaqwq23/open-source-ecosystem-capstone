@@ -30,11 +30,6 @@ class SettingsAboutPage extends StatelessWidget {
               subtitle: '1.0.0+1',
               leading: const Icon(Icons.new_releases_outlined),
             ),
-            SettingsFlatTile(
-              title: l10n.settingsAboutLicenseTitle,
-              subtitle: l10n.settingsGeneralComingSoon,
-              leading: const Icon(Icons.description_outlined),
-            ),
           ],
         ),
       ),

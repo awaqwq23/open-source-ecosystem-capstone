@@ -227,7 +227,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGeneralEntrySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Theme, language, sync, notifications and widgets'**
+  /// **'Theme, language, widgets and navigation'**
   String get settingsGeneralEntrySubtitle;
 
   /// No description provided for @settingsHomeEntrySubtitle.
@@ -260,35 +260,11 @@ abstract class AppLocalizations {
   /// **'App info, version and license'**
   String get settingsAboutEntrySubtitle;
 
-  /// No description provided for @settingsGeneralCapabilitiesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Platform capabilities'**
-  String get settingsGeneralCapabilitiesTitle;
-
-  /// No description provided for @settingsGeneralSyncTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Data sync'**
-  String get settingsGeneralSyncTitle;
-
-  /// No description provided for @settingsGeneralNotificationTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Notifications'**
-  String get settingsGeneralNotificationTitle;
-
   /// No description provided for @settingsGeneralWidgetsTitle.
   ///
   /// In en, this message translates to:
   /// **'Home-screen widgets'**
   String get settingsGeneralWidgetsTitle;
-
-  /// No description provided for @settingsGeneralComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'This capability will be available in a future release.'**
-  String get settingsGeneralComingSoon;
 
   /// No description provided for @settingsAboutProductSubtitle.
   ///
@@ -301,12 +277,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version'**
   String get settingsAboutVersionTitle;
-
-  /// No description provided for @settingsAboutLicenseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Open-source license'**
-  String get settingsAboutLicenseTitle;
 
   /// No description provided for @settingsQuickActionsTitle.
   ///
@@ -355,18 +325,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home item block opacity'**
   String get settingsHomeItemOpacity;
-
-  /// No description provided for @settingsHomeDemoModeTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Demo data mode'**
-  String get settingsHomeDemoModeTitle;
-
-  /// No description provided for @settingsHomeDemoModeDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'When enabled, the home page switches to built-in sample items for demos and walkthroughs.'**
-  String get settingsHomeDemoModeDescription;
 
   /// No description provided for @settingsHomeGridMode.
   ///
@@ -608,12 +566,6 @@ abstract class AppLocalizations {
   /// **'Month'**
   String get homeScopeMonth;
 
-  /// No description provided for @homeDemoBanner.
-  ///
-  /// In en, this message translates to:
-  /// **'Demo data mode is enabled. The home page is showing built-in sample items.'**
-  String get homeDemoBanner;
-
   /// No description provided for @listTabMyDay.
   ///
   /// In en, this message translates to:
@@ -667,12 +619,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reorder tasks'**
   String get listSettingsReorder;
-
-  /// No description provided for @listSettingsTheme.
-  ///
-  /// In en, this message translates to:
-  /// **'Change theme'**
-  String get listSettingsTheme;
 
   /// No description provided for @listSettingsMore.
   ///
@@ -775,12 +721,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manual order'**
   String get listSortManual;
-
-  /// No description provided for @listThemeComingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Tab themes are out of scope for this pass.'**
-  String get listThemeComingSoon;
 
   /// No description provided for @listStatusPending.
   ///

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/features/pages/home/data/home_demo_items.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/home/domain/use_cases/build_home_grid.dart';
 import 'package:luotopia/features/pages/home/domain/use_cases/layout_home_items.dart';
@@ -52,7 +51,6 @@ class HomeViewQuery {
 class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
   static const _gridBuilder = BuildHomeGridUseCase();
   static const _itemLayoutBuilder = LayoutHomeItemsUseCase();
-  static const _demoItemsSource = HomeDemoItemsSource();
 
   @override
   HomeHeaderState build() {
@@ -160,17 +158,15 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     settings: settings,
     items: const [],
   );
-  final visibleItems = settings.showDemoData
-      ? HomeHeaderViewModel._demoItemsSource.buildForRange(previewGrid.visibleRange)
-      : [
-          for (final item in repositoryItems)
-            if (item.type == ItemType.task ||
-                item.type == ItemType.schedule ||
-                (item.type == ItemType.course &&
-                    (activeTimetableId == null ||
-                        item.courseDetails.timetableId == activeTimetableId)))
-              item,
-        ];
+  final visibleItems = [
+    for (final item in repositoryItems)
+      if (item.type == ItemType.task ||
+          item.type == ItemType.schedule ||
+          (item.type == ItemType.course &&
+              (activeTimetableId == null ||
+                  item.courseDetails.timetableId == activeTimetableId)))
+        item,
+  ];
   final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
     items: visibleItems,
     visibleRange: previewGrid.visibleRange,

@@ -72,7 +72,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsGeneralEntryTitle => '通用设置';
 
   @override
-  String get settingsGeneralEntrySubtitle => '主题、语言、同步、通知与小组件';
+  String get settingsGeneralEntrySubtitle => '主题、语言、小组件与导航栏';
 
   @override
   String get settingsHomeEntrySubtitle => '主页时间块、网格模式与宽屏显示范围';
@@ -90,28 +90,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAboutEntrySubtitle => '应用信息、版本与许可';
 
   @override
-  String get settingsGeneralCapabilitiesTitle => '平台能力';
-
-  @override
-  String get settingsGeneralSyncTitle => '数据同步';
-
-  @override
-  String get settingsGeneralNotificationTitle => '通知';
-
-  @override
   String get settingsGeneralWidgetsTitle => '桌面小组件';
-
-  @override
-  String get settingsGeneralComingSoon => '该能力将在后续版本开放。';
 
   @override
   String get settingsAboutProductSubtitle => '全屏纵览表格化校园规划';
 
   @override
   String get settingsAboutVersionTitle => '版本';
-
-  @override
-  String get settingsAboutLicenseTitle => '开源许可';
 
   @override
   String get settingsQuickActionsTitle => '快捷定位';
@@ -136,12 +121,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHomeItemOpacity => '主页事项方块不透明度';
-
-  @override
-  String get settingsHomeDemoModeTitle => '演示假数据模式';
-
-  @override
-  String get settingsHomeDemoModeDescription => '开启后主页将改为展示内置假数据，便于录屏、演示和走查效果。';
 
   @override
   String get settingsHomeGridMode => '网格模式';
@@ -268,9 +247,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeScopeMonth => '月';
 
   @override
-  String get homeDemoBanner => '当前为演示假数据模式，主页展示的是内置示例事项。';
-
-  @override
   String get listTabMyDay => '我的一天';
 
   @override
@@ -296,9 +272,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listSettingsReorder => '对任务重新排序';
-
-  @override
-  String get listSettingsTheme => '更改主题';
 
   @override
   String get listSettingsMore => '更多设置';
@@ -356,9 +329,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listSortManual => '手动排序';
-
-  @override
-  String get listThemeComingSoon => '本轮先不实现标签页主题。';
 
   @override
   String get listStatusPending => '未完成';

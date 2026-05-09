@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/time/now_ticker_provider.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:luotopia/features/pages/list/data/list_demo_items.dart';
 import 'package:luotopia/features/pages/list/domain/models/list_filters.dart';
 import 'package:luotopia/features/pages/list/domain/use_cases/build_list_prefill.dart';
 import 'package:luotopia/features/pages/list/domain/use_cases/filter_list_items.dart';
@@ -63,7 +62,6 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
   static const _filterItems = FilterListItemsUseCase();
   static const _sortItemsUseCase = SortListItemsUseCase();
   static const _buildPrefill = BuildListPrefillUseCase();
-  static const _demoItemsSource = ListDemoItemsSource();
 
   @override
   ListHeaderState build() {
@@ -131,14 +129,6 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
     final moved = taskIds.removeAt(oldIndex);
     taskIds.insert(normalizedNewIndex, moved);
     await ref.read(agendaItemRepositoryProvider.notifier).reorderItems(taskIds);
-  }
-
-  Future<void> injectDemoItems() {
-    final now = DateTime.now();
-    return ref.read(agendaItemRepositoryProvider.notifier).replaceItemsByIdPrefix(
-          idPrefix: ListDemoItemsSource.idPrefix,
-          items: _demoItemsSource.build(now),
-        );
   }
 
   ItemEditorPrefill createPrefillForCurrentTab() {

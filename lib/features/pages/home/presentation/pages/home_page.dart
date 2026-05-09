@@ -151,10 +151,6 @@ class HomePage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
             child: Column(
               children: [
-                if (homeSettings.showDemoData) ...[
-                  _DemoModeBanner(message: context.l10n.homeDemoBanner),
-                  const SizedBox(height: 10),
-                ],
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
@@ -289,50 +285,6 @@ class HomePage extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _DemoModeBanner extends StatelessWidget {
-  const _DemoModeBanner({
-    required this.message,
-  });
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.68),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: theme.colorScheme.secondary.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            AppIcons.info,
-            size: 18,
-            color: theme.colorScheme.onSecondaryContainer,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
