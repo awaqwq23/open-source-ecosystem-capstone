@@ -343,7 +343,7 @@ class _CompactTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
