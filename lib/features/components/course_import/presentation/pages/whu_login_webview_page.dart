@@ -18,6 +18,7 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
   final _cookieManager = WebviewCookieManager();
   late final WebViewController _controller;
   var _loading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -28,7 +29,10 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
         NavigationDelegate(
           onPageStarted: (_) {
             if (mounted) {
-              setState(() => _loading = true);
+              setState(() {
+                _loading = true;
+                _errorMessage = null;
+              });
             }
           },
           onPageFinished: (_) {
@@ -36,9 +40,21 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
               setState(() => _loading = false);
             }
           },
+          onWebResourceError: (error) {
+            if (mounted) {
+              setState(() {
+                _loading = false;
+                _errorMessage = '${error.description} (${error.errorCode})';
+              });
+            }
+          },
         ),
       )
       ..loadRequest(Uri.parse(_loginUrl));
+  }
+
+  void _retry() {
+    _controller.loadRequest(Uri.parse(_loginUrl));
   }
 
   @override
@@ -62,18 +78,47 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
           ],
         ),
       ],
-      child: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_loading)
-            const Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              child: LinearProgressIndicator(minHeight: 2),
+      child: _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 24),
+                    ui.OutlineButton(
+                      onPressed: _retry,
+                      child: Text(
+                        _isChinese(context) ? '重试' : 'Retry',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Stack(
+              children: [
+                WebViewWidget(controller: _controller),
+                if (_loading)
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 
