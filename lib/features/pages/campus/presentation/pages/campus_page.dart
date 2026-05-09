@@ -147,7 +147,7 @@ class _WeatherCard extends StatelessWidget {
               Icon(Icons.wb_sunny, size: 48, color: Colors.orange.shade300),
               const SizedBox(width: 14),
               Text(
-                '28°',
+                '28℃',
                 style: theme.textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: colors.onSurface,
@@ -160,7 +160,7 @@ class _WeatherCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '晴 · 体感 31°',
+                    '晴 · 体感 31℃',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: colors.onSurface.withValues(alpha: 0.7),
@@ -168,7 +168,7 @@ class _WeatherCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '今日 18° ~ 30°',
+                    '今日 18℃ ~ 30℃',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.onSurface.withValues(alpha: 0.55),
                     ),
@@ -395,13 +395,13 @@ class _HourForecast {
 }
 
 const _mockHourly = <_HourForecast>[
-  _HourForecast(time: '现在', icon: Icons.wb_sunny, temp: '28°'),
-  _HourForecast(time: '10:00', icon: Icons.wb_sunny, temp: '29°'),
-  _HourForecast(time: '11:00', icon: Icons.wb_sunny, temp: '30°'),
-  _HourForecast(time: '12:00', icon: Icons.wb_cloudy, temp: '31°'),
-  _HourForecast(time: '13:00', icon: Icons.cloud, temp: '30°'),
-  _HourForecast(time: '14:00', icon: Icons.water_drop, temp: '27°'),
-  _HourForecast(time: '15:00', icon: Icons.wb_sunny, temp: '28°'),
+  _HourForecast(time: '现在', icon: Icons.wb_sunny, temp: '28℃'),
+  _HourForecast(time: '10:00', icon: Icons.wb_sunny, temp: '29℃'),
+  _HourForecast(time: '11:00', icon: Icons.wb_sunny, temp: '30℃'),
+  _HourForecast(time: '12:00', icon: Icons.wb_cloudy, temp: '31℃'),
+  _HourForecast(time: '13:00', icon: Icons.cloud, temp: '30℃'),
+  _HourForecast(time: '14:00', icon: Icons.water_drop, temp: '27℃'),
+  _HourForecast(time: '15:00', icon: Icons.wb_sunny, temp: '28℃'),
 ];
 
 class _AppGrid extends StatelessWidget {
