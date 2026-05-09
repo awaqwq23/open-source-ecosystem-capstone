@@ -14,14 +14,9 @@ class SettingsAboutPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildSecondaryAppBar(
+          context,
           title: l10n.settingsAboutEntryTitle,
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
         ),
       ],
       child: SingleChildScrollView(

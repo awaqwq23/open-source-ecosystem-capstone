@@ -42,14 +42,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     final cookieHeader = authState.cookieHeader;
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildSecondaryAppBar(
+          context,
           title: isZh ? '武汉大学教务导入' : 'WHU Import',
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
         ),
       ],
       child: ListView(

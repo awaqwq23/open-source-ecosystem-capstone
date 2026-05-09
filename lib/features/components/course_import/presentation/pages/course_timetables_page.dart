@@ -20,14 +20,9 @@ class CourseTimetablesPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildSecondaryAppBar(
+          context,
           title: isZh ? '课程表与导入' : 'Course Tables & Import',
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
           trailing: [
             ui.IconButton.ghost(
               icon: const Icon(AppIcons.add),

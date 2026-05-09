@@ -16,7 +16,7 @@ class SettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildTabAppBar(
           title: context.l10n.settingsTitle,
           trailing: [
             ui.Tooltip(

@@ -100,14 +100,9 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
     final isZh = _isChinese(context);
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildSecondaryAppBar(
+          context,
           title: isZh ? '登录武大教务' : 'WHU Login',
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
           trailing: [
             ui.IconButton.ghost(
               icon: const Icon(AppIcons.selected),

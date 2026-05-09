@@ -21,17 +21,9 @@ class RepeatSettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildAppBar(
+        buildSecondaryAppBar(
+          context,
           title: l10n.editorRepeatPageTitle,
-          leading: [
-            ui.Tooltip(
-              tooltip: (context) => Text(l10n.commonBack),
-              child: ui.IconButton.ghost(
-                icon: const Icon(AppIcons.back),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ],
         ),
       ],
       child: AppEntrance(
