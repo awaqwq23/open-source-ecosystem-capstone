@@ -25,8 +25,6 @@ class CampusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return ui.Scaffold(
       child: Stack(
         children: [
@@ -38,14 +36,12 @@ class CampusPage extends StatelessWidget {
           ),
           // Scrollable content
           SafeArea(
-            top: false,
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Status bar spacing
-                  SizedBox(height: topPadding + 16),
+                  SizedBox(height: 16),
                   _WeatherCard(),
                   const SizedBox(height: 16),
                   _AppGrid(apps: _gridApps),
