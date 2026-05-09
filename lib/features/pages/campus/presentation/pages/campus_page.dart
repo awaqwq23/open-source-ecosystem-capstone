@@ -274,7 +274,7 @@ class _WeatherCard extends StatelessWidget {
           _ReminderTile(
             icon: Icons.school,
             iconColor: Colors.indigo.shade300,
-            text: '下午没课，试试蹭一节「古代汉语」？',
+            text: '下午没课，试试一节「古代汉语」？',
             onTap: () => _showInteraction(context, '蹭课推荐'),
           ),
           const SizedBox(height: 8),
