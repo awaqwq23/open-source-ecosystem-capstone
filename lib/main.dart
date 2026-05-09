@@ -22,6 +22,7 @@ Future<void> main() async {
         appLocaleProvider.overrideWith((ref) => bootstrap.locale),
         appThemeModeProvider.overrideWith((ref) => bootstrap.themeMode),
         appHomeSettingsProvider.overrideWith((ref) => bootstrap.homeSettings),
+        appAiSettingsProvider.overrideWith((ref) => bootstrap.aiSettings),
         appWidgetSettingsProvider.overrideWith((ref) => bootstrap.widgetSettings),
         appNavigationSettingsProvider.overrideWith((ref) => bootstrap.navigationSettings),
         agendaItemsBootstrapProvider.overrideWithValue(bootstrap.agendaItems),
