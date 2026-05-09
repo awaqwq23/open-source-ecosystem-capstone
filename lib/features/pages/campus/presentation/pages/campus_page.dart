@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CampusPage extends StatelessWidget {
   const CampusPage({super.key});
 
   static const _gridApps = <_CampusApp>[
-    _CampusApp(icon: Icons.local_library, name: '图书馆'),
-    _CampusApp(icon: Icons.sports_soccer, name: '运动'),
-    _CampusApp(icon: Icons.grading, name: '成绩'),
-    _CampusApp(icon: Icons.directions_bus, name: '校巴'),
-    _CampusApp(icon: Icons.credit_card, name: 'E卡'),
-    _CampusApp(icon: Icons.qr_code, name: '付款码'),
-    _CampusApp(icon: Icons.assignment, name: '给分'),
-    _CampusApp(icon: Icons.rate_review, name: '评价'),
-    _CampusApp(icon: Icons.school, name: '蹭课'),
-    _CampusApp(icon: Icons.menu_book, name: '讲义'),
-    _CampusApp(icon: Icons.quiz, name: '试卷'),
-    _CampusApp(icon: Icons.auto_awesome, name: '自动化'),
+    _CampusApp(icon: Icons.local_library, name: '图书馆', colorAssoc: ItemColorOption.indigo),
+    _CampusApp(icon: Icons.sports_soccer, name: '运动', colorAssoc: ItemColorOption.lime),
+    _CampusApp(icon: Icons.grading, name: '成绩', colorAssoc: ItemColorOption.amber),
+    _CampusApp(icon: Icons.directions_bus, name: '校巴', colorAssoc: ItemColorOption.teal),
+    _CampusApp(icon: Icons.credit_card, name: 'E卡', colorAssoc: ItemColorOption.sky),
+    _CampusApp(icon: Icons.qr_code, name: '付款码', colorAssoc: ItemColorOption.jade),
+    _CampusApp(icon: Icons.assignment, name: '给分', colorAssoc: ItemColorOption.coral),
+    _CampusApp(icon: Icons.rate_review, name: '评价', colorAssoc: ItemColorOption.orchid),
+    _CampusApp(icon: Icons.school, name: '蹭课', colorAssoc: ItemColorOption.rose),
+    _CampusApp(icon: Icons.menu_book, name: '讲义', colorAssoc: ItemColorOption.slate),
+    _CampusApp(icon: Icons.quiz, name: '试卷', colorAssoc: ItemColorOption.crimson),
+    _CampusApp(icon: Icons.auto_awesome, name: '自动化', colorAssoc: ItemColorOption.violet),
   ];
 
   @override
@@ -74,14 +75,18 @@ class _WeatherCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primaryContainer,
-            theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
-            theme.colorScheme.tertiaryContainer,
+            theme.colorScheme.primary.withValues(alpha: 0.09),
+            theme.colorScheme.primary.withValues(alpha: 0.04),
+            theme.colorScheme.surfaceContainerLowest,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.10),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +96,7 @@ class _WeatherCard extends StatelessWidget {
               Icon(
                 weatherIcon,
                 size: 40,
-                color: theme.colorScheme.onPrimaryContainer,
+                color: theme.colorScheme.primary,
               ),
               const SizedBox(width: 12),
               Column(
@@ -101,14 +106,14 @@ class _WeatherCard extends StatelessWidget {
                     temperature,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onPrimaryContainer,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     condition,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer
-                          .withValues(alpha: 0.8),
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -120,8 +125,8 @@ class _WeatherCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onPrimaryContainer
-                      .withValues(alpha: 0.15),
+                  color: theme.colorScheme.primary
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -130,14 +135,14 @@ class _WeatherCard extends StatelessWidget {
                     Icon(
                       Icons.air,
                       size: 16,
-                      color: theme.colorScheme.onPrimaryContainer,
+                      color: theme.colorScheme.primary,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '优',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onPrimaryContainer,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ],
@@ -151,16 +156,16 @@ class _WeatherCard extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 18,
-                color: theme.colorScheme.onPrimaryContainer
-                    .withValues(alpha: 0.7),
+                color: theme.colorScheme.primary
+                    .withValues(alpha: 0.6),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   suggestion,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer
-                        .withValues(alpha: 0.85),
+                    color: theme.colorScheme.onSurface
+                        .withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -194,11 +199,14 @@ class _AppGrid extends StatelessWidget {
       itemCount: apps.length,
       itemBuilder: (context, index) {
         final app = apps[index];
+        final accent = app.colorAssoc.resolve(theme.brightness);
         return Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => _openApp(context, app.name),
+            splashColor: accent.withValues(alpha: 0.10),
+            highlightColor: accent.withValues(alpha: 0.05),
             child: Ink(
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerLow,
@@ -211,14 +219,13 @@ class _AppGrid extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer
-                          .withValues(alpha: 0.4),
+                      color: accent.withValues(alpha: 0.13),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
                       app.icon,
                       size: 26,
-                      color: theme.colorScheme.onSecondaryContainer,
+                      color: accent,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -254,8 +261,10 @@ class _CampusApp {
   const _CampusApp({
     required this.icon,
     required this.name,
+    required this.colorAssoc,
   });
 
   final IconData icon;
   final String name;
+  final ItemColorOption colorAssoc;
 }
