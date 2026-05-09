@@ -38,12 +38,15 @@ class CampusPage extends StatelessWidget {
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
-          // AppBar — floats above everything
+          // AppBar — floats above everything, frosted glass extends behind status bar
           Positioned(
-            top: topPadding,
+            top: 0,
             left: 0,
             right: 0,
-            child: buildTabAppBar(title: context.l10n.campusTitle),
+            child: ui.Data.inherit(
+              data: ui.ScaffoldBarData(childIndex: 0, childrenCount: 1),
+              child: buildTabAppBar(title: context.l10n.campusTitle),
+            ),
           ),
           // Scrollable content
           SafeArea(
