@@ -264,6 +264,7 @@ class _AppGrid extends StatelessWidget {
         return ui.Card(
           surfaceBlur: 10,
           surfaceOpacity: 0.82,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () => _openApp(context, app.name),
@@ -283,7 +284,7 @@ class _AppGrid extends StatelessWidget {
                     color: accent,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   app.name,
                   style: theme.textTheme.labelMedium?.copyWith(
