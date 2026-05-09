@@ -123,6 +123,33 @@ class SettingsHomePage extends ConsumerWidget {
               ),
             ),
             SettingsFlatTile(
+              title: context.l10n.settingsHomeGridMode,
+              leading: const Icon(Icons.grid_view),
+              trailing: DropdownButtonHideUnderline(
+                child: DropdownButton<HomeGridMode>(
+                  value: settings.gridMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _saveHomeSettings(
+                        ref,
+                        settings.copyWith(gridMode: value),
+                      );
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(
+                      value: HomeGridMode.timeGrid,
+                      child: Text(context.l10n.homeGridModeTime),
+                    ),
+                    DropdownMenuItem(
+                      value: HomeGridMode.courseGrid,
+                      child: Text(context.l10n.homeGridModeCourse),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SettingsFlatTile(
               title: context.l10n.settingsHomeWideLayout,
               leading: const Icon(AppIcons.homeOutlined),
               trailing: DropdownButtonHideUnderline(

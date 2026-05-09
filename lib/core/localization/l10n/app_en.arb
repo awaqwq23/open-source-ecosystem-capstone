@@ -21,7 +21,7 @@
   "settingsSearchEmpty": "No matching settings found",
   "settingsGeneralEntryTitle": "General",
   "settingsGeneralEntrySubtitle": "Theme, language, sync, notifications and widgets",
-  "settingsHomeEntrySubtitle": "Home time blocks and wide-screen range",
+  "settingsHomeEntrySubtitle": "Home time blocks, grid mode and wide-screen range",
   "settingsListEntryTitle": "List settings",
   "settingsListEntrySubtitle": "Sort, reorder and list display preferences",
   "settingsAboutEntryTitle": "About",
@@ -44,6 +44,9 @@
   "settingsHomeItemOpacity": "Home item block opacity",
   "settingsHomeDemoModeTitle": "Demo data mode",
   "settingsHomeDemoModeDescription": "When enabled, the home page switches to built-in sample items for demos and walkthroughs.",
+  "settingsHomeGridMode": "Grid mode",
+  "homeGridModeTime": "Time grid",
+  "homeGridModeCourse": "Course grid",
   "settingsHomeWideLayout": "Ultra-wide default range",
   "@settingsMinutesValue": {
     "placeholders": {
