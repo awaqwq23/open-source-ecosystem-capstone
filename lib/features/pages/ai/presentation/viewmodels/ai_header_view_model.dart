@@ -154,13 +154,14 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     final repository = ref.read(aiChatRepositoryNotifierProvider);
     final service = ref.read(aiServiceProvider);
     final now = DateTime.now();
+    final messageId = 'user_${now.microsecondsSinceEpoch}';
     final sessionId = repository.getActiveSession()?.id ??
         (await repository.createSession()).id;
 
     // 添加用户消息
     await repository.appendToActiveSession(
       AiChatMessage(
-        id: 'user_${now.microsecondsSinceEpoch}',
+        id: messageId,
         sessionId: sessionId,
         content: content,
         createdAt: now,
@@ -178,9 +179,16 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
 
     try {
       final items = ref.read(agendaItemRepositoryProvider);
+      final session = repository.getActiveSession();
+      // 传入所有历史消息（不含刚追加的当前消息），让 AI 拥有完整上下文
+      final history = session?.messages
+              .where((m) => m.id != messageId)
+              .toList() ??
+          [];
       final stream = service.streamMessage(
         message: content,
         items: items,
+        history: history,
       );
 
       String fullContent = '';

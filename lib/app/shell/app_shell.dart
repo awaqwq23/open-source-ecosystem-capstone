@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/shell/app_shell_destination.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -20,8 +21,14 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  void _onTap(int visibleIndex, List<int> branchIndices) {
+  void _onTap(int visibleIndex, List<int> branchIndices, WidgetRef ref) {
     final branchIndex = branchIndices[visibleIndex];
+    // 从其他标签页切换到 AI 页时，触发新 session 创建
+    final allDestinations = AppShellDestination.values;
+    if (allDestinations[branchIndex] == AppShellDestination.ai &&
+        allDestinations[navigationShell.currentIndex] != AppShellDestination.ai) {
+      ref.read(aiPageActivationProvider.notifier).state++;
+    }
     navigationShell.goBranch(
       branchIndex,
       initialLocation: branchIndex == navigationShell.currentIndex,
@@ -54,6 +61,7 @@ class AppShell extends ConsumerWidget {
             current,
             showLabels,
             branchIndices,
+            ref,
           ),
         ],
         child: navigationShell,
@@ -72,6 +80,7 @@ class AppShell extends ConsumerWidget {
               current,
               showLabels,
               branchIndices,
+              ref,
             ),
           ),
           const VerticalDivider(width: 1),
@@ -94,6 +103,7 @@ class AppShell extends ConsumerWidget {
     AppShellDestination current,
     bool showLabels,
     List<int> branchIndices,
+    WidgetRef ref,
   ) {
     final compactNavBarHeight =
         showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
@@ -116,7 +126,7 @@ class AppShell extends ConsumerWidget {
           (d) => ValueKey(d.route) == key,
         );
         if (visibleIndex >= 0) {
-          _onTap(visibleIndex, branchIndices);
+          _onTap(visibleIndex, branchIndices, ref);
         }
       },
       children: [
@@ -141,6 +151,7 @@ class AppShell extends ConsumerWidget {
     AppShellDestination current,
     bool showLabels,
     List<int> branchIndices,
+    WidgetRef ref,
   ) {
     final navIconSize = showLabels ? 24.0 : 28.0;
 
@@ -154,7 +165,7 @@ class AppShell extends ConsumerWidget {
           (d) => ValueKey(d.route) == key,
         );
         if (visibleIndex >= 0) {
-          _onTap(visibleIndex, branchIndices);
+          _onTap(visibleIndex, branchIndices, ref);
         }
       },
       children: [

@@ -174,6 +174,7 @@ class OpenAiCompatibleAiService implements AiService {
   Future<AiResolvedMessage> resolveMessage({
     required String message,
     required List<AgendaItem> items,
+    List<AiChatMessage> history = const [],
   }) async {
     final settings = _ref.read(appAiSettingsProvider);
     final now = DateTime.now();
@@ -190,6 +191,10 @@ class OpenAiCompatibleAiService implements AiService {
               items: items,
             ),
           },
+          ...history.map((m) => {
+                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+                'content': m.content,
+              }),
           {
             'role': 'user',
             'content': message,
@@ -243,6 +248,7 @@ class OpenAiCompatibleAiService implements AiService {
   Stream<AiStreamEvent> streamMessage({
     required String message,
     required List<AgendaItem> items,
+    List<AiChatMessage> history = const [],
   }) async* {
     final settings = _ref.read(appAiSettingsProvider);
     final now = DateTime.now();
@@ -271,6 +277,10 @@ class OpenAiCompatibleAiService implements AiService {
               items: items,
             ),
           },
+          ...history.map((m) => {
+                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+                'content': m.content,
+              }),
           {
             'role': 'user',
             'content': message,

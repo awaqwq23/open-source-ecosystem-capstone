@@ -76,7 +76,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'sessions',
-                    builder: (context, state) => const AiPage(),
+                    builder: (context, state) => const AiSessionsPage(),
                   ),
                 ],
               ),

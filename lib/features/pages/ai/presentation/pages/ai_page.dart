@@ -34,12 +34,20 @@ class _AiPageState extends ConsumerState<AiPage> {
   bool _focusRequested = false;
   bool _isDraftRouteOpening = false;
   int? _lastHandledDraftNavigationId;
+  int _lastActivationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
     _inputFocusNode = FocusNode();
+    _lastActivationCount = ref.read(aiPageActivationProvider);
+    // 每次进入 AI 页都创建新 session
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(aiHeaderViewModelProvider.notifier).createSession();
+      }
+    });
   }
 
   @override
@@ -51,6 +59,17 @@ class _AiPageState extends ConsumerState<AiPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 检测 AI 标签页被重新激活（从其他 tab 切回），创建新 session
+    final activationCount = ref.watch(aiPageActivationProvider);
+    if (activationCount > _lastActivationCount) {
+      _lastActivationCount = activationCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(aiHeaderViewModelProvider.notifier).createSession();
+        }
+      });
+    }
+
     final state = ref.watch(aiHeaderViewModelProvider);
     final session = ref.watch(aiActiveSessionProvider);
     _syncController(state.input);
