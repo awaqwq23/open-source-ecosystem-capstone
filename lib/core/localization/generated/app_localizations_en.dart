@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navForum => 'Forum';
 
   @override
+  String get navAi => 'AI';
+
+  @override
   String get navCampus => 'Campus';
 
   @override
@@ -649,6 +652,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String detailMemoDate(Object date, Object duration) {
     return '$date · est. $duration';
   }
+
+  @override
+  String get aiTitle => 'AI Assistant';
+
+  @override
+  String get aiInputHint => 'Ask me anything about your schedule...';
+
+  @override
+  String get settingsAiSectionTitle => 'AI settings';
+
+  @override
+  String get settingsAiBaseUrlLabel => 'API URL';
+
+  @override
+  String get settingsAiApiKeyLabel => 'API key';
+
+  @override
+  String get settingsAiModelLabel => 'Model';
+
+  @override
+  String get settingsAiSystemPromptLabel => 'System prompt';
+
+  @override
+  String get settingsAiTestButton => 'Test connection';
+
+  @override
+  String get settingsAiTestingButton => 'Testing...';
+
+  @override
+  String get settingsAiSaveButton => 'Save AI settings';
 
   @override
   String get placeholderOpenPicker => 'Open picker';

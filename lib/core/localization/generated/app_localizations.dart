@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'Forum'**
   String get navForum;
 
+  /// No description provided for @navAi.
+  ///
+  /// In en, this message translates to:
+  /// **'AI'**
+  String get navAi;
+
   /// No description provided for @navCampus.
   ///
   /// In en, this message translates to:
@@ -1297,6 +1303,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{date} · est. {duration}'**
   String detailMemoDate(Object date, Object duration);
+
+  /// No description provided for @aiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get aiTitle;
+
+  /// No description provided for @aiInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me anything about your schedule...'**
+  String get aiInputHint;
+
+  /// No description provided for @settingsAiSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI settings'**
+  String get settingsAiSectionTitle;
+
+  /// No description provided for @settingsAiBaseUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API URL'**
+  String get settingsAiBaseUrlLabel;
+
+  /// No description provided for @settingsAiApiKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get settingsAiApiKeyLabel;
+
+  /// No description provided for @settingsAiModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get settingsAiModelLabel;
+
+  /// No description provided for @settingsAiSystemPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'System prompt'**
+  String get settingsAiSystemPromptLabel;
+
+  /// No description provided for @settingsAiTestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test connection'**
+  String get settingsAiTestButton;
+
+  /// No description provided for @settingsAiTestingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get settingsAiTestingButton;
+
+  /// No description provided for @settingsAiSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save AI settings'**
+  String get settingsAiSaveButton;
 
   /// No description provided for @placeholderOpenPicker.
   ///

@@ -18,6 +18,11 @@ enum AppShellDestination {
     icon: AppIcons.forumOutlined,
     selectedIcon: AppIcons.forumFilled,
   ),
+  ai(
+    route: AppRoutePaths.ai,
+    icon: AppIcons.aiOutlined,
+    selectedIcon: AppIcons.aiFilled,
+  ),
   campus(
     route: AppRoutePaths.campus,
     icon: AppIcons.campusOutlined,

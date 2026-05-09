@@ -87,6 +87,12 @@ class SettingsPage extends StatelessWidget {
         icon: AppIcons.itemTypeCourse,
       ),
       _SettingsEntry(
+        title: _isChinese(context) ? 'AI 设置' : 'AI Settings',
+        subtitle: _isChinese(context) ? 'API 地址、密钥、模型与提示词' : 'API URL, key, model and system prompt',
+        route: AppRoutePaths.settingsAi,
+        icon: AppIcons.aiOutlined,
+      ),
+      _SettingsEntry(
         title: l10n.settingsAboutEntryTitle,
         subtitle: l10n.settingsAboutEntrySubtitle,
         route: AppRoutePaths.settingsAbout,

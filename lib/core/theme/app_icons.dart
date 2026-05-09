@@ -16,6 +16,9 @@ abstract final class AppIcons {
   static const IconData campusOutlined = Icons.apps_outlined;
   static const IconData campusFilled = Icons.apps;
 
+  static const IconData aiOutlined = Icons.auto_awesome_outlined;
+  static const IconData aiFilled = Icons.auto_awesome;
+
   static const IconData settingsOutlined = Icons.settings_outlined;
   static const IconData settingsFilled = Icons.settings;
 

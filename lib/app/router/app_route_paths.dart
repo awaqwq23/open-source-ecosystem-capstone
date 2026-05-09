@@ -3,6 +3,8 @@ abstract final class AppRoutePaths {
   static const home = '/';
   static const list = '/list';
   static const forum = '/forum';
+  static const ai = '/ai';
+  static const aiSessions = '/ai/sessions';
   static const campus = '/campus';
   static const settings = '/settings';
 
@@ -17,6 +19,7 @@ abstract final class AppRoutePaths {
   static const settingsCourseImportWhu = '/settings/course-import-whu';
   static const settingsCourseImportWhuLogin = '/settings/course-import-whu/login';
   static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
+  static const settingsAi = '/settings/ai';
   static const settingsAbout = '/settings/about';
 
   // Modal (full-screen overlay flow)
