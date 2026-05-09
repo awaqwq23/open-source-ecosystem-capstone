@@ -227,7 +227,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsHomeEntrySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Home time blocks and wide-screen range'**
+  /// **'Home time blocks, grid mode and wide-screen range'**
   String get settingsHomeEntrySubtitle;
 
   /// No description provided for @settingsListEntryTitle.
@@ -361,6 +361,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When enabled, the home page switches to built-in sample items for demos and walkthroughs.'**
   String get settingsHomeDemoModeDescription;
+
+  /// No description provided for @settingsHomeGridMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid mode'**
+  String get settingsHomeGridMode;
+
+  /// No description provided for @homeGridModeTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time grid'**
+  String get homeGridModeTime;
+
+  /// No description provided for @homeGridModeCourse.
+  ///
+  /// In en, this message translates to:
+  /// **'Course grid'**
+  String get homeGridModeCourse;
 
   /// No description provided for @settingsHomeWideLayout.
   ///

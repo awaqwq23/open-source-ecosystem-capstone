@@ -78,7 +78,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHomeEntrySubtitle =>
-      'Home time blocks and wide-screen range';
+      'Home time blocks, grid mode and wide-screen range';
 
   @override
   String get settingsListEntryTitle => 'List settings';
@@ -150,6 +150,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsHomeDemoModeDescription =>
       'When enabled, the home page switches to built-in sample items for demos and walkthroughs.';
+
+  @override
+  String get settingsHomeGridMode => 'Grid mode';
+
+  @override
+  String get homeGridModeTime => 'Time grid';
+
+  @override
+  String get homeGridModeCourse => 'Course grid';
 
   @override
   String get settingsHomeWideLayout => 'Ultra-wide default range';

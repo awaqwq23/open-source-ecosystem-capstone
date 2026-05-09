@@ -72,7 +72,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsGeneralEntrySubtitle => '主题、语言、同步、通知与小组件';
 
   @override
-  String get settingsHomeEntrySubtitle => '主页时间块与宽屏显示范围';
+  String get settingsHomeEntrySubtitle => '主页时间块、网格模式与宽屏显示范围';
 
   @override
   String get settingsListEntryTitle => '列表页设置';
@@ -139,6 +139,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHomeDemoModeDescription => '开启后主页将改为展示内置假数据，便于录屏、演示和走查效果。';
+
+  @override
+  String get settingsHomeGridMode => '网格模式';
+
+  @override
+  String get homeGridModeTime => '时间方格';
+
+  @override
+  String get homeGridModeCourse => '课程方格';
 
   @override
   String get settingsHomeWideLayout => '超宽屏默认范围';
