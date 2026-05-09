@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -27,9 +28,7 @@ class CampusPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          title: Text(context.l10n.campusTitle),
-        ),
+        buildTabAppBar(title: context.l10n.campusTitle),
       ],
       child: Container(
         decoration: BoxDecoration(
@@ -209,8 +208,10 @@ class _AppGrid extends StatelessWidget {
             highlightColor: accent.withValues(alpha: 0.05),
             child: Ink(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
