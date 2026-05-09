@@ -209,10 +209,12 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     ],
   );
   if (semesterWeekLabel != null) {
+    final isCurrentWeek = _isCurrentWeek(baseViewData.visibleRange.start);
+
     return HomeViewData(
       scope: baseViewData.scope,
-      periodLabel: semesterWeekLabel,
-      periodSubtitle: baseViewData.periodSubtitle,
+      periodLabel: isCurrentWeek ? baseViewData.periodSubtitle : semesterWeekLabel,
+      periodSubtitle: isCurrentWeek ? semesterWeekLabel : baseViewData.periodSubtitle,
       metrics: baseViewData.metrics,
       visibleRange: baseViewData.visibleRange,
       periodSelection: baseViewData.periodSelection,
@@ -225,6 +227,12 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
 
   return baseViewData;
 });
+
+bool _isCurrentWeek(DateTime visibleRangeStart) {
+  final today = DateUtils.dateOnly(DateTime.now());
+  final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+  return DateUtils.isSameDay(monday, DateUtils.dateOnly(visibleRangeStart));
+}
 
 String? _buildSemesterWeekLabel({
   required String localeTag,

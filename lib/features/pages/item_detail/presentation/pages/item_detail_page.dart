@@ -183,11 +183,6 @@ class _ItemDetailContent extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
-
-        // ── Time meta ──
-        _buildTimeMeta(context),
-
         // ── Course grading & reviews ──
         if (isCourse) ...[
           const SizedBox(height: 20),
@@ -275,36 +270,6 @@ class _ItemDetailContent extends ConsumerWidget {
     }
 
     return rows;
-  }
-
-  Widget _buildTimeMeta(BuildContext context) {
-    final theme = Theme.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final df = DateFormat('yyyy/M/d HH:mm', locale);
-
-    final parts = <InlineSpan>[];
-    parts.add(WidgetSpan(
-      child: Padding(
-        padding: const EdgeInsets.only(right: 4),
-        child: Icon(AppIcons.info, size: 13, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-      ),
-    ));
-    parts.add(TextSpan(
-      text: '创建于 ${df.format(item.createdAt)}',
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-      ),
-    ));
-    if (item.updatedAt != null) {
-      parts.add(TextSpan(
-        text: '  ·  更新于 ${df.format(item.updatedAt!)}',
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-        ),
-      ));
-    }
-
-    return RichText(text: TextSpan(children: parts));
   }
 
   IconData _typeIcon(ItemType type) {
@@ -858,9 +823,14 @@ String _formatDuration(BuildContext context, Duration value) {
 }
 
 String _formatDateWithWeekday(BuildContext context, DateTime value) {
+  final localeName = Localizations.localeOf(context).toLanguageTag();
+  if (localeName.startsWith('zh')) {
+    final date = DateFormat('M月d日', localeName).format(value);
+    final weekday = DateFormat('EEE', localeName).format(value);
+    return '$weekday $date';
+  }
   final localizations = MaterialLocalizations.of(context);
   final date = localizations.formatMediumDate(value);
-  final localeName = Localizations.localeOf(context).toLanguageTag();
   final weekday = DateFormat('EEE', localeName).format(value);
   return '$weekday $date';
 }
