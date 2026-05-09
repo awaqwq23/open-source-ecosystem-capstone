@@ -10,7 +10,7 @@ class ForumPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(title: context.l10n.forumTitle),
+        buildAppBar(title: context.l10n.forumTitle),
       ],
       child: const SizedBox.expand(),
     );

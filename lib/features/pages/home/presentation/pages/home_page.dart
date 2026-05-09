@@ -42,8 +42,10 @@ class HomePage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildHomeAppBar(
-          child: Stack(
+        buildAppBar(
+          child: SizedBox(
+            height: 72,
+            child: Stack(
             alignment: Alignment.center,
             children: [
               Align(
@@ -125,6 +127,7 @@ class HomePage extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         ),
       ],
       child: Container(

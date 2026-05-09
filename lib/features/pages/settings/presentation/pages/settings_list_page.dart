@@ -14,9 +14,14 @@ class SettingsListPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: l10n.settingsListEntryTitle,
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: SingleChildScrollView(

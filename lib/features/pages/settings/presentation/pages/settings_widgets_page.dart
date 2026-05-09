@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
@@ -19,9 +20,14 @@ class SettingsWidgetsPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: l10n.settingsGeneralWidgetsTitle,
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: SingleChildScrollView(

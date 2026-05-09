@@ -79,7 +79,7 @@ class _AiPageState extends ConsumerState<AiPage> {
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(
+        buildAppBar(
           title: context.l10n.aiTitle,
           trailing: [
             ui.Tooltip(
@@ -569,9 +569,14 @@ class AiSessionsPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: _text(context, zh: '对话列表', en: 'Conversations'),
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => context.pop(),
+            ),
+          ],
           trailing: [
             ui.Tooltip(
               tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),

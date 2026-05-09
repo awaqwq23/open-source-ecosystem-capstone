@@ -114,7 +114,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(
+        buildAppBar(
           title: _createTitle(l10n, state),
           trailing: [
             _SubmitActionButton(

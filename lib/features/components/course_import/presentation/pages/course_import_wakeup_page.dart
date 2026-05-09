@@ -32,9 +32,14 @@ class _CourseImportWakeupPageState extends ConsumerState<CourseImportWakeupPage>
     final isZh = _isChinese(context);
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: isZh ? 'Wakeup 导入' : 'Wakeup Import',
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: ListView(

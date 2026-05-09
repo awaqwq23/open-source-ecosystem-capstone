@@ -21,9 +21,17 @@ class ReminderSettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: l10n.editorReminderPageTitle,
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
         ),
       ],
       child: AppEntrance(

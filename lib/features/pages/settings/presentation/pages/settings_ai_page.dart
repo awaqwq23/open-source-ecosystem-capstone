@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
@@ -47,9 +48,14 @@ class _SettingsAiPageState extends ConsumerState<SettingsAiPage> {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: l10n.settingsAiSectionTitle,
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: SingleChildScrollView(

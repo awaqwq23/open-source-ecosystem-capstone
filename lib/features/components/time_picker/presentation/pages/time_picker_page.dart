@@ -50,9 +50,17 @@ class _TimePickerPageState extends ConsumerState<TimePickerPage> {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: context.l10n.timePickerTitle,
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(context.l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.back),
+                onPressed: context.pop,
+              ),
+            ),
+          ],
           trailing: [
             ui.PrimaryButton(
               onPressed: () => context.pop(notifier.confirmSelection()),

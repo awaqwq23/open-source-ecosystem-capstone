@@ -22,9 +22,14 @@ class SettingsGeneralPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: l10n.settingsGeneralEntryTitle,
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: SingleChildScrollView(

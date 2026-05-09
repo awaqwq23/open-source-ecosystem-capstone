@@ -18,9 +18,14 @@ class SettingsHomePage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: context.l10n.settingsHomeSectionTitle,
+          leading: [
+            ui.IconButton.ghost(
+              icon: const Icon(AppIcons.back),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ],
         ),
       ],
       child: SingleChildScrollView(

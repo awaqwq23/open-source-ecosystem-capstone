@@ -28,7 +28,7 @@ class CampusPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(title: context.l10n.campusTitle),
+        buildAppBar(title: context.l10n.campusTitle),
       ],
       child: Container(
         decoration: BoxDecoration(

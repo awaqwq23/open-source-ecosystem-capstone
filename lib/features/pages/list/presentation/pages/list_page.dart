@@ -36,7 +36,7 @@ class ListPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(
+        buildAppBar(
           title: _tabLabel(l10n, state.currentTab),
           trailing: [
             ui.Tooltip(

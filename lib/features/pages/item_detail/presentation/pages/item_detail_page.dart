@@ -36,9 +36,17 @@ class ItemDetailPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(
-          context,
+        buildAppBar(
           title: context.l10n.detailTitle,
+          leading: [
+            ui.Tooltip(
+              tooltip: (context) => Text(context.l10n.commonBack),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.back),
+                onPressed: context.pop,
+              ),
+            ),
+          ],
           trailing: item == null
               ? const []
               : [
