@@ -21,6 +21,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navForum => '论坛';
 
   @override
+  String get navAi => 'AI';
+
+  @override
   String get navCampus => '校园';
 
   @override
@@ -627,6 +630,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String detailMemoDate(Object date, Object duration) {
     return '$date · 预计 $duration';
   }
+
+  @override
+  String get aiTitle => 'AI 助手';
+
+  @override
+  String get aiInputHint => '关于日程的任何问题...';
+
+  @override
+  String get settingsAiSectionTitle => 'AI 设置';
+
+  @override
+  String get settingsAiBaseUrlLabel => 'API 地址';
+
+  @override
+  String get settingsAiApiKeyLabel => 'API 密钥';
+
+  @override
+  String get settingsAiModelLabel => '模型';
+
+  @override
+  String get settingsAiSystemPromptLabel => '系统提示词';
+
+  @override
+  String get settingsAiTestButton => '测试连接';
+
+  @override
+  String get settingsAiTestingButton => '测试中...';
+
+  @override
+  String get settingsAiSaveButton => '保存 AI 设置';
 
   @override
   String get placeholderOpenPicker => '打开选择器';

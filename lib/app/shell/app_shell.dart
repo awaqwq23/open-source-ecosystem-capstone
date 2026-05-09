@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/shell/app_shell_destination.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -19,25 +20,43 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  void _onTap(int index) {
+  void _onTap(int visibleIndex, List<int> branchIndices) {
+    final branchIndex = branchIndices[visibleIndex];
     navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
+      branchIndex,
+      initialLocation: branchIndex == navigationShell.currentIndex,
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final destinations = AppShellDestination.values;
-    final current = destinations[navigationShell.currentIndex];
+    final navSettings = ref.watch(appNavigationSettingsProvider);
+    final middleTabMode = navSettings.middleTabMode;
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
-    final showLabels = ref.watch(appNavigationSettingsProvider).showLabels;
+    final showLabels = navSettings.showLabels;
+
+    final branchIndices = switch (middleTabMode) {
+      MiddleTabMode.forum => const [0, 1, 2, 4, 5],
+      MiddleTabMode.ai => const [0, 1, 3, 4, 5],
+    };
+    final allDestinations = AppShellDestination.values;
+    final visibleDestinations =
+        branchIndices.map((i) => allDestinations[i]).toList(growable: false);
+    final current = allDestinations[navigationShell.currentIndex];
 
     if (isCompact) {
       return ui.Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        footers: [_buildNavigationBar(context, destinations, current, showLabels)],
-        child: _buildAnimatedContent(current),
+        footers: [
+          _buildNavigationBar(
+            context,
+            visibleDestinations,
+            current,
+            showLabels,
+            branchIndices,
+          ),
+        ],
+        child: navigationShell,
       );
     }
 
@@ -49,9 +68,10 @@ class AppShell extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: _buildNavigationSidebar(
               context,
-              destinations,
+              visibleDestinations,
               current,
               showLabels,
+              branchIndices,
             ),
           ),
           const VerticalDivider(width: 1),
@@ -59,7 +79,7 @@ class AppShell extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ui.Card(
-                child: SizedBox.expand(child: _buildAnimatedContent(current)),
+                child: SizedBox.expand(child: navigationShell),
               ),
             ),
           ),
@@ -68,15 +88,12 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  Widget _buildAnimatedContent(AppShellDestination current) {
-    return navigationShell;
-  }
-
   ui.NavigationBar _buildNavigationBar(
     BuildContext context,
     List<AppShellDestination> destinations,
     AppShellDestination current,
     bool showLabels,
+    List<int> branchIndices,
   ) {
     final compactNavBarHeight =
         showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
@@ -95,11 +112,11 @@ class AppShell extends ConsumerWidget {
       spacing: showLabels ? 4 : 0,
       selectedKey: ValueKey(current.route),
       onSelected: (key) {
-        final index = destinations.indexWhere(
-          (destination) => ValueKey(destination.route) == key,
+        final visibleIndex = destinations.indexWhere(
+          (d) => ValueKey(d.route) == key,
         );
-        if (index >= 0) {
-          _onTap(index);
+        if (visibleIndex >= 0) {
+          _onTap(visibleIndex, branchIndices);
         }
       },
       children: [
@@ -123,6 +140,7 @@ class AppShell extends ConsumerWidget {
     List<AppShellDestination> destinations,
     AppShellDestination current,
     bool showLabels,
+    List<int> branchIndices,
   ) {
     final navIconSize = showLabels ? 24.0 : 28.0;
 
@@ -132,11 +150,11 @@ class AppShell extends ConsumerWidget {
           ? ui.NavigationLabelType.expanded
           : ui.NavigationLabelType.none,
       onSelected: (key) {
-        final index = destinations.indexWhere(
-          (destination) => ValueKey(destination.route) == key,
+        final visibleIndex = destinations.indexWhere(
+          (d) => ValueKey(d.route) == key,
         );
-        if (index >= 0) {
-          _onTap(index);
+        if (visibleIndex >= 0) {
+          _onTap(visibleIndex, branchIndices);
         }
       },
       children: [

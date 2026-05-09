@@ -4,6 +4,7 @@
   "navHome": "Home",
   "navList": "Schedule",
   "navForum": "Forum",
+  "navAi": "AI",
   "navCampus": "Campus",
   "navSettings": "Settings",
   "homeTitle": "Schedule Overview",
@@ -274,6 +275,16 @@
     }
   },
   "detailMemoDate": "{date} · est. {duration}",
+  "aiTitle": "AI Assistant",
+  "aiInputHint": "Ask me anything about your schedule...",
+  "settingsAiSectionTitle": "AI settings",
+  "settingsAiBaseUrlLabel": "API URL",
+  "settingsAiApiKeyLabel": "API key",
+  "settingsAiModelLabel": "Model",
+  "settingsAiSystemPromptLabel": "System prompt",
+  "settingsAiTestButton": "Test connection",
+  "settingsAiTestingButton": "Testing...",
+  "settingsAiSaveButton": "Save AI settings",
   "placeholderOpenPicker": "Open picker",
   "placeholderOpenMenu": "Open menu"
 }

@@ -4,6 +4,7 @@
   "navHome": "主页",
   "navList": "日程",
   "navForum": "论坛",
+  "navAi": "AI",
   "navCampus": "校园",
   "navSettings": "设置",
   "homeTitle": "日程总览",
@@ -274,6 +275,16 @@
     }
   },
   "detailMemoDate": "{date} · 预计 {duration}",
+  "aiTitle": "AI 助手",
+  "aiInputHint": "关于日程的任何问题...",
+  "settingsAiSectionTitle": "AI 设置",
+  "settingsAiBaseUrlLabel": "API 地址",
+  "settingsAiApiKeyLabel": "API 密钥",
+  "settingsAiModelLabel": "模型",
+  "settingsAiSystemPromptLabel": "系统提示词",
+  "settingsAiTestButton": "测试连接",
+  "settingsAiTestingButton": "测试中...",
+  "settingsAiSaveButton": "保存 AI 设置",
   "placeholderOpenPicker": "打开选择器",
   "placeholderOpenMenu": "打开菜单"
 }

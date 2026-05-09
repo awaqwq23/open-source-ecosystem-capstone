@@ -62,7 +62,20 @@ class SettingsGeneralPage extends ConsumerWidget {
                   trailing: Switch(
                     value: state.navigationSettings.showLabels,
                     onChanged: (value) => viewModel.saveNavigationSettings(
-                      NavigationSettings(showLabels: value),
+                      state.navigationSettings.copyWith(showLabels: value),
+                    ),
+                  ),
+                ),
+                SettingsFlatTile(
+                  title: _isChinese(context) ? '中间标签页' : 'Middle tab',
+                  subtitle: _isChinese(context)
+                      ? '导航栏中间位置显示论坛或 AI 助手（默认论坛）'
+                      : 'Choose between Forum or AI for the middle tab (default Forum).',
+                  leading: const Icon(Icons.swap_horiz_outlined),
+                  trailing: _MiddleTabDropdown(
+                    value: state.navigationSettings.middleTabMode,
+                    onChanged: (value) => viewModel.saveNavigationSettings(
+                      state.navigationSettings.copyWith(middleTabMode: value),
                     ),
                   ),
                 ),
@@ -169,6 +182,41 @@ class _LanguageDropdown extends StatelessWidget {
           DropdownMenuItem(
             value: AppLocale.english.locale,
             child: Text(l10n.languageEnglish),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiddleTabDropdown extends StatelessWidget {
+  const _MiddleTabDropdown({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final MiddleTabMode value;
+  final ValueChanged<MiddleTabMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isChinese = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<MiddleTabMode>(
+        value: value,
+        onChanged: (selected) {
+          if (selected != null) {
+            onChanged(selected);
+          }
+        },
+        items: [
+          DropdownMenuItem(
+            value: MiddleTabMode.forum,
+            child: Text(isChinese ? '论坛' : 'Forum'),
+          ),
+          DropdownMenuItem(
+            value: MiddleTabMode.ai,
+            child: Text(isChinese ? 'AI 助手' : 'AI'),
           ),
         ],
       ),

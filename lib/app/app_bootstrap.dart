@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
@@ -17,6 +18,7 @@ class AppBootstrapData {
     required this.locale,
     required this.themeMode,
     required this.homeSettings,
+    required this.aiSettings,
     required this.widgetSettings,
     required this.navigationSettings,
     required this.agendaItems,
@@ -26,6 +28,7 @@ class AppBootstrapData {
   final Locale locale;
   final ui.ThemeMode themeMode;
   final HomeSettings homeSettings;
+  final AiSettings aiSettings;
   final WidgetSettings widgetSettings;
   final NavigationSettings navigationSettings;
   final List<AgendaItem> agendaItems;
@@ -36,12 +39,15 @@ abstract final class AppBootstrapStorageKeys {
   static const locale = 'settings.locale';
   static const themeMode = 'settings.themeMode';
   static const homeSettings = 'settings.home';
+  static const aiSettings = 'settings.ai';
   static const widgetSettings = 'settings.widget';
   static const navigationSettings = 'settings.navigation';
   static const agendaItems = 'agenda.items';
   static const courseTimetables = 'course.timetables';
   static const activeCourseTimetableId = 'course.activeTimetableId';
   static const whuCourseCookieHeader = 'course.whu.cookieHeader';
+  static const aiSessions = 'ai.sessions';
+  static const activeAiSessionId = 'ai.activeSessionId';
 }
 
 class AppBootstrapLoader {
@@ -52,6 +58,7 @@ class AppBootstrapLoader {
       locale: _readLocale(preferences),
       themeMode: _readThemeMode(preferences),
       homeSettings: _readHomeSettings(preferences),
+      aiSettings: _readAiSettings(preferences),
       widgetSettings: _readWidgetSettings(preferences),
       navigationSettings: _readNavigationSettings(preferences),
       agendaItems: _readAgendaItems(preferences),
@@ -144,9 +151,31 @@ class AppBootstrapLoader {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return NavigationSettings(
         showLabels: json['showLabels'] as bool? ?? false,
+        middleTabMode: switch (json['middleTabMode'] as String?) {
+          'ai' => MiddleTabMode.ai,
+          _ => MiddleTabMode.forum,
+        },
       );
     } catch (_) {
       return const NavigationSettings.defaults();
+    }
+  }
+
+  static AiSettings _readAiSettings(SharedPreferences preferences) {
+    final raw = preferences.getString(AppBootstrapStorageKeys.aiSettings);
+    if (raw == null || raw.isEmpty) {
+      return const AiSettings.defaults();
+    }
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return AiSettings(
+        baseUrl: json['baseUrl'] as String? ?? '',
+        apiKey: json['apiKey'] as String? ?? '',
+        model: json['model'] as String? ?? '',
+        systemPrompt: json['systemPrompt'] as String? ?? '',
+      );
+    } catch (_) {
+      return const AiSettings.defaults();
     }
   }
 
