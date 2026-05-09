@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 /// 全局语义图标入口。
 ///
@@ -11,9 +10,8 @@ abstract final class AppIcons {
   static const IconData listOutlined = Icons.checklist_rtl_outlined;
   static const IconData listFilled = Icons.checklist_rtl;
 
-  // MDI garage = 带车库门的房子造型，契合"珞珈防空洞"的洞口意象
-  static IconData get forumOutlined => MdiIcons.garage;
-  static IconData get forumFilled => MdiIcons.garage;
+  static const IconData forumOutlined = Icons.donut_small_outlined;
+  static const IconData forumFilled = Icons.donut_small;
 
   static const IconData campusOutlined = Icons.apps_outlined;
   static const IconData campusFilled = Icons.apps;
