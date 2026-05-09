@@ -13,6 +13,7 @@ import 'package:luotopia/features/pages/ai/presentation/viewmodels/ai_header_vie
 import 'package:luotopia/features/pages/ai/presentation/widgets/ai_item_visualizer.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -78,8 +79,8 @@ class _AiPageState extends ConsumerState<AiPage> {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          title: Text(context.l10n.aiTitle),
+        buildTabAppBar(
+          title: context.l10n.aiTitle,
           trailing: [
             ui.Tooltip(
               tooltip: (context) => Text(_text(context, zh: '对话列表', en: 'Conversations')),
@@ -568,14 +569,9 @@ class AiSessionsPage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => context.pop(),
-            ),
-          ],
-          title: Text(_text(context, zh: '对话列表', en: 'Conversations')),
+        buildSecondaryAppBar(
+          context,
+          title: _text(context, zh: '对话列表', en: 'Conversations'),
           trailing: [
             ui.Tooltip(
               tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),

@@ -5,6 +5,7 @@ import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsHomePage extends ConsumerWidget {
@@ -17,15 +18,7 @@ class SettingsHomePage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
-          title: Text(context.l10n.settingsHomeSectionTitle),
-        ),
+        buildSecondaryAppBar(context, title: context.l10n.settingsHomeSectionTitle),
       ],
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
