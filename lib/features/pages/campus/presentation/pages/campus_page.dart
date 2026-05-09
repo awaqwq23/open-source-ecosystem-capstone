@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -25,34 +28,151 @@ class CampusPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final headerHeight = MediaQuery.of(context).size.height * 0.25;
 
     return ui.Scaffold(
       headers: [
-        buildTabAppBar(title: context.l10n.campusTitle),
-      ],
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.colorScheme.surface,
-              theme.colorScheme.surfaceContainerLowest,
-            ],
-          ),
+        ui.AppBar(
+          title: Text(context.l10n.campusTitle),
         ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            child: Column(
-              children: [
-                _WeatherCard(),
-                const SizedBox(height: 16),
-                _AppGrid(apps: _gridApps),
-              ],
+      ],
+      child: Stack(
+        children: [
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  theme.colorScheme.surface,
+                  theme.colorScheme.surfaceContainerLowest,
+                ],
+              ),
             ),
           ),
+          // Bing header image
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: headerHeight,
+            child: _BingHeaderImage(),
+          ),
+          // Smooth gradient transition at header bottom
+          Positioned(
+            top: headerHeight - 80,
+            left: 0,
+            right: 0,
+            height: 80,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    theme.colorScheme.surface,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Scrollable content
+          SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: headerHeight),
+                  // Weather card: shifted up so its midline aligns with header bottom
+                  FractionalTranslation(
+                    translation: const Offset(0, -0.5),
+                    child: _WeatherCard(),
+                  ),
+                  // Compensate for the upward shift of the weather card
+                  Transform.translate(
+                    offset: const Offset(0, -70),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 12),
+                        _AppGrid(apps: _gridApps),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BingHeaderImage extends StatefulWidget {
+  @override
+  State<_BingHeaderImage> createState() => _BingHeaderImageState();
+}
+
+class _BingHeaderImageState extends State<_BingHeaderImage> {
+  String? _imageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBingImage();
+  }
+
+  Future<void> _fetchBingImage() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final url = data['images'][0]['url'] as String;
+        if (mounted) setState(() => _imageUrl = 'https://www.bing.com$url');
+      }
+    } catch (_) {
+      // 加载失败时使用 fallback 渐变背景
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_imageUrl != null) {
+      return Image.network(
+        _imageUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, _, _) => _buildFallback(context),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _buildFallback(context);
+        },
+      );
+    }
+
+    return _buildFallback(context);
+  }
+
+  Widget _buildFallback(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.colorScheme.primary.withValues(alpha: 0.15),
+            theme.colorScheme.surfaceContainerLowest,
+          ],
         ),
       ),
     );
@@ -68,25 +188,8 @@ class _WeatherCard extends StatelessWidget {
     const condition = '晴';
     const suggestion = '阳光正好，适合户外运动或图书馆自习';
 
-    return Container(
-      width: double.infinity,
+    return ui.Card(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary.withValues(alpha: 0.09),
-            theme.colorScheme.primary.withValues(alpha: 0.04),
-            theme.colorScheme.surfaceContainerLowest,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.10),
-          width: 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -111,21 +214,16 @@ class _WeatherCard extends StatelessWidget {
                   Text(
                     condition,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface
-                          .withValues(alpha: 0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary
-                      .withValues(alpha: 0.12),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -155,16 +253,14 @@ class _WeatherCard extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 18,
-                color: theme.colorScheme.primary
-                    .withValues(alpha: 0.6),
+                color: theme.colorScheme.primary.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   suggestion,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface
-                        .withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
