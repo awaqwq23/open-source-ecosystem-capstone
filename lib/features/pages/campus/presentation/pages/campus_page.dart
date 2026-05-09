@@ -284,7 +284,7 @@ class _AppGrid extends StatelessWidget {
                     color: accent,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 Text(
                   app.name,
                   style: theme.textTheme.labelMedium?.copyWith(
