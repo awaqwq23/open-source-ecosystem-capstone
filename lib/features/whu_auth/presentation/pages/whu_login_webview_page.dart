@@ -16,45 +16,82 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
       'https://cas.whu.edu.cn/authserver/login?service='
       'https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin';
   final _cookieManager = WebviewCookieManager();
-  late final WebViewController _controller;
+  WebViewController? _controller;
   var _loading = true;
   String? _errorMessage;
+  var _didRetryCacheMiss = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) {
-              setState(() {
-                _loading = true;
-                _errorMessage = null;
-              });
-            }
-          },
-          onPageFinished: (_) {
-            if (mounted) {
-              setState(() => _loading = false);
-            }
-          },
-          onWebResourceError: (error) {
-            if (mounted) {
-              setState(() {
-                _loading = false;
-                _errorMessage = '${error.description} (${error.errorCode})';
-              });
-            }
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_loginUrl));
+    _initWebView();
+  }
+
+  Future<void> _initWebView() async {
+    final controller = WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted);
+    // 预先赋值，让闭包能通过实例字段引用 controller
+    _controller = controller;
+
+    controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: (_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _loading = true;
+            _errorMessage = null;
+          });
+        },
+        onPageFinished: (_) {
+          if (!mounted) {
+            return;
+          }
+          setState(() => _loading = false);
+        },
+        onWebResourceError: (error) {
+          if (!mounted) {
+            return;
+          }
+          // 非主框架错误（子资源、iframe 等）忽略，避免误杀正常流程
+          if (error.isForMainFrame != true) {
+            return;
+          }
+          // ERR_CACHE_MISS：CAS 登录后的 POST 重定向丢失缓存数据
+          // 自动重试一次即可恢复，而不是直接瘫痪
+          if (error.description.contains('ERR_CACHE_MISS') &&
+              !_didRetryCacheMiss) {
+            _didRetryCacheMiss = true;
+            setState(() => _errorMessage = null);
+            controller.loadRequest(Uri.parse(_loginUrl));
+            return;
+          }
+          if (mounted) {
+            setState(() {
+              _loading = false;
+              _errorMessage = '${error.description} (${error.errorCode})';
+            });
+          }
+        },
+      ),
+    );
+
+    // 启动前清除缓存，避免干扰 CAS 登录流程
+    await controller.clearCache();
+    await controller.loadRequest(Uri.parse(_loginUrl));
+
+    if (mounted) {
+      setState(() => _controller = controller);
+    }
   }
 
   void _retry() {
-    _controller.loadRequest(Uri.parse(_loginUrl));
+    setState(() {
+      _errorMessage = null;
+      _loading = true;
+      _didRetryCacheMiss = false;
+    });
+    _controller?.loadRequest(Uri.parse(_loginUrl));
   }
 
   @override
@@ -109,7 +146,8 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
             )
           : Stack(
               children: [
-                WebViewWidget(controller: _controller),
+                if (_controller != null)
+                  WebViewWidget(controller: _controller!),
                 if (_loading)
                   const Positioned(
                     left: 0,

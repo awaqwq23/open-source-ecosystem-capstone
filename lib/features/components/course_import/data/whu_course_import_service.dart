@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
@@ -63,7 +64,7 @@ class WhuCourseImportService {
       throw Exception('教务接口请求失败（HTTP ${response.statusCode}）。');
     }
     final normalizedBody = response.body.replaceAll('\u00A0', '');
-    if (_looksLikeLoginRedirect(normalizedBody)) {
+    if (looksLikeWhuLoginRedirect(normalizedBody)) {
       throw const WhuSessionInvalidException();
     }
     final decoded = jsonDecode(normalizedBody);
@@ -413,12 +414,6 @@ class WhuCourseImportService {
     return ItemColorOption.values[seed % ItemColorOption.values.length];
   }
 
-  bool _looksLikeLoginRedirect(String body) {
-    final lower = body.toLowerCase();
-    return lower.contains('authserver/login') ||
-        lower.contains('cas.whu.edu.cn') && lower.contains('login') ||
-        lower.contains('var dlktsxx=');
-  }
 }
 
 class _ClassPeriod {
@@ -439,13 +434,4 @@ class _PeriodTime {
 
   final int startMinute;
   final int endMinute;
-}
-
-class WhuSessionInvalidException implements Exception {
-  const WhuSessionInvalidException();
-
-  @override
-  String toString() {
-    return '教务会话已失效，请重新登录后再导入。';
-  }
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:luotopia/app/app_bootstrap.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
@@ -23,15 +23,8 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   final _nameController = TextEditingController();
   final _termController = TextEditingController();
   DateTime? _weekOneMonday;
-  String _cookieHeader = '';
   bool _submitting = false;
   String? _statusText;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCachedCookie();
-  }
 
   @override
   void dispose() {
@@ -40,32 +33,12 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     super.dispose();
   }
 
-  Future<void> _loadCachedCookie() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    final cached = prefs?.getString(AppBootstrapStorageKeys.whuCourseCookieHeader) ?? '';
-    if (!mounted || cached.trim().isEmpty) {
-      return;
-    }
-    setState(() => _cookieHeader = cached.trim());
-  }
-
-  Future<void> _persistCookie(String cookieHeader) async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs?.setString(AppBootstrapStorageKeys.whuCourseCookieHeader, cookieHeader);
-  }
-
-  Future<void> _clearPersistedCookie() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs?.remove(AppBootstrapStorageKeys.whuCourseCookieHeader);
-    if (mounted) {
-      setState(() => _cookieHeader = '');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isZh = _isChinese(context);
     final inferredTerm = _inferCurrentTerm(DateTime.now());
+    final authState = ref.watch(whuAuthProvider);
+    final cookieHeader = authState.cookieHeader;
     return ui.Scaffold(
       headers: [
         ui.AppBar(
@@ -88,7 +61,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
           ui.PrimaryButton(
             onPressed: _submitting ? null : _openLoginPage,
             leading: const Icon(AppIcons.web),
-            child: Text(_cookieHeader.isEmpty ? (isZh ? '登录教务并授权' : 'Login to WHU') : (isZh ? '已获取会话，重新登录' : 'Session acquired, relogin')),
+            child: Text(cookieHeader.isEmpty ? (isZh ? '登录教务并授权' : 'Login to WHU') : (isZh ? '已获取会话，重新登录' : 'Session acquired, relogin')),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -156,7 +129,8 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
 
   Future<void> _submit() async {
     final isZh = _isChinese(context);
-    if (_cookieHeader.isEmpty) {
+    final authState = ref.read(whuAuthProvider);
+    if (authState.cookieHeader.isEmpty) {
       _showMessage(isZh ? '请先完成教务登录授权。' : 'Please login first.');
       return;
     }
@@ -174,7 +148,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
       final payload = await _service.loadCourses(
-        cookieHeader: _cookieHeader,
+        cookieHeader: authState.cookieHeader,
         year: inferredTerm.academicYearStart,
         semester: inferredTerm.semester,
         weekOneMonday: _weekOneMonday!,
@@ -228,7 +202,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         return;
       }
       if (error is WhuSessionInvalidException) {
-        await _clearPersistedCookie();
+        await ref.read(whuAuthProvider.notifier).clearCookie();
       }
       setState(() {
         _statusText = isZh ? '导入失败：$error' : 'Import failed: $error';
@@ -258,14 +232,12 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
 
   Future<void> _openLoginPage() async {
     final cookieHeader = await context.push<String>(
-      AppRoutePaths.settingsCourseImportWhuLogin,
+      AppRoutePaths.settingsWhuAuthLogin,
     );
     if (!mounted || cookieHeader == null || cookieHeader.trim().isEmpty) {
       return;
     }
-    final normalized = cookieHeader.trim();
-    setState(() => _cookieHeader = normalized);
-    await _persistCookie(normalized);
+    await ref.read(whuAuthProvider.notifier).setCookie(cookieHeader.trim());
     _showMessage(
       _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
     );
