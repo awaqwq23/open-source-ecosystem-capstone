@@ -355,13 +355,19 @@ class _MessageLineState extends State<_MessageLine> {
             crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               if (isUser)
-                Text(
-                  widget.message.content,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        height: 1.5,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    widget.message.content,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          height: 1.5,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                  ),
                 )
               else
                 _MarkdownContent(message: widget.message.content),
