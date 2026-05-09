@@ -76,24 +76,12 @@ class HomeLaidOutItem {
     required this.columnIndex,
     required this.startMinute,
     required this.endMinute,
-    required this.top,
-    required this.height,
-    required this.opacity,
-    required this.left,
-    required this.width,
-    required this.maxOverlap,
   });
 
   final AgendaItem item;
   final int columnIndex;
   final int startMinute;
   final int endMinute;
-  final double top;
-  final double height;
-  final double opacity;
-  final double left;
-  final double width;
-  final int maxOverlap;
 }
 
 class HomeCellSelection {

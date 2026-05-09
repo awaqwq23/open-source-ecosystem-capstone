@@ -38,9 +38,7 @@ void main() {
     );
 
     expect(laidOutItems, hasLength(2));
-    expect(laidOutItems.map((item) => item.left).toSet(), {0.0});
-    expect(laidOutItems.map((item) => item.width).toSet(), {1.0});
-    expect(laidOutItems.every((item) => item.maxOverlap == 1), isTrue);
+    expect(laidOutItems.every((item) => item.startMinute < item.endMinute), isTrue);
   });
 
   test('切换时间段时会清空已选时间块并把选中日期约束在可见范围内', () {

@@ -385,7 +385,7 @@ class _HomeGridState extends State<_HomeGrid> {
             final layout = _HomeGridLayout.fromConstraints(
               constraints: constraints,
               columnCount: widget.viewData.columns.length,
-              rowCount: widget.viewData.timeSlots.length,
+              timeSlots: widget.viewData.timeSlots,
             );
 
             return GestureDetector(
@@ -790,12 +790,13 @@ class _HomeGridLayout {
     required this.topPadding,
     required this.bottomPadding,
     required this.itemInset,
+    required this.timeSlots,
   });
 
   factory _HomeGridLayout.fromConstraints({
     required BoxConstraints constraints,
     required int columnCount,
-    required int rowCount,
+    required List<HomeTimeSlot> timeSlots,
   }) {
     const horizontalPadding = _HomeGridLayoutSpec.contentHorizontalPadding;
     const topPadding = _HomeGridLayoutSpec.contentTopPadding;
@@ -818,6 +819,7 @@ class _HomeGridLayout {
     );
     final timelineWidth = HomeGridMetrics.computeTimelineWidth(cellWidth: columnWidth);
     final cellSize = columnWidth;
+    final rowCount = timeSlots.length;
     final safeRowCount = math.max(0, rowCount);
     final gridHeight = safeRowCount == 0
         ? 0.0
@@ -840,6 +842,7 @@ class _HomeGridLayout {
       topPadding: topPadding,
       bottomPadding: bottomPadding,
       itemInset: itemInset,
+      timeSlots: timeSlots,
     );
   }
 
@@ -857,6 +860,7 @@ class _HomeGridLayout {
   final double topPadding;
   final double bottomPadding;
   final double itemInset;
+  final List<HomeTimeSlot> timeSlots;
 
   double get timelineLabelWidth => timelineWidth;
 
@@ -875,12 +879,40 @@ class _HomeGridLayout {
     return headerHeight + rowIndex * (cellSize + rowGap);
   }
 
+  double minuteToPixel(int minute) {
+    final slots = timeSlots;
+    if (slots.isEmpty) return headerHeight;
+
+    minute = minute.clamp(slots.first.startMinute, slots.last.endMinute);
+
+    for (int i = 0; i < slots.length; i++) {
+      final slot = slots[i];
+      if (minute < slot.startMinute && i > 0) {
+        // Between previous slot end and this slot start (gap)
+        final prevSlotBottom = rowTop(i - 1) + cellSize;
+        final gapDuration = slot.startMinute - slots[i - 1].endMinute;
+        if (gapDuration <= 0) return rowTop(i);
+        final gapRatio = (minute - slots[i - 1].endMinute) / gapDuration;
+        return prevSlotBottom + gapRatio * rowGap;
+      }
+      if (minute >= slot.startMinute && minute <= slot.endMinute) {
+        // Inside slot
+        final slotDuration = slot.endMinute - slot.startMinute;
+        if (slotDuration <= 0) return rowTop(i);
+        final offset = (minute - slot.startMinute) / slotDuration;
+        return rowTop(i) + offset * cellSize;
+      }
+    }
+
+    return rowTop(slots.length - 1) + cellSize;
+  }
+
   double itemLeft(HomeLaidOutItem item) {
     return columnLeft(item.columnIndex) + itemInset;
   }
 
   double itemTop(HomeLaidOutItem item) {
-    return headerHeight + item.top * gridHeight + itemInset;
+    return minuteToPixel(item.startMinute) + itemInset;
   }
 
   double itemWidth(HomeLaidOutItem item) {
@@ -891,9 +923,11 @@ class _HomeGridLayout {
   }
 
   double itemHeight(HomeLaidOutItem item) {
+    final top = minuteToPixel(item.startMinute);
+    final bottom = minuteToPixel(item.endMinute);
     return math.max(
       _HomeGridLayoutSpec.minimumItemHeight,
-      item.height * gridHeight - itemInset * 2,
+      bottom - top - itemInset * 2,
     );
   }
 
@@ -967,7 +1001,7 @@ class _AgendaBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
-    final effectiveOpacity = (item.opacity * opacityFactor).clamp(0.0, 1.0);
+    final effectiveOpacity = opacityFactor.clamp(0.0, 1.0);
     final textBaseColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
 
     return Positioned(

@@ -8,7 +8,6 @@ import 'package:luotopia/shared/value_objects/date_time_range.dart';
 class LayoutHomeItemsUseCase {
   const LayoutHomeItemsUseCase();
 
-  static const minimumVisibleHeightFactor = 0.04;
 
   List<HomeLaidOutItem> build({
     required List<AgendaItem> items,
@@ -59,15 +58,6 @@ class LayoutHomeItemsUseCase {
           columnIndex: segment.columnIndex,
           startMinute: segment.startMinute,
           endMinute: segment.endMinute,
-          top: (segment.startMinute - dayStartMinute) / (dayEndMinute - dayStartMinute),
-          height: math.max(
-            minimumVisibleHeightFactor,
-            (segment.endMinute - segment.startMinute) / (dayEndMinute - dayStartMinute),
-          ),
-          opacity: 1,
-          left: 0,
-          width: 1,
-          maxOverlap: 1,
         ),
     ];
   }
