@@ -433,6 +433,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorFieldEnd => '结束时间';
 
   @override
+  String get editorFieldDate => '日期';
+
+  @override
   String get editorFieldStartDate => '开始日期';
 
   @override

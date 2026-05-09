@@ -451,6 +451,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorFieldEnd => 'End';
 
   @override
+  String get editorFieldDate => 'Date';
+
+  @override
   String get editorFieldStartDate => 'Start date';
 
   @override

@@ -176,6 +176,7 @@
   "editorFieldLocation": "地点",
   "editorFieldStart": "开始时间",
   "editorFieldEnd": "结束时间",
+  "editorFieldDate": "日期",
   "editorFieldStartDate": "开始日期",
   "editorFieldStartTime": "开始时间",
   "editorFieldEndDate": "结束日期",

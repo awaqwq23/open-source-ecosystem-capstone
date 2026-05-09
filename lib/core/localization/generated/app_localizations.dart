@@ -926,6 +926,12 @@ abstract class AppLocalizations {
   /// **'End'**
   String get editorFieldEnd;
 
+  /// No description provided for @editorFieldDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get editorFieldDate;
+
   /// No description provided for @editorFieldStartDate.
   ///
   /// In en, this message translates to:

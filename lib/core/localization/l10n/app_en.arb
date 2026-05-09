@@ -176,6 +176,7 @@
   "editorFieldLocation": "Location",
   "editorFieldStart": "Start",
   "editorFieldEnd": "End",
+  "editorFieldDate": "Date",
   "editorFieldStartDate": "Start date",
   "editorFieldStartTime": "Start time",
   "editorFieldEndDate": "End date",
