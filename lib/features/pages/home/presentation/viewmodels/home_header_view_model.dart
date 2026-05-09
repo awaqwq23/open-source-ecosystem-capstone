@@ -208,13 +208,29 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
         if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
     ],
   );
-  if (semesterWeekLabel != null) {
-    final isCurrentWeek = _isCurrentWeek(baseViewData.visibleRange.start);
+  final isCurrentWeek = _isCurrentWeek(baseViewData.visibleRange.start);
 
+  if (isCurrentWeek) {
+    final intendedLabel = semesterWeekLabel ?? baseViewData.periodLabel;
     return HomeViewData(
       scope: baseViewData.scope,
-      periodLabel: isCurrentWeek ? baseViewData.periodSubtitle : semesterWeekLabel,
-      periodSubtitle: isCurrentWeek ? semesterWeekLabel : baseViewData.periodSubtitle,
+      periodLabel: baseViewData.periodSubtitle,
+      periodSubtitle: intendedLabel,
+      metrics: baseViewData.metrics,
+      visibleRange: baseViewData.visibleRange,
+      periodSelection: baseViewData.periodSelection,
+      selectedCell: baseViewData.selectedCell,
+      columns: baseViewData.columns,
+      timeSlots: baseViewData.timeSlots,
+      items: baseViewData.items,
+    );
+  }
+
+  if (semesterWeekLabel != null) {
+    return HomeViewData(
+      scope: baseViewData.scope,
+      periodLabel: semesterWeekLabel,
+      periodSubtitle: baseViewData.periodSubtitle,
       metrics: baseViewData.metrics,
       visibleRange: baseViewData.visibleRange,
       periodSelection: baseViewData.periodSelection,
