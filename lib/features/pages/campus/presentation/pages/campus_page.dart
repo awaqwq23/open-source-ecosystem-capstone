@@ -239,6 +239,7 @@ class _WeatherCard extends StatelessWidget {
                     children: [
                       Text(
                         h.time,
+                        textAlign: TextAlign.center,
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
                           fontSize: 11,
@@ -247,11 +248,13 @@ class _WeatherCard extends StatelessWidget {
                               : colors.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
+
                       const SizedBox(height: 4),
                       Icon(h.icon, size: 20, color: Colors.orange.shade300),
                       const SizedBox(height: 4),
                       Text(
                         h.temp,
+                        textAlign: TextAlign.center,
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
