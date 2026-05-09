@@ -31,27 +31,11 @@ class CampusPage extends StatelessWidget {
     final headerHeight = MediaQuery.of(context).size.height * 0.25;
 
     return ui.Scaffold(
-      headers: [
-        ui.AppBar(
-          title: Text(context.l10n.campusTitle),
-        ),
-      ],
       child: Stack(
         children: [
-          // Background gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  theme.colorScheme.surface,
-                  theme.colorScheme.surfaceContainerLowest,
-                ],
-              ),
-            ),
-          ),
-          // Bing header image
+          // Background
+          Container(color: theme.colorScheme.surface),
+          // Bing header image — from the very top of the page
           Positioned(
             top: 0,
             left: 0,
@@ -59,29 +43,11 @@ class CampusPage extends StatelessWidget {
             height: headerHeight,
             child: _BingHeaderImage(),
           ),
-          // Smooth gradient transition at header bottom
-          Positioned(
-            top: headerHeight - 80,
-            left: 0,
-            right: 0,
-            height: 80,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    theme.colorScheme.surface,
-                  ],
-                ),
-              ),
-            ),
-          ),
           // Scrollable content
           SafeArea(
             top: false,
             child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               child: Column(
                 children: [
                   SizedBox(height: headerHeight),
@@ -98,12 +64,21 @@ class CampusPage extends StatelessWidget {
                       children: [
                         const SizedBox(height: 12),
                         _AppGrid(apps: _gridApps),
-                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+          // AppBar — floats above the header image
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ui.AppBar(
+              useSafeArea: true,
+              title: Text(context.l10n.campusTitle),
             ),
           ),
         ],
@@ -137,7 +112,7 @@ class _BingHeaderImageState extends State<_BingHeaderImage> {
         if (mounted) setState(() => _imageUrl = 'https://www.bing.com$url');
       }
     } catch (_) {
-      // 加载失败时使用 fallback 渐变背景
+      // 加载失败时使用 fallback
     }
   }
 
@@ -165,16 +140,7 @@ class _BingHeaderImageState extends State<_BingHeaderImage> {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            theme.colorScheme.primary.withValues(alpha: 0.15),
-            theme.colorScheme.surfaceContainerLowest,
-          ],
-        ),
-      ),
+      color: theme.colorScheme.primary.withValues(alpha: 0.08),
     );
   }
 }
@@ -189,6 +155,8 @@ class _WeatherCard extends StatelessWidget {
     const suggestion = '阳光正好，适合户外运动或图书馆自习';
 
     return ui.Card(
+      surfaceBlur: 10,
+      surfaceOpacity: 0.82,
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
