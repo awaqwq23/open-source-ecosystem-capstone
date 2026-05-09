@@ -95,6 +95,7 @@ class BuildHomeGridUseCase {
       (590, 635),   // 3:  9:50-10:35
       (640, 685),   // 4: 10:40-11:25
       (690, 735),   // 5: 11:30-12:15
+      (735, 845),   // 午休: 12:15-14:05
       (845, 890),   // 6: 14:05-14:50
       (895, 940),   // 7: 14:55-15:40
       (945, 990),   // 8: 15:45-16:30
@@ -105,6 +106,7 @@ class BuildHomeGridUseCase {
       (1210, 1255), //13: 20:10-20:55
     ];
     final localeIsChinese = localeTag.startsWith('zh');
+    const lunchBreakIndex = 5;
 
     return [
       for (var index = 0; index < coursePeriods.length; index++)
@@ -126,9 +128,13 @@ class BuildHomeGridUseCase {
           );
           final startLabel = _formatMinute(slotStartMinute);
           final endLabel = _formatMinute(slotEndMinute);
+          final isLunchBreak = index == lunchBreakIndex;
+          final courseNumber = isLunchBreak ? null : (index < lunchBreakIndex ? index + 1 : index);
           return HomeTimeSlot(
             label: '$startLabel~$endLabel',
-            shortLabel: localeIsChinese ? '第${index + 1}节' : 'Period ${index + 1}',
+            shortLabel: isLunchBreak
+                ? (localeIsChinese ? '午休' : 'Lunch')
+                : (localeIsChinese ? '第$courseNumber节' : 'Period $courseNumber'),
             start: start,
             end: end,
             startMinute: slotStartMinute,
