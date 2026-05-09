@@ -2,8 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -38,16 +36,6 @@ class CampusPage extends StatelessWidget {
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
-          // AppBar — floats above everything, frosted glass extends behind status bar
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ui.Data.inherit(
-              data: ui.ScaffoldBarData(childIndex: 0, childrenCount: 1),
-              child: buildTabAppBar(title: context.l10n.campusTitle),
-            ),
-          ),
           // Scrollable content
           SafeArea(
             top: false,
@@ -56,8 +44,8 @@ class CampusPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Spacer so content starts below the floating AppBar
-                  SizedBox(height: topPadding + 56 + 16),
+                  // Status bar spacing
+                  SizedBox(height: topPadding + 16),
                   _WeatherCard(),
                   const SizedBox(height: 16),
                   _AppGrid(apps: _gridApps),
