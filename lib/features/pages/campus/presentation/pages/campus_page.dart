@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -28,21 +27,23 @@ class CampusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final headerHeight = MediaQuery.of(context).size.height * 0.25;
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return ui.Scaffold(
       child: Stack(
         children: [
-          // Background
-          Container(color: theme.colorScheme.surface),
-          // Bing header image — from the very top of the page
+          // Full-screen Bing wallpaper — orientation-aware
+          Positioned.fill(child: _BingWallpaper()),
+          // Slight dark overlay for readability over bright images
+          Positioned.fill(
+            child: Container(color: Colors.black.withValues(alpha: 0.10)),
+          ),
+          // AppBar — floats above everything
           Positioned(
-            top: 0,
+            top: topPadding,
             left: 0,
             right: 0,
-            height: headerHeight,
-            child: _BingHeaderImage(),
+            child: buildTabAppBar(title: context.l10n.campusTitle),
           ),
           // Scrollable content
           SafeArea(
@@ -50,34 +51,16 @@ class CampusPage extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(height: headerHeight),
-                  // Weather card: shifted up so its midline aligns with header bottom
-                  FractionalTranslation(
-                    translation: const Offset(0, -0.5),
-                    child: _WeatherCard(),
-                  ),
-                  // Compensate for the upward shift of the weather card
-                  Transform.translate(
-                    offset: const Offset(0, -70),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 12),
-                        _AppGrid(apps: _gridApps),
-                      ],
-                    ),
-                  ),
+                  // Spacer so content starts below the floating AppBar
+                  SizedBox(height: topPadding + 56 + 16),
+                  _WeatherCard(),
+                  const SizedBox(height: 16),
+                  _AppGrid(apps: _gridApps),
                 ],
               ),
             ),
-          ),
-          // AppBar — floats above the header image
-          Positioned(
-            top: MediaQuery.of(context).padding.top,
-            left: 0,
-            right: 0,
-            child: buildTabAppBar(title: context.l10n.campusTitle),
           ),
         ],
       ),
@@ -85,13 +68,14 @@ class CampusPage extends StatelessWidget {
   }
 }
 
-class _BingHeaderImage extends StatefulWidget {
+class _BingWallpaper extends StatefulWidget {
   @override
-  State<_BingHeaderImage> createState() => _BingHeaderImageState();
+  State<_BingWallpaper> createState() => _BingWallpaperState();
 }
 
-class _BingHeaderImageState extends State<_BingHeaderImage> {
-  String? _imageUrl;
+class _BingWallpaperState extends State<_BingWallpaper> {
+  String? _landscapeUrl;
+  String? _portraitUrl;
 
   @override
   void initState() {
@@ -107,30 +91,41 @@ class _BingHeaderImageState extends State<_BingHeaderImage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final url = data['images'][0]['url'] as String;
-        if (mounted) setState(() => _imageUrl = 'https://www.bing.com$url');
+        final base = 'https://www.bing.com$url';
+        if (mounted) {
+          setState(() {
+            _landscapeUrl = base;
+            _portraitUrl = base.replaceAll('_1920x1080', '_1080x1920');
+          });
+        }
       }
-    } catch (_) {
-      // 加载失败时使用 fallback
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_imageUrl != null) {
-      return Image.network(
-        _imageUrl!,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, _, _) => _buildFallback(context),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _buildFallback(context);
-        },
-      );
+    if (_landscapeUrl == null || _portraitUrl == null) {
+      return _buildFallback(context);
     }
 
-    return _buildFallback(context);
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        final imageUrl = orientation == Orientation.landscape
+            ? _landscapeUrl!
+            : _portraitUrl!;
+        return Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, _, _) => _buildFallback(context),
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return _buildFallback(context);
+          },
+        );
+      },
+    );
   }
 
   Widget _buildFallback(BuildContext context) {
