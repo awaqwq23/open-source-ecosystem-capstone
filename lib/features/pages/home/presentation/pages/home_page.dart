@@ -252,6 +252,17 @@ class HomePage extends ConsumerWidget {
                   controller: controller,
                   initialValue: initialDate,
                   initialViewType: ui.CalendarViewType.date,
+                  onChanged: (selectedDate) {
+                    if (selectedDate != null) {
+                      ui.closeDrawer(sheetContext);
+                      ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
+                        HomePeriodSelection(
+                          anchor: selectedDate,
+                          scope: viewData.scope,
+                        ),
+                      );
+                    }
+                  },
                   stateBuilder: (date) {
                     final now = DateTime.now();
                     return date.isAfter(now.add(const Duration(days: 365))) ||
@@ -364,7 +375,15 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
-  bool _showPeriodNumber = false;
+  bool _showPeriodNumber = true;
+
+  @override
+  void didUpdateWidget(_HomeGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewData.isCourseGrid != widget.viewData.isCourseGrid) {
+      _showPeriodNumber = true;
+    }
+  }
 
   @override
   void dispose() {
