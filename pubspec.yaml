@@ -51,6 +51,7 @@ dependencies:
   webview_flutter: ^4.13.0
   webview_cookie_manager_flutter: ^3.0.1
   home_widget: ^0.7.0
+  material_symbols_icons: ^4.2928.1
 
 dev_dependencies:
   flutter_test:
