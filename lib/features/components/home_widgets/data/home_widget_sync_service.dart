@@ -7,11 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -70,8 +72,19 @@ class HomeWidgetSyncService {
       final zh = languageCode.startsWith('zh');
       final themeMode = _ref.read(appThemeModeProvider);
       final items = _ref.read(agendaItemRepositoryProvider);
+      final timetableStore = _ref.read(courseTimetableRepositoryProvider);
       final now = DateTime.now();
       final week = _weekRange(now);
+
+      final timetabledCourseItems = items
+          .where((item) => item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty)
+          .toList();
+      final semesterWeekLabel = _semesterWeekLabel(
+        timetabledCourseItems: timetabledCourseItems,
+        activeTimetableId: timetableStore.activeTimetableId,
+        zh: zh,
+      );
+      final intendedLabel = semesterWeekLabel ?? _periodLabel(week.start, zh);
 
       final payload = <String, dynamic>{
         'version': 4,
@@ -94,12 +107,16 @@ class HomeWidgetSyncService {
           now: now,
           zh: zh,
           darkMode: _isDarkMode(themeMode),
+          weekLabel: zh ? '本周' : 'This Week',
+          weekSubtitle: intendedLabel,
         ),
         'weekGrid': _buildWeekGridPayload(
           items: items,
           week: week,
           now: now,
           zh: zh,
+          weekLabel: zh ? '本周' : 'This Week',
+          weekSubtitle: intendedLabel,
         ),
       };
 
@@ -144,6 +161,8 @@ Map<String, dynamic> _buildAgendaListPayload({
   required DateTime now,
   required bool zh,
   required bool darkMode,
+  required String weekLabel,
+  required String weekSubtitle,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final tomorrow = today.add(const Duration(days: 1));
@@ -211,8 +230,8 @@ Map<String, dynamic> _buildAgendaListPayload({
           includeDay: true,
         ),
     ],
-    'weekdayLabel': _weekdayLong(zh, leftDay.weekday),
-    'weekLabel': zh ? '第${_weekOfYear(leftDay)}周' : 'Week ${_weekOfYear(leftDay)}',
+    'weekdayLabel': weekSubtitle,
+    'weekLabel': weekLabel,
   };
 }
 
@@ -322,6 +341,8 @@ Map<String, dynamic> _buildWeekGridPayload({
   required DateTimeRange week,
   required DateTime now,
   required bool zh,
+  required String weekLabel,
+  required String weekSubtitle,
 }) {
   final filtered = items
       .where((item) => item.type != ItemType.course)
@@ -343,10 +364,8 @@ Map<String, dynamic> _buildWeekGridPayload({
   }
 
   return {
-    'title': zh ? '周视图表格' : 'Week Grid',
-    'subtitle': zh
-        ? '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}'
-        : '${week.start.month}/${week.start.day}-${week.end.month}/${week.end.day}',
+    'title': weekLabel,
+    'subtitle': weekSubtitle,
     'weekStartIso': DateTime(
       week.start.year,
       week.start.month,
@@ -460,29 +479,6 @@ String _weekdayShort(bool zh, int weekday) {
   };
 }
 
-String _weekdayLong(bool zh, int weekday) {
-  if (zh) {
-    return switch (weekday) {
-      DateTime.monday => '星期一',
-      DateTime.tuesday => '星期二',
-      DateTime.wednesday => '星期三',
-      DateTime.thursday => '星期四',
-      DateTime.friday => '星期五',
-      DateTime.saturday => '星期六',
-      _ => '星期日',
-    };
-  }
-  return switch (weekday) {
-    DateTime.monday => 'Monday',
-    DateTime.tuesday => 'Tuesday',
-    DateTime.wednesday => 'Wednesday',
-    DateTime.thursday => 'Thursday',
-    DateTime.friday => 'Friday',
-    DateTime.saturday => 'Saturday',
-    _ => 'Sunday',
-  };
-}
-
 bool _isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
@@ -514,11 +510,68 @@ String _toArgbHex(Color color) {
   return '#$a$r$g$b';
 }
 
+int _weekOfMonth(DateTime date) {
+  final firstDay = DateTime(date.year, date.month, 1);
+  final offset = firstDay.weekday - DateTime.monday;
+  return ((date.day + offset - 1) ~/ 7) + 1;
+}
+
 int _weekOfYear(DateTime date) {
   final firstDay = DateTime(date.year, 1, 1);
   final offset = firstDay.weekday - DateTime.monday;
   final dayOfYear = date.difference(firstDay).inDays + 1;
   return ((dayOfYear + offset - 1) ~/ 7) + 1;
+}
+
+String? _semesterWeekLabel({
+  required List<AgendaItem> timetabledCourseItems,
+  required String? activeTimetableId,
+  required bool zh,
+}) {
+  if (timetabledCourseItems.isEmpty) return null;
+
+  final String? targetTimetableId = () {
+    if (activeTimetableId != null && activeTimetableId.isNotEmpty) {
+      return activeTimetableId;
+    }
+    final ids = <String>{
+      for (final item in timetabledCourseItems) item.courseDetails.timetableId,
+    };
+    return ids.length == 1 ? ids.first : null;
+  }();
+  if (targetTimetableId == null) return null;
+
+  DateTime? semesterFirstDay;
+  for (final item in timetabledCourseItems) {
+    if (item.courseDetails.timetableId != targetTimetableId) continue;
+    final startDate = DateUtils.dateOnly(item.startAt);
+    if (semesterFirstDay == null || startDate.isBefore(semesterFirstDay)) {
+      semesterFirstDay = startDate;
+    }
+  }
+  if (semesterFirstDay == null) return null;
+
+  final semesterWeekOneMonday =
+      semesterFirstDay.subtract(Duration(days: semesterFirstDay.weekday - DateTime.monday));
+  final nowMonday = DateUtils.dateOnly(DateTime.now())
+      .subtract(Duration(days: DateTime.now().weekday - DateTime.monday));
+  final weekIndex = nowMonday.difference(semesterWeekOneMonday).inDays ~/ 7 + 1;
+  if (weekIndex <= 0) return null;
+
+  return zh ? '第$weekIndex周' : 'Week $weekIndex';
+}
+
+String _periodLabel(DateTime weekStart, bool zh) {
+  final weekEnd = weekStart.add(const Duration(days: 6));
+  if (zh) {
+    return weekStart.month == weekEnd.month
+        ? '${weekStart.month}月第${_weekOfMonth(weekStart)}周'
+        : '${weekStart.year}年第${_weekOfYear(weekStart)}周';
+  }
+  if (weekStart.month == weekEnd.month) {
+    return 'Week ${_weekOfMonth(weekStart)} of ${DateFormat.yMMMM('en').format(weekStart)}';
+  }
+  return 'Week ${_weekOfYear(weekStart)} of ${weekStart.year}';
 }
 
 String _timezoneLabel() {
