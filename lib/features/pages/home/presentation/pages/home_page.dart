@@ -16,6 +16,7 @@ import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_pr
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -41,96 +42,88 @@ class HomePage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          useSafeArea: true,
-          backgroundColor: Colors.transparent,
-          surfaceBlur: 0,
-          surfaceOpacity: 0,
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-          child: SizedBox(
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ui.IconButton.ghost(
-                    icon: const Icon(AppIcons.previousPeriod),
-                    onPressed: () => viewModel.showPrevious(viewData.scope),
-                  ),
+        buildHomeAppBar(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ui.IconButton.ghost(
+                  icon: const Icon(AppIcons.previousPeriod),
+                  onPressed: () => viewModel.showPrevious(viewData.scope),
                 ),
-                Center(
-                  child: TextButton(
-                    onPressed: () => _openTimePicker(context, ref, viewData),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          viewData.periodLabel,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              viewData.periodSubtitle,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(AppIcons.expandSelection, size: 16),
-                          ],
-                        ),
-                      ],
+              ),
+              Center(
+                child: TextButton(
+                  onPressed: () => _openTimePicker(context, ref, viewData),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ui.Tooltip(
-                        tooltip: (context) => Text(
-                          homeSettings.gridMode == HomeGridMode.courseGrid
-                              ? '切换为时间方格'
-                              : '切换为课程方格',
-                        ),
-                        child: ui.IconButton.ghost(
-                          icon: Icon(
-                            homeSettings.gridMode == HomeGridMode.courseGrid
-                                ? Icons.view_module
-                                : Icons.view_agenda,
-                          ),
-                          onPressed: () {
-                            ref.read(appHomeSettingsProvider.notifier).state =
-                                homeSettings.copyWith(
-                              gridMode: homeSettings.gridMode == HomeGridMode.courseGrid
-                                  ? HomeGridMode.timeGrid
-                                  : HomeGridMode.courseGrid,
-                            );
-                          },
+                      Text(
+                        viewData.periodLabel,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      ui.IconButton.ghost(
-                        icon: const Icon(AppIcons.nextPeriod),
-                        onPressed: () => viewModel.showNext(viewData.scope),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            viewData.periodSubtitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(AppIcons.expandSelection, size: 16),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ui.Tooltip(
+                      tooltip: (context) => Text(
+                        homeSettings.gridMode == HomeGridMode.courseGrid
+                            ? '切换为时间方格'
+                            : '切换为课程方格',
+                      ),
+                      child: ui.IconButton.ghost(
+                        icon: Icon(
+                          homeSettings.gridMode == HomeGridMode.courseGrid
+                              ? Icons.view_module
+                              : Icons.view_agenda,
+                        ),
+                        onPressed: () {
+                          ref.read(appHomeSettingsProvider.notifier).state =
+                              homeSettings.copyWith(
+                            gridMode: homeSettings.gridMode == HomeGridMode.courseGrid
+                                ? HomeGridMode.timeGrid
+                                : HomeGridMode.courseGrid,
+                          );
+                        },
+                      ),
+                    ),
+                    ui.IconButton.ghost(
+                      icon: const Icon(AppIcons.nextPeriod),
+                      onPressed: () => viewModel.showNext(viewData.scope),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
@@ -41,14 +42,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     final cookieHeader = authState.cookieHeader;
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
-          title: Text(isZh ? '武汉大学教务导入' : 'WHU Import'),
+        buildSecondaryAppBar(
+          context,
+          title: isZh ? '武汉大学教务导入' : 'WHU Import',
         ),
       ],
       child: ListView(

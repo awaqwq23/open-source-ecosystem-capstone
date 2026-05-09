@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/features/components/time_picker/presentation/viewmodels/time_picker_view_model.dart';
 import 'package:intl/intl.dart';
@@ -49,17 +50,9 @@ class _TimePickerPageState extends ConsumerState<TimePickerPage> {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          leading: [
-            ui.Tooltip(
-              tooltip: (context) => Text(context.l10n.commonBack),
-              child: ui.IconButton.ghost(
-                icon: const Icon(AppIcons.back),
-                onPressed: context.pop,
-              ),
-            ),
-          ],
-          title: Text(context.l10n.timePickerTitle),
+        buildSecondaryAppBar(
+          context,
+          title: context.l10n.timePickerTitle,
           trailing: [
             ui.PrimaryButton(
               onPressed: () => context.pop(notifier.confirmSelection()),

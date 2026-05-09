@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ForumPage extends StatelessWidget {
@@ -9,9 +10,7 @@ class ForumPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          title: Text(context.l10n.forumTitle),
-        ),
+        buildTabAppBar(title: context.l10n.forumTitle),
       ],
       child: const SizedBox.expand(),
     );

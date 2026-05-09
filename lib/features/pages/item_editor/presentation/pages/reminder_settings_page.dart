@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -20,17 +21,9 @@ class ReminderSettingsPage extends StatelessWidget {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          leading: [
-            ui.Tooltip(
-              tooltip: (context) => Text(l10n.commonBack),
-              child: ui.IconButton.ghost(
-                icon: const Icon(AppIcons.back),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ],
-          title: Text(l10n.editorReminderPageTitle),
+        buildSecondaryAppBar(
+          context,
+          title: l10n.editorReminderPageTitle,
         ),
       ],
       child: AppEntrance(

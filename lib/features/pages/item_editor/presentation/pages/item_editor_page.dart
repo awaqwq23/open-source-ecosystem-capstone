@@ -8,6 +8,7 @@ import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
 import 'package:luotopia/features/pages/item_editor/domain/use_cases/validate_item_draft.dart';
 import 'package:luotopia/features/pages/item_editor/presentation/viewmodels/item_editor_header_view_model.dart';
@@ -113,8 +114,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
     return ui.Scaffold(
       headers: [
-        ui.AppBar(
-          title: Text(_createTitle(l10n, state)),
+        buildTabAppBar(
+          title: _createTitle(l10n, state),
           trailing: [
             _SubmitActionButton(
               onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
