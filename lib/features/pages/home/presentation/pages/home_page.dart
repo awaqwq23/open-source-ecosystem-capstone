@@ -7,7 +7,6 @@ import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/home/presentation/layout/home_grid_metrics.dart';
 import 'package:luotopia/features/pages/home/presentation/viewmodels/home_header_view_model.dart';
@@ -17,6 +16,7 @@ import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_pr
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -223,28 +223,17 @@ class HomePage extends ConsumerWidget {
     WidgetRef ref,
     HomeViewData viewData,
   ) async {
-    final initialMode = switch (viewData.scope) {
-      HomeDisplayScope.week => TimePickerMode.week,
-      HomeDisplayScope.month => TimePickerMode.month,
-    };
-    final selection = await context.push<TimePickerSelection>(
-      AppRoutePaths.timePicker,
-      extra: TimePickerArgs(
-        mode: initialMode,
-        initialDate: viewData.periodSelection.anchor,
-      ),
+    final picked = await AppDateTimePickers.pickDate(
+      context,
+      initialDate: viewData.periodSelection.anchor,
     );
-    if (selection == null || !context.mounted) {
+    if (picked == null || !context.mounted) {
       return;
     }
-    final targetScope = switch (selection.mode) {
-      TimePickerMode.month => HomeDisplayScope.month,
-      TimePickerMode.week || TimePickerMode.day => viewData.scope,
-    };
     ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
           HomePeriodSelection(
-            anchor: selection.anchor,
-            scope: targetScope,
+            anchor: picked,
+            scope: viewData.scope,
           ),
         );
   }

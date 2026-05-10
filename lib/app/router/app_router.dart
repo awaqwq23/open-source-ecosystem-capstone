@@ -27,8 +27,6 @@ import 'package:luotopia/features/pages/settings/presentation/pages/settings_hom
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_list_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_widgets_page.dart';
-import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
-import 'package:luotopia/features/components/time_picker/presentation/pages/time_picker_page.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -168,16 +166,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 : null,
           ),
           type: SharedAxisTransitionType.scaled,
-        ),
-      ),
-      GoRoute(
-        path: AppRoutePaths.timePicker,
-        pageBuilder: (context, state) => AppRouteTransitions.fadeThroughPage<void>(
-          context,
-          state,
-          TimePickerPage(
-            args: state.extra is TimePickerArgs ? state.extra! as TimePickerArgs : null,
-          ),
         ),
       ),
       GoRoute(

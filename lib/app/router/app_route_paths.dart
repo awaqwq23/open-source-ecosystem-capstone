@@ -23,7 +23,6 @@ abstract final class AppRoutePaths {
   static const settingsAbout = '/settings/about';
 
   // Modal (full-screen overlay flow)
-  static const timePicker = '/time-picker';
   static const repeatSettings = '/item-editor/repeat-settings';
   static const reminderSettings = '/item-editor/reminder-settings';
 }
