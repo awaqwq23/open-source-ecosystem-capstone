@@ -74,14 +74,59 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsAiSectionTitle,
-                  subtitle: '',
+                  subtitle: '模型、密钥与系统提示词',
                   icon: AppIcons.aiOutlined,
                   onTap: () => context.push(AppRoutePaths.settingsAi),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _SettingsLinkCard(
+              children: [
+                _SettingsLinkTile(
+                  title: 'Lorem Ipsum',
+                  subtitle: 'Dolor sit amet, consectetur adipiscing',
+                  icon: Icons.rate_review_outlined,
+                  onTap: () => _showLinkPending(context, 'Lorem Ipsum'),
+                ),
+                _SettingsLinkTile(
+                  title: 'Sed Do Eiusmod',
+                  subtitle: 'Tempor incididunt ut labore et dolore',
+                  icon: Icons.school_outlined,
+                  onTap: () => _showLinkPending(context, 'Sed Do Eiusmod'),
+                ),
+                _SettingsLinkTile(
+                  title: 'Ut Enim Ad Minim',
+                  subtitle: 'Veniam quis nostrud exercitation',
+                  icon: Icons.auto_awesome_outlined,
+                  onTap: () => _showLinkPending(context, 'Ut Enim Ad Minim'),
+                ),
+                _SettingsLinkTile(
+                  title: 'Duis Aute Irure',
+                  subtitle: 'Dolor in reprehenderit in voluptate',
+                  icon: Icons.account_balance_outlined,
+                  onTap: () => _showLinkPending(context, 'Duis Aute Irure'),
+                ),
+                _SettingsLinkTile(
+                  title: 'Excepteur Sint',
+                  subtitle: 'Occaecat cupidatat non proident',
+                  icon: Icons.forum_outlined,
+                  onTap: () => _showLinkPending(context, 'Excepteur Sint'),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLinkPending(BuildContext context, String title) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$title placeholder'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
