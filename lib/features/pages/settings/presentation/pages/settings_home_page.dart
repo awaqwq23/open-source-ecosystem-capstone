@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
-import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsHomePage extends ConsumerWidget {
@@ -17,6 +18,8 @@ class SettingsHomePage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final settings = state.homeSettings;
 
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
     return ui.Scaffold(
       headers: [
         buildSecondaryAppBar(context, title: context.l10n.settingsHomeSectionTitle),
@@ -25,69 +28,7 @@ class SettingsHomePage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: SettingsFlatSection(
           children: [
-            SettingsFlatTile(
-              title: context.l10n.settingsHomeDayStart,
-              subtitle: MaterialLocalizations.of(context).formatTimeOfDay(
-                settings.dayStartTime,
-              ),
-              leading: const Icon(AppIcons.clock),
-              onTap: () => _pickHomeStartTime(context, ref, settings),
-            ),
-            _HomeStepperTile(
-              title: context.l10n.settingsHomeBlockDuration,
-              value: context.l10n.settingsMinutesValue(settings.blockDurationMinutes),
-              onDecrease: settings.blockDurationMinutes > 15
-                  ? () => _saveHomeSettings(
-                        ref,
-                        settings.copyWith(
-                          blockDurationMinutes: settings.blockDurationMinutes - 15,
-                        ),
-                      )
-                  : null,
-              onIncrease: () => _saveHomeSettings(
-                ref,
-                settings.copyWith(
-                  blockDurationMinutes: settings.blockDurationMinutes + 15,
-                ),
-              ),
-            ),
-            _HomeStepperTile(
-              title: context.l10n.settingsHomeBlockGap,
-              value: context.l10n.settingsMinutesValue(settings.blockGapMinutes),
-              onDecrease: settings.blockGapMinutes > 0
-                  ? () => _saveHomeSettings(
-                        ref,
-                        settings.copyWith(
-                          blockGapMinutes: settings.blockGapMinutes - 5,
-                        ),
-                      )
-                  : null,
-              onIncrease: () => _saveHomeSettings(
-                ref,
-                settings.copyWith(
-                  blockGapMinutes: settings.blockGapMinutes + 5,
-                ),
-              ),
-            ),
-            _HomeStepperTile(
-              title: context.l10n.settingsHomeBlockCount,
-              value: '${settings.blockCount}',
-              onDecrease: settings.blockCount > 1
-                  ? () => _saveHomeSettings(
-                        ref,
-                        settings.copyWith(
-                          blockCount: settings.blockCount - 1,
-                        ),
-                      )
-                  : null,
-              onIncrease: () => _saveHomeSettings(
-                ref,
-                settings.copyWith(
-                  blockCount: settings.blockCount + 1,
-                ),
-              ),
-            ),
-            _HomeStepperTile(
+            _OpacityStepperTile(
               title: context.l10n.settingsHomeItemOpacity,
               value: context.l10n.settingsPercentValue(settings.itemOpacityPercent),
               onDecrease: settings.itemOpacityPercent > 0
@@ -106,6 +47,33 @@ class SettingsHomePage extends ConsumerWidget {
                         ),
                       )
                   : null,
+            ),
+            SettingsFlatTile(
+              title: context.l10n.settingsHomeWideLayout,
+              leading: const Icon(AppIcons.homeOutlined),
+              trailing: DropdownButtonHideUnderline(
+                child: DropdownButton<HomeWideLayoutScope>(
+                  value: settings.wideLayoutScope,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _saveHomeSettings(
+                        ref,
+                        settings.copyWith(wideLayoutScope: value),
+                      );
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(
+                      value: HomeWideLayoutScope.week,
+                      child: Text(context.l10n.homeScopeWeek),
+                    ),
+                    DropdownMenuItem(
+                      value: HomeWideLayoutScope.month,
+                      child: Text(context.l10n.homeScopeMonth),
+                    ),
+                  ],
+                ),
+              ),
             ),
             SettingsFlatTile(
               title: context.l10n.settingsHomeGridMode,
@@ -135,31 +103,18 @@ class SettingsHomePage extends ConsumerWidget {
               ),
             ),
             SettingsFlatTile(
-              title: context.l10n.settingsHomeWideLayout,
-              leading: const Icon(AppIcons.homeOutlined),
-              trailing: DropdownButtonHideUnderline(
-                child: DropdownButton<HomeWideLayoutScope>(
-                  value: settings.wideLayoutScope,
-                  onChanged: (value) {
-                    if (value != null) {
-                      _saveHomeSettings(
-                        ref,
-                        settings.copyWith(wideLayoutScope: value),
-                      );
-                    }
-                  },
-                  items: [
-                    DropdownMenuItem(
-                      value: HomeWideLayoutScope.week,
-                      child: Text(context.l10n.homeScopeWeek),
-                    ),
-                    DropdownMenuItem(
-                      value: HomeWideLayoutScope.month,
-                      child: Text(context.l10n.homeScopeMonth),
-                    ),
-                  ],
-                ),
-              ),
+              title: isZh ? '课程方格设置' : 'Course Grid Settings',
+              subtitle: isZh ? '课程导入、课程表管理' : 'Course import & timetable management',
+              leading: const Icon(AppIcons.itemTypeCourse),
+              trailing: const Icon(AppIcons.drillIn, size: 20),
+              onTap: () => context.push(AppRoutePaths.settingsCourseGrid),
+            ),
+            SettingsFlatTile(
+              title: isZh ? '时间方格设置' : 'Time Grid Settings',
+              subtitle: isZh ? '开始时间、规划块时长、规划块数量' : 'Start time, block duration & count',
+              leading: const Icon(AppIcons.clock),
+              trailing: const Icon(AppIcons.drillIn, size: 20),
+              onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
             ),
           ],
         ),
@@ -167,28 +122,13 @@ class SettingsHomePage extends ConsumerWidget {
     );
   }
 
-  Future<void> _pickHomeStartTime(
-    BuildContext context,
-    WidgetRef ref,
-    HomeSettings settings,
-  ) async {
-    final result = await AppDateTimePickers.pickTime(
-      context,
-      initialTime: settings.dayStartTime,
-    );
-    if (result == null) {
-      return;
-    }
-    await _saveHomeSettings(ref, settings.copyWith(dayStartTime: result));
-  }
-
   Future<void> _saveHomeSettings(WidgetRef ref, HomeSettings settings) {
     return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
   }
 }
 
-class _HomeStepperTile extends StatelessWidget {
-  const _HomeStepperTile({
+class _OpacityStepperTile extends StatelessWidget {
+  const _OpacityStepperTile({
     required this.title,
     required this.value,
     required this.onDecrease,
