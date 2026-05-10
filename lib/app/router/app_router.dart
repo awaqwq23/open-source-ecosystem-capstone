@@ -21,10 +21,12 @@ import 'package:luotopia/features/pages/item_editor/presentation/pages/reminder_
 import 'package:luotopia/features/pages/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:luotopia/features/pages/list/presentation/pages/list_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_ai_page.dart';
+import 'package:luotopia/features/pages/settings/presentation/pages/settings_course_grid_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_general_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_home_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_navigation_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_page.dart';
+import 'package:luotopia/features/pages/settings/presentation/pages/settings_time_grid_page.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -103,6 +105,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'home',
                     builder: (context, state) => const SettingsHomePage(),
+                  ),
+                  GoRoute(
+                    path: 'time-grid',
+                    builder: (context, state) => const SettingsTimeGridPage(),
+                  ),
+                  GoRoute(
+                    path: 'course-grid',
+                    builder: (context, state) => const SettingsCourseGridPage(),
                   ),
                   GoRoute(
                     path: 'course-timetables',

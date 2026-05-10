@@ -284,6 +284,8 @@
   "settingsNavigationEntrySubtitle": "显示文字、中间标签页",
   "settingsHomeCourseImport": "课程表导入",
   "settingsHomeCourseManagement": "课程表管理",
+  "settingsHomeTimeGridSettings": "时间方格模式设置",
+  "settingsHomeCourseGridSettings": "课程方格模式设置",
   "placeholderOpenPicker": "打开选择器",
   "placeholderOpenMenu": "打开菜单"
 }

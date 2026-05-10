@@ -1358,6 +1358,18 @@ abstract class AppLocalizations {
   /// **'Timetable management'**
   String get settingsHomeCourseManagement;
 
+  /// No description provided for @settingsHomeTimeGridSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Grid Settings'**
+  String get settingsHomeTimeGridSettings;
+
+  /// No description provided for @settingsHomeCourseGridSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Course Grid Settings'**
+  String get settingsHomeCourseGridSettings;
+
   /// No description provided for @placeholderOpenPicker.
   ///
   /// In en, this message translates to:

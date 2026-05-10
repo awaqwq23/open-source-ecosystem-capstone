@@ -284,6 +284,8 @@
   "settingsNavigationEntrySubtitle": "Labels and middle tab",
   "settingsHomeCourseImport": "Course import",
   "settingsHomeCourseManagement": "Timetable management",
+  "settingsHomeTimeGridSettings": "Time Grid Settings",
+  "settingsHomeCourseGridSettings": "Course Grid Settings",
   "placeholderOpenPicker": "Open picker",
   "placeholderOpenMenu": "Open menu"
 }

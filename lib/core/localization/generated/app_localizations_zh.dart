@@ -659,6 +659,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHomeCourseManagement => '课程表管理';
 
   @override
+  String get settingsHomeTimeGridSettings => '时间方格模式设置';
+
+  @override
+  String get settingsHomeCourseGridSettings => '课程方格模式设置';
+
+  @override
   String get placeholderOpenPicker => '打开选择器';
 
   @override

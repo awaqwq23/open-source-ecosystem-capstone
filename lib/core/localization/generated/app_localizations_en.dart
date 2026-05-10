@@ -677,6 +677,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHomeCourseManagement => 'Timetable management';
 
   @override
+  String get settingsHomeTimeGridSettings => 'Time Grid Settings';
+
+  @override
+  String get settingsHomeCourseGridSettings => 'Course Grid Settings';
+
+  @override
   String get placeholderOpenPicker => 'Open picker';
 
   @override
