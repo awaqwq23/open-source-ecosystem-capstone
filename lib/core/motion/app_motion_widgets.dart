@@ -324,22 +324,6 @@ bool _isLocalFieldTransitionDisabled(BuildContext context) {
       scope.disableLocalFieldTransitions;
 }
 
-class AppSwitchingContent extends AppSchemaTransition {
-  const AppSwitchingContent({
-    required super.child,
-    required Object contentKey,
-    super.key,
-  }) : super(schemaKey: contentKey);
-}
-
-class AppAnimatedFieldGroup extends AppCollapsibleFieldGroup {
-  const AppAnimatedFieldGroup({
-    required super.visible,
-    required super.child,
-    super.key,
-  });
-}
-
 class _AppSchemaTransitionScope extends InheritedWidget {
   const _AppSchemaTransitionScope({
     required this.disableLocalFieldTransitions,
