@@ -15,6 +15,7 @@ import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
+import 'package:luotopia/shared/presentation/widgets/app_duration_picker.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -165,17 +166,11 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             value: _formatDate(context, state.draft.targetDate),
                             onTap: () => _pickTargetDate(context, ref, state),
                           ),
-                          _PickerRow(
+                          _PlainActionRow(
                             label: l10n.editorFieldEstimatedDuration,
-                            child: ui.DurationPicker(
-                              value: state.draft.estimatedDuration,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  notifier.updateEstimatedDuration(value);
-                                }
-                              },
-                              mode: ui.PromptMode.popover,
-                            ),
+                            value: _formatDuration(context, state.draft.estimatedDuration),
+                            errorText: state.errors.estimatedDuration,
+                            onTap: () => _pickEstimatedDuration(context, ref, state),
                           ),
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-reminder'),
@@ -223,32 +218,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                     onTap: () => _pickEndTime(context, ref, state),
                                   )
                                 else
-                                  _PickerRow(
+                                  _PlainActionRow(
                                     label: l10n.editorFieldEstimatedDuration,
-                                    child: ui.DurationPicker(
-                                      value: state.draft.estimatedDuration,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          notifier.updateEstimatedDuration(value);
-                                        }
-                                      },
-                                      mode: ui.PromptMode.popover,
+                                    value: _formatDuration(
+                                      context,
+                                      state.draft.estimatedDuration,
                                     ),
-                                  ),
-                                if (state.errors.estimatedDuration != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: _kEditorErrorBottomPadding,
-                                    ),
-                                    child: Text(
-                                      state.errors.estimatedDuration!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                        color: Theme.of(context).colorScheme.error,
-                                      ),
-                                    ),
+                                    errorText: state.errors.estimatedDuration,
+                                    onTap: () => _pickEstimatedDuration(context, ref, state),
                                   ),
                               ],
                             ),
@@ -557,6 +534,20 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
   }
 
+  Future<void> _pickEstimatedDuration(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await AppDurationPicker.pickDuration(
+      context,
+      initialDuration: state.draft.estimatedDuration,
+    );
+    if (picked != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).updateEstimatedDuration(picked);
+    }
+  }
+
   Future<void> _pickDeadlineDateTime(
     BuildContext context,
     WidgetRef ref,
@@ -686,6 +677,28 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       TimeOfDay.fromDateTime(value),
       alwaysUse24HourFormat: true,
     );
+  }
+
+  String _formatDuration(BuildContext context, Duration value) {
+    final locale = Localizations.localeOf(context).languageCode.toLowerCase();
+    final hours = value.inHours;
+    final minutes = value.inMinutes.remainder(60);
+    if (locale.startsWith('zh')) {
+      if (hours > 0 && minutes > 0) {
+        return '$hours 小时 $minutes 分钟';
+      }
+      if (hours > 0) {
+        return '$hours 小时';
+      }
+      return '$minutes 分钟';
+    }
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    }
+    if (hours > 0) {
+      return '${hours}h';
+    }
+    return '${minutes}m';
   }
 
   String _formatDateTimeSummary(
@@ -1029,38 +1042,6 @@ class _RoundedInputField extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _PickerRow extends StatelessWidget {
-  const _PickerRow({
-    required this.label,
-    required this.child,
-  });
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: _kEditorBaseRowHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          SizedBox(
-            width: 200,
-            child: child,
-          ),
-        ],
-      ),
     );
   }
 }
