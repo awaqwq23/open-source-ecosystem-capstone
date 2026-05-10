@@ -1,7 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -28,8 +26,7 @@ class CampusPage extends StatelessWidget {
     return ui.Scaffold(
       child: Stack(
         children: [
-          // Full-screen Bing wallpaper — orientation-aware
-          Positioned.fill(child: _BingWallpaper()),
+          Positioned.fill(child: const AppWallpaperBackground()),
           // Slight dark overlay for readability over bright images
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
@@ -51,76 +48,6 @@ class CampusPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BingWallpaper extends StatefulWidget {
-  @override
-  State<_BingWallpaper> createState() => _BingWallpaperState();
-}
-
-class _BingWallpaperState extends State<_BingWallpaper> {
-  String? _landscapeUrl;
-  String? _portraitUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchBingImage();
-  }
-
-  Future<void> _fetchBingImage() async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1'),
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final url = data['images'][0]['url'] as String;
-        final base = 'https://www.bing.com$url';
-        if (mounted) {
-          setState(() {
-            _landscapeUrl = base;
-            _portraitUrl = base.replaceAll('_1920x1080', '_1080x1920');
-          });
-        }
-      }
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_landscapeUrl == null || _portraitUrl == null) {
-      return _buildFallback(context);
-    }
-
-    return OrientationBuilder(
-      builder: (context, orientation) {
-        final imageUrl = orientation == Orientation.landscape
-            ? _landscapeUrl!
-            : _portraitUrl!;
-        return Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          errorBuilder: (_, _, _) => _buildFallback(context),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return _buildFallback(context);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildFallback(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: theme.colorScheme.primary.withValues(alpha: 0.08),
     );
   }
 }

@@ -17,6 +17,7 @@
 - `components/time_picker/`：日周月时间选择组件。
 - `components/course_import/`：课程导入相关页面、适配器与服务。
 - `components/home_widgets/`：系统桌面小组件同步能力。
+- `components/wallpaper/`：应用内壁纸获取、缓存与展示能力。
 
 ### 模块边界规则
 
