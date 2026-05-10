@@ -63,6 +63,11 @@ data class WidgetPayloadV4(
 
 object WidgetPayloadReader {
     fun read(context: Context): WidgetPayloadV4 {
+        val snapshot = WidgetSnapshotReader.read(context)
+        if (snapshot != null) {
+            return WidgetSnapshotModelBuilder.build(snapshot)
+        }
+
         val raw = WidgetStore.readPayload(context)
         if (raw.isBlank()) {
             return fallback()
