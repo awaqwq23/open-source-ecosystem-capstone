@@ -15,6 +15,7 @@ import 'package:luotopia/features/pages/settings/domain/providers/settings_state
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -63,10 +64,6 @@ class HomeWidgetSyncService {
     _isSyncing = true;
     try {
       final settings = _ref.read(appWidgetSettingsProvider);
-      if (!settings.enabled) {
-        return;
-      }
-
       final locale = _resolveLocale(settings);
       final languageCode = locale.languageCode.toLowerCase();
       final zh = languageCode.startsWith('zh');
@@ -90,7 +87,7 @@ class HomeWidgetSyncService {
         'version': 4,
         'meta': {
           'languageCode': languageCode,
-          'darkMode': _isDarkMode(themeMode),
+          'darkMode': _isDarkMode(settings, themeMode),
           'timezone': _timezoneLabel(),
           'updatedAt': now.toIso8601String(),
           'updatedLabel': _formatWidgetTimestamp(now, zh),
@@ -106,7 +103,7 @@ class HomeWidgetSyncService {
           items: items,
           now: now,
           zh: zh,
-          darkMode: _isDarkMode(themeMode),
+          darkMode: _isDarkMode(settings, themeMode),
           weekSubtitle: intendedLabel,
         ),
         'weekGrid': _buildWeekGridPayload(
@@ -119,12 +116,25 @@ class HomeWidgetSyncService {
         ),
       };
 
-      final payloadHash = jsonEncode(payload);
+      final transport = <String, dynamic>{
+        'version': 5,
+        'renderedPayload': payload,
+        'snapshot': _buildSnapshotPayload(
+          items: items,
+          timetableStore: timetableStore,
+          settings: settings,
+          now: now,
+          languageCode: languageCode,
+          darkMode: _isDarkMode(settings, themeMode),
+        ),
+      };
+
+      final payloadHash = jsonEncode(transport);
       if (payloadHash == _lastPayloadHash) {
         return;
       }
       _lastPayloadHash = payloadHash;
-      await _channel.invokeMethod<void>('syncWidgets', payload);
+      await _channel.invokeMethod<void>('syncWidgets', transport);
     } finally {
       _isSyncing = false;
       if (_syncQueued) {
@@ -145,7 +155,10 @@ class HomeWidgetSyncService {
     return PlatformDispatcher.instance.locale;
   }
 
-  bool _isDarkMode(ui.ThemeMode themeMode) {
+  bool _isDarkMode(WidgetSettings settings, ui.ThemeMode themeMode) {
+    if (!settings.followAppTheme) {
+      return PlatformDispatcher.instance.platformBrightness == Brightness.dark;
+    }
     return switch (themeMode) {
       ui.ThemeMode.dark => true,
       ui.ThemeMode.light => false,
@@ -153,6 +166,59 @@ class HomeWidgetSyncService {
         PlatformDispatcher.instance.platformBrightness == Brightness.dark,
     };
   }
+}
+
+Map<String, dynamic> _buildSnapshotPayload({
+  required List<AgendaItem> items,
+  required CourseTimetableStore timetableStore,
+  required WidgetSettings settings,
+  required DateTime now,
+  required String languageCode,
+  required bool darkMode,
+}) {
+  return {
+    'version': 1,
+    'generatedAt': now.toIso8601String(),
+    'settings': {
+      'enabled': settings.enabled,
+      'refreshInterval': settings.refreshInterval.name,
+      'languageCode': languageCode,
+      'followAppLanguage': settings.followAppLanguage,
+      'darkMode': darkMode,
+      'followAppTheme': settings.followAppTheme,
+    },
+    'timetables': {
+      'activeTimetableId': timetableStore.activeTimetableId ?? '',
+      'items': [
+        for (final timetable in timetableStore.timetables)
+          {
+            'id': timetable.id,
+            'name': timetable.name,
+            'termLabel': timetable.termLabel,
+            'createdAt': timetable.createdAt.toIso8601String(),
+          },
+      ],
+    },
+    'items': [
+      for (final item in items)
+        {
+          'id': item.id,
+          'type': item.type.name,
+          'title': item.title,
+          'location': item.location,
+          'isCompleted': item.isCompleted,
+          'manualOrder': item.manualOrder,
+          'startAt': item.startAt.toIso8601String(),
+          'endAt': item.endAt.toIso8601String(),
+          'isAllDay': item.isAllDay,
+          'targetDate': item.targetDate.toIso8601String(),
+          'estimatedDurationMinutes': item.estimatedDuration.inMinutes,
+          'timetableId': item.courseDetails.timetableId,
+          'accentColorLight': _toArgbHex(item.color.resolve(Brightness.light)),
+          'accentColorDark': _toArgbHex(item.color.resolve(Brightness.dark)),
+        },
+    ],
+  };
 }
 
 Map<String, dynamic> _buildAgendaListPayload({

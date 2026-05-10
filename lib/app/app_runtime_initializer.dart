@@ -5,6 +5,7 @@ import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/home_widgets/data/home_widget_sync_service.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 
 class AppRuntimeInitializer extends ConsumerStatefulWidget {
   const AppRuntimeInitializer({
@@ -41,6 +42,9 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     await service.initialize();
     _subs.add(
       ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.syncDebounced()),
+    );
+    _subs.add(
+      ref.listenManual(courseTimetableRepositoryProvider, (_, __) => service.syncDebounced()),
     );
     _subs.add(
       ref.listenManual(appHomeSettingsProvider, (_, __) => service.syncDebounced()),
