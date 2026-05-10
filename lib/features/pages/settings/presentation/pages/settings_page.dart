@@ -10,21 +10,38 @@ import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provi
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class SettingsPage extends ConsumerWidget {
+const double _settingsHeroImageHeight = 164;
+
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     final whuAuth = ref.watch(whuAuthProvider);
     return ui.Scaffold(
+      floatingHeader: true,
       headers: [
-        buildTabAppBar(
+        _SettingsFadingTopBar(
+          scrollController: _scrollController,
           title: l10n.settingsTitle,
         ),
       ],
       child: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,6 +149,38 @@ class SettingsPage extends ConsumerWidget {
   }
 }
 
+class _SettingsFadingTopBar extends StatelessWidget {
+  const _SettingsFadingTopBar({
+    required this.scrollController,
+    required this.title,
+  });
+
+  final ScrollController scrollController;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: scrollController,
+      builder: (context, child) {
+        final offset = scrollController.hasClients
+            ? scrollController.offset
+            : 0.0;
+        final opacity = (offset / _settingsHeroImageHeight)
+            .clamp(0.0, 1.0)
+            .toDouble();
+        return IgnorePointer(
+          child: Opacity(
+            opacity: opacity,
+            child: child,
+          ),
+        );
+      },
+      child: buildTabAppBar(title: title),
+    );
+  }
+}
+
 class _SettingsHero extends StatelessWidget {
   const _SettingsHero({
     required this.child,
@@ -149,7 +198,7 @@ class _SettingsHero extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           SizedBox(
-            height: 164,
+            height: _settingsHeroImageHeight,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
