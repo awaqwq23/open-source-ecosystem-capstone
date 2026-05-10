@@ -33,9 +33,7 @@ class SettingsPage extends ConsumerWidget {
               child: _AccountHubCard(
                 children: [
                   _AccountHubTile(
-                    icon: Icons.sentiment_satisfied_alt_outlined,
-                    iconBackground: theme.colorScheme.surfaceContainerHigh,
-                    iconColor: theme.colorScheme.onSurfaceVariant,
+                    icon: Icons.person_outline,
                     title: l10n.settingsAccountLocalTitle,
                     subtitle: '本地模式',
                     prominent: true,
@@ -46,8 +44,6 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   _AccountHubTile(
                     icon: AppIcons.web,
-                    iconBackground: theme.colorScheme.primaryContainer,
-                    iconColor: theme.colorScheme.primary,
                     title: l10n.settingsAccountWhuTitle,
                     subtitle: whuAuth.isAuthenticated
                         ? l10n.settingsAccountWhuLoggedIn
@@ -68,24 +64,18 @@ class SettingsPage extends ConsumerWidget {
                   title: l10n.settingsGeneralEntryTitle,
                   subtitle: l10n.settingsGeneralEntrySubtitle,
                   icon: AppIcons.settingsOutlined,
-                  iconBackground: theme.colorScheme.secondaryContainer,
-                  iconColor: theme.colorScheme.secondary,
                   onTap: () => context.push(AppRoutePaths.settingsGeneral),
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
                   subtitle: l10n.settingsHomeEntrySubtitle,
                   icon: AppIcons.homeOutlined,
-                  iconBackground: theme.colorScheme.tertiaryContainer,
-                  iconColor: theme.colorScheme.tertiary,
                   onTap: () => context.push(AppRoutePaths.settingsHome),
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsAiSectionTitle,
                   subtitle: '',
                   icon: AppIcons.aiOutlined,
-                  iconBackground: theme.colorScheme.primaryContainer,
-                  iconColor: theme.colorScheme.primary,
                   onTap: () => context.push(AppRoutePaths.settingsAi),
                 ),
               ],
@@ -187,8 +177,6 @@ class _AccountHubCard extends StatelessWidget {
 class _AccountHubTile extends StatelessWidget {
   const _AccountHubTile({
     required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
     required this.title,
     required this.subtitle,
     required this.prominent,
@@ -197,8 +185,6 @@ class _AccountHubTile extends StatelessWidget {
   });
 
   final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
   final String title;
   final String subtitle;
   final bool prominent;
@@ -208,7 +194,6 @@ class _AccountHubTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconSize = prominent ? 48.0 : 42.0;
     final glyphSize = prominent ? 28.0 : 24.0;
     final verticalPadding = prominent ? 14.0 : 12.0;
     final titleStyle = (prominent
@@ -231,17 +216,14 @@ class _AccountHubTile extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(18, verticalPadding, 14, verticalPadding),
         child: Row(
           children: [
-            Container(
-              width: iconSize,
-              height: iconSize,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                shape: BoxShape.circle,
-              ),
+            SizedBox(
+              width: 46,
               child: Icon(
                 icon,
                 size: glyphSize,
-                color: iconColor,
+                color: prominent
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 14),
@@ -323,16 +305,12 @@ class _SettingsLinkTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.iconBackground,
-    required this.iconColor,
     required this.onTap,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color iconBackground;
-  final Color iconColor;
   final VoidCallback onTap;
 
   @override
@@ -345,17 +323,12 @@ class _SettingsLinkTile extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
         child: Row(
           children: [
-            Container(
+            SizedBox(
               width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: iconBackground,
-                shape: BoxShape.circle,
-              ),
               child: Icon(
                 icon,
-                size: 26,
-                color: iconColor,
+                size: 28,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 14),
