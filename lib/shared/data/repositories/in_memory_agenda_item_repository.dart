@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app_bootstrap.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/shared/data/id/app_id_generator.dart';
 import 'package:luotopia/shared/data/mappers/agenda_item_storage_mapper.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
@@ -16,12 +17,9 @@ final agendaItemsBootstrapProvider = Provider<List<AgendaItem>>((ref) {
 
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
-  var _idSeed = 0;
-
   @override
   List<AgendaItem> build() {
     final items = ref.read(agendaItemsBootstrapProvider);
-    _idSeed = items.length;
     return items;
   }
 
@@ -57,7 +55,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
             1;
     final item = _normalizeCompletionByType(
       AgendaItem.fromDraft(
-        id: 'item_${_idSeed++}',
+        id: _createUniqueAgendaItemId(),
         draft: draft,
         createdAt: now,
         manualOrder: nextOrder,
@@ -158,7 +156,6 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       ...preservedItems,
       ...items,
     ];
-    _idSeed = state.length;
     await _persist();
   }
 
@@ -184,6 +181,16 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   AgendaItem _normalizeCompletionByType(AgendaItem item) {
     return item;
+  }
+
+  String _createUniqueAgendaItemId() {
+    final existingIds = state.map((item) => item.id).toSet();
+    final generator = ref.read(appIdGeneratorProvider);
+    var id = generator.newAgendaItemId();
+    while (existingIds.contains(id)) {
+      id = generator.newAgendaItemId();
+    }
+    return id;
   }
 }
 

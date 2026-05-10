@@ -115,6 +115,7 @@ class ListPage extends ConsumerWidget {
                                     state: state,
                                   ),
                                   _StaticItemRow(:final item) => _ListItemRow(
+                                    key: ValueKey(item.id),
                                     item: item,
                                     dragIndex: null,
                                     onToggleComplete: () => ref
@@ -451,6 +452,7 @@ class _PendingTaskRowList extends ConsumerWidget {
         children: [
           for (final item in items)
             _ListItemRow(
+              key: ValueKey(item.id),
               item: item,
               dragIndex: null,
               onToggleComplete: () => ref
