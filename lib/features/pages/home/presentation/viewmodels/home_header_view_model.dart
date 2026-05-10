@@ -207,36 +207,14 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
   final isCurrentWeek = _isCurrentWeek(baseViewData.visibleRange.start);
 
   if (isCurrentWeek) {
-    final intendedLabel = semesterWeekLabel ?? baseViewData.periodLabel;
-    return HomeViewData(
-      scope: baseViewData.scope,
+    return baseViewData.copyWith(
       periodLabel: baseViewData.periodSubtitle,
-      periodSubtitle: intendedLabel,
-      metrics: baseViewData.metrics,
-      visibleRange: baseViewData.visibleRange,
-      periodSelection: baseViewData.periodSelection,
-      selectedCell: baseViewData.selectedCell,
-      columns: baseViewData.columns,
-      timeSlots: baseViewData.timeSlots,
-      items: baseViewData.items,
-      isCourseGrid: baseViewData.isCourseGrid,
+      periodSubtitle: semesterWeekLabel ?? baseViewData.periodLabel,
     );
   }
 
   if (semesterWeekLabel != null) {
-    return HomeViewData(
-      scope: baseViewData.scope,
-      periodLabel: semesterWeekLabel,
-      periodSubtitle: baseViewData.periodSubtitle,
-      metrics: baseViewData.metrics,
-      visibleRange: baseViewData.visibleRange,
-      periodSelection: baseViewData.periodSelection,
-      selectedCell: baseViewData.selectedCell,
-      columns: baseViewData.columns,
-      timeSlots: baseViewData.timeSlots,
-      items: baseViewData.items,
-      isCourseGrid: baseViewData.isCourseGrid,
-    );
+    return baseViewData.copyWith(periodLabel: semesterWeekLabel);
   }
 
   return baseViewData;

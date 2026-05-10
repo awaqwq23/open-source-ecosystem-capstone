@@ -120,5 +120,24 @@ class HomeViewData {
   final List<HomeTimeSlot> timeSlots;
   final List<HomeLaidOutItem> items;
   final bool isCourseGrid;
+
+  HomeViewData copyWith({
+    String? periodLabel,
+    String? periodSubtitle,
+  }) {
+    return HomeViewData(
+      scope: scope,
+      periodLabel: periodLabel ?? this.periodLabel,
+      periodSubtitle: periodSubtitle ?? this.periodSubtitle,
+      metrics: metrics,
+      visibleRange: visibleRange,
+      periodSelection: periodSelection,
+      selectedCell: selectedCell,
+      columns: columns,
+      timeSlots: timeSlots,
+      items: items,
+      isCourseGrid: isCourseGrid,
+    );
+  }
 }
 

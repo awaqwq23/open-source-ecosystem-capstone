@@ -266,7 +266,7 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
-  bool _showPeriodNumber = true; // 课程方格默认显示节数，每次刷新重置
+  bool _showPeriodNumber = true;
 
   @override
   void didUpdateWidget(covariant _HomeGrid oldWidget) {
@@ -386,18 +386,16 @@ class _HomeGridState extends State<_HomeGrid> {
       position,
       scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0,
     );
-    final x = contentPosition.dx;
-    final y = contentPosition.dy;
 
-    // 时间轴标签区域点击：课程方格模式下切换显示时间段/节数
-    if (x >= 0 && x < layout.timelineWidth && y >= layout.headerHeight) {
-      if (widget.viewData.isCourseGrid) {
-        setState(() => _showPeriodNumber = !_showPeriodNumber);
-      }
+    if (widget.viewData.isCourseGrid &&
+        contentPosition.dx >= 0 &&
+        contentPosition.dx < layout.timelineWidth &&
+        contentPosition.dy >= layout.headerHeight) {
+      setState(() => _showPeriodNumber = !_showPeriodNumber);
       return;
     }
 
-    final hit = _resolveHit(position, layout);
+    final hit = _resolveHit(position, layout, contentPosition: contentPosition);
     if (hit == null) {
       return;
     }
@@ -422,8 +420,8 @@ class _HomeGridState extends State<_HomeGrid> {
     }
   }
 
-  _GridHit? _resolveHit(Offset position, _HomeGridLayout layout) {
-    final contentPosition = layout.contentOffsetFromViewport(
+  _GridHit? _resolveHit(Offset position, _HomeGridLayout layout, {Offset? contentPosition}) {
+    contentPosition ??= layout.contentOffsetFromViewport(
       position,
       scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0,
     );
