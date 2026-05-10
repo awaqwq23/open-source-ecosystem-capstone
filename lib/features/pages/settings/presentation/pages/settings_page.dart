@@ -10,7 +10,7 @@ import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provi
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-const double _settingsHeroImageHeightFactor = 0.25;
+const double _settingsHeroImageHeightFactor = 0.333;
 const double _settingsHeroCardImageOverlap = 60;
 const double _settingsHeroCardReservedHeight = 148;
 const double _settingsHeroHorizontalPadding = 16;
@@ -63,7 +63,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     title: l10n.settingsAccountLocalTitle,
                     subtitle: '本地模式',
                     prominent: true,
-                    showTrailing: false,
+                    showTrailing: true,
                     onTap: () {
                       // 本地账户详情暂为信息展示
                     },
@@ -74,7 +74,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     subtitle: whuAuth.isAuthenticated
                         ? l10n.settingsAccountWhuLoggedIn
                         : l10n.settingsAccountWhuNotLoggedIn,
-                    prominent: false,
+                    prominent: true,
                     showTrailing: true,
                     onTap: whuAuth.isAuthenticated
                         ? null
