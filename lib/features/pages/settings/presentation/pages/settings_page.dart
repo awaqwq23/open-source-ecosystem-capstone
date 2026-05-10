@@ -148,12 +148,10 @@ class _AccountHubCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Material(
-      color: AppSemanticColors.settingsSectionBackground(theme),
-      elevation: theme.brightness == Brightness.dark ? 0 : 8,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
+    return ui.Card(
+      surfaceBlur: 10,
+      surfaceOpacity: 0.82,
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           for (var index = 0; index < children.length; index++) ...[
@@ -273,12 +271,10 @@ class _SettingsLinkCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: AppSemanticColors.settingsSectionBackground(theme),
-        elevation: theme.brightness == Brightness.dark ? 0 : 4,
-        shadowColor: Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(24),
-        clipBehavior: Clip.antiAlias,
+      child: ui.Card(
+        surfaceBlur: 10,
+        surfaceOpacity: 0.82,
+        padding: EdgeInsets.zero,
         child: Column(
           children: [
             for (var index = 0; index < children.length; index++) ...[
