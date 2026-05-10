@@ -107,7 +107,6 @@ class HomeWidgetSyncService {
           now: now,
           zh: zh,
           darkMode: _isDarkMode(themeMode),
-          weekLabel: zh ? '本周' : 'This Week',
           weekSubtitle: intendedLabel,
         ),
         'weekGrid': _buildWeekGridPayload(
@@ -161,36 +160,46 @@ Map<String, dynamic> _buildAgendaListPayload({
   required DateTime now,
   required bool zh,
   required bool darkMode,
-  required String weekLabel,
   required String weekSubtitle,
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final tomorrow = today.add(const Duration(days: 1));
 
-  final hasCourseToday = items.any(
-    (item) => item.type == ItemType.course && _itemInDay(item, today),
-  );
-
-  final leftDay = hasCourseToday ? today : tomorrow;
-  final rightStart = leftDay.add(const Duration(days: 1));
-
-  final leftItems = items
-      .where((item) => _shouldShowInLeftColumn(item, now: now, leftDay: leftDay))
+  final todayLeftItems = items
+      .where((item) => _shouldShowInLeftColumn(item, now: now, day: today))
       .toList(growable: false)
     ..sort((a, b) {
-      final byStart = _sortStart(a, leftDay).compareTo(_sortStart(b, leftDay));
+      final byStart = _sortStart(a, today).compareTo(_sortStart(b, today));
       if (byStart != 0) {
         return byStart;
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
-
-  final rightItems = items
-      .where((item) => _shouldShowInRightColumn(item, now: now, rightStart: rightStart))
+  final tomorrowLeftItems = items
+      .where((item) => _shouldShowInLeftColumn(item, now: now, day: tomorrow))
       .toList(growable: false)
     ..sort((a, b) {
-      final dayA = _displayDayForItem(a, fallback: rightStart);
-      final dayB = _displayDayForItem(b, fallback: rightStart);
+      final byStart = _sortStart(a, tomorrow).compareTo(_sortStart(b, tomorrow));
+      if (byStart != 0) {
+        return byStart;
+      }
+      return a.manualOrder.compareTo(b.manualOrder);
+    });
+  final useTodayLeft = todayLeftItems.isNotEmpty;
+  final leftDay = useTodayLeft ? today : tomorrow;
+  final leftItems = useTodayLeft ? todayLeftItems : tomorrowLeftItems;
+  final leftStatusLabel = useTodayLeft
+      ? (zh ? '今日日程' : 'Today')
+      : leftItems.isNotEmpty
+          ? (zh ? '明日日程' : 'Tomorrow')
+          : (zh ? '明日无日程' : 'No schedule tomorrow');
+
+  final rightItems = items
+      .where(_shouldShowInRightColumn)
+      .toList(growable: false)
+    ..sort((a, b) {
+      final dayA = _displayDayForItem(a, fallback: today);
+      final dayB = _displayDayForItem(b, fallback: today);
       final byDay = dayA.compareTo(dayB);
       if (byDay != 0) {
         return byDay;
@@ -204,12 +213,14 @@ Map<String, dynamic> _buildAgendaListPayload({
 
   return {
     'title': zh ? '事项列表' : 'Agenda List',
-    'subtitle': hasCourseToday
-        ? (zh ? '左列今天，右列今天之后（右列无课程）' : 'Left today, right after today (no course on right)')
-        : (zh ? '左列明天，右列明天之后（右列无课程）' : 'Left tomorrow, right after tomorrow (no course on right)'),
-    'mode': hasCourseToday ? 'today_future' : 'tomorrow_future',
-    'leftTitle': hasCourseToday ? (zh ? '今天' : 'Today') : (zh ? '明天' : 'Tomorrow'),
-    'rightTitle': hasCourseToday ? (zh ? '今天之后' : 'After Today') : (zh ? '明天之后' : 'After Tomorrow'),
+    'subtitle': zh ? '左列日程，右列任务与备忘' : 'Schedule left, tasks and memos right',
+    'mode': useTodayLeft
+        ? 'today_schedule'
+        : leftItems.isNotEmpty
+            ? 'tomorrow_schedule'
+            : 'tomorrow_empty',
+    'leftTitle': leftStatusLabel,
+    'rightTitle': zh ? '任务备忘' : 'Tasks & Memos',
     'leftRows': [
       for (final item in leftItems.take(40))
         _toAgendaListRow(
@@ -224,56 +235,43 @@ Map<String, dynamic> _buildAgendaListPayload({
       for (final item in rightItems.take(80))
         _toAgendaListRow(
           item,
-          _displayDayForItem(item, fallback: rightStart),
+          _displayDayForItem(item, fallback: today),
           zh,
           darkMode: darkMode,
           includeDay: true,
         ),
     ],
     'weekdayLabel': weekSubtitle,
-    'weekLabel': weekLabel,
+    'weekLabel': leftStatusLabel,
   };
 }
 
 bool _shouldShowInLeftColumn(
   AgendaItem item, {
   required DateTime now,
-  required DateTime leftDay,
+  required DateTime day,
 }) {
   if (item.isCompleted) {
     return false;
   }
-  if (!_itemInDay(item, leftDay)) {
+  if (item.type != ItemType.course && item.type != ItemType.schedule) {
     return false;
   }
-  if (item.type == ItemType.course) {
-    return true;
+  if (!_itemInDay(item, day)) {
+    return false;
   }
   final today = DateTime(now.year, now.month, now.day);
-  if (_isSameDay(leftDay, today) && item.type != ItemType.memo) {
+  if (_isSameDay(day, today)) {
     return item.endAt.isAfter(now);
   }
   return true;
 }
 
-bool _shouldShowInRightColumn(
-  AgendaItem item, {
-  required DateTime now,
-  required DateTime rightStart,
-}) {
+bool _shouldShowInRightColumn(AgendaItem item) {
   if (item.isCompleted) {
     return false;
   }
-  if (item.type == ItemType.course) {
-    return false;
-  }
-  if (!_itemIntersects(item, rightStart, rightStart.add(const Duration(days: 3650)))) {
-    return false;
-  }
-  if (item.type != ItemType.memo && !item.endAt.isAfter(now)) {
-    return false;
-  }
-  return true;
+  return item.type == ItemType.task || item.type == ItemType.memo;
 }
 
 DateTime _displayDayForItem(
@@ -381,14 +379,6 @@ DateTimeRange _weekRange(DateTime now) {
       .subtract(Duration(days: now.weekday - DateTime.monday));
   final end = start.add(const Duration(days: 6));
   return DateTimeRange(start: start, end: end);
-}
-
-bool _itemIntersects(AgendaItem item, DateTime start, DateTime endExclusive) {
-  if (item.type == ItemType.memo) {
-    final date = DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
-    return !date.isBefore(start) && date.isBefore(endExclusive);
-  }
-  return item.endAt.isAfter(start) && item.startAt.isBefore(endExclusive);
 }
 
 bool _itemInDay(AgendaItem item, DateTime day) {
