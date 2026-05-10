@@ -132,23 +132,15 @@ class AppAnimatedFieldGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRect(
-      child: AnimatedSize(
-        duration: AppMotion.medium,
-        curve: AppMotion.emphasizedCurve,
-        alignment: Alignment.topCenter,
-        child: AnimatedSwitcher(
-          duration: AppMotion.fast,
-          reverseDuration: AppMotion.fast,
-          switchInCurve: AppMotion.enterCurve,
-          switchOutCurve: AppMotion.exitCurve,
-          layoutBuilder: AppSwitchingContent._topStackLayout,
-          transitionBuilder: AppSwitchingContent._fadeSlideTransition,
-          child: visible
-              ? KeyedSubtree(
-                  key: const ValueKey('visible'),
-                  child: child,
-                )
-              : const SizedBox.shrink(key: ValueKey('hidden')),
+      child: AnimatedOpacity(
+        duration: AppMotion.fast,
+        curve: AppMotion.enterCurve,
+        opacity: visible ? 1 : 0,
+        child: AnimatedSize(
+          duration: AppMotion.medium,
+          curve: AppMotion.emphasizedCurve,
+          alignment: Alignment.topCenter,
+          child: visible ? child : const SizedBox.shrink(),
         ),
       ),
     );
