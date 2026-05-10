@@ -51,11 +51,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ],
       child: SingleChildScrollView(
         controller: _scrollController,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         padding: const EdgeInsets.fromLTRB(0, 0, 0, _settingsPageBottomPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SettingsHero(
+              scrollController: _scrollController,
               child: _AccountHubCard(
                 children: [
                   _AccountHubTile(
@@ -192,9 +196,11 @@ class _SettingsFadingTopBar extends StatelessWidget {
 
 class _SettingsHero extends StatelessWidget {
   const _SettingsHero({
+    required this.scrollController,
     required this.child,
   });
 
+  final ScrollController scrollController;
   final Widget child;
 
   @override
@@ -208,27 +214,12 @@ class _SettingsHero extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          SizedBox(
+          _SettingsExpandableHeroImage(
+            scrollController: scrollController,
             height: imageHeight,
-            width: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const AppWallpaperBackground(),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        theme.colorScheme.surface.withValues(alpha: 0.08),
-                        theme.colorScheme.surface.withValues(alpha: 0.52),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            gradientStartColor:
+                theme.colorScheme.surface.withValues(alpha: 0.08),
+            gradientEndColor: theme.colorScheme.surface.withValues(alpha: 0.52),
           ),
           Positioned(
             left: _settingsHeroHorizontalPadding,
@@ -237,6 +228,65 @@ class _SettingsHero extends StatelessWidget {
             child: child,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsExpandableHeroImage extends StatelessWidget {
+  const _SettingsExpandableHeroImage({
+    required this.scrollController,
+    required this.height,
+    required this.gradientStartColor,
+    required this.gradientEndColor,
+  });
+
+  final ScrollController scrollController;
+  final double height;
+  final Color gradientStartColor;
+  final Color gradientEndColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: scrollController,
+      builder: (context, child) {
+        final offset = scrollController.hasClients
+            ? scrollController.offset
+            : 0.0;
+        final pullDistance = offset < 0 ? -offset : 0.0;
+        final scale = 1 + pullDistance / height;
+
+        return Transform.translate(
+          offset: Offset(0, -pullDistance),
+          child: Transform.scale(
+            alignment: Alignment.topCenter,
+            scale: scale,
+            child: child,
+          ),
+        );
+      },
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const AppWallpaperBackground(),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    gradientStartColor,
+                    gradientEndColor,
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
