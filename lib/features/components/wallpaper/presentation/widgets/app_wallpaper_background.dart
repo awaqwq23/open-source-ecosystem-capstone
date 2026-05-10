@@ -23,6 +23,7 @@ class AppWallpaperBackground extends ConsumerWidget {
             return Image.file(
               File(path),
               fit: BoxFit.cover,
+              gaplessPlayback: true,
               width: double.infinity,
               height: double.infinity,
               errorBuilder: (_, _, _) => const _WallpaperFallback(),
