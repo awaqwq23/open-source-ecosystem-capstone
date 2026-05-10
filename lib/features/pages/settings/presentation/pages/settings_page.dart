@@ -39,6 +39,7 @@ class SettingsPage extends ConsumerWidget {
                     iconColor: theme.colorScheme.onSurfaceVariant,
                     title: l10n.settingsAccountLocalTitle,
                     subtitle: '本地模式',
+                    prominent: false,
                     onTap: () {
                       // 本地账户详情暂为信息展示
                     },
@@ -51,6 +52,7 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: whuAuth.isAuthenticated
                         ? l10n.settingsAccountWhuLoggedIn
                         : l10n.settingsAccountWhuNotLoggedIn,
+                    prominent: true,
                     onTap: whuAuth.isAuthenticated
                         ? null
                         : () => context.push(AppRoutePaths.settingsWhuAuthLogin),
@@ -100,12 +102,12 @@ class _SettingsHero extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 238,
+      height: 252,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           SizedBox(
-            height: 176,
+            height: 164,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
@@ -129,7 +131,7 @@ class _SettingsHero extends StatelessWidget {
           Positioned(
             left: 16,
             right: 16,
-            top: 118,
+            top: 104,
             child: child,
           ),
         ],
@@ -153,7 +155,7 @@ class _AccountHubCard extends StatelessWidget {
       color: AppSemanticColors.settingsSectionBackground(theme),
       elevation: theme.brightness == Brightness.dark ? 0 : 8,
       shadowColor: Colors.black.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(24),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
@@ -161,7 +163,7 @@ class _AccountHubCard extends StatelessWidget {
             children[index],
             if (index != children.length - 1)
               Padding(
-                padding: const EdgeInsets.only(left: 88, right: 20),
+                padding: const EdgeInsets.only(left: 78, right: 18),
                 child: Divider(
                   height: 1,
                   thickness: 1,
@@ -182,6 +184,7 @@ class _AccountHubTile extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    required this.prominent,
     this.onTap,
   });
 
@@ -190,28 +193,45 @@ class _AccountHubTile extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final bool prominent;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final iconSize = prominent ? 48.0 : 42.0;
+    final glyphSize = prominent ? 28.0 : 24.0;
+    final verticalPadding = prominent ? 14.0 : 12.0;
+    final titleStyle = (prominent
+            ? theme.textTheme.titleMedium
+            : theme.textTheme.titleSmall)
+        ?.copyWith(
+      color: prominent ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+      fontWeight: prominent ? FontWeight.w800 : FontWeight.w600,
+    );
+    final subtitleStyle = (prominent
+            ? theme.textTheme.bodyMedium
+            : theme.textTheme.bodySmall)
+        ?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
 
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+        padding: EdgeInsets.fromLTRB(18, verticalPadding, 14, verticalPadding),
         child: Row(
           children: [
             Container(
-              width: 54,
-              height: 54,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
                 color: iconBackground,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 30,
+                size: glyphSize,
                 color: iconColor,
               ),
             ),
@@ -224,18 +244,14 @@ class _AccountHubTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: titleStyle,
                   ),
-                  const SizedBox(height: 3),
+                  SizedBox(height: prominent ? 3 : 2),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: subtitleStyle,
                   ),
                 ],
               ),
