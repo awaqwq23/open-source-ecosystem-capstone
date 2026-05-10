@@ -540,6 +540,7 @@ class _PendingTaskRowList extends ConsumerWidget {
 
 class _ListItemRow extends StatefulWidget {
   const _ListItemRow({
+    super.key,
     required this.item,
     required this.dragIndex,
     required this.onToggleComplete,
