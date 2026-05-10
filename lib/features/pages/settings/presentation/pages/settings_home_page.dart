@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
@@ -20,20 +19,37 @@ class SettingsHomePage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final settings = state.homeSettings;
     final isCourseGrid = settings.gridMode == HomeGridMode.courseGrid;
+    final l10n = context.l10n;
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(context, title: context.l10n.settingsHomeSectionTitle),
+        buildSecondaryAppBar(context, title: l10n.settingsHomeSectionTitle),
       ],
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: Column(
           children: [
-            _GridModeToggle(
-              value: settings.gridMode,
-              onChanged: (mode) => _saveHomeSettings(
-                ref,
-                settings.copyWith(gridMode: mode),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: ui.Tabs(
+                index: isCourseGrid ? 0 : 1,
+                onChanged: (index) => _saveHomeSettings(
+                  ref,
+                  settings.copyWith(
+                    gridMode: index == 0
+                        ? HomeGridMode.courseGrid
+                        : HomeGridMode.timeGrid,
+                  ),
+                ),
+                expand: true,
+                children: [
+                  ui.TabItem(
+                    child: Text(l10n.homeGridModeCourse),
+                  ),
+                  ui.TabItem(
+                    child: Text(l10n.homeGridModeTime),
+                  ),
+                ],
               ),
             ),
             _buildTimeGridSection(context, ref, settings),
@@ -188,108 +204,6 @@ class SettingsHomePage extends ConsumerWidget {
 
   Future<void> _saveHomeSettings(WidgetRef ref, HomeSettings settings) {
     return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
-  }
-}
-
-class _GridModeToggle extends StatelessWidget {
-  const _GridModeToggle({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final HomeGridMode value;
-  final ValueChanged<HomeGridMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = context.l10n;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppSemanticColors.settingsSectionBackground(theme),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            Expanded(
-              child: _ToggleButton(
-                selected: value == HomeGridMode.courseGrid,
-                label: l10n.homeGridModeCourse,
-                icon: Icons.school_outlined,
-                onTap: () => onChanged(HomeGridMode.courseGrid),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: _ToggleButton(
-                selected: value == HomeGridMode.timeGrid,
-                label: l10n.homeGridModeTime,
-                icon: Icons.schedule_outlined,
-                onTap: () => onChanged(HomeGridMode.timeGrid),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ToggleButton extends StatelessWidget {
-  const _ToggleButton({
-    required this.selected,
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final bool selected;
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: selected
-          ? theme.colorScheme.primaryContainer
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: selected ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: selected
-                      ? theme.colorScheme.onPrimaryContainer
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
