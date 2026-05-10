@@ -10,7 +10,16 @@ import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provi
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-const double _settingsHeroImageHeight = 164;
+const double _settingsHeroImageHeightFactor = 0.25;
+const double _settingsHeroCardImageOverlap = 60;
+const double _settingsHeroCardReservedHeight = 148;
+const double _settingsHeroHorizontalPadding = 16;
+const double _settingsSectionSpacing = 16;
+const double _settingsPageBottomPadding = 24;
+
+double _settingsHeroImageHeight(BuildContext context) {
+  return MediaQuery.sizeOf(context).height * _settingsHeroImageHeightFactor;
+}
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -42,7 +51,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ],
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, _settingsPageBottomPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -74,7 +83,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: _settingsSectionSpacing),
             _SettingsLinkCard(
               children: [
                 _SettingsLinkTile(
@@ -97,7 +106,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: _settingsSectionSpacing),
             _SettingsLinkCard(
               children: [
                 _SettingsLinkTile(
@@ -166,7 +175,7 @@ class _SettingsFadingTopBar extends StatelessWidget {
         final offset = scrollController.hasClients
             ? scrollController.offset
             : 0.0;
-        final opacity = (offset / _settingsHeroImageHeight)
+        final opacity = (offset / _settingsHeroImageHeight(context))
             .clamp(0.0, 1.0)
             .toDouble();
         return IgnorePointer(
@@ -191,14 +200,16 @@ class _SettingsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final imageHeight = _settingsHeroImageHeight(context);
+    final cardTop = imageHeight - _settingsHeroCardImageOverlap;
 
     return SizedBox(
-      height: 252,
+      height: cardTop + _settingsHeroCardReservedHeight,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           SizedBox(
-            height: _settingsHeroImageHeight,
+            height: imageHeight,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
@@ -220,9 +231,9 @@ class _SettingsHero extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: 16,
-            right: 16,
-            top: 104,
+            left: _settingsHeroHorizontalPadding,
+            right: _settingsHeroHorizontalPadding,
+            top: cardTop,
             child: child,
           ),
         ],
