@@ -266,7 +266,15 @@ class _HomeGrid extends StatefulWidget {
 
 class _HomeGridState extends State<_HomeGrid> {
   final ScrollController _scrollController = ScrollController();
-  bool _showPeriodNumber = false;
+  bool _showPeriodNumber = true; // 课程方格默认显示节数，每次刷新重置
+
+  @override
+  void didUpdateWidget(covariant _HomeGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewData.isCourseGrid != oldWidget.viewData.isCourseGrid) {
+      _showPeriodNumber = true;
+    }
+  }
 
   @override
   void dispose() {
