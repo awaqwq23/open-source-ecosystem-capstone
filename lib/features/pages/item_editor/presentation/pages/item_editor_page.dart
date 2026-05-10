@@ -194,21 +194,21 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                               value: state.draft.isAllDay,
                               onChanged: notifier.toggleAllDay,
                             ),
-                          _PlainActionRow(
-                            rowKey: const ValueKey('item-editor-row-start'),
-                            labelKey: const ValueKey('item-editor-row-start-label'),
-                            trailingGroupKey:
-                                const ValueKey('item-editor-row-start-trailing-group'),
-                            valueKey: const ValueKey('item-editor-row-start-value'),
-                            trailingKey: const ValueKey('item-editor-row-start-chevron'),
-                            label: l10n.editorFieldStartTime,
-                            value: _formatTime(context, state.draft.startAt),
-                            onTap: () => _pickStartTime(context, ref, state),
-                          ),
                           if (!state.draft.isAllDay)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                _PlainActionRow(
+                                  rowKey: const ValueKey('item-editor-row-start'),
+                                  labelKey: const ValueKey('item-editor-row-start-label'),
+                                  trailingGroupKey:
+                                      const ValueKey('item-editor-row-start-trailing-group'),
+                                  valueKey: const ValueKey('item-editor-row-start-value'),
+                                  trailingKey: const ValueKey('item-editor-row-start-chevron'),
+                                  label: l10n.editorFieldStartTime,
+                                  value: _formatTime(context, state.draft.startAt),
+                                  onTap: () => _pickStartTime(context, ref, state),
+                                ),
                                 if (state.draft.type == ItemType.schedule)
                                   _PlainActionRow(
                                     rowKey: const ValueKey('item-editor-row-end-time'),
