@@ -17,6 +17,7 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final whuAuth = ref.watch(whuAuthProvider);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -70,6 +71,12 @@ class SettingsPage extends ConsumerWidget {
                   subtitle: '',
                   leading: const Icon(AppIcons.aiOutlined),
                   onTap: () => context.push(AppRoutePaths.settingsAi),
+                ),
+                SettingsFlatTile(
+                  title: isZh ? '课程表与导入' : 'Course Tables & Import',
+                  subtitle: isZh ? '管理课程表、导入课程数据' : 'Manage timetables and import courses',
+                  leading: const Icon(AppIcons.itemTypeCourse),
+                  onTap: () => context.push(AppRoutePaths.settingsCourseTimetables),
                 ),
               ],
             ),
