@@ -681,6 +681,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
   String _formatDuration(BuildContext context, Duration value) {
     final locale = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (value == Duration.zero) {
+      return locale.startsWith('zh') ? '未设置' : 'Unset';
+    }
     final hours = value.inHours;
     final minutes = value.inMinutes.remainder(60);
     if (locale.startsWith('zh')) {
