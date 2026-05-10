@@ -36,11 +36,8 @@ class SettingsHomePage extends ConsumerWidget {
                 settings.copyWith(gridMode: mode),
               ),
             ),
-            if (isCourseGrid) ...[
-              _buildCourseGridSection(context, ref),
-            ] else ...[
-              _buildTimeGridSection(context, ref, settings),
-            ],
+            _buildTimeGridSection(context, ref, settings),
+            if (isCourseGrid) _buildCourseGridSection(context, ref),
           ],
         ),
       ),
