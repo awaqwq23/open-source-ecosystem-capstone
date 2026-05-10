@@ -6,7 +6,6 @@ import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
-import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -39,7 +38,8 @@ class SettingsPage extends ConsumerWidget {
                     iconColor: theme.colorScheme.onSurfaceVariant,
                     title: l10n.settingsAccountLocalTitle,
                     subtitle: '本地模式',
-                    prominent: false,
+                    prominent: true,
+                    showTrailing: false,
                     onTap: () {
                       // 本地账户详情暂为信息展示
                     },
@@ -52,7 +52,8 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: whuAuth.isAuthenticated
                         ? l10n.settingsAccountWhuLoggedIn
                         : l10n.settingsAccountWhuNotLoggedIn,
-                    prominent: true,
+                    prominent: false,
+                    showTrailing: true,
                     onTap: whuAuth.isAuthenticated
                         ? null
                         : () => context.push(AppRoutePaths.settingsWhuAuthLogin),
@@ -60,25 +61,31 @@ class SettingsPage extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            SettingsFlatSection(
+            const SizedBox(height: 16),
+            _SettingsLinkCard(
               children: [
-                SettingsFlatTile(
+                _SettingsLinkTile(
                   title: l10n.settingsGeneralEntryTitle,
                   subtitle: l10n.settingsGeneralEntrySubtitle,
-                  leading: const Icon(AppIcons.settingsOutlined),
+                  icon: AppIcons.settingsOutlined,
+                  iconBackground: theme.colorScheme.secondaryContainer,
+                  iconColor: theme.colorScheme.secondary,
                   onTap: () => context.push(AppRoutePaths.settingsGeneral),
                 ),
-                SettingsFlatTile(
+                _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
                   subtitle: l10n.settingsHomeEntrySubtitle,
-                  leading: const Icon(AppIcons.homeOutlined),
+                  icon: AppIcons.homeOutlined,
+                  iconBackground: theme.colorScheme.tertiaryContainer,
+                  iconColor: theme.colorScheme.tertiary,
                   onTap: () => context.push(AppRoutePaths.settingsHome),
                 ),
-                SettingsFlatTile(
+                _SettingsLinkTile(
                   title: l10n.settingsAiSectionTitle,
                   subtitle: '',
-                  leading: const Icon(AppIcons.aiOutlined),
+                  icon: AppIcons.aiOutlined,
+                  iconBackground: theme.colorScheme.primaryContainer,
+                  iconColor: theme.colorScheme.primary,
                   onTap: () => context.push(AppRoutePaths.settingsAi),
                 ),
               ],
@@ -185,6 +192,7 @@ class _AccountHubTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.prominent,
+    required this.showTrailing,
     this.onTap,
   });
 
@@ -194,6 +202,7 @@ class _AccountHubTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool prominent;
+  final bool showTrailing;
   final VoidCallback? onTap;
 
   @override
@@ -253,6 +262,126 @@ class _AccountHubTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: subtitleStyle,
                   ),
+                ],
+              ),
+            ),
+            if (showTrailing)
+              Icon(
+                AppIcons.drillIn,
+                size: 22,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsLinkCard extends StatelessWidget {
+  const _SettingsLinkCard({
+    required this.children,
+  });
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: AppSemanticColors.settingsSectionBackground(theme),
+        elevation: theme.brightness == Brightness.dark ? 0 : 4,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              children[index],
+              if (index != children.length - 1)
+                Padding(
+                  padding: const EdgeInsets.only(left: 78, right: 18),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppSemanticColors.settingsSectionDivider(theme),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsLinkTile extends StatelessWidget {
+  const _SettingsLinkTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: iconColor,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
