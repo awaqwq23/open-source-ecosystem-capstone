@@ -219,6 +219,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       columns: baseViewData.columns,
       timeSlots: baseViewData.timeSlots,
       items: baseViewData.items,
+      isCourseGrid: baseViewData.isCourseGrid,
     );
   }
 
@@ -234,6 +235,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       columns: baseViewData.columns,
       timeSlots: baseViewData.timeSlots,
       items: baseViewData.items,
+      isCourseGrid: baseViewData.isCourseGrid,
     );
   }
 
