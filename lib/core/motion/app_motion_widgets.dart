@@ -162,7 +162,7 @@ class _AppSchemaTransitionState extends State<AppSchemaTransition> {
   }
 }
 
-class AppCollapsibleFieldGroup extends StatefulWidget {
+class AppCollapsibleFieldGroup extends StatelessWidget {
   const AppCollapsibleFieldGroup({
     required this.visible,
     required this.child,
@@ -177,151 +177,53 @@ class AppCollapsibleFieldGroup extends StatefulWidget {
   final Duration sizeDuration;
 
   @override
-  State<AppCollapsibleFieldGroup> createState() => _AppCollapsibleFieldGroupState();
-}
-
-class _AppCollapsibleFieldGroupState extends State<AppCollapsibleFieldGroup> {
-  Widget? _retainedChild;
-  bool _includeChild = false;
-  bool _showSize = false;
-  bool _showOpacity = false;
-  int _animationGeneration = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _retainedChild = widget.child;
-    _includeChild = widget.visible;
-    _showSize = widget.visible;
-    _showOpacity = widget.visible;
-  }
-
-  @override
-  void didUpdateWidget(covariant AppCollapsibleFieldGroup oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final disableLocalTransition = _isLocalFieldTransitionDisabled(context);
-
-    if (disableLocalTransition) {
-      _snapToTarget();
-      return;
-    }
-
-    if (widget.visible) {
-      _retainedChild = widget.child;
-    } else if (oldWidget.visible) {
-      _retainedChild = oldWidget.child;
-    }
-
-    if (oldWidget.visible == widget.visible) {
-      if (widget.visible) {
-        _retainedChild = widget.child;
-      }
-      return;
-    }
-
-    if (widget.visible) {
-      _expandThenFadeIn();
-      return;
-    }
-
-    _fadeOutThenCollapse();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final disableLocalTransition =
         AppSchemaTransition.maybeDisableLocalFieldTransitions(context);
     if (disableLocalTransition) {
-      return widget.visible ? widget.child : const SizedBox.shrink();
-    }
-
-    if (!_includeChild || _retainedChild == null) {
-      return const SizedBox.shrink();
+      return visible ? child : const SizedBox.shrink();
     }
 
     return ClipRect(
-      child: IgnorePointer(
-        ignoring: !_showOpacity || !_showSize,
-        child: ExcludeSemantics(
-          excluding: !_showOpacity || !_showSize,
-          child: AnimatedSize(
-            duration: widget.sizeDuration,
-            curve: AppMotion.emphasizedCurve,
-            alignment: Alignment.topCenter,
-            child: AnimatedOpacity(
-              duration: widget.fadeDuration,
-              curve: _showOpacity ? AppMotion.enterCurve : AppMotion.exitCurve,
-              opacity: _showOpacity ? 1 : 0,
-              child: _showSize ? _retainedChild! : const SizedBox.shrink(),
+      child: AnimatedSwitcher(
+        duration: sizeDuration,
+        reverseDuration: sizeDuration,
+        switchInCurve: AppMotion.enterCurve,
+        switchOutCurve: AppMotion.exitCurve,
+        transitionBuilder: (child, animation) {
+          final fadeFraction =
+              (fadeDuration.inMicroseconds / sizeDuration.inMicroseconds)
+                  .clamp(0.0, 1.0)
+                  .toDouble();
+          final opacity = CurvedAnimation(
+            parent: animation,
+            curve: Interval(
+              0,
+              fadeFraction,
+              curve: AppMotion.enterCurve,
             ),
-          ),
-        ),
+            reverseCurve: AppMotion.exitCurve,
+          );
+          return SizeTransition(
+            sizeFactor: animation,
+            axisAlignment: -1,
+            child: FadeTransition(
+              opacity: opacity,
+              child: child,
+            ),
+          );
+        },
+        child: visible
+            ? KeyedSubtree(
+                key: const ValueKey('app-collapsible-field-visible'),
+                child: child,
+              )
+            : const SizedBox.shrink(
+                key: ValueKey('app-collapsible-field-hidden'),
+              ),
       ),
     );
   }
-
-  void _snapToTarget() {
-    _animationGeneration++;
-    _retainedChild = widget.child;
-    _includeChild = widget.visible;
-    _showSize = widget.visible;
-    _showOpacity = widget.visible;
-  }
-
-  void _expandThenFadeIn() {
-    final generation = ++_animationGeneration;
-    setState(() {
-      _retainedChild = widget.child;
-      _includeChild = true;
-      _showSize = true;
-      _showOpacity = false;
-    });
-
-    Future<void>.delayed(widget.sizeDuration, () {
-      if (!mounted || generation != _animationGeneration) {
-        return;
-      }
-      setState(() {
-        _showOpacity = true;
-      });
-    });
-  }
-
-  void _fadeOutThenCollapse() {
-    final generation = ++_animationGeneration;
-    setState(() {
-      _includeChild = true;
-      _showSize = true;
-      _showOpacity = false;
-    });
-
-    Future<void>.delayed(widget.fadeDuration, () {
-      if (!mounted || generation != _animationGeneration) {
-        return;
-      }
-      setState(() {
-        _showSize = false;
-      });
-    });
-
-    Future<void>.delayed(widget.fadeDuration + widget.sizeDuration, () {
-      if (!mounted || generation != _animationGeneration) {
-        return;
-      }
-      setState(() {
-        _includeChild = false;
-        _retainedChild = null;
-      });
-    });
-  }
-}
-
-bool _isLocalFieldTransitionDisabled(BuildContext context) {
-  final scope = context
-      .getElementForInheritedWidgetOfExactType<_AppSchemaTransitionScope>()
-      ?.widget;
-  return scope is _AppSchemaTransitionScope &&
-      scope.disableLocalFieldTransitions;
 }
 
 class _AppSchemaTransitionScope extends InheritedWidget {
