@@ -493,7 +493,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorColorPickerTitle => '选择事项颜色';
 
   @override
-  String get editorAllDayTitle => '全天事项';
+  String get editorAllDayTitle => '全天任务';
 
   @override
   String get editorAllDayDescription => '开启后只显示日期，不再单独设置具体时分。';
