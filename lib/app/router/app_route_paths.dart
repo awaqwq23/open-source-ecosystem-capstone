@@ -12,15 +12,13 @@ abstract final class AppRoutePaths {
   static const itemEditorFlow = '/item-editor/flow';
   static const itemDetail = '/item-detail';
   static const settingsGeneral = '/settings/general';
-  static const settingsWidgets = '/settings/widgets';
+  static const settingsNavigation = '/settings/navigation';
   static const settingsHome = '/settings/home';
-  static const settingsList = '/settings/list';
   static const settingsCourseTimetables = '/settings/course-timetables';
   static const settingsCourseImportWhu = '/settings/course-import-whu';
   static const settingsWhuAuthLogin = '/settings/whu-auth/login';
   static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
   static const settingsAi = '/settings/ai';
-  static const settingsAbout = '/settings/about';
 
   // Modal (full-screen overlay flow)
   static const repeatSettings = '/item-editor/repeat-settings';

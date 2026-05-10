@@ -653,6 +653,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAiSaveButton => 'Save AI settings';
 
   @override
+  String get settingsAccountLocalTitle => 'Local Account';
+
+  @override
+  String get settingsAccountWhuTitle => 'WHU Account';
+
+  @override
+  String get settingsAccountWhuLoggedIn => 'Authenticated';
+
+  @override
+  String get settingsAccountWhuNotLoggedIn => 'Not logged in';
+
+  @override
+  String get settingsNavigationEntryTitle => 'Navigation settings';
+
+  @override
+  String get settingsNavigationEntrySubtitle => 'Labels and middle tab';
+
+  @override
+  String get settingsHomeCourseImport => 'Course import';
+
+  @override
+  String get settingsHomeCourseManagement => 'Timetable management';
+
+  @override
   String get placeholderOpenPicker => 'Open picker';
 
   @override

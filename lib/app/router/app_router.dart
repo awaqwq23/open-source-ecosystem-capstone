@@ -20,13 +20,11 @@ import 'package:luotopia/features/pages/item_editor/presentation/pages/item_edit
 import 'package:luotopia/features/pages/item_editor/presentation/pages/reminder_settings_page.dart';
 import 'package:luotopia/features/pages/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:luotopia/features/pages/list/presentation/pages/list_page.dart';
-import 'package:luotopia/features/pages/settings/presentation/pages/settings_about_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_ai_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_general_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_home_page.dart';
-import 'package:luotopia/features/pages/settings/presentation/pages/settings_list_page.dart';
+import 'package:luotopia/features/pages/settings/presentation/pages/settings_navigation_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_page.dart';
-import 'package:luotopia/features/pages/settings/presentation/pages/settings_widgets_page.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -99,16 +97,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const SettingsGeneralPage(),
                   ),
                   GoRoute(
-                    path: 'widgets',
-                    builder: (context, state) => const SettingsWidgetsPage(),
+                    path: 'navigation',
+                    builder: (context, state) => const SettingsNavigationPage(),
                   ),
                   GoRoute(
                     path: 'home',
                     builder: (context, state) => const SettingsHomePage(),
-                  ),
-                  GoRoute(
-                    path: 'list',
-                    builder: (context, state) => const SettingsListPage(),
                   ),
                   GoRoute(
                     path: 'course-timetables',
@@ -129,10 +123,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'ai',
                     builder: (context, state) => const SettingsAiPage(),
-                  ),
-                  GoRoute(
-                    path: 'about',
-                    builder: (context, state) => const SettingsAboutPage(),
                   ),
                 ],
               ),

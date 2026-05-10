@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
@@ -19,6 +19,7 @@ class SettingsGeneralPage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final viewModel = ref.read(settingsViewModelProvider.notifier);
     final l10n = context.l10n;
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -47,50 +48,99 @@ class SettingsGeneralPage extends ConsumerWidget {
                   ),
                 ),
                 SettingsFlatTile(
-                  title: _isChinese(context) ? '导航栏显示文字' : 'Show navigation labels',
-                  subtitle: _isChinese(context)
-                      ? '关闭后仅显示图标（默认）'
-                      : 'When off, only icons are shown (default).',
-                  leading: const Icon(Icons.subtitles_outlined),
-                  trailing: Switch(
-                    value: state.navigationSettings.showLabels,
-                    onChanged: (value) => viewModel.saveNavigationSettings(
-                      state.navigationSettings.copyWith(showLabels: value),
-                    ),
-                  ),
-                ),
-                SettingsFlatTile(
-                  title: _isChinese(context) ? '中间标签页' : 'Middle tab',
-                  subtitle: _isChinese(context)
-                      ? '导航栏中间位置显示论坛或 AI 助手（默认论坛）'
-                      : 'Choose between Forum or AI for the middle tab (default Forum).',
-                  leading: const Icon(Icons.swap_horiz_outlined),
-                  trailing: _MiddleTabDropdown(
-                    value: state.navigationSettings.middleTabMode,
-                    onChanged: (value) => viewModel.saveNavigationSettings(
-                      state.navigationSettings.copyWith(middleTabMode: value),
-                    ),
-                  ),
+                  title: l10n.settingsNavigationEntryTitle,
+                  subtitle: l10n.settingsNavigationEntrySubtitle,
+                  leading: const Icon(Icons.explore_outlined),
+                  onTap: () => context.push(AppRoutePaths.settingsNavigation),
                 ),
               ],
             ),
-            SettingsFlatTile(
-              title: l10n.settingsGeneralWidgetsTitle,
-              subtitle: _isChinese(context)
-                  ? '配置刷新策略、展示范围和跳转行为'
-                  : 'Configure refresh policy, ranges and launch actions',
-              leading: const Icon(Icons.widgets_outlined),
-              onTap: () => context.push(AppRoutePaths.settingsWidgets),
-            ),
+            _buildWidgetsSection(context, ref, state, viewModel, l10n, isZh),
           ],
         ),
       ),
     );
   }
-}
 
-bool _isChinese(BuildContext context) {
-  return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+  Widget _buildWidgetsSection(
+    BuildContext context,
+    WidgetRef ref,
+    SettingsState state,
+    SettingsViewModel viewModel,
+    AppLocalizations l10n,
+    bool isZh,
+  ) {
+    final widgetSettings = state.widgetSettings;
+    return SettingsFlatSection(
+      title: l10n.settingsGeneralWidgetsTitle,
+      children: [
+        SettingsFlatTile(
+          title: isZh ? '启用桌面小组件同步' : 'Enable widget sync',
+          leading: const Icon(Icons.sync_outlined),
+          trailing: Switch(
+            value: widgetSettings.enabled,
+            onChanged: (value) => viewModel.saveWidgetSettings(
+              widgetSettings.copyWith(enabled: value),
+            ),
+          ),
+        ),
+        SettingsFlatTile(
+          title: isZh ? '兜底刷新频率' : 'Fallback refresh interval',
+          subtitle: isZh
+              ? '数据变更即时推送，同时按频率兜底刷新。'
+              : 'Update on data changes, with periodic fallback refresh.',
+          leading: const Icon(Icons.schedule_outlined),
+          trailing: DropdownButtonHideUnderline(
+            child: DropdownButton<WidgetRefreshInterval>(
+              value: widgetSettings.refreshInterval,
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                viewModel.saveWidgetSettings(
+                  widgetSettings.copyWith(refreshInterval: value),
+                );
+              },
+              items: [
+                DropdownMenuItem(
+                  value: WidgetRefreshInterval.minutes30,
+                  child: Text(isZh ? '30 分钟' : '30 minutes'),
+                ),
+                DropdownMenuItem(
+                  value: WidgetRefreshInterval.hour1,
+                  child: Text(isZh ? '1 小时' : '1 hour'),
+                ),
+                DropdownMenuItem(
+                  value: WidgetRefreshInterval.hours3,
+                  child: Text(isZh ? '3 小时' : '3 hours'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SettingsFlatTile(
+          title: isZh ? '跟随应用语言' : 'Follow app language',
+          leading: const Icon(Icons.language_outlined),
+          trailing: Switch(
+            value: widgetSettings.followAppLanguage,
+            onChanged: (value) => viewModel.saveWidgetSettings(
+              widgetSettings.copyWith(followAppLanguage: value),
+            ),
+          ),
+        ),
+        SettingsFlatTile(
+          title: isZh ? '跟随应用主题' : 'Follow app theme',
+          leading: const Icon(Icons.palette_outlined),
+          trailing: Switch(
+            value: widgetSettings.followAppTheme,
+            onChanged: (value) => viewModel.saveWidgetSettings(
+              widgetSettings.copyWith(followAppTheme: value),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ThemeModeDropdown extends StatelessWidget {
@@ -160,41 +210,6 @@ class _LanguageDropdown extends StatelessWidget {
           DropdownMenuItem(
             value: AppLocale.english.locale,
             child: Text(l10n.languageEnglish),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiddleTabDropdown extends StatelessWidget {
-  const _MiddleTabDropdown({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final MiddleTabMode value;
-  final ValueChanged<MiddleTabMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final isChinese = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<MiddleTabMode>(
-        value: value,
-        onChanged: (selected) {
-          if (selected != null) {
-            onChanged(selected);
-          }
-        },
-        items: [
-          DropdownMenuItem(
-            value: MiddleTabMode.forum,
-            child: Text(isChinese ? '论坛' : 'Forum'),
-          ),
-          DropdownMenuItem(
-            value: MiddleTabMode.ai,
-            child: Text(isChinese ? 'AI 助手' : 'AI'),
           ),
         ],
       ),

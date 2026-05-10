@@ -635,6 +635,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAiSaveButton => '保存 AI 设置';
 
   @override
+  String get settingsAccountLocalTitle => '本地账户';
+
+  @override
+  String get settingsAccountWhuTitle => '武大账户';
+
+  @override
+  String get settingsAccountWhuLoggedIn => '已认证';
+
+  @override
+  String get settingsAccountWhuNotLoggedIn => '未登录';
+
+  @override
+  String get settingsNavigationEntryTitle => '导航栏设置';
+
+  @override
+  String get settingsNavigationEntrySubtitle => '显示文字、中间标签页';
+
+  @override
+  String get settingsHomeCourseImport => '课程表导入';
+
+  @override
+  String get settingsHomeCourseManagement => '课程表管理';
+
+  @override
   String get placeholderOpenPicker => '打开选择器';
 
   @override

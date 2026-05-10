@@ -1310,6 +1310,54 @@ abstract class AppLocalizations {
   /// **'Save AI settings'**
   String get settingsAiSaveButton;
 
+  /// No description provided for @settingsAccountLocalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Account'**
+  String get settingsAccountLocalTitle;
+
+  /// No description provided for @settingsAccountWhuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'WHU Account'**
+  String get settingsAccountWhuTitle;
+
+  /// No description provided for @settingsAccountWhuLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticated'**
+  String get settingsAccountWhuLoggedIn;
+
+  /// No description provided for @settingsAccountWhuNotLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Not logged in'**
+  String get settingsAccountWhuNotLoggedIn;
+
+  /// No description provided for @settingsNavigationEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation settings'**
+  String get settingsNavigationEntryTitle;
+
+  /// No description provided for @settingsNavigationEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Labels and middle tab'**
+  String get settingsNavigationEntrySubtitle;
+
+  /// No description provided for @settingsHomeCourseImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Course import'**
+  String get settingsHomeCourseImport;
+
+  /// No description provided for @settingsHomeCourseManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable management'**
+  String get settingsHomeCourseManagement;
+
   /// No description provided for @placeholderOpenPicker.
   ///
   /// In en, this message translates to:

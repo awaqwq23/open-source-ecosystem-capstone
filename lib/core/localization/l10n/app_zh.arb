@@ -276,6 +276,14 @@
   "settingsAiTestButton": "测试连接",
   "settingsAiTestingButton": "测试中...",
   "settingsAiSaveButton": "保存 AI 设置",
+  "settingsAccountLocalTitle": "本地账户",
+  "settingsAccountWhuTitle": "武大账户",
+  "settingsAccountWhuLoggedIn": "已认证",
+  "settingsAccountWhuNotLoggedIn": "未登录",
+  "settingsNavigationEntryTitle": "导航栏设置",
+  "settingsNavigationEntrySubtitle": "显示文字、中间标签页",
+  "settingsHomeCourseImport": "课程表导入",
+  "settingsHomeCourseManagement": "课程表管理",
   "placeholderOpenPicker": "打开选择器",
   "placeholderOpenMenu": "打开菜单"
 }

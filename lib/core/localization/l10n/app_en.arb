@@ -276,6 +276,14 @@
   "settingsAiTestButton": "Test connection",
   "settingsAiTestingButton": "Testing...",
   "settingsAiSaveButton": "Save AI settings",
+  "settingsAccountLocalTitle": "Local Account",
+  "settingsAccountWhuTitle": "WHU Account",
+  "settingsAccountWhuLoggedIn": "Authenticated",
+  "settingsAccountWhuNotLoggedIn": "Not logged in",
+  "settingsNavigationEntryTitle": "Navigation settings",
+  "settingsNavigationEntrySubtitle": "Labels and middle tab",
+  "settingsHomeCourseImport": "Course import",
+  "settingsHomeCourseManagement": "Timetable management",
   "placeholderOpenPicker": "Open picker",
   "placeholderOpenMenu": "Open menu"
 }

@@ -27,9 +27,9 @@ class HomeSettings {
         blockDurationMinutes = 60,
         blockGapMinutes = 0,
         blockCount = 12,
-        wideLayoutScope = HomeWideLayoutScope.week,
-        gridMode = HomeGridMode.timeGrid,
-        itemOpacityPercent = 100;
+        wideLayoutScope = HomeWideLayoutScope.month,
+        gridMode = HomeGridMode.courseGrid,
+        itemOpacityPercent = 25;
 
   final TimeOfDay dayStartTime;
   final int blockDurationMinutes;
