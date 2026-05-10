@@ -44,7 +44,6 @@ class AppDurationPicker {
               hours: selectedHours,
               minutes: selectedMinutes,
             );
-            final canConfirm = selectedDuration > Duration.zero;
             return SafeArea(
               top: false,
               child: Padding(
@@ -67,9 +66,7 @@ class AppDurationPicker {
                         ),
                         const Spacer(),
                         TextButton(
-                          onPressed: canConfirm
-                              ? () => Navigator.of(sheetContext).pop(selectedDuration)
-                              : null,
+                          onPressed: () => Navigator.of(sheetContext).pop(selectedDuration),
                           child: Text(MaterialLocalizations.of(context).okButtonLabel),
                         ),
                       ],

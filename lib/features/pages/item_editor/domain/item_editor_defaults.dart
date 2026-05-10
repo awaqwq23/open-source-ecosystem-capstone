@@ -54,7 +54,7 @@ class ItemEditorDefaults {
       ),
       memoDetails: ItemMemoDetails(
         targetDate: targetDate,
-        estimatedDuration: prefill?.estimatedDuration ?? const Duration(hours: 1),
+        estimatedDuration: prefill?.estimatedDuration ?? Duration.zero,
       ),
       courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
     );
@@ -74,13 +74,7 @@ class ItemEditorDefaults {
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
       targetDate: type == ItemType.memo ? _dateOnly(draft.targetDate) : draft.targetDate,
-      estimatedDuration: (type == ItemType.memo ||
-              type == ItemType.task ||
-              type == ItemType.schedule)
-          ? (draft.estimatedDuration > Duration.zero
-              ? draft.estimatedDuration
-              : const Duration(hours: 1))
-          : draft.estimatedDuration,
+      estimatedDuration: draft.estimatedDuration,
     );
   }
 

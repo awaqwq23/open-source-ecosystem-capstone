@@ -398,7 +398,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     state = state.copyWith(isSubmitting: true);
     final repository = ref.read(itemEditorRepositoryProvider);
     final saveDraft = SaveItemDraftUseCase(repository);
-    var draft = state.draft;
+    var draft = _normalizeDraftForSave(state.draft);
     if (draft.type == ItemType.course) {
       draft = draft.copyWith(
         details: '',
@@ -453,14 +453,25 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     if (!_shouldDeriveEndFromDuration(draft)) {
       return draft;
     }
-    final duration = draft.estimatedDuration > Duration.zero
-        ? draft.estimatedDuration
-        : const Duration(hours: 1);
+    final duration = _effectiveEstimatedDuration(draft.estimatedDuration);
     final derivedEndAt = draft.startAt.add(duration);
     return draft.copyWith(
-      estimatedDuration: duration,
       endAt: derivedEndAt,
     );
+  }
+
+  ItemDraft _normalizeDraftForSave(ItemDraft draft) {
+    if (draft.type != ItemType.task && draft.type != ItemType.memo) {
+      return draft;
+    }
+    if (draft.estimatedDuration > Duration.zero) {
+      return draft;
+    }
+    return draft.copyWith(estimatedDuration: const Duration(hours: 1));
+  }
+
+  Duration _effectiveEstimatedDuration(Duration duration) {
+    return duration > Duration.zero ? duration : const Duration(hours: 1);
   }
 
   bool _shouldDeriveEndFromDuration(ItemDraft draft) {

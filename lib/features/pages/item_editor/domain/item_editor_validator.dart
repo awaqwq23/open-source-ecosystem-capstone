@@ -50,11 +50,6 @@ class ItemEditorValidator {
       deadlineError = l10n.editorErrorDeadlineBeforeStart;
     }
 
-    if ((draft.type == ItemType.memo || draft.type == ItemType.task) &&
-        draft.estimatedDuration <= Duration.zero) {
-      estimatedDurationError = l10n.editorErrorDurationPositive;
-    }
-
     return ItemEditorValidationErrors(
       title: titleError,
       timeRange: timeRangeError,
