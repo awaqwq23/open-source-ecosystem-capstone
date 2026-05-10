@@ -194,57 +194,55 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                           ),
                         ] else ...[
                           const Gap(12),
-                          _PickerRow(
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-date'),
                             label: l10n.editorFieldDate,
-                            child: ui.DatePicker(
-                              value: state.draft.startAt,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  notifier.updateStartDate(value);
-                                }
-                              },
-                              mode: ui.PromptMode.popover,
-                            ),
+                            value: _formatDate(context, state.draft.startAt),
+                            onTap: () => _pickStartDate(context, ref, state),
                           ),
                           if (!isCourse)
                             _SwitchRow(
                               rowKey: const ValueKey('item-editor-row-all-day'),
-                              label: l10n.editorAllDayTitle,
+                              label: _allDayLabel(context, state.draft.type),
                               value: state.draft.isAllDay,
                               onChanged: notifier.toggleAllDay,
                             ),
-                          _PickerRow(
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-start'),
+                            labelKey: const ValueKey('item-editor-row-start-label'),
+                            trailingGroupKey:
+                                const ValueKey('item-editor-row-start-trailing-group'),
+                            valueKey: const ValueKey('item-editor-row-start-value'),
+                            trailingKey: const ValueKey('item-editor-row-start-chevron'),
                             label: l10n.editorFieldStartTime,
-                            child: ui.TimePicker(
-                              value: ui.TimeOfDay(
-                                hour: state.draft.startAt.hour,
-                                minute: state.draft.startAt.minute,
-                              ),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  notifier.updateStartTime(value.hour, value.minute);
-                                }
-                              },
-                              use24HourFormat: true,
-                              mode: ui.PromptMode.popover,
-                            ),
+                            value: _formatTime(context, state.draft.startAt),
+                            onTap: () => _pickStartTime(context, ref, state),
                           ),
                           if (!state.draft.isAllDay)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _PickerRow(
-                                  label: l10n.editorFieldEstimatedDuration,
-                                  child: ui.DurationPicker(
-                                    value: state.draft.estimatedDuration,
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        notifier.updateEstimatedDuration(value);
-                                      }
-                                    },
-                                    mode: ui.PromptMode.popover,
+                                if (state.draft.type == ItemType.schedule)
+                                  _PlainActionRow(
+                                    rowKey: const ValueKey('item-editor-row-end-time'),
+                                    label: l10n.editorFieldEndTime,
+                                    value: _formatTime(context, state.draft.endAt),
+                                    errorText: state.errors.timeRange,
+                                    onTap: () => _pickEndTime(context, ref, state),
+                                  )
+                                else
+                                  _PickerRow(
+                                    label: l10n.editorFieldEstimatedDuration,
+                                    child: ui.DurationPicker(
+                                      value: state.draft.estimatedDuration,
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          notifier.updateEstimatedDuration(value);
+                                        }
+                                      },
+                                      mode: ui.PromptMode.popover,
+                                    ),
                                   ),
-                                ),
                                 if (state.errors.estimatedDuration != null)
                                   Padding(
                                     padding: const EdgeInsets.only(
@@ -505,6 +503,54 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     );
   }
 
+  Future<void> _pickStartDate(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: state.draft.startAt,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).updateStartDate(picked);
+    }
+  }
+
+  Future<void> _pickStartTime(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(state.draft.startAt),
+    );
+    if (picked != null && mounted) {
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateStartTime(picked.hour, picked.minute);
+    }
+  }
+
+  Future<void> _pickEndTime(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(state.draft.endAt),
+    );
+    if (picked != null && mounted) {
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateEndTime(picked.hour, picked.minute);
+    }
+  }
+
   Future<void> _pickDeadlineDateTime(
     BuildContext context,
     WidgetRef ref,
@@ -667,6 +713,16 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       return _formatDate(context, value);
     }
     return '${_formatDate(context, value)}  ${_formatTime(context, value)}';
+  }
+
+  String _allDayLabel(BuildContext context, ItemType type) {
+    if (type == ItemType.schedule && _isChinese(context)) {
+      return '全天日程';
+    }
+    if (type == ItemType.schedule) {
+      return 'All-day schedule';
+    }
+    return context.l10n.editorAllDayTitle;
   }
 
   String _courseNatureHint(BuildContext context) {

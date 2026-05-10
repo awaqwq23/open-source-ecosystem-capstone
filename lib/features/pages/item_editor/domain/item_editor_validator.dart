@@ -39,7 +39,8 @@ class ItemEditorValidator {
       titleError = l10n.editorErrorTitleRequired;
     }
 
-    if (draft.type == ItemType.course && draft.endAt.isBefore(draft.startAt)) {
+    if ((draft.type == ItemType.course || draft.type == ItemType.schedule) &&
+        draft.endAt.isBefore(draft.startAt)) {
       timeRangeError = l10n.editorErrorEndBeforeStart;
     }
 
@@ -49,9 +50,7 @@ class ItemEditorValidator {
       deadlineError = l10n.editorErrorDeadlineBeforeStart;
     }
 
-    if ((draft.type == ItemType.memo ||
-            draft.type == ItemType.task ||
-            draft.type == ItemType.schedule) &&
+    if ((draft.type == ItemType.memo || draft.type == ItemType.task) &&
         draft.estimatedDuration <= Duration.zero) {
       estimatedDurationError = l10n.editorErrorDurationPositive;
     }

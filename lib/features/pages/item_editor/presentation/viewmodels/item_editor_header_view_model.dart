@@ -273,11 +273,19 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       state.draft.startAt.hour,
       state.draft.startAt.minute,
     );
-    final end = state.draft.endAt.isBefore(start) ? start : state.draft.endAt;
+    final end = state.draft.type == ItemType.schedule
+        ? DateTime(
+            date.year,
+            date.month,
+            date.day,
+            state.draft.endAt.hour,
+            state.draft.endAt.minute,
+          )
+        : (state.draft.endAt.isBefore(start) ? start : state.draft.endAt);
     _updateDraft(
       state.draft.copyWith(
         startAt: start,
-        endAt: end,
+        endAt: end.isBefore(start) ? start : end,
         targetDate: date,
       ),
     );
@@ -456,7 +464,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   bool _shouldDeriveEndFromDuration(ItemDraft draft) {
-    return draft.type == ItemType.task || draft.type == ItemType.schedule;
+    return draft.type == ItemType.task;
   }
 }
 
