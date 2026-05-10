@@ -18,8 +18,6 @@ class SettingsHomePage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final settings = state.homeSettings;
     final l10n = context.l10n;
-    final isCourseGrid = settings.gridMode == HomeGridMode.courseGrid;
-
     return ui.Scaffold(
       headers: [
         buildSecondaryAppBar(context, title: l10n.settingsHomeSectionTitle),
@@ -96,18 +94,16 @@ class SettingsHomePage extends ConsumerWidget {
                 ),
               ],
             ),
-            if (isCourseGrid)
-              SettingsFlatTile(
-                title: l10n.settingsHomeCourseGridSettings,
-                leading: const Icon(Icons.school_outlined),
-                onTap: () => context.push(AppRoutePaths.settingsCourseGrid),
-              ),
-            if (!isCourseGrid)
-              SettingsFlatTile(
-                title: l10n.settingsHomeTimeGridSettings,
-                leading: const Icon(Icons.schedule_outlined),
-                onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
-              ),
+            SettingsFlatTile(
+              title: l10n.settingsHomeTimeGridSettings,
+              leading: const Icon(Icons.schedule_outlined),
+              onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
+            ),
+            SettingsFlatTile(
+              title: l10n.settingsHomeCourseGridSettings,
+              leading: const Icon(Icons.school_outlined),
+              onTap: () => context.push(AppRoutePaths.settingsCourseGrid),
+            ),
           ],
         ),
       ),
