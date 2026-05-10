@@ -65,31 +65,91 @@ class AppSwitchingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: AppMotion.medium,
-      reverseDuration: AppMotion.fast,
-      switchInCurve: AppMotion.enterCurve,
-      switchOutCurve: AppMotion.exitCurve,
-      transitionBuilder: (child, animation) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: AppMotion.enterCurve,
-          reverseCurve: AppMotion.exitCurve,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: AppMotion.sectionOffset,
-              end: Offset.zero,
-            ).animate(curved),
+    return ClipRect(
+      child: AnimatedSize(
+        duration: AppMotion.medium,
+        curve: AppMotion.emphasizedCurve,
+        alignment: Alignment.topCenter,
+        child: AnimatedSwitcher(
+          duration: AppMotion.medium,
+          reverseDuration: AppMotion.fast,
+          switchInCurve: AppMotion.enterCurve,
+          switchOutCurve: AppMotion.exitCurve,
+          layoutBuilder: _topStackLayout,
+          transitionBuilder: _fadeSlideTransition,
+          child: KeyedSubtree(
+            key: ValueKey(contentKey),
             child: child,
           ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey(contentKey),
+        ),
+      ),
+    );
+  }
+
+  static Widget _topStackLayout(
+    Widget? currentChild,
+    List<Widget> previousChildren,
+  ) {
+    return Stack(
+      alignment: Alignment.topCenter,
+      fit: StackFit.passthrough,
+      children: [
+        ...previousChildren,
+        if (currentChild != null) currentChild,
+      ],
+    );
+  }
+
+  static Widget _fadeSlideTransition(Widget child, Animation<double> animation) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: AppMotion.enterCurve,
+      reverseCurve: AppMotion.exitCurve,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: AppMotion.sectionOffset,
+          end: Offset.zero,
+        ).animate(curved),
         child: child,
+      ),
+    );
+  }
+}
+
+class AppAnimatedFieldGroup extends StatelessWidget {
+  const AppAnimatedFieldGroup({
+    required this.visible,
+    required this.child,
+    super.key,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: AnimatedSize(
+        duration: AppMotion.medium,
+        curve: AppMotion.emphasizedCurve,
+        alignment: Alignment.topCenter,
+        child: AnimatedSwitcher(
+          duration: AppMotion.fast,
+          reverseDuration: AppMotion.fast,
+          switchInCurve: AppMotion.enterCurve,
+          switchOutCurve: AppMotion.exitCurve,
+          layoutBuilder: AppSwitchingContent._topStackLayout,
+          transitionBuilder: AppSwitchingContent._fadeSlideTransition,
+          child: visible
+              ? KeyedSubtree(
+                  key: const ValueKey('visible'),
+                  child: child,
+                )
+              : const SizedBox.shrink(key: ValueKey('hidden')),
+        ),
       ),
     );
   }

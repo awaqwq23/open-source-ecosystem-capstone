@@ -143,7 +143,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                   ),
                   const Gap(20),
                   AppSwitchingContent(
-                    contentKey: '${state.draft.type.name}-${state.draft.isAllDay}',
+                    contentKey: state.draft.type.name,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -194,8 +194,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                               value: state.draft.isAllDay,
                               onChanged: notifier.toggleAllDay,
                             ),
-                          if (!state.draft.isAllDay)
-                            Column(
+                          AppAnimatedFieldGroup(
+                            visible: !state.draft.isAllDay,
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _PlainActionRow(
@@ -229,6 +230,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                   ),
                               ],
                             ),
+                          ),
                           if (state.draft.type == ItemType.task)
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-deadline'),
@@ -260,44 +262,46 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             ),
                           ],
                         ],
+                        if (isCourse) ...[
+                          const Gap(20),
+                          _RoundedInputField(
+                            containerKey: const ValueKey('item-editor-field-course-nature'),
+                            controller: _courseNatureController,
+                            hintText: _courseNatureHint(context),
+                            onChanged: notifier.updateCourseNature,
+                          ),
+                          const Gap(12),
+                          _RoundedInputField(
+                            containerKey: const ValueKey('item-editor-field-course-instructor'),
+                            controller: _courseInstructorController,
+                            hintText: _courseInstructorHint(context),
+                            onChanged: notifier.updateCourseInstructor,
+                          ),
+                          const Gap(12),
+                        ] else ...[
+                          const Gap(12),
+                        ],
+                        _RoundedInputField(
+                          containerKey: const ValueKey('item-editor-field-location'),
+                          controller: _locationController,
+                          hintText: isCourse
+                              ? _courseLocationHint(context)
+                              : l10n.editorHintLocation,
+                          onChanged: notifier.updateLocation,
+                        ),
+                        if (!isCourse) ...[
+                          const Gap(12),
+                          _RoundedInputField(
+                            containerKey: const ValueKey('item-editor-field-details'),
+                            controller: _detailsController,
+                            hintText: l10n.editorHintDetails,
+                            onChanged: notifier.updateDetails,
+                            maxLines: 4,
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  if (isCourse) ...[
-                    const Gap(20),
-                    _RoundedInputField(
-                      containerKey: const ValueKey('item-editor-field-course-nature'),
-                      controller: _courseNatureController,
-                      hintText: _courseNatureHint(context),
-                      onChanged: notifier.updateCourseNature,
-                    ),
-                    const Gap(12),
-                    _RoundedInputField(
-                      containerKey: const ValueKey('item-editor-field-course-instructor'),
-                      controller: _courseInstructorController,
-                      hintText: _courseInstructorHint(context),
-                      onChanged: notifier.updateCourseInstructor,
-                    ),
-                    const Gap(12),
-                  ] else ...[
-                    const Gap(12),
-                  ],
-                  _RoundedInputField(
-                    containerKey: const ValueKey('item-editor-field-location'),
-                    controller: _locationController,
-                    hintText: isCourse ? _courseLocationHint(context) : l10n.editorHintLocation,
-                    onChanged: notifier.updateLocation,
-                  ),
-                  if (!isCourse) ...[
-                    const Gap(12),
-                    _RoundedInputField(
-                      containerKey: const ValueKey('item-editor-field-details'),
-                      controller: _detailsController,
-                      hintText: l10n.editorHintDetails,
-                      onChanged: notifier.updateDetails,
-                      maxLines: 4,
-                    ),
-                  ],
                 ],
               ),
             ),
