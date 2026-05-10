@@ -9,10 +9,10 @@ class CampusPage extends StatelessWidget {
   static const _gridApps = <_CampusApp>[
     _CampusApp(icon: Icons.event_seat, name: '自习预约', colorAssoc: ItemColorOption.indigo),
     _CampusApp(icon: Icons.local_library, name: '图书借阅', colorAssoc: ItemColorOption.amber),
-    _CampusApp(icon: Icons.grading, name: '成绩', colorAssoc: ItemColorOption.coral),
     _CampusApp(icon: Icons.sports_soccer, name: '运动场馆', colorAssoc: ItemColorOption.lime),
     _CampusApp(icon: Icons.credit_card, name: '珞珈E卡', colorAssoc: ItemColorOption.sky),
     _CampusApp(icon: Icons.qr_code, name: 'E卡付款码', colorAssoc: ItemColorOption.jade),
+    _CampusApp(icon: Icons.grading, name: '成绩', colorAssoc: ItemColorOption.coral),
     _CampusApp(icon: Icons.meeting_room, name: '空闲教室', colorAssoc: ItemColorOption.teal),
     _CampusApp(icon: Icons.school, name: '蹭课', colorAssoc: ItemColorOption.rose),
     _CampusApp(icon: Icons.calendar_month, name: '全校课表', colorAssoc: ItemColorOption.violet),
