@@ -6,6 +6,7 @@ import 'package:luotopia/features/pages/settings/domain/models/home_settings.dar
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
+import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsHomePage extends ConsumerWidget {
@@ -171,8 +172,8 @@ class SettingsHomePage extends ConsumerWidget {
     WidgetRef ref,
     HomeSettings settings,
   ) async {
-    final result = await showTimePicker(
-      context: context,
+    final result = await AppDateTimePickers.pickTime(
+      context,
       initialTime: settings.dayStartTime,
     );
     if (result == null) {

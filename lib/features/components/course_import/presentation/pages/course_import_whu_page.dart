@@ -9,6 +9,7 @@ import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CourseImportWhuPage extends ConsumerStatefulWidget {
@@ -216,11 +217,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   }
 
   Future<void> _pickWeekOneMonday(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await AppDateTimePickers.pickDate(
+      context,
       initialDate: _weekOneMonday ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
     );
     if (picked == null) {
       return;

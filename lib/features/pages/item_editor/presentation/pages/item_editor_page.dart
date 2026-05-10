@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:date_field/date_field.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
@@ -15,6 +14,7 @@ import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
+import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -159,19 +159,11 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         ),
                         if (state.draft.type == ItemType.memo) ...[
                           const Gap(12),
-                          _PickerRow(
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-target-date'),
                             label: l10n.editorFieldTargetDate,
-                            child: ui.DatePicker(
-                              value: state.draft.targetDate,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  notifier.updateTargetDate(
-                                    DateTime(value.year, value.month, value.day),
-                                  );
-                                }
-                              },
-                              mode: ui.PromptMode.popover,
-                            ),
+                            value: _formatDate(context, state.draft.targetDate),
+                            onTap: () => _pickTargetDate(context, ref, state),
                           ),
                           _PickerRow(
                             label: l10n.editorFieldEstimatedDuration,
@@ -508,14 +500,28 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await AppDateTimePickers.pickDate(
+      context,
       initialDate: state.draft.startAt,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
     );
     if (picked != null && mounted) {
       ref.read(itemEditorPageControllerProvider.notifier).updateStartDate(picked);
+    }
+  }
+
+  Future<void> _pickTargetDate(
+    BuildContext context,
+    WidgetRef ref,
+    ItemEditorPageState state,
+  ) async {
+    final picked = await AppDateTimePickers.pickDate(
+      context,
+      initialDate: state.draft.targetDate,
+    );
+    if (picked != null && mounted) {
+      ref.read(itemEditorPageControllerProvider.notifier).updateTargetDate(
+            DateTime(picked.year, picked.month, picked.day),
+          );
     }
   }
 
@@ -524,8 +530,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await showTimePicker(
-      context: context,
+    final picked = await AppDateTimePickers.pickTime(
+      context,
       initialTime: TimeOfDay.fromDateTime(state.draft.startAt),
     );
     if (picked != null && mounted) {
@@ -540,8 +546,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await showTimePicker(
-      context: context,
+    final picked = await AppDateTimePickers.pickTime(
+      context,
       initialTime: TimeOfDay.fromDateTime(state.draft.endAt),
     );
     if (picked != null && mounted) {
@@ -556,13 +562,16 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final picked = await _showDateTimePicker(
-      context: context,
-      initialDateTime: state.draft.deadline ?? state.draft.endAt,
-      mode: state.draft.isAllDay
-          ? DateTimeFieldPickerMode.date
-          : DateTimeFieldPickerMode.dateAndTime,
-    );
+    final initialDateTime = state.draft.deadline ?? state.draft.endAt;
+    final picked = state.draft.isAllDay
+        ? await AppDateTimePickers.pickDate(
+            context,
+            initialDate: initialDateTime,
+          )
+        : await AppDateTimePickers.pickDateTime(
+            context,
+            initialDateTime: initialDateTime,
+          );
 
     if (picked != null && mounted) {
       final normalized = state.draft.isAllDay
@@ -572,31 +581,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           .read(itemEditorPageControllerProvider.notifier)
           .updateDeadlineDateTime(normalized);
     }
-  }
-
-  Future<DateTime?> _showDateTimePicker({
-    required BuildContext context,
-    required DateTime initialDateTime,
-    required DateTimeFieldPickerMode mode,
-  }) {
-    return showAdaptiveDateTimePicker(
-      context: context,
-      mode: mode,
-      pickerPlatform: DateTimeFieldPickerPlatform.cupertino,
-      initialPickerDateTime: initialDateTime,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      cupertinoDatePickerOptions: CupertinoDatePickerOptions(
-        minuteInterval: 5,
-        saveText: context.l10n.editorPickerConfirm,
-        cancelText: context.l10n.editorPickerCancel,
-        modalTitleText: switch (mode) {
-          DateTimeFieldPickerMode.date => context.l10n.editorFieldTargetDate,
-          DateTimeFieldPickerMode.time => context.l10n.editorSectionTime,
-          DateTimeFieldPickerMode.dateAndTime => context.l10n.editorSectionTime,
-        },
-      ),
-    );
   }
 
   Future<void> _openRepeatSettings(

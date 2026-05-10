@@ -5,6 +5,7 @@ import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/features/components/time_picker/presentation/viewmodels/time_picker_view_model.dart';
+import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -204,8 +205,8 @@ class _TimePickerPageState extends ConsumerState<TimePickerPage> {
     TimePickerViewModel notifier,
     DateTime initialDate,
   ) async {
-    final result = await showDatePicker(
-      context: context,
+    final result = await AppDateTimePickers.pickDate(
+      context,
       initialDate: initialDate,
       firstDate: DateTime(2000, 1, 1),
       lastDate: DateTime(2100, 12, 31),
