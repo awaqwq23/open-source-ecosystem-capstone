@@ -53,33 +53,76 @@ class AppSheetEntrance extends StatelessWidget {
   }
 }
 
-class AppSwitchingContent extends StatelessWidget {
-  const AppSwitchingContent({
+class AppSchemaTransition extends StatefulWidget {
+  const AppSchemaTransition({
     required this.child,
-    required this.contentKey,
+    required this.schemaKey,
     super.key,
+    this.duration = AppMotion.medium,
+    this.reverseDuration = AppMotion.fast,
   });
 
   final Widget child;
-  final Object contentKey;
+  final Object schemaKey;
+  final Duration duration;
+  final Duration reverseDuration;
+
+  static bool maybeDisableLocalFieldTransitions(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_AppSchemaTransitionScope>()
+            ?.disableLocalFieldTransitions ??
+        false;
+  }
+
+  @override
+  State<AppSchemaTransition> createState() => _AppSchemaTransitionState();
+}
+
+class _AppSchemaTransitionState extends State<AppSchemaTransition> {
+  late Object _currentSchemaKey = widget.schemaKey;
+  bool _disableLocalFieldTransitions = false;
+  int _transitionGeneration = 0;
+
+  @override
+  void didUpdateWidget(covariant AppSchemaTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.schemaKey == widget.schemaKey) {
+      return;
+    }
+
+    _currentSchemaKey = widget.schemaKey;
+    _disableLocalFieldTransitions = true;
+    final generation = ++_transitionGeneration;
+    Future<void>.delayed(widget.duration, () {
+      if (!mounted || generation != _transitionGeneration) {
+        return;
+      }
+      setState(() {
+        _disableLocalFieldTransitions = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return ClipRect(
       child: AnimatedSize(
-        duration: AppMotion.medium,
+        duration: widget.duration,
         curve: AppMotion.emphasizedCurve,
         alignment: Alignment.topCenter,
         child: AnimatedSwitcher(
-          duration: AppMotion.medium,
-          reverseDuration: AppMotion.fast,
+          duration: widget.duration,
+          reverseDuration: widget.reverseDuration,
           switchInCurve: AppMotion.enterCurve,
           switchOutCurve: AppMotion.exitCurve,
           layoutBuilder: _topStackLayout,
           transitionBuilder: _fadeSlideTransition,
-          child: KeyedSubtree(
-            key: ValueKey(contentKey),
-            child: child,
+          child: _AppSchemaTransitionScope(
+            key: ValueKey(_currentSchemaKey),
+            disableLocalFieldTransitions: _disableLocalFieldTransitions,
+            child: KeyedSubtree(
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -119,30 +162,195 @@ class AppSwitchingContent extends StatelessWidget {
   }
 }
 
-class AppAnimatedFieldGroup extends StatelessWidget {
-  const AppAnimatedFieldGroup({
+class AppCollapsibleFieldGroup extends StatefulWidget {
+  const AppCollapsibleFieldGroup({
     required this.visible,
     required this.child,
     super.key,
+    this.fadeDuration = const Duration(milliseconds: 120),
+    this.sizeDuration = const Duration(milliseconds: 180),
   });
 
   final bool visible;
   final Widget child;
+  final Duration fadeDuration;
+  final Duration sizeDuration;
+
+  @override
+  State<AppCollapsibleFieldGroup> createState() => _AppCollapsibleFieldGroupState();
+}
+
+class _AppCollapsibleFieldGroupState extends State<AppCollapsibleFieldGroup> {
+  Widget? _retainedChild;
+  bool _includeChild = false;
+  bool _showSize = false;
+  bool _showOpacity = false;
+  int _animationGeneration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _retainedChild = widget.child;
+    _includeChild = widget.visible;
+    _showSize = widget.visible;
+    _showOpacity = widget.visible;
+  }
+
+  @override
+  void didUpdateWidget(covariant AppCollapsibleFieldGroup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final disableLocalTransition = _isLocalFieldTransitionDisabled(context);
+
+    if (disableLocalTransition) {
+      _snapToTarget();
+      return;
+    }
+
+    if (widget.visible) {
+      _retainedChild = widget.child;
+    } else if (oldWidget.visible) {
+      _retainedChild = oldWidget.child;
+    }
+
+    if (oldWidget.visible == widget.visible) {
+      if (widget.visible) {
+        _retainedChild = widget.child;
+      }
+      return;
+    }
+
+    if (widget.visible) {
+      _expandThenFadeIn();
+      return;
+    }
+
+    _fadeOutThenCollapse();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final disableLocalTransition =
+        AppSchemaTransition.maybeDisableLocalFieldTransitions(context);
+    if (disableLocalTransition) {
+      return widget.visible ? widget.child : const SizedBox.shrink();
+    }
+
+    if (!_includeChild || _retainedChild == null) {
+      return const SizedBox.shrink();
+    }
+
     return ClipRect(
-      child: AnimatedOpacity(
-        duration: AppMotion.fast,
-        curve: AppMotion.enterCurve,
-        opacity: visible ? 1 : 0,
-        child: AnimatedSize(
-          duration: AppMotion.medium,
-          curve: AppMotion.emphasizedCurve,
-          alignment: Alignment.topCenter,
-          child: visible ? child : const SizedBox.shrink(),
+      child: IgnorePointer(
+        ignoring: !_showOpacity || !_showSize,
+        child: ExcludeSemantics(
+          excluding: !_showOpacity || !_showSize,
+          child: AnimatedSize(
+            duration: widget.sizeDuration,
+            curve: AppMotion.emphasizedCurve,
+            alignment: Alignment.topCenter,
+            child: AnimatedOpacity(
+              duration: widget.fadeDuration,
+              curve: _showOpacity ? AppMotion.enterCurve : AppMotion.exitCurve,
+              opacity: _showOpacity ? 1 : 0,
+              child: _showSize ? _retainedChild! : const SizedBox.shrink(),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  void _snapToTarget() {
+    _animationGeneration++;
+    _retainedChild = widget.child;
+    _includeChild = widget.visible;
+    _showSize = widget.visible;
+    _showOpacity = widget.visible;
+  }
+
+  void _expandThenFadeIn() {
+    final generation = ++_animationGeneration;
+    setState(() {
+      _retainedChild = widget.child;
+      _includeChild = true;
+      _showSize = true;
+      _showOpacity = false;
+    });
+
+    Future<void>.delayed(widget.sizeDuration, () {
+      if (!mounted || generation != _animationGeneration) {
+        return;
+      }
+      setState(() {
+        _showOpacity = true;
+      });
+    });
+  }
+
+  void _fadeOutThenCollapse() {
+    final generation = ++_animationGeneration;
+    setState(() {
+      _includeChild = true;
+      _showSize = true;
+      _showOpacity = false;
+    });
+
+    Future<void>.delayed(widget.fadeDuration, () {
+      if (!mounted || generation != _animationGeneration) {
+        return;
+      }
+      setState(() {
+        _showSize = false;
+      });
+    });
+
+    Future<void>.delayed(widget.fadeDuration + widget.sizeDuration, () {
+      if (!mounted || generation != _animationGeneration) {
+        return;
+      }
+      setState(() {
+        _includeChild = false;
+        _retainedChild = null;
+      });
+    });
+  }
+}
+
+bool _isLocalFieldTransitionDisabled(BuildContext context) {
+  final scope = context
+      .getElementForInheritedWidgetOfExactType<_AppSchemaTransitionScope>()
+      ?.widget;
+  return scope is _AppSchemaTransitionScope &&
+      scope.disableLocalFieldTransitions;
+}
+
+class AppSwitchingContent extends AppSchemaTransition {
+  const AppSwitchingContent({
+    required super.child,
+    required Object contentKey,
+    super.key,
+  }) : super(schemaKey: contentKey);
+}
+
+class AppAnimatedFieldGroup extends AppCollapsibleFieldGroup {
+  const AppAnimatedFieldGroup({
+    required super.visible,
+    required super.child,
+    super.key,
+  });
+}
+
+class _AppSchemaTransitionScope extends InheritedWidget {
+  const _AppSchemaTransitionScope({
+    required this.disableLocalFieldTransitions,
+    required super.child,
+    super.key,
+  });
+
+  final bool disableLocalFieldTransitions;
+
+  @override
+  bool updateShouldNotify(_AppSchemaTransitionScope oldWidget) {
+    return oldWidget.disableLocalFieldTransitions != disableLocalFieldTransitions;
   }
 }

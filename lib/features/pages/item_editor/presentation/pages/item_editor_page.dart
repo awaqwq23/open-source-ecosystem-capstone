@@ -142,8 +142,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                     memoLabel: l10n.editorTypeMemo,
                   ),
                   const Gap(20),
-                  AppSwitchingContent(
-                    contentKey: state.draft.type.name,
+                  AppSchemaTransition(
+                    schemaKey: state.draft.type,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -194,7 +194,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                               value: state.draft.isAllDay,
                               onChanged: notifier.toggleAllDay,
                             ),
-                          AppAnimatedFieldGroup(
+                          AppCollapsibleFieldGroup(
                             visible: !state.draft.isAllDay,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
