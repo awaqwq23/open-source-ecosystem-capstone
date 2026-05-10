@@ -24,7 +24,7 @@ class SettingsPage extends ConsumerWidget {
         ),
       ],
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -97,17 +97,14 @@ class _AccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderRadius = BorderRadius.circular(12);
     final tileColor = AppSemanticColors.settingsSectionBackground(theme);
 
     return Material(
       color: tileColor,
-      borderRadius: borderRadius,
       child: InkWell(
-        borderRadius: borderRadius,
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             children: [
               Icon(icon, size: 28),
