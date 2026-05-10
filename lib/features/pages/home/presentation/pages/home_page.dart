@@ -7,6 +7,7 @@ import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/components/time_picker/domain/models/time_picker_args.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/home/presentation/layout/home_grid_metrics.dart';
 import 'package:luotopia/features/pages/home/presentation/viewmodels/home_header_view_model.dart';
@@ -222,70 +223,30 @@ class HomePage extends ConsumerWidget {
     WidgetRef ref,
     HomeViewData viewData,
   ) async {
-    final initialDate = viewData.periodSelection.anchor;
-    final controller = ui.DatePickerController(initialDate);
-
-    await ui.openSheet<void>(
-      context: context,
-      position: ui.OverlayPosition.bottom,
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.timePickerTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ui.ControlledDatePicker(
-                  controller: controller,
-                  initialValue: initialDate,
-                  initialViewType: ui.CalendarViewType.date,
-                  stateBuilder: (date) {
-                    final now = DateTime.now();
-                    return date.isAfter(now.add(const Duration(days: 365))) ||
-                            date.isBefore(now.subtract(const Duration(days: 365)))
-                        ? ui.DateState.disabled
-                        : ui.DateState.enabled;
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ui.OutlineButton(
-                    onPressed: () => ui.closeDrawer(sheetContext),
-                    child: Text(context.l10n.commonBack),
-                  ),
-                  const SizedBox(width: 12),
-                  ui.PrimaryButton(
-                    onPressed: () {
-                      final selected = controller.value ?? initialDate;
-                      ui.closeDrawer(sheetContext);
-                      ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
-                            HomePeriodSelection(
-                              anchor: selected,
-                              scope: viewData.scope,
-                            ),
-                          );
-                    },
-                    child: Text(context.l10n.editorPickerConfirm),
-                  ),
-                ],
-              ),
-            ],
+    final initialMode = switch (viewData.scope) {
+      HomeDisplayScope.week => TimePickerMode.week,
+      HomeDisplayScope.month => TimePickerMode.month,
+    };
+    final selection = await context.push<TimePickerSelection>(
+      AppRoutePaths.timePicker,
+      extra: TimePickerArgs(
+        mode: initialMode,
+        initialDate: viewData.periodSelection.anchor,
+      ),
+    );
+    if (selection == null || !context.mounted) {
+      return;
+    }
+    final targetScope = switch (selection.mode) {
+      TimePickerMode.month => HomeDisplayScope.month,
+      TimePickerMode.week || TimePickerMode.day => viewData.scope,
+    };
+    ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
+          HomePeriodSelection(
+            anchor: selection.anchor,
+            scope: targetScope,
           ),
         );
-      },
-    );
   }
 }
 
