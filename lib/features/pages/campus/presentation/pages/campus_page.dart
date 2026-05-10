@@ -1,3 +1,5 @@
+import 'dart:ui' as dart_ui;
+
 import 'package:flutter/material.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -26,22 +28,26 @@ class CampusPage extends StatelessWidget {
     return ui.Scaffold(
       child: Stack(
         children: [
-          Positioned.fill(child: const AppWallpaperBackground()),
+          const Positioned.fill(
+            child: RepaintBoundary(child: AppWallpaperBackground()),
+          ),
           // Slight dark overlay for readability over bright images
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
           // Scrollable content
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: 16),
-                  _WeatherCard(),
-                  const SizedBox(height: 16),
-                  _AppGrid(apps: _gridApps),
+            child: BackdropGroup(
+              child: CustomScrollView(
+                slivers: [
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    sliver: SliverToBoxAdapter(child: _WeatherCard()),
+                  ),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    sliver: _AppGrid(apps: _gridApps),
+                  ),
                 ],
               ),
             ),
@@ -60,9 +66,7 @@ class _WeatherCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return ui.Card(
-      surfaceBlur: 10,
-      surfaceOpacity: 0.82,
+    return _CampusGlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,9 +317,7 @@ class _AppGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return SliverGrid.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 12,
@@ -326,9 +328,7 @@ class _AppGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final app = apps[index];
         final accent = app.colorAssoc.resolve(theme.brightness);
-        return ui.Card(
-          surfaceBlur: 10,
-          surfaceOpacity: 0.82,
+        return _CampusGlassCard(
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
@@ -372,6 +372,44 @@ class _AppGrid extends StatelessWidget {
       SnackBar(
         content: Text('$name 功能正在开发中'),
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+class _CampusGlassCard extends StatelessWidget {
+  const _CampusGlassCard({
+    required this.child,
+    this.padding = EdgeInsets.zero,
+  });
+
+  static final _blurFilter = dart_ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10);
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final shadTheme = ui.Theme.of(context);
+    final borderRadius = shadTheme.borderRadiusXl;
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter.grouped(
+        filter: _blurFilter,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: shadTheme.colorScheme.card.withValues(alpha: 0.82),
+            borderRadius: borderRadius,
+            border: Border.all(color: shadTheme.colorScheme.muted),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Padding(
+              padding: padding,
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }
