@@ -24,6 +24,9 @@ abstract final class AppRoutePaths {
   static const settingsWhuAccount = '/settings/whu-account';
   static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
   static const settingsAi = '/settings/ai';
+  static const settingsLuotopiaLogin = '/settings/luotopia-auth/login';
+  static const settingsLuotopiaRegister = '/settings/luotopia-auth/register';
+  static const settingsLuotopiaAccount = '/settings/luotopia-auth/account';
 
   // Modal (full-screen overlay flow)
   static const repeatSettings = '/item-editor/repeat-settings';

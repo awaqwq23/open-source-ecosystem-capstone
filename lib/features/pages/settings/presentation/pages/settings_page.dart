@@ -6,6 +6,7 @@ import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
+import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -41,6 +42,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final whuAuth = ref.watch(whuAuthProvider);
+    final luotopiaAuth = ref.watch(luotopiaAuthProvider);
     return ui.Scaffold(
       floatingHeader: true,
       headers: [
@@ -65,12 +67,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _AccountHubTile(
                     icon: Icons.person_outline,
                     title: l10n.settingsAccountLocalTitle,
-                    subtitle: '本地模式',
+                    subtitle: luotopiaAuth.isAuthenticated
+                        ? luotopiaAuth.user!.displayNameStr
+                        : '未登录',
                     prominent: true,
                     showTrailing: true,
-                    onTap: () {
-                      // 本地账户详情暂为信息展示
-                    },
+                    onTap: luotopiaAuth.isAuthenticated
+                        ? () => context.push(AppRoutePaths.settingsLuotopiaAccount)
+                        : () => context.push(AppRoutePaths.settingsLuotopiaLogin),
                   ),
                   _AccountHubTile(
                     icon: AppIcons.web,

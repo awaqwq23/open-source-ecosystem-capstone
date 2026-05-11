@@ -7,6 +7,9 @@ import 'package:luotopia/core/motion/app_route_transitions.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_import_wakeup_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_import_whu_page.dart';
 import 'package:luotopia/features/components/course_import/presentation/pages/course_timetables_page.dart';
+import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_account_page.dart';
+import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_login_page.dart';
+import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_register_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
@@ -146,6 +149,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'course-import-wakeup',
                     builder: (context, state) => const CourseImportWakeupPage(),
+                  ),
+                  GoRoute(
+                    path: 'luotopia-auth/login',
+                    builder: (context, state) => const LuotopiaLoginPage(),
+                  ),
+                  GoRoute(
+                    path: 'luotopia-auth/register',
+                    builder: (context, state) => const LuotopiaRegisterPage(),
+                  ),
+                  GoRoute(
+                    path: 'luotopia-auth/account',
+                    builder: (context, state) => const LuotopiaAccountPage(),
                   ),
                   GoRoute(
                     path: 'ai',
