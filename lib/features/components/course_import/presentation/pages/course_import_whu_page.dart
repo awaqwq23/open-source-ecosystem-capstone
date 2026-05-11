@@ -228,7 +228,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
-      final client = ref.read(whuEducationClientProvider);
+      final client = ref.read(whuSessionClientProvider);
       if (client == null) {
         throw Exception('请先登录武大教务账户。');
       }

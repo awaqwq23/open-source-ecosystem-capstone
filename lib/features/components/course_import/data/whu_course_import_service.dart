@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
-import 'package:luotopia/features/whu_auth/token/whu_education_client.dart';
+import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
@@ -24,7 +24,7 @@ class WhuCourseImportPayload {
 }
 
 class WhuCourseImportService {
-  final WhuEducationClient client;
+  final WhuSessionClient client;
 
   WhuCourseImportService({required this.client});
 
@@ -40,7 +40,7 @@ class WhuCourseImportService {
     final response = await client.post(
       Uri.parse(_courseApiUrl),
       body: {
-        'validate': WhuEducationClient.generateValidate(),
+        'validate': WhuSessionClient.generateValidate(),
         'xnm': '$year',
         'xqm': '${_mapSemester(semester)}',
         'xzlx': 'ck',
