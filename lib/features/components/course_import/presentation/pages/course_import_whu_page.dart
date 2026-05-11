@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
-import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
-import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
@@ -15,6 +13,62 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 const double _rowHeight = 56;
 const double _horizontalPad = 16;
+
+class _TermOption {
+  const _TermOption({required this.year, required this.semester});
+
+  final int year;
+  final int semester;
+
+  String label(bool isZh) {
+    final next = year + 1;
+    if (isZh) {
+      return '$year-$next 学年第${semester}学期';
+    }
+    final sem = switch (semester) { 1 => 'Fall', 2 => 'Spring', _ => 'Summer' };
+    return '$year-$next $sem';
+  }
+
+  String termLabel() => '$year-${year + 1}-$semester';
+
+  @override
+  bool operator ==(Object other) =>
+      other is _TermOption && other.year == year && other.semester == semester;
+
+  @override
+  int get hashCode => Object.hash(year, semester);
+}
+
+List<_TermOption> _availableTerms() {
+  final now = DateTime.now();
+  final current = _inferCurrentTerm(now);
+  final options = <_TermOption>{};
+  for (var y = current.academicYearStart - 2; y <= current.academicYearStart + 1; y++) {
+    for (var s = 1; s <= 3; s++) {
+      options.add(_TermOption(year: y, semester: s));
+    }
+  }
+  final sorted = options.toList()
+    ..sort((a, b) {
+      final c = b.year.compareTo(a.year);
+      return c != 0 ? c : b.semester.compareTo(a.semester);
+    });
+  return sorted;
+}
+
+_InferredTerm _inferCurrentTerm(DateTime now) {
+  final month = now.month;
+  if (month >= 9) {
+    return _InferredTerm(academicYearStart: now.year, semester: 1);
+  }
+  if (month == 8) {
+    return _InferredTerm(academicYearStart: now.year - 1, semester: 3);
+  }
+  if (month == 1) {
+    return _InferredTerm(academicYearStart: now.year - 1, semester: 1);
+  }
+  return _InferredTerm(academicYearStart: now.year - 1, semester: 2);
+}
 
 class CourseImportWhuPage extends ConsumerStatefulWidget {
   const CourseImportWhuPage({super.key});
@@ -26,25 +80,42 @@ class CourseImportWhuPage extends ConsumerStatefulWidget {
 class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   final _service = WhuCourseImportService();
   final _nameController = TextEditingController();
-  final _termController = TextEditingController();
   DateTime? _weekOneMonday;
   bool _submitting = false;
   String? _statusText;
 
+  late final List<_TermOption> _allTerms;
+  _TermOption _selectedTerm;
+
+  _CourseImportWhuPageState()
+      : _selectedTerm = _TermOption(year: 0, semester: 0); // dummy, set in initState
+
+  @override
+  void initState() {
+    super.initState();
+    final inferred = _inferCurrentTerm(DateTime.now());
+    _allTerms = _availableTerms();
+    _selectedTerm = _allTerms.firstWhere(
+      (t) => t.year == inferred.academicYearStart && t.semester == inferred.semester,
+      orElse: () => _allTerms.first,
+    );
+    _nameController.text = _selectedTerm.label(_isChinese(context));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
-    _termController.dispose();
     super.dispose();
+  }
+
+  bool _isChinese(BuildContext context) {
+    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isZh = _isChinese(context);
-    final inferredTerm = _inferCurrentTerm(DateTime.now());
-    final authState = ref.watch(whuAuthProvider);
-    final hasCookie = authState.cookieHeader.isNotEmpty;
 
     return ui.Scaffold(
       headers: [
@@ -63,33 +134,41 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── 教务授权（PlainActionRow 风格，无背景） ──
-            _FlatActionRow(
-              label: isZh ? '教务授权' : 'Auth',
-              value: hasCookie
-                  ? (isZh ? '已获取会话' : 'Session acquired')
-                  : (isZh ? '未登录' : 'Not logged in'),
-              onTap: _submitting ? null : _openLoginPage,
-            ),
-            const Gap(16),
-
-            // ── 课程表名称（RoundedInputField 风格，独立圆角容器） ──
-            _RoundedTextField(
-              controller: _nameController,
-              hintText: isZh ? '课程表名称（如：2026 春季学期）' : 'Timetable name (e.g. 2026 Spring)',
+            // ── 导入学期选择 ──
+            _SemesterSelector(
+              options: _allTerms,
+              selected: _selectedTerm,
+              onChanged: (term) {
+                setState(() {
+                  _selectedTerm = term;
+                  _nameController.text = term.label(isZh);
+                });
+              },
             ),
             const Gap(12),
 
-            // ── 自动识别学期（PlainActionRow 风格，无背景） ──
-            _FlatActionRow(
-              label: isZh ? '自动识别学期' : 'Detected Term',
-              value: isZh
-                  ? '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} 第${inferredTerm.semester}学期'
-                  : '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} Sem ${inferredTerm.semester}',
+            // ── 课程表名称 ──
+            _RoundedTextField(
+              controller: _nameController,
+              hintText: isZh ? '课程表名称' : 'Timetable name',
             ),
+            if (_nameController.text.trim().isNotEmpty) ...[
+              const Gap(4),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  isZh
+                      ? '生成名称：${_nameController.text.trim()} ${_formatNow()}'
+                      : 'Will save as: ${_nameController.text.trim()} ${_formatNow()}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
             const Gap(16),
 
-            // ── 第1周周一（PlainActionRow 风格，无背景） ──
+            // ── 第1周周一 ──
             _FlatActionRow(
               label: isZh ? '第1周周一' : 'Week-1 Monday',
               value: _weekOneMonday == null
@@ -97,16 +176,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
                   : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
               onTap: _submitting ? null : () => _pickWeekOneMonday(context),
             ),
-            const Gap(12),
-
-            // ── 学期标识（RoundedInputField 风格，独立圆角容器） ──
-            _RoundedTextField(
-              controller: _termController,
-              hintText: isZh ? '学期标识（可选，如：2025-2026-2）' : 'Term label (optional)',
-            ),
             const Gap(24),
 
-            // ── 提交按钮 ──
+            // ── 开始导入 ──
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -141,18 +213,18 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     );
   }
 
+  String _formatNow() {
+    final now = DateTime.now();
+    final pad = (int v) => v.toString().padLeft(2, '0');
+    return '${now.year}-${pad(now.month)}-${pad(now.day)} ${pad(now.hour)}:${pad(now.minute)}';
+  }
+
   Future<void> _submit() async {
     final isZh = _isChinese(context);
-    final authState = ref.read(whuAuthProvider);
-    if (authState.cookieHeader.isEmpty) {
-      _showMessage(isZh ? '请先完成教务登录授权。' : 'Please login first.');
-      return;
-    }
     if (_weekOneMonday == null) {
       _showMessage(isZh ? '请选择第1周周一日期。' : 'Please select Week-1 Monday.');
       return;
     }
-    final inferredTerm = _inferCurrentTerm(DateTime.now());
     setState(() {
       _submitting = true;
       _statusText = isZh ? '正在校验并建立教务会话...' : 'Verifying and establishing education session...';
@@ -161,19 +233,19 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
+      final authState = ref.read(whuAuthProvider);
       final payload = await _service.loadCourses(
         cookieHeader: authState.cookieHeader,
-        year: inferredTerm.academicYearStart,
-        semester: inferredTerm.semester,
+        year: _selectedTerm.year,
+        semester: _selectedTerm.semester,
         weekOneMonday: _weekOneMonday!,
         homeSettings: ref.read(appHomeSettingsProvider),
       );
-      final tableName = _nameController.text.trim().isEmpty
-          ? (isZh ? '武大导入 ${DateTime.now().toLocal()}' : 'WHU Import ${DateTime.now().toLocal()}')
-          : _nameController.text.trim();
-      final termLabel = _termController.text.trim().isEmpty
-          ? payload.termLabel
-          : _termController.text.trim();
+      final baseName = _nameController.text.trim();
+      final tableName = baseName.isEmpty
+          ? '${_selectedTerm.label(isZh)} ${_formatNow()}'
+          : '$baseName ${_formatNow()}';
+      final termLabel = _selectedTerm.termLabel();
       final timetable = await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
             name: tableName,
             source: CourseTimetableSource.whuJw,
@@ -216,9 +288,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       if (!mounted) {
         return;
       }
-      if (error is WhuSessionInvalidException) {
-        await ref.read(whuAuthProvider.notifier).logout();
-      }
       setState(() {
         _statusText = isZh ? '导入失败：$error' : 'Import failed: $error';
       });
@@ -241,18 +310,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     setState(() {
       _weekOneMonday = DateTime(picked.year, picked.month, picked.day);
     });
-  }
-
-  Future<void> _openLoginPage() async {
-    await context.push(AppRoutePaths.settingsWhuAuthLogin);
-    if (!mounted) {
-      return;
-    }
-    if (ref.read(whuAuthProvider).isAuthenticated) {
-      _showMessage(
-        _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
-      );
-    }
   }
 
   Future<void> _showMessage(String message) async {
@@ -279,39 +336,67 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       },
     );
   }
-
-  bool _isChinese(BuildContext context) {
-    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
-  }
-
-  _InferredTerm _inferCurrentTerm(DateTime now) {
-    final month = now.month;
-    if (month >= 9) {
-      return _InferredTerm(academicYearStart: now.year, semester: 1);
-    }
-    if (month == 8) {
-      return _InferredTerm(academicYearStart: now.year - 1, semester: 3);
-    }
-    if (month == 1) {
-      return _InferredTerm(academicYearStart: now.year - 1, semester: 1);
-    }
-    return _InferredTerm(academicYearStart: now.year - 1, semester: 2);
-  }
 }
 
 class _InferredTerm {
-  const _InferredTerm({
-    required this.academicYearStart,
-    required this.semester,
-  });
-
+  const _InferredTerm({required this.academicYearStart, required this.semester});
   final int academicYearStart;
   final int semester;
 }
 
+// ── 学期选择器 ──
+
+class _SemesterSelector extends StatelessWidget {
+  const _SemesterSelector({
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<_TermOption> options;
+  final _TermOption selected;
+  final ValueChanged<_TermOption> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
+    return SizedBox(
+      height: _rowHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(width: 4),
+          Text(
+            isZh ? '导入学期' : 'Semester',
+            style: theme.textTheme.titleMedium,
+          ),
+          const Spacer(),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<_TermOption>(
+              value: selected,
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+              items: [
+                for (final opt in options)
+                  DropdownMenuItem(
+                    value: opt,
+                    child: Text(opt.label(isZh)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+}
+
 // ── 组件 ──
 
-/// 纯平操作行（无背景容器），与 ItemEditorPage._PlainActionRow 一致
 class _FlatActionRow extends StatelessWidget {
   const _FlatActionRow({
     required this.label,
@@ -365,7 +450,6 @@ class _FlatActionRow extends StatelessWidget {
   }
 }
 
-/// 独立圆角输入框，与 ItemEditorPage._RoundedInputField 一致
 class _RoundedTextField extends StatelessWidget {
   const _RoundedTextField({
     required this.controller,
