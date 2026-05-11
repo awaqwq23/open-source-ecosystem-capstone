@@ -4,6 +4,7 @@ import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 class WhuLoginWebViewPage extends ConsumerStatefulWidget {
   const WhuLoginWebViewPage({super.key});
@@ -28,9 +29,6 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
             if (mounted) {
               setState(() => _loading = false);
             }
-            try {
-              await _controller.runJavaScript(_loginPageScript);
-            } catch (_) {}
             await _tryCompleteLogin();
           },
           onNavigationRequest: (request) {
@@ -41,11 +39,21 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
           },
         ),
       )
-      ..loadRequest(
-        Uri.parse(
-          'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fcas.whu.edu.cn%2Fauthserver%2Fmobile%2Fcallback%3FappId%3D985180443&login_type=mobileLogin',
-        ),
-      );
+      ..enableZoom(true);
+    _loadLoginPage();
+  }
+
+  Future<void> _loadLoginPage() async {
+    final platformController = _controller.platform;
+    if (platformController is AndroidWebViewController) {
+      await platformController.setUseWideViewPort(true);
+      await platformController.setTextZoom(100);
+    }
+    await _controller.loadRequest(
+      Uri.parse(
+        'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fcas.whu.edu.cn%2Fauthserver%2Fmobile%2Fcallback%3FappId%3D985180443&login_type=mobileLogin',
+      ),
+    );
   }
 
   @override
@@ -102,28 +110,3 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     }
   }
 }
-
-const _loginPageScript = '''
-(function() {
-  var social = document.getElementsByClassName('social-aut-login')[0];
-  if (social) social.remove();
-  var username = document.getElementById('mobileUsername');
-  var password = document.getElementById('mobilePassword');
-  var login = document.getElementById('load');
-  if (username) username.setAttribute('placeholder', '学号');
-  if (password) password.setAttribute('placeholder', '统一认证密码');
-  if (login && !login.__luotopiaTextPatched) {
-    login.__luotopiaTextPatched = true;
-    login.textContent = '登录';
-  }
-  var forget = document.getElementById('mobileGetPasswordControllerId');
-  if (forget) forget.style.display = 'none';
-  var languages = document.getElementById('languages') || document.querySelector('.language-wrap');
-  if (languages) languages.style.display = 'none';
-  var header = document.querySelector('header');
-  if (header) header.textContent = '武汉大学';
-  var main = document.getElementsByClassName('main')[0];
-  if (main) main.setAttribute('style', 'height: ' + window.innerHeight + 'px');
-})();
-true;
-''';
