@@ -21,19 +21,7 @@ class CampusTimetablePage extends ConsumerStatefulWidget {
 
 class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
   Set<String> _pendingSelectedIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    final store = ref.read(courseTimetableRepositoryProvider);
-    _pendingSelectedIds = Set<String>.from(store.selectedTimetableIds);
-    ref.listen(courseTimetableRepositoryProvider, (_, next) {
-      final added = next.selectedTimetableIds.where((id) => !_pendingSelectedIds.contains(id));
-      if (added.isNotEmpty) {
-        setState(() => _pendingSelectedIds.addAll(added));
-      }
-    });
-  }
+  bool _didInit = false;
 
   void _applySelection() {
     ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(_pendingSelectedIds);
@@ -42,6 +30,17 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_didInit) {
+      _didInit = true;
+      _pendingSelectedIds =
+          Set<String>.from(ref.read(courseTimetableRepositoryProvider).selectedTimetableIds);
+    }
+    ref.listen(courseTimetableRepositoryProvider, (_, next) {
+      final added = next.selectedTimetableIds.where((id) => !_pendingSelectedIds.contains(id));
+      if (added.isNotEmpty) {
+        setState(() => _pendingSelectedIds.addAll(added));
+      }
+    });
     final whuAuth = ref.watch(whuAuthProvider);
     final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
