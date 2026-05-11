@@ -39,7 +39,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     });
 
     try {
-      final client = await ref.read(whuAuthProvider.notifier).authorizeEducation();
+      final client = await ref.read(whuAuthGatewayProvider).authorizeEducation();
       final ScoreListResult result;
       try {
         result = await WhuScoreService(client: client).getScoreList();

@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:luotopia/features/whu_auth/data/whu_authorized_client.dart';
+import 'package:luotopia/core/storage/shared_preferences_provider.dart';
 import 'package:luotopia/features/whu_auth/data/whu_auth_storage.dart';
 import 'package:luotopia/features/whu_auth/data/whu_cas_service.dart';
 import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
@@ -8,6 +7,7 @@ import 'package:luotopia/features/whu_auth/domain/models/whu_account.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_snapshot.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_cas_service_request.dart';
+import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 
 final whuAuthProvider = NotifierProvider<WhuAuthNotifier, WhuAuthState>(
@@ -18,7 +18,11 @@ final whuCasServiceProvider = Provider<WhuCasService>((ref) {
   return const WhuCasService();
 });
 
-class WhuAuthNotifier extends Notifier<WhuAuthState> {
+final whuAuthGatewayProvider = Provider<WhuAuthGateway>((ref) {
+  return ref.watch(whuAuthProvider.notifier);
+});
+
+class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   final WhuAuthStorage _storage = const WhuAuthStorage();
   final WebviewCookieManager _cookieManager = WebviewCookieManager();
 
@@ -67,7 +71,8 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
     }
   }
 
-  Future<WhuAuthorizedClient> authorizeService(WhuCasServiceRequest request) async {
+  @override
+  Future<WhuServiceSession> authorizeService(WhuCasServiceRequest request) async {
     if (_casCookieHeader.trim().isEmpty) {
       throw const WhuAuthException(
         WhuAuthExceptionCode.loginRequired,
@@ -80,7 +85,8 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
         );
   }
 
-  Future<WhuAuthorizedClient> authorizeEducation() {
+  @override
+  Future<WhuServiceSession> authorizeEducation() {
     return authorizeService(WhuCasService.educationService);
   }
 

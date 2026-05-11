@@ -3,6 +3,7 @@ import 'package:luotopia/features/whu_auth/data/whu_authorized_client.dart';
 import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_account.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_cas_service_request.dart';
+import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 
 class WhuCasService {
   const WhuCasService();
@@ -13,7 +14,7 @@ class WhuCasService {
     parseFailure: _parseEducationLoginFailure,
   );
 
-  Future<WhuAuthorizedClient> authorizeService({
+  Future<WhuServiceSession> authorizeService({
     required String casCookieHeader,
     required WhuCasServiceRequest request,
   }) async {
@@ -51,7 +52,7 @@ class WhuCasService {
     }
   }
 
-  Future<WhuAccount> loadEducationAccount(WhuAuthorizedClient client) async {
+  Future<WhuAccount> loadEducationAccount(WhuServiceSession client) async {
     final response = await client.get(
       Uri.parse(
         'https://jwgl.whu.edu.cn/xtgl/index_cxYhxxIndex.html?xt=jw&localeKey=zh_CN&gnmkdm=index',

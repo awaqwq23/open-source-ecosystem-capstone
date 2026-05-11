@@ -25,7 +25,7 @@ class WhuCourseImportPayload {
 }
 
 class WhuCourseImportService {
-  final WhuAuthorizedClient client;
+  final WhuServiceSession client;
 
   WhuCourseImportService({required this.client});
 

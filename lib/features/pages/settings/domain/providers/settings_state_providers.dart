@@ -3,7 +3,8 @@ import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart'
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+export 'package:luotopia/core/storage/shared_preferences_provider.dart';
 
 final appHomeSettingsProvider = StateProvider<HomeSettings>((ref) {
   return const HomeSettings.defaults();
@@ -19,8 +20,4 @@ final appWidgetSettingsProvider = StateProvider<WidgetSettings>((ref) {
 
 final appNavigationSettingsProvider = StateProvider<NavigationSettings>((ref) {
   return const NavigationSettings.defaults();
-});
-
-final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) {
-  return null;
 });

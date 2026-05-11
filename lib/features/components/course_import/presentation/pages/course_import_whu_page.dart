@@ -228,7 +228,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
-      final client = await ref.read(whuAuthProvider.notifier).authorizeEducation();
+      final client = await ref.read(whuAuthGatewayProvider).authorizeEducation();
       final WhuCourseImportPayload payload;
       try {
         final service = WhuCourseImportService(client: client);

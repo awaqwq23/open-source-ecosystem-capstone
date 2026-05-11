@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
+import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 
-class WhuAuthorizedClient extends http.BaseClient {
+class WhuAuthorizedClient extends WhuServiceSession {
   WhuAuthorizedClient({
     required String initialCookieHeader,
     http.Client? inner,

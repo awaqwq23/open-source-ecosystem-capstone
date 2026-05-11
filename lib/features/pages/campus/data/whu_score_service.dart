@@ -7,7 +7,7 @@ import 'package:luotopia/features/whu_auth/whu_auth.dart';
 class WhuScoreService {
   const WhuScoreService({required this.client});
 
-  final WhuAuthorizedClient client;
+  final WhuServiceSession client;
 
   static final Uri _scoreApiUri = Uri.parse(
     'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html?doType=query&gnmkdm=N305005',
