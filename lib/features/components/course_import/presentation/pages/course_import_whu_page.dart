@@ -576,37 +576,48 @@ class _FlatActionRow extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.titleMedium,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleMedium,
               ),
             ),
-          ),
-          if (onTap != null) ...[
-            const SizedBox(width: 8),
-            Icon(
-              AppIcons.drillIn,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant,
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(
+                      AppIcons.drillIn,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ],
+              ),
             ),
+            const SizedBox(width: 4),
           ],
-          const SizedBox(width: 4),
-        ],
+        ),
       ),
     );
   }
