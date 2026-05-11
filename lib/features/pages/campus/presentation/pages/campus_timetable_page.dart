@@ -10,7 +10,8 @@ import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-const double _rowHeight = 56;
+const double _rowHeight = 72;
+const double _pageHorizontalPad = 20;
 
 class CampusTimetablePage extends ConsumerWidget {
   const CampusTimetablePage({super.key});
@@ -96,7 +97,7 @@ class _TimetableListView extends ConsumerWidget {
     final selectedSet = store.selectedTimetableIds;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+      padding: const EdgeInsets.fromLTRB(_pageHorizontalPad, 8, _pageHorizontalPad, 24),
       child: Column(
         children: [
           if (store.timetables.isEmpty)
@@ -236,11 +237,11 @@ class _TimetableCheckTile extends StatelessWidget {
     final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
-    // Disable checkbox if any overlapping timetable is already selected
-    // (always allow deselecting)
     final hasActiveConflict = isSelected
         ? false
         : conflictIds.any((id) => selectedSet.contains(id));
+
+    final canToggle = !hasActiveConflict;
 
     final subtitle = timetable.termLabel.trim().isEmpty
         ? null
@@ -248,59 +249,60 @@ class _TimetableCheckTile extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Checkbox(
-            value: isSelected,
-            onChanged: (v) {
-              if (v != null && (!hasActiveConflict || !v)) {
-                onToggle(v);
-              }
-            },
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  timetable.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-                if (subtitle != null)
+      child: InkWell(
+        onTap: canToggle ? () => onToggle(!isSelected) : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Checkbox(
+              value: isSelected,
+              onChanged: (v) {
+                if (v != null && canToggle) onToggle(v);
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitle,
+                    timetable.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
-              ],
-            ),
-          ),
-          if (hasActiveConflict)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Icon(
-                Icons.info_outline,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
             ),
-          IconButton(
-            icon: const Icon(AppIcons.delete, size: 20),
-            tooltip: isZh ? '删除' : 'Delete',
-            onPressed: onDelete,
-          ),
-        ],
+            if (hasActiveConflict)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            IconButton(
+              icon: const Icon(AppIcons.delete, size: 20),
+              tooltip: isZh ? '删除' : 'Delete',
+              onPressed: onDelete,
+            ),
+          ],
+        ),
       ),
     );
   }
