@@ -135,7 +135,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
               onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
-          title: Text(isZh ? '武大教务导入' : 'WHU Import'),
+          title: Text(isZh ? '导入课程表' : 'Import Schedule'),
         ),
       ],
       child: SingleChildScrollView(
@@ -165,7 +165,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
 
             // ── 第1周周一 ──
             _FlatActionRow(
-              label: isZh ? '第1周周一' : 'Week-1 Monday',
+              label: isZh ? '第一周周一' : 'Week-1 Monday',
               value: _weekOneMonday == null
                   ? (isZh ? '点击选择' : 'Tap to select')
                   : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
