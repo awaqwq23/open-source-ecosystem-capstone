@@ -13,7 +13,7 @@ abstract class CourseTimetableRepository {
 
   Future<void> renameTimetable(String id, String newName);
 
-  Future<void> setActiveTimetable(String? timetableId);
+  Future<void> setSelectedTimetables(Set<String> ids);
 
   Future<void> deleteTimetable(String id);
 }

@@ -145,7 +145,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
   final settings = ref.watch(appHomeSettingsProvider);
   final repositoryItems = ref.watch(agendaItemRepositoryProvider);
   final timetableStore = ref.watch(courseTimetableRepositoryProvider);
-  final activeTimetableId = timetableStore.activeTimetableId;
+  final selectedTimetableIds = timetableStore.selectedTimetableIds;
   final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
       ? HomeDisplayScope.month
       : HomeDisplayScope.week;
@@ -163,8 +163,8 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       if (item.type == ItemType.task ||
           item.type == ItemType.schedule ||
           (item.type == ItemType.course &&
-              (activeTimetableId == null ||
-                  item.courseDetails.timetableId == activeTimetableId)))
+              (selectedTimetableIds.isEmpty ||
+                  selectedTimetableIds.contains(item.courseDetails.timetableId))))
         item,
   ];
   final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
@@ -198,7 +198,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     localeTag: query.localeTag,
     scope: scope,
     visibleRangeStart: baseViewData.visibleRange.start,
-    activeTimetableId: activeTimetableId,
+    selectedTimetableIds: selectedTimetableIds,
     timetabledCourseItems: [
       for (final item in repositoryItems)
         if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
@@ -230,7 +230,7 @@ String? _buildSemesterWeekLabel({
   required String localeTag,
   required HomeDisplayScope scope,
   required DateTime visibleRangeStart,
-  required String? activeTimetableId,
+  required Set<String> selectedTimetableIds,
   required List<AgendaItem> timetabledCourseItems,
 }) {
   if (scope != HomeDisplayScope.week || timetabledCourseItems.isEmpty) {
@@ -238,8 +238,8 @@ String? _buildSemesterWeekLabel({
   }
 
   final String? targetTimetableId = () {
-    if (activeTimetableId != null && activeTimetableId.isNotEmpty) {
-      return activeTimetableId;
+    if (selectedTimetableIds.length == 1) {
+      return selectedTimetableIds.first;
     }
     final ids = <String>{
       for (final item in timetabledCourseItems) item.courseDetails.timetableId,

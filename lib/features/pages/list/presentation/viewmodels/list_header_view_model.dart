@@ -106,7 +106,9 @@ class ListHeaderViewModel extends Notifier<ListHeaderState> {
   Future<void> reorderPendingTasks(int oldIndex, int newIndex) async {
     final section = _computeSection(
       items: ref.read(agendaItemRepositoryProvider),
-      activeCourseTimetableId: ref.read(courseTimetableRepositoryProvider).activeTimetableId,
+      activeCourseTimetableId: ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.isEmpty
+          ? null
+          : ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.first,
       uiState: state,
       now: DateTime.now(),
     );
@@ -178,7 +180,9 @@ final listPageViewDataProvider = Provider<ListPageViewData>((ref) {
   final items = ref.watch(agendaItemRepositoryProvider);
   final now = ref.watch(nowTickerProvider).value ?? DateTime.now();
   final activeCourseTimetableId =
-      ref.watch(courseTimetableRepositoryProvider).activeTimetableId;
+      ref.watch(courseTimetableRepositoryProvider).selectedTimetableIds.isEmpty
+          ? null
+          : ref.watch(courseTimetableRepositoryProvider).selectedTimetableIds.first;
   final section = ListHeaderViewModel._computeSection(
     items: items,
     activeCourseTimetableId: activeCourseTimetableId,

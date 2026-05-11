@@ -411,8 +411,10 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     }
     if (draft.type == ItemType.course && draft.courseDetails.timetableId.isEmpty) {
       final timetableRepo = ref.read(courseTimetableRepositoryProvider.notifier);
-      var activeId = ref.read(courseTimetableRepositoryProvider).activeTimetableId;
-      if (activeId == null || activeId.isEmpty) {
+      var activeId = ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.isEmpty
+          ? null
+          : ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.first;
+      if (activeId == null) {
         final timetable = await timetableRepo.createTimetable(
           name: '课程表 1',
           source: CourseTimetableSource.manual,

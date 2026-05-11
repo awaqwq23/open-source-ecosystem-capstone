@@ -78,7 +78,9 @@ class HomeWidgetSyncService {
           .toList();
       final semesterWeekLabel = _semesterWeekLabel(
         timetabledCourseItems: timetabledCourseItems,
-        activeTimetableId: timetableStore.activeTimetableId,
+        activeTimetableId: timetableStore.selectedTimetableIds.isEmpty
+            ? null
+            : timetableStore.selectedTimetableIds.first,
         zh: zh,
       );
       final intendedLabel = semesterWeekLabel ?? _periodLabel(week.start, zh);
@@ -188,7 +190,9 @@ Map<String, dynamic> _buildSnapshotPayload({
       'followAppTheme': settings.followAppTheme,
     },
     'timetables': {
-      'activeTimetableId': timetableStore.activeTimetableId ?? '',
+      'activeTimetableId': timetableStore.selectedTimetableIds.isEmpty
+          ? ''
+          : timetableStore.selectedTimetableIds.first,
       'items': [
         for (final timetable in timetableStore.timetables)
           {

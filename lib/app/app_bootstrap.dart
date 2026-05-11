@@ -196,12 +196,9 @@ class AppBootstrapLoader {
 
   static CourseTimetableStore _readCourseTimetableStore(SharedPreferences preferences) {
     final raw = preferences.getString(AppBootstrapStorageKeys.courseTimetables);
-    final rawActiveId = preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId);
+    final rawSelected = preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId);
     if (raw == null || raw.isEmpty) {
-      return CourseTimetableStore(
-        timetables: const [],
-        activeTimetableId: (rawActiveId == null || rawActiveId.isEmpty) ? null : rawActiveId,
-      );
+      return const CourseTimetableStore(timetables: []);
     }
 
     try {
@@ -211,14 +208,29 @@ class AppBootstrapLoader {
           .map(CourseTimetableStorageMapper.fromJson)
           .whereType<CourseTimetable>()
           .toList(growable: false);
-      final activeId = (rawActiveId == null || rawActiveId.isEmpty) ? null : rawActiveId;
-      final normalizedActiveId = activeId != null &&
-              timetables.any((timetable) => timetable.id == activeId)
-          ? activeId
-          : (timetables.isEmpty ? null : timetables.first.id);
+
+      Set<String> parseSelected(String? raw) {
+        if (raw == null || raw.isEmpty) {
+          return {};
+        }
+        try {
+          final parsed = jsonDecode(raw);
+          if (parsed is List) {
+            return parsed.whereType<String>().toSet();
+          }
+        } catch (_) {}
+        // Legacy: single ID string
+        return {raw};
+      }
+
+      var selected = parseSelected(rawSelected);
+      // Filter out IDs that no longer exist
+      final validIds = timetables.map((t) => t.id).toSet();
+      selected = selected.where(validIds.contains).toSet();
+
       return CourseTimetableStore(
         timetables: timetables,
-        activeTimetableId: normalizedActiveId,
+        selectedTimetableIds: selected,
       );
     } catch (_) {
       return const CourseTimetableStore(timetables: []);

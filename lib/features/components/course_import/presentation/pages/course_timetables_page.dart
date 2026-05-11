@@ -66,7 +66,7 @@ class CourseTimetablesPage extends ConsumerWidget {
             for (final timetable in store.timetables)
               ListTile(
                 leading: Icon(
-                  store.activeTimetableId == timetable.id
+                  store.isSelected(timetable.id)
                       ? AppIcons.selected
                       : AppIcons.itemTypeCourse,
                 ),
@@ -77,11 +77,11 @@ class CourseTimetablesPage extends ConsumerWidget {
                   children: [
                     ui.IconButton.ghost(
                       icon: const Icon(AppIcons.selected),
-                      onPressed: store.activeTimetableId == timetable.id
+                      onPressed: store.isSelected(timetable.id)
                           ? null
                           : () => ref
                               .read(courseTimetableRepositoryProvider.notifier)
-                              .setActiveTimetable(timetable.id),
+                              .setSelectedTimetables({timetable.id}),
                     ),
                     ui.IconButton.ghost(
                       icon: const Icon(AppIcons.delete),

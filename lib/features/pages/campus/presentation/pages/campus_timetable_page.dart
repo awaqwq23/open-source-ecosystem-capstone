@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+
+const double _rowHeight = 56;
 
 class CampusTimetablePage extends ConsumerWidget {
   const CampusTimetablePage({super.key});
@@ -75,13 +76,11 @@ class _UnauthenticatedView extends StatelessWidget {
   Future<void> _login(BuildContext context) async {
     await context.push(AppRoutePaths.settingsWhuAuthLogin);
     if (!context.mounted) return;
-    if (context.mounted) {
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger != null) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('登录成功')),
-        );
-      }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('登录成功')),
+      );
     }
   }
 }
@@ -90,79 +89,89 @@ class _TimetableListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(courseTimetableRepositoryProvider);
+    final agendaItems = ref.watch(agendaItemRepositoryProvider);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
+    final overlapMap = _buildOverlapMap(store.timetables, agendaItems);
+    final selectedSet = store.selectedTimetableIds;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-      child: SettingsFlatSection(
-        title: isZh ? '课程表列表' : 'Timetables',
-        children: store.timetables.isEmpty
-            ? [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Text(
-                    isZh ? '还没有课程表，点右上角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+      child: Column(
+        children: [
+          if (store.timetables.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+              child: Center(
+                child: Text(
+                  isZh ? '还没有课程表，点右上角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ]
-            : [
-                for (final timetable in store.timetables)
-                  _TimetableListTile(timetable: timetable),
-              ],
-      ),
-    );
-  }
-}
-
-class _TimetableListTile extends ConsumerWidget {
-  const _TimetableListTile({required this.timetable});
-
-  final CourseTimetable timetable;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(courseTimetableRepositoryProvider);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
-
-    final sourceText = switch (timetable.source) {
-      CourseTimetableSource.whuJw => isZh ? '来源：武大教务' : 'Source: WHU',
-      CourseTimetableSource.wakeup => isZh ? '来源：Wakeup' : 'Source: Wakeup',
-      CourseTimetableSource.merged => isZh ? '来源：合并' : 'Source: Merged',
-      CourseTimetableSource.manual => isZh ? '来源：手动' : 'Source: Manual',
-    };
-    final subtitle = timetable.termLabel.trim().isEmpty
-        ? sourceText
-        : '$sourceText · ${timetable.termLabel}';
-
-    return SettingsFlatTile(
-      title: timetable.name,
-      subtitle: subtitle,
-      leading: Icon(
-        store.activeTimetableId == timetable.id
-            ? AppIcons.selected
-            : AppIcons.itemTypeCourse,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ui.IconButton.ghost(
-            icon: const Icon(AppIcons.selected),
-            onPressed: store.activeTimetableId == timetable.id
-                ? null
-                : () => ref
-                    .read(courseTimetableRepositoryProvider.notifier)
-                    .setActiveTimetable(timetable.id),
-          ),
-          ui.IconButton.ghost(
-            icon: const Icon(AppIcons.delete),
-            onPressed: () => _deleteTimetable(context, ref, timetable.id),
-          ),
+              ),
+            )
+          else
+            for (final timetable in store.timetables)
+              _TimetableCheckTile(
+                timetable: timetable,
+                isSelected: selectedSet.contains(timetable.id),
+                conflictIds: overlapMap[timetable.id] ?? {},
+                selectedSet: selectedSet,
+                onToggle: (checked) {
+                  final next = Set<String>.from(selectedSet);
+                  if (checked) {
+                    next.add(timetable.id);
+                  } else {
+                    next.remove(timetable.id);
+                  }
+                  ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(next);
+                },
+                onDelete: () => _deleteTimetable(context, ref, timetable.id),
+              ),
         ],
       ),
     );
+  }
+
+  /// Build a map: timetableId -> set of other timetableIds that overlap with it.
+  Map<String, Set<String>> _buildOverlapMap(
+    List<CourseTimetable> timetables,
+    List<dynamic> agendaItems,
+  ) {
+    // Compute the global date range per timetable
+    final ranges = <String, DateTimeRange>{};
+    for (final t in timetables) {
+      DateTime? first, last;
+      for (final item in agendaItems) {
+        if (item.type == ItemType.course && item.courseDetails.timetableId == t.id) {
+          final s = DateUtils.dateOnly(item.startAt);
+          final e = DateUtils.dateOnly(item.endAt);
+          if (first == null || s.isBefore(first)) first = s;
+          if (last == null || e.isAfter(last)) last = e;
+        }
+      }
+      if (first != null && last != null) {
+        ranges[t.id] = DateTimeRange(start: first, end: last);
+      }
+    }
+
+    final conflict = <String, Set<String>>{};
+    for (final t in timetables) {
+      conflict[t.id] = {};
+    }
+    final ids = ranges.keys.toList();
+    for (var i = 0; i < ids.length; i++) {
+      for (var j = i + 1; j < ids.length; j++) {
+        final a = ranges[ids[i]]!;
+        final b = ranges[ids[j]]!;
+        if (a.start.isBefore(b.end) && b.start.isBefore(a.end)) {
+          conflict[ids[i]]!.add(ids[j]);
+          conflict[ids[j]]!.add(ids[i]);
+        }
+      }
+    }
+    return conflict;
   }
 
   Future<void> _deleteTimetable(BuildContext context, WidgetRef ref, String timetableId) async {
@@ -202,5 +211,97 @@ class _TimetableListTile extends ConsumerWidget {
       await agendaRepo.deleteItem(itemId);
     }
     await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
+  }
+}
+
+class _TimetableCheckTile extends StatelessWidget {
+  const _TimetableCheckTile({
+    required this.timetable,
+    required this.isSelected,
+    required this.conflictIds,
+    required this.selectedSet,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  final CourseTimetable timetable;
+  final bool isSelected;
+  final Set<String> conflictIds;
+  final Set<String> selectedSet;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
+    // Disable checkbox if any overlapping timetable is already selected
+    // (always allow deselecting)
+    final hasActiveConflict = isSelected
+        ? false
+        : conflictIds.any((id) => selectedSet.contains(id));
+
+    final subtitle = timetable.termLabel.trim().isEmpty
+        ? null
+        : timetable.termLabel;
+
+    return SizedBox(
+      height: _rowHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Checkbox(
+            value: isSelected,
+            onChanged: (v) {
+              if (v != null && (!hasActiveConflict || !v)) {
+                onToggle(v);
+              }
+            },
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  timetable.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (hasActiveConflict)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(
+                Icons.info_outline,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+            ),
+          IconButton(
+            icon: const Icon(AppIcons.delete, size: 20),
+            tooltip: isZh ? '删除' : 'Delete',
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
   }
 }

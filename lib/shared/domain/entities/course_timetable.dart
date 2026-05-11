@@ -44,22 +44,21 @@ class CourseTimetable {
 class CourseTimetableStore {
   const CourseTimetableStore({
     required this.timetables,
-    this.activeTimetableId,
+    this.selectedTimetableIds = const {},
   });
 
   final List<CourseTimetable> timetables;
-  final String? activeTimetableId;
+  final Set<String> selectedTimetableIds;
+
+  bool isSelected(String id) => selectedTimetableIds.contains(id);
 
   CourseTimetableStore copyWith({
     List<CourseTimetable>? timetables,
-    String? activeTimetableId,
-    bool clearActiveTimetableId = false,
+    Set<String>? selectedTimetableIds,
   }) {
     return CourseTimetableStore(
       timetables: timetables ?? this.timetables,
-      activeTimetableId: clearActiveTimetableId
-          ? null
-          : (activeTimetableId ?? this.activeTimetableId),
+      selectedTimetableIds: selectedTimetableIds ?? this.selectedTimetableIds,
     );
   }
 }

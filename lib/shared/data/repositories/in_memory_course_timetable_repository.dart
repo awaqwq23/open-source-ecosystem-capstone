@@ -47,9 +47,10 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       termLabel: termLabel.trim(),
       createdAt: now,
     );
+    final selected = <String>{...state.selectedTimetableIds, timetable.id};
     state = state.copyWith(
       timetables: [...state.timetables, timetable],
-      activeTimetableId: state.activeTimetableId ?? timetable.id,
+      selectedTimetableIds: selected,
     );
     await _persist();
     return timetable;
@@ -74,11 +75,9 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
   }
 
   @override
-  Future<void> setActiveTimetable(String? timetableId) async {
-    if (timetableId != null && findById(timetableId) == null) {
-      return;
-    }
-    state = state.copyWith(activeTimetableId: timetableId);
+  Future<void> setSelectedTimetables(Set<String> ids) async {
+    final valid = ids.where((id) => findById(id) != null).toSet();
+    state = state.copyWith(selectedTimetableIds: valid);
     await _persist();
   }
 
@@ -88,13 +87,11 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       for (final timetable in state.timetables)
         if (timetable.id != id) timetable,
     ];
-    final nextActiveId = state.activeTimetableId == id
-        ? (remaining.isEmpty ? null : remaining.first.id)
-        : state.activeTimetableId;
+    final nextSelected = Set<String>.from(state.selectedTimetableIds)
+      ..remove(id);
     state = state.copyWith(
       timetables: remaining,
-      activeTimetableId: nextActiveId,
-      clearActiveTimetableId: nextActiveId == null,
+      selectedTimetableIds: nextSelected,
     );
     await _persist();
   }
@@ -114,7 +111,7 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       ),
       prefs.setString(
         AppBootstrapStorageKeys.activeCourseTimetableId,
-        state.activeTimetableId ?? '',
+        jsonEncode(state.selectedTimetableIds.toList()),
       ),
     ]).then((_) {});
   }

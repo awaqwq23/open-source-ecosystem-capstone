@@ -247,8 +247,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             source: CourseTimetableSource.whuJw,
             termLabel: termLabel,
           );
-      await ref.read(courseTimetableRepositoryProvider.notifier).setActiveTimetable(timetable.id);
-
       final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
       for (final draft in payload.items) {
         await agendaRepo.createItem(
