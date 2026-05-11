@@ -143,6 +143,13 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── 课程表名称 ──
+            _RoundedTextField(
+              controller: _nameController,
+              hintText: isZh ? '课程表名称' : 'Timetable name',
+            ),
+            const Gap(12),
+
             // ── 导入学期选择 ──
             _SemesterSelector(
               options: _allTerms,
@@ -156,25 +163,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             ),
             const Gap(12),
 
-            // ── 课程表名称 ──
-            _RoundedTextField(
-              controller: _nameController,
-              hintText: isZh ? '课程表名称' : 'Timetable name',
-            ),
-            if (_nameController.text.trim().isNotEmpty) ...[
-              const Gap(4),
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  isZh
-                      ? '生成名称：${_nameController.text.trim()} ${_formatNow()}'
-                      : 'Will save as: ${_nameController.text.trim()} ${_formatNow()}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
             const Gap(16),
 
             // ── 第1周周一 ──
