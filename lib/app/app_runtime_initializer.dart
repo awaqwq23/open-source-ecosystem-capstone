@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
+import 'package:luotopia/features/hot_update/data/hot_update_service.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/home_widgets/data/home_widget_sync_service.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
@@ -18,6 +19,10 @@ class AppRuntimeInitializer extends ConsumerStatefulWidget {
   @override
   ConsumerState<AppRuntimeInitializer> createState() => _AppRuntimeInitializerState();
 }
+
+final hotUpdateServiceProvider = Provider<HotUpdateService>((ref) {
+  return HotUpdateService();
+});
 
 class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
   final List<ProviderSubscription<dynamic>> _subs = [];
@@ -37,6 +42,9 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       return;
     }
     _initialized = true;
+    // 初始化热更新服务（后台检查脚本更新）
+    ref.read(hotUpdateServiceProvider).initialize();
+
     final service = ref.read(homeWidgetSyncServiceProvider);
     _homeWidgetSyncService = service;
     await service.initialize();

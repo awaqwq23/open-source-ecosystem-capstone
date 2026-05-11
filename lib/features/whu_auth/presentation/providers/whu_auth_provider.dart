@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/app/app_runtime_initializer.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/whu_auth/data/education_api_service.dart';
 import 'package:luotopia/features/whu_auth/data/whu_auth_repository.dart';
@@ -15,7 +16,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
   @override
   WhuAuthState build() {
     _repository = const WhuAuthRepository();
-    _educationApi = EducationApiService();
+    _educationApi = EducationApiService(
+      hotUpdateService: ref.read(hotUpdateServiceProvider),
+    );
     _loadCached();
     return const WhuAuthState(isLoading: true);
   }

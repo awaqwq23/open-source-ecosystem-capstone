@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:luotopia/features/hot_update/data/hot_update_service.dart';
+import 'package:luotopia/features/hot_update/domain/models/script_info.dart';
 import 'package:luotopia/features/whu_auth/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/domain/whu_session_checker.dart';
 import 'package:luotopia/features/whu_auth/domain/whu_session_invalid_exception.dart';
@@ -22,6 +24,9 @@ class EducationUserInfo {
 }
 
 class EducationApiService {
+  final HotUpdateService? hotUpdateService;
+
+  const EducationApiService({this.hotUpdateService});
   static const _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -186,11 +191,20 @@ class EducationApiService {
     if (decoded is! Map<String, dynamic>) {
       throw Exception('成绩接口返回格式异常。');
     }
+
+    // 尝试热更新 JS 解析器，失败时使用内置 Dart 解析
+    if (hotUpdateService != null) {
+      return hotUpdateService!.parse(
+        parserName: ParserNames.score,
+        rawData: decoded,
+        dartParser: _parseScoreResponseViaJs,
+      );
+    }
+
     final rawItems = decoded['items'];
     if (rawItems is! List) {
       throw Exception('成绩接口返回格式异常：未找到 items。');
     }
-
     return _parseScoreResponse(rawItems);
   }
 
@@ -245,6 +259,65 @@ class EducationApiService {
   String _generateValidate() {
     final random = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
     return 'sl$random';
+  }
+
+  /// 接收 JS 解析器输出或原生 API 数据，构造统一返回值
+  ({List<ScoreEntity> scores, ScoreUserInfo userInfo}) _parseScoreResponseViaJs(
+    Map<String, dynamic> json,
+  ) {
+    // JS 解析器输出格式: { scores: [...], userInfo: {...} }
+    final rawScores = json['scores'] as List<dynamic>?;
+    if (rawScores != null) {
+      final userInfoData = json['userInfo'];
+      final userInfo = userInfoData is Map<String, dynamic>
+          ? ScoreUserInfo(
+              college: (userInfoData['college'] as String? ?? ''),
+              major: (userInfoData['major'] as String? ?? ''),
+              name: (userInfoData['name'] as String? ?? ''),
+              studentId: (userInfoData['studentId'] as String? ?? ''),
+            )
+          : const ScoreUserInfo(
+              college: '',
+              major: '',
+              name: '',
+              studentId: '',
+            );
+
+      final scores = rawScores
+          .map((e) {
+            if (e is! Map) {
+              return null;
+            }
+            final m = Map<String, dynamic>.from(e as Map);
+            final score = (m['score'] as num?)?.toInt() ?? 0;
+            final credit = (m['credit'] as num?)?.toDouble() ?? 0;
+            if (score <= 0 || credit <= 0) {
+              return null;
+            }
+            return ScoreEntity(
+              year: (m['year'] as num?)?.toInt() ?? 0,
+              semester: (m['semester'] as num?)?.toInt() ?? 1,
+              name: (m['name'] as String? ?? '').trim(),
+              courseId: (m['courseId'] as String? ?? '').trim(),
+              instructor: (m['instructor'] as String? ?? '').trim(),
+              credit: credit,
+              courseType: (m['courseType'] as String? ?? '').trim(),
+              score: score,
+              courseCollege: (m['courseCollege'] as String? ?? '').trim(),
+            );
+          })
+          .whereType<ScoreEntity>()
+          .toList();
+      return (scores: scores, userInfo: userInfo);
+    }
+
+    // 原生 API 格式: { items: [...] }
+    final rawItems = json['items'] as List<dynamic>?;
+    if (rawItems != null) {
+      return _parseScoreResponse(rawItems);
+    }
+
+    throw Exception('成绩解析失败：无法识别的数据格式。');
   }
 
   ({List<ScoreEntity> scores, ScoreUserInfo userInfo}) _parseScoreResponse(
