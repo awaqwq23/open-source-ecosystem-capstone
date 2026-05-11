@@ -3,19 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
+import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:gap/gap.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+
+const double _editorRowHeight = 56;
+const double _editorHorizontalPadding = 20;
 
 class CampusTimetablePage extends ConsumerWidget {
   const CampusTimetablePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(courseTimetableRepositoryProvider);
+    final whuAuth = ref.watch(whuAuthProvider);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
@@ -28,146 +32,214 @@ class CampusTimetablePage extends ConsumerWidget {
             ),
           ],
           title: Text(isZh ? '课程表' : 'Timetable'),
-          trailing: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.add),
-              onPressed: () => _createEmptyTimetable(context, ref),
-            ),
-          ],
+          trailing: whuAuth.isAuthenticated
+              ? <Widget>[
+                  ui.IconButton.ghost(
+                    icon: const Icon(AppIcons.add),
+                    onPressed: () => context.push(AppRoutePaths.settingsCourseImportWhu),
+                  ),
+                ]
+              : <Widget>[],
         ),
       ],
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
-        child: Column(
-          children: [
-            // ── 课程导入 ──
-            SettingsFlatSection(
-              title: isZh ? '课程导入' : 'Course Import',
-              children: [
-                SettingsFlatTile(
-                  title: isZh ? '武汉大学教务系统' : 'WHU Academic System',
-                  subtitle: isZh ? '通过内嵌网页登录并导入课程' : 'Import via embedded web login',
-                  leading: const Icon(AppIcons.web),
-                  onTap: () => context.push(AppRoutePaths.settingsCourseImportWhu),
-                ),
-                SettingsFlatTile(
-                  title: isZh ? 'Wakeup 分享口令/链接' : 'Wakeup Share Link/Code',
-                  subtitle: isZh ? '从分享文本导入课程表' : 'Import from shared text',
-                  leading: const Icon(AppIcons.import),
-                  onTap: () => context.push(AppRoutePaths.settingsCourseImportWakeup),
-                ),
-              ],
-            ),
-
-            // ── 课程表列表 ──
-            SettingsFlatSection(
-              title: isZh ? '课程表列表' : 'Timetables',
-              children: [
-                if (store.timetables.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: Text(
-                      isZh ? '还没有课程表，先从上方导入或手动创建。' : 'No timetable yet. Import or create one first.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                else
-                  for (final timetable in store.timetables)
-                    _TimetableListTile(timetable: timetable),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _createEmptyTimetable(BuildContext context, WidgetRef ref) async {
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(isZh ? '新建课程表' : 'Create timetable'),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: isZh ? '输入课程表名称' : 'Enter timetable name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(isZh ? '取消' : 'Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: Text(isZh ? '创建' : 'Create'),
-            ),
-          ],
-        );
-      },
-    );
-    if (result == null) return;
-    await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
-      name: result,
-      source: CourseTimetableSource.manual,
+      child: whuAuth.isAuthenticated
+          ? _TimetableListView()
+          : _UnauthenticatedView(),
     );
   }
 }
 
-class _TimetableListTile extends ConsumerWidget {
-  const _TimetableListTile({required this.timetable});
-
-  final CourseTimetable timetable;
-
+class _UnauthenticatedView extends StatelessWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(courseTimetableRepositoryProvider);
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
-    final sourceText = switch (timetable.source) {
-      CourseTimetableSource.whuJw => isZh ? '来源：武大教务' : 'Source: WHU',
-      CourseTimetableSource.wakeup => isZh ? '来源：Wakeup' : 'Source: Wakeup',
-      CourseTimetableSource.merged => isZh ? '来源：合并' : 'Source: Merged',
-      CourseTimetableSource.manual => isZh ? '来源：手动' : 'Source: Manual',
-    };
-    final subtitle = timetable.termLabel.trim().isEmpty
-        ? sourceText
-        : '$sourceText · ${timetable.termLabel}';
-
-    return SettingsFlatTile(
-      title: timetable.name,
-      subtitle: subtitle,
-      leading: Icon(
-        store.activeTimetableId == timetable.id
-            ? AppIcons.selected
-            : AppIcons.itemTypeCourse,
-      ),
-      trailing: Row(
+    return Center(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ui.IconButton.ghost(
-            icon: const Icon(AppIcons.selected),
-            onPressed: store.activeTimetableId == timetable.id
-                ? null
-                : () => ref
-                    .read(courseTimetableRepositoryProvider.notifier)
-                    .setActiveTimetable(timetable.id),
+          Icon(Icons.lock_outline, size: 48, color: colors.onSurfaceVariant),
+          const Gap(16),
+          Text(
+            isZh ? '请先登录武大教务账户' : 'Please login to WHU Academic System',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
-          ui.IconButton.ghost(
-            icon: const Icon(AppIcons.delete),
-            onPressed: () => _deleteTimetable(context, ref, timetable.id),
+          const Gap(16),
+          ui.OutlineButton(
+            onPressed: () => _login(context),
+            child: Text(isZh ? '去登录' : 'Login'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _deleteTimetable(BuildContext context, WidgetRef ref, String timetableId) async {
+  Future<void> _login(BuildContext context) async {
+    await context.push(AppRoutePaths.settingsWhuAuthLogin);
+    if (!context.mounted) return;
+    if (context.mounted) {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger != null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('登录成功')),
+        );
+      }
+    }
+  }
+}
+
+class _TimetableListView extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(courseTimetableRepositoryProvider);
+    final theme = Theme.of(context);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(_editorHorizontalPadding, 12, _editorHorizontalPadding, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text(
+              isZh ? '课程表列表' : 'Timetables',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: store.timetables.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    child: Center(
+                      child: Text(
+                        isZh ? '还没有课程表，点右上角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < store.timetables.length; i++) ...[
+                        _TimetableRow(timetable: store.timetables[i]),
+                        if (i != store.timetables.length - 1)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: 16,
+                            endIndent: 16,
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          ),
+                      ],
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimetableRow extends ConsumerWidget {
+  const _TimetableRow({required this.timetable});
+
+  final CourseTimetable timetable;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(courseTimetableRepositoryProvider);
+    final theme = Theme.of(context);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isActive = store.activeTimetableId == timetable.id;
+
+    final sourceText = switch (timetable.source) {
+      CourseTimetableSource.whuJw => isZh ? '武大教务' : 'WHU',
+      CourseTimetableSource.wakeup => isZh ? 'Wakeup' : 'Wakeup',
+      CourseTimetableSource.merged => isZh ? '合并' : 'Merged',
+      CourseTimetableSource.manual => isZh ? '手动' : 'Manual',
+    };
+    final subtitle = timetable.termLabel.trim().isEmpty
+        ? sourceText
+        : '$sourceText · ${timetable.termLabel}';
+
+    return InkWell(
+      onTap: () => _activate(context, ref),
+      child: SizedBox(
+        height: _editorRowHeight,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: SizedBox(
+                width: 24,
+                child: Icon(
+                  isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 20,
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const Gap(12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    timetable.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (!isActive)
+              IconButton(
+                icon: Icon(Icons.check_circle_outline, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                tooltip: isZh ? '设为当前' : 'Set active',
+                onPressed: () => _activate(context, ref),
+              ),
+            IconButton(
+              icon: const Icon(AppIcons.delete, size: 20),
+              tooltip: isZh ? '删除' : 'Delete',
+              onPressed: () => _delete(context, ref),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _activate(BuildContext context, WidgetRef ref) {
+    ref.read(courseTimetableRepositoryProvider.notifier).setActiveTimetable(timetable.id);
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -197,12 +269,12 @@ class _TimetableListTile extends ConsumerWidget {
     final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
     final courseItemIds = [
       for (final item in ref.read(agendaItemRepositoryProvider))
-        if (item.type == ItemType.course && item.courseDetails.timetableId == timetableId)
+        if (item.type == ItemType.course && item.courseDetails.timetableId == timetable.id)
           item.id,
     ];
     for (final itemId in courseItemIds) {
       await agendaRepo.deleteItem(itemId);
     }
-    await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
+    await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetable.id);
   }
 }
