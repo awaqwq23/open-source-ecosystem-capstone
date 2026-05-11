@@ -1,159 +1,182 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 /// 教务系统 HTTP 客户端。
 ///
-/// 利用 `http.Client` 自动跟随重定向的能力做 SSO，
-/// 从最终响应的 `set-cookie` 中提取 JWGL session cookie，
-/// 后续请求自动附带。
+/// 自愈式 cookie 管理：
+/// 1. 所有请求携带 `_cookieHeader`（CAS cookie + JWGL session cookie 合并串）
+/// 2. 响应含登录页标记（authserver/login、var dlktsxx=）→ 自动 _ssoRefresh
+/// 3. _ssoRefresh 从 `set-cookie` 提取新 cookie 合并到 _cookieHeader
+/// 4. 合并后续期 → 重试原请求（用户/业务层无感）
 class JwglClient {
-  JwglClient({required this.casCookie});
-  final String casCookie;
+  JwglClient({
+    required String cookieHeader,
+    this.onCookiesUpdated,
+  }) : _cookieHeader = cookieHeader;
 
-  /// 域名 → cookie 键值对
-  final Map<String, Map<String, String>> _cookieJar = {};
+  String _cookieHeader;
+  final ValueChanged<String>? onCookiesUpdated;
 
-  bool _sessionEstablished = false;
+  bool _isRefreshing = false;
+  Completer<void>? _refreshCompleter;
 
-  static const _casLoginUrl = 'https://cas.whu.edu.cn/authserver/login';
-  static const _educationSsoUrl = 'https://jwgl.whu.edu.cn/sso/jznewsixlogin';
+  static const _requestTimeout = Duration(seconds: 20);
 
-  /// SSO：携带 CAS cookie 向 CAS 发起登录，`http.Client` 自动跟随重定向到 JWGL，
-  /// 最终响应中提取 JWGL 下发的 session cookie。
-  Future<void> loginEducation() async {
-    if (_sessionEstablished) return;
+  static const _userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-    final client = http.Client();
-    try {
-      final request = http.Request(
-        'GET',
-        Uri.parse(
-          '$_casLoginUrl?service=${Uri.encodeComponent(_educationSsoUrl)}',
-        ),
-      );
-      request.headers['Cookie'] = casCookie;
-      // 设置 User-Agent 避免被 CAS 拦截
-      request.headers['User-Agent'] =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  static const _casLoginUrl =
+      'https://cas.whu.edu.cn/authserver/login'
+      '?service=https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin';
 
-      final streamed = await client.send(request);
-      final headers = streamed.headers;
+  Map<String, String> _buildHeaders() => {
+        'User-Agent': _userAgent,
+        'Cookie': _cookieHeader,
+      };
 
-      // HTTP Client 已自动跟随重定向链，headers 是最终响应的头。
-      // set-cookie 可能包含新下发的 JSESSIONID
-      _saveCookies('jwgl.whu.edu.cn', headers['set-cookie']);
+  // ── 公开 API ──
 
-      final body = await streamed.stream.bytesToString();
-      if (!body.contains('教学管理信息服务平台')) {
-        _sessionEstablished = false;
-        final reason = _parseJsError(body);
-        throw Exception(
-          '教务系统登录失败！${reason.isEmpty ? '请重新登录' : reason}',
-        );
-      }
-      _sessionEstablished = true;
-    } finally {
-      client.close();
-    }
-  }
-
-  /// POST 请求（自动携带 session cookie）。
   Future<http.Response> post(
     Uri url, {
     Map<String, String>? body,
-    Map<String, String>? headers,
+    Map<String, String>? extraHeaders,
   }) async {
-    await loginEducation();
-
-    final request = http.Request('POST', url);
-    _attachCookies(request, url.host);
-    if (headers != null) {
-      request.headers.addAll(headers);
-    }
-    request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    if (body != null) {
-      request.body =
-          body.entries
-              .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
-              .join('&');
-    }
-
-    final client = http.Client();
-    try {
-      final streamed = await client.send(request);
-      final streamedHeaders = streamed.headers;
-      _saveCookies(url.host, streamedHeaders['set-cookie']);
-
-      final bodyStr = await streamed.stream.bytesToString();
-      return http.Response(bodyStr, streamed.statusCode,
-          headers: streamedHeaders);
-    } finally {
-      client.close();
-    }
+    final req = () => http
+        .post(
+          url,
+          headers: {
+            ..._buildHeaders(),
+            'Content-Type': 'application/x-www-form-urlencoded',
+            if (extraHeaders != null) ...extraHeaders,
+          },
+          body: body,
+        )
+        .timeout(_requestTimeout);
+    return _executeWithRetry(req);
   }
 
-  /// GET 请求（自动携带 session cookie）。
   Future<http.Response> get(
     Uri url, {
-    Map<String, String>? headers,
+    Map<String, String>? extraHeaders,
   }) async {
-    await loginEducation();
+    final req = () => http
+        .get(
+          url,
+          headers: {
+            ..._buildHeaders(),
+            if (extraHeaders != null) ...extraHeaders,
+          },
+        )
+        .timeout(_requestTimeout);
+    return _executeWithRetry(req);
+  }
 
-    final request = http.Request('GET', url);
-    _attachCookies(request, url.host);
-    if (headers != null) {
-      request.headers.addAll(headers);
+  // ── 自愈核心 ──
+
+  Future<http.Response> _executeWithRetry(
+    Future<http.Response> Function() request,
+  ) async {
+    final response = await request();
+    if (!_looksLikeLoginRedirect(response.body)) return response;
+
+    await _ssoRefresh();
+    return request();
+  }
+
+  /// SSO 重新握手：用已有 cookie 访问 CAS 完成静默认证。
+  /// 从最终响应的 set-cookie 中提取新 cookie 合并到 _cookieHeader。
+  Future<void> _ssoRefresh() async {
+    if (_isRefreshing) {
+      await _refreshCompleter!.future;
+      return;
     }
 
-    final client = http.Client();
-    try {
-      final streamed = await client.send(request);
-      final streamedHeaders = streamed.headers;
-      _saveCookies(url.host, streamedHeaders['set-cookie']);
+    _isRefreshing = true;
+    _refreshCompleter = Completer<void>();
 
-      final bodyStr = await streamed.stream.bytesToString();
-      return http.Response(bodyStr, streamed.statusCode,
-          headers: streamedHeaders);
+    try {
+      final response = await http
+          .get(Uri.parse(_casLoginUrl), headers: _buildHeaders())
+          .timeout(_requestTimeout);
+
+      if (response.body.contains('教学管理信息服务平台')) {
+        _extractAndUpdateCookies(response);
+
+        // 部分 JWGL 实现不会在最终页面响应中重发 JSESSIONID，
+        // 显式请求 JWGL 首页强制获取 session cookie
+        if (!_cookieHeader.contains('JSESSIONID=')) {
+          try {
+            final warmup = await http
+                .get(
+                  Uri.parse('https://jwgl.whu.edu.cn/'),
+                  headers: _buildHeaders(),
+                )
+                .timeout(_requestTimeout);
+            _extractAndUpdateCookies(warmup);
+          } catch (_) {}
+        }
+
+        if (_cookieHeader.contains('JSESSIONID=')) {
+          onCookiesUpdated?.call(_cookieHeader);
+          _refreshCompleter!.complete();
+          return;
+        }
+      }
+
+      final errorMatch = RegExp(r'var dlktsxx="(.*?)";').firstMatch(response.body);
+      final errorMsg = errorMatch?.group(1);
+      if (errorMsg != null && errorMsg.isNotEmpty) {
+        throw Exception('教务系统登录失败：$errorMsg');
+      }
+
+      throw Exception('教务系统登录失败，请检查账户状态。');
+    } catch (e) {
+      _refreshCompleter!.completeError(e);
+      rethrow;
     } finally {
-      client.close();
+      _isRefreshing = false;
     }
   }
 
-  // ── cookie 管理 ──
+  // ── cookie 提取合并 ──
 
-  void _saveCookies(String domain, String? setCookie) {
+  void _extractAndUpdateCookies(http.Response response) {
+    final setCookie = response.headers['set-cookie'];
     if (setCookie == null || setCookie.isEmpty) return;
 
-    for (final raw in setCookie.split(',').map((s) => s.trim())) {
-      final semi = raw.indexOf(';');
-      final kv = semi > 0 ? raw.substring(0, semi).trim() : raw.trim();
-      final eq = kv.indexOf('=');
-      if (eq <= 0) continue;
+    for (final part in setCookie.split(',')) {
+      final match = RegExp(r'([^=]+=[^;]*)').firstMatch(part.trim());
+      if (match == null) continue;
 
-      _cookieJar.putIfAbsent(domain, () => {});
-      _cookieJar[domain]![kv.substring(0, eq).trim()] = kv.substring(eq + 1);
+      final newPair = match.group(1)!;
+      // 跳过空值 cookie（如 CASTGC=; 是 cookie 清除指令）
+      if (newPair.endsWith('=')) continue;
+
+      final key = newPair.split('=')[0];
+
+      final entries =
+          _cookieHeader.split('; ').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      entries.removeWhere((e) => e.startsWith('$key='));
+      entries.add(newPair);
+      _cookieHeader = entries.join('; ');
     }
-  }
-
-  void _attachCookies(http.BaseRequest request, String domain) {
-    final cookies = _cookieJar[domain];
-    if (cookies == null || cookies.isEmpty) return;
-    final value =
-        cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
-    request.headers['Cookie'] = value;
   }
 
   // ── 工具 ──
 
-  static String generateValidate() {
-    final random = Random();
-    return 'sl${random.nextInt(1000000000).toRadixString(36)}${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+  static bool _looksLikeLoginRedirect(String body) {
+    final lower = body.toLowerCase();
+    return lower.contains('authserver/login') ||
+        (lower.contains('cas.whu.edu.cn') && lower.contains('login')) ||
+        lower.contains('var dlktsxx=');
   }
 
-  String _parseJsError(String html) {
-    final match = RegExp(r'var dlktsxx="(.*?)";').firstMatch(html);
-    return match?.group(1) ?? '';
+  static String generateValidate() {
+    final random = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    return 'sl$random';
   }
 }
