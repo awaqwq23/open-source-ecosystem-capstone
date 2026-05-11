@@ -243,9 +243,11 @@ class _TimetableCheckTile extends StatelessWidget {
 
     final canToggle = !hasActiveConflict;
 
-    final subtitle = timetable.termLabel.trim().isEmpty
-        ? null
-        : timetable.termLabel;
+    final timeStr = '${timetable.createdAt.year}-${timetable.createdAt.month.toString().padLeft(2, '0')}-${timetable.createdAt.day.toString().padLeft(2, '0')}';
+    final termPart = timetable.termLabel.trim();
+    final subtitle = termPart.isEmpty
+        ? (isZh ? '导入于 $timeStr' : 'Imported $timeStr')
+        : '$termPart · $timeStr';
 
     return SizedBox(
       height: _rowHeight,
@@ -277,8 +279,7 @@ class _TimetableCheckTile extends StatelessWidget {
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
-                  if (subtitle != null)
-                    Text(
+                  Text(
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
