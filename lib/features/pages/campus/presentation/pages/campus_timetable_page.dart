@@ -18,7 +18,6 @@ class CampusTimetablePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final whuAuth = ref.watch(whuAuthProvider);
-    final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
@@ -34,30 +33,15 @@ class CampusTimetablePage extends ConsumerWidget {
           trailing: whuAuth.isAuthenticated
               ? <Widget>[
                   ui.IconButton.ghost(
-                    icon: const Icon(Icons.check),
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(AppIcons.add),
+                    onPressed: () => context.push(AppRoutePaths.settingsCourseImportWhu),
                   ),
                 ]
               : <Widget>[],
         ),
       ],
       child: whuAuth.isAuthenticated
-          ? Stack(
-              children: [
-                _TimetableListView(),
-                Positioned(
-                  right: 20,
-                  bottom: 24,
-                  child: FloatingActionButton(
-                    heroTag: 'timetable-fab',
-                    onPressed: () => context.push(AppRoutePaths.settingsCourseImportWhu),
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    child: const Icon(AppIcons.add),
-                  ),
-                ),
-              ],
-            )
+          ? _TimetableListView()
           : _UnauthenticatedView(),
     );
   }
