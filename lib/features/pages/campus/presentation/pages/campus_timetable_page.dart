@@ -21,55 +21,26 @@ class CampusTimetablePage extends ConsumerStatefulWidget {
 
 class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
   Set<String> _pendingSelectedIds = {};
-  final Set<String> _pendingDeleteIds = {};
-  List<String> _initialTimetableIds = const [];
   bool _didInit = false;
+
+  void _applySelection() {
+    ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(_pendingSelectedIds);
+    Navigator.of(context).maybePop();
+  }
 
   @override
   Widget build(BuildContext context) {
     if (!_didInit) {
       _didInit = true;
-      final store = ref.read(courseTimetableRepositoryProvider);
-      _pendingSelectedIds = Set<String>.from(store.selectedTimetableIds);
-      _initialTimetableIds = store.timetables.map((t) => t.id).toList();
+      _pendingSelectedIds =
+          Set<String>.from(ref.read(courseTimetableRepositoryProvider).selectedTimetableIds);
     }
-
-    // Cancel: revert all pending changes and pop
-    void cancel() {
-      final store = ref.read(courseTimetableRepositoryProvider);
-      final notifier = ref.read(courseTimetableRepositoryProvider.notifier);
-      // Remove timetables added by import since page opened
-      for (final t in store.timetables) {
-        if (!_initialTimetableIds.contains(t.id)) {
-          notifier.deleteTimetable(t.id);
-        }
+    ref.listen(courseTimetableRepositoryProvider, (_, next) {
+      final added = next.selectedTimetableIds.where((id) => !_pendingSelectedIds.contains(id));
+      if (added.isNotEmpty) {
+        setState(() => _pendingSelectedIds.addAll(added));
       }
-      // Restore original selection
-      notifier.setSelectedTimetables(_initialTimetableIds.toSet());
-      Navigator.of(context).maybePop();
-    }
-
-    void confirm() async {
-      final notifier = ref.read(courseTimetableRepositoryProvider.notifier);
-      // Apply pending deletes
-      for (final id in _pendingDeleteIds) {
-        final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
-        final courseItemIds = [
-          for (final item in ref.read(agendaItemRepositoryProvider))
-            if (item.type == ItemType.course && item.courseDetails.timetableId == id)
-              item.id,
-        ];
-        for (final itemId in courseItemIds) {
-          await agendaRepo.deleteItem(itemId);
-        }
-        await notifier.deleteTimetable(id);
-      }
-      // Apply selection
-      await notifier.setSelectedTimetables(_pendingSelectedIds);
-      if (!context.mounted) return;
-      Navigator.of(context).maybePop();
-    }
-
+    });
     final whuAuth = ref.watch(whuAuthProvider);
     final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
@@ -80,7 +51,7 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
           leading: [
             ui.IconButton.ghost(
               icon: const Icon(AppIcons.back),
-              onPressed: cancel,
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
           title: Text(isZh ? '课程表' : 'Timetable'),
@@ -88,7 +59,7 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
               ? <Widget>[
                   ui.IconButton.ghost(
                     icon: const Icon(Icons.check),
-                    onPressed: confirm,
+                    onPressed: _applySelection,
                   ),
                 ]
               : <Widget>[],
@@ -99,21 +70,13 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
               children: [
                 _TimetableListView(
                   pendingSelectedIds: _pendingSelectedIds,
-                  pendingDeleteIds: _pendingDeleteIds,
                   onToggle: (id, checked) {
                     setState(() {
                       if (checked) {
                         _pendingSelectedIds.add(id);
-                        _pendingDeleteIds.remove(id);
                       } else {
                         _pendingSelectedIds.remove(id);
                       }
-                    });
-                  },
-                  onDelete: (id) {
-                    setState(() {
-                      _pendingDeleteIds.add(id);
-                      _pendingSelectedIds.remove(id);
                     });
                   },
                 ),
@@ -176,15 +139,11 @@ class _UnauthenticatedView extends StatelessWidget {
 class _TimetableListView extends ConsumerWidget {
   const _TimetableListView({
     required this.pendingSelectedIds,
-    required this.pendingDeleteIds,
     required this.onToggle,
-    required this.onDelete,
   });
 
   final Set<String> pendingSelectedIds;
-  final Set<String> pendingDeleteIds;
   final void Function(String id, bool checked) onToggle;
-  final void Function(String id) onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -192,17 +151,14 @@ class _TimetableListView extends ConsumerWidget {
     final agendaItems = ref.watch(agendaItemRepositoryProvider);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
-    final visibleTimetables = store.timetables
-        .where((t) => !pendingDeleteIds.contains(t.id))
-        .toList();
-    final overlapMap = _buildOverlapMap(visibleTimetables, agendaItems);
+    final overlapMap = _buildOverlapMap(store.timetables, agendaItems);
     final selectedSet = pendingSelectedIds;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
       child: Column(
         children: [
-          if (visibleTimetables.isEmpty)
+          if (store.timetables.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
               child: Center(
@@ -215,14 +171,14 @@ class _TimetableListView extends ConsumerWidget {
               ),
             )
           else
-            for (final timetable in visibleTimetables)
+            for (final timetable in store.timetables)
               _TimetableCheckTile(
                 timetable: timetable,
                 isSelected: selectedSet.contains(timetable.id),
                 conflictIds: overlapMap[timetable.id] ?? {},
                 selectedSet: selectedSet,
                 onToggle: (checked) => onToggle(timetable.id, checked),
-                onDelete: () => onDelete(timetable.id),
+                onDelete: () => _deleteTimetable(context, ref, timetable.id, selectedSet),
               ),
         ],
       ),
@@ -267,6 +223,49 @@ class _TimetableListView extends ConsumerWidget {
     return conflict;
   }
 
+  static Future<void> _deleteTimetable(
+    BuildContext context,
+    WidgetRef ref,
+    String timetableId,
+    Set<String> pendingSelectedIds,
+  ) async {
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(isZh ? '删除课程表' : 'Delete timetable'),
+          content: Text(
+            isZh
+                ? '会同时删除该课程表下的所有课程事项。'
+                : 'All course items in this timetable will be deleted.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(isZh ? '取消' : 'Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(isZh ? '删除' : 'Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldDelete != true) return;
+
+    final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
+    final courseItemIds = [
+      for (final item in ref.read(agendaItemRepositoryProvider))
+        if (item.type == ItemType.course && item.courseDetails.timetableId == timetableId)
+          item.id,
+    ];
+    for (final itemId in courseItemIds) {
+      await agendaRepo.deleteItem(itemId);
+    }
+    await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
+  }
 }
 
 class _TimetableCheckTile extends StatelessWidget {
