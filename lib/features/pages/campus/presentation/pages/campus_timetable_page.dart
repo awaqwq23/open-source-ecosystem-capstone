@@ -12,36 +12,11 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 const double _rowHeight = 72;
 
-class CampusTimetablePage extends ConsumerStatefulWidget {
+class CampusTimetablePage extends ConsumerWidget {
   const CampusTimetablePage({super.key});
 
   @override
-  ConsumerState<CampusTimetablePage> createState() => _CampusTimetablePageState();
-}
-
-class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
-  Set<String> _pendingSelectedIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    final store = ref.read(courseTimetableRepositoryProvider);
-    _pendingSelectedIds = Set<String>.from(store.selectedTimetableIds);
-    ref.listen(courseTimetableRepositoryProvider, (_, next) {
-      final added = next.selectedTimetableIds.where((id) => !_pendingSelectedIds.contains(id));
-      if (added.isNotEmpty) {
-        setState(() => _pendingSelectedIds.addAll(added));
-      }
-    });
-  }
-
-  void _applySelection() {
-    ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(_pendingSelectedIds);
-    Navigator.of(context).maybePop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final whuAuth = ref.watch(whuAuthProvider);
     final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
@@ -60,7 +35,7 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
               ? <Widget>[
                   ui.IconButton.ghost(
                     icon: const Icon(Icons.check),
-                    onPressed: _applySelection,
+                    onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ]
               : <Widget>[],
@@ -69,18 +44,7 @@ class _CampusTimetablePageState extends ConsumerState<CampusTimetablePage> {
       child: whuAuth.isAuthenticated
           ? Stack(
               children: [
-                _TimetableListView(
-                  pendingSelectedIds: _pendingSelectedIds,
-                  onToggle: (id, checked) {
-                    setState(() {
-                      if (checked) {
-                        _pendingSelectedIds.add(id);
-                      } else {
-                        _pendingSelectedIds.remove(id);
-                      }
-                    });
-                  },
-                ),
+                _TimetableListView(),
                 Positioned(
                   right: 20,
                   bottom: 24,
@@ -138,14 +102,6 @@ class _UnauthenticatedView extends StatelessWidget {
 }
 
 class _TimetableListView extends ConsumerWidget {
-  const _TimetableListView({
-    required this.pendingSelectedIds,
-    required this.onToggle,
-  });
-
-  final Set<String> pendingSelectedIds;
-  final void Function(String id, bool checked) onToggle;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(courseTimetableRepositoryProvider);
@@ -153,7 +109,7 @@ class _TimetableListView extends ConsumerWidget {
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     final overlapMap = _buildOverlapMap(store.timetables, agendaItems);
-    final selectedSet = pendingSelectedIds;
+    final selectedSet = store.selectedTimetableIds;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
@@ -164,7 +120,7 @@ class _TimetableListView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
               child: Center(
                 child: Text(
-                  isZh ? '还没有课程表，点右下角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
+                  isZh ? '还没有课程表，点右上角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -178,18 +134,28 @@ class _TimetableListView extends ConsumerWidget {
                 isSelected: selectedSet.contains(timetable.id),
                 conflictIds: overlapMap[timetable.id] ?? {},
                 selectedSet: selectedSet,
-                onToggle: (checked) => onToggle(timetable.id, checked),
-                onDelete: () => _deleteTimetable(context, ref, timetable.id, selectedSet),
+                onToggle: (checked) {
+                  final next = Set<String>.from(selectedSet);
+                  if (checked) {
+                    next.add(timetable.id);
+                  } else {
+                    next.remove(timetable.id);
+                  }
+                  ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(next);
+                },
+                onDelete: () => _deleteTimetable(context, ref, timetable.id),
               ),
         ],
       ),
     );
   }
 
+  /// Build a map: timetableId -> set of other timetableIds that overlap with it.
   Map<String, Set<String>> _buildOverlapMap(
     List<CourseTimetable> timetables,
     List<dynamic> agendaItems,
   ) {
+    // Compute the global date range per timetable
     final ranges = <String, DateTimeRange>{};
     for (final t in timetables) {
       DateTime? first, last;
@@ -224,12 +190,7 @@ class _TimetableListView extends ConsumerWidget {
     return conflict;
   }
 
-  static Future<void> _deleteTimetable(
-    BuildContext context,
-    WidgetRef ref,
-    String timetableId,
-    Set<String> pendingSelectedIds,
-  ) async {
+  Future<void> _deleteTimetable(BuildContext context, WidgetRef ref, String timetableId) async {
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -312,58 +273,58 @@ class _TimetableCheckTile extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Checkbox(
-                  value: isSelected,
-                  onChanged: (v) {
-                    if (v != null && canToggle) onToggle(v);
-                  },
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        timetable.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (hasActiveConflict)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Checkbox(
+              value: isSelected,
+              onChanged: (v) {
+                if (v != null && canToggle) onToggle(v);
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    timetable.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
-                IconButton(
-                  icon: const Icon(AppIcons.delete, size: 20),
-                  tooltip: isZh ? '删除' : 'Delete',
-                  onPressed: onDelete,
-                ),
-              ],
+                  Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
+            if (hasActiveConflict)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            IconButton(
+              icon: const Icon(AppIcons.delete, size: 20),
+              tooltip: isZh ? '删除' : 'Delete',
+              onPressed: onDelete,
+            ),
+          ],
         ),
+        ),
+      ),
       ),
     );
   }
