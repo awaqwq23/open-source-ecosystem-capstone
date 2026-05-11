@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class WhuLoginWebViewPage extends StatefulWidget {
+class WhuLoginWebViewPage extends ConsumerStatefulWidget {
   const WhuLoginWebViewPage({super.key});
 
   @override
-  State<WhuLoginWebViewPage> createState() => _WhuLoginWebViewPageState();
+  ConsumerState<WhuLoginWebViewPage> createState() => _WhuLoginWebViewPageState();
 }
 
-class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
+class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
   static const _loginUrl =
       'https://cas.whu.edu.cn/authserver/login?service='
       'https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin';
@@ -20,6 +22,7 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
   var _loading = true;
   String? _errorMessage;
   var _didRetryCacheMiss = false;
+  var _isLoggingIn = false;
 
   @override
   void initState() {
@@ -144,24 +147,27 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
                 ),
               ),
             )
-          : Stack(
-              children: [
-                if (_controller != null)
-                  WebViewWidget(controller: _controller!),
-                if (_loading)
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    child: LinearProgressIndicator(minHeight: 2),
-                  ),
-              ],
-            ),
+          : _isLoggingIn
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                  children: [
+                    if (_controller != null)
+                      WebViewWidget(controller: _controller!),
+                    if (_loading)
+                      const Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        child: LinearProgressIndicator(minHeight: 2),
+                      ),
+                  ],
+                ),
     );
   }
 
   Future<void> _confirmCookies() async {
     final isZh = _isChinese(context);
+
     final jwglCookies = await _cookieManager.getCookies('https://jwgl.whu.edu.cn');
     final jwglCookieMap = <String, String>{};
     for (final cookie in jwglCookies) {
@@ -183,7 +189,20 @@ class _WhuLoginWebViewPageState extends State<WhuLoginWebViewPage> {
     }
     final cookieHeader =
         jwglCookieMap.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
-    Navigator.of(context).pop(cookieHeader);
+
+    // 调用增强的登录流程：保存 cookie → 教务 SSO → 拉取用户信息
+    setState(() => _isLoggingIn = true);
+    try {
+      await ref.read(whuAuthProvider.notifier).login(cookieHeader);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoggingIn = false);
+        _showMessage('登录处理出错：$e');
+      }
+    }
   }
 
   bool _isChinese(BuildContext context) {

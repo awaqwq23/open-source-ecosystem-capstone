@@ -19,6 +19,7 @@ abstract final class AppRoutePaths {
   static const settingsCourseTimetables = '/settings/course-timetables';
   static const settingsCourseImportWhu = '/settings/course-import-whu';
   static const settingsWhuAuthLogin = '/settings/whu-auth/login';
+  static const settingsWhuAccount = '/settings/whu-account';
   static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
   static const settingsAi = '/settings/ai';
 
