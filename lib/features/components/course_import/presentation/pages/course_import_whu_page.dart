@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
@@ -151,10 +152,10 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             const Gap(12),
 
             // ── 导入学期选择 ──
-            _SemesterSelector(
-              options: _allTerms,
+            _SemesterPicker(
+              allTerms: _allTerms,
               selected: _selectedTerm,
-              onChanged: (term) {
+              onChange: (term) {
                 setState(() {
                   _selectedTerm = term;
                   _nameController.text = term.label(isZh);
@@ -341,16 +342,16 @@ class _InferredTerm {
 
 // ── 学期选择器 ──
 
-class _SemesterSelector extends StatelessWidget {
-  const _SemesterSelector({
-    required this.options,
+class _SemesterPicker extends StatelessWidget {
+  const _SemesterPicker({
+    required this.allTerms,
     required this.selected,
-    required this.onChanged,
+    required this.onChange,
   });
 
-  final List<_TermOption> options;
+  final List<_TermOption> allTerms;
   final _TermOption selected;
-  final ValueChanged<_TermOption> onChanged;
+  final ValueChanged<_TermOption> onChange;
 
   @override
   Widget build(BuildContext context) {
@@ -359,31 +360,188 @@ class _SemesterSelector extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: InkWell(
+        onTap: () => _openSheet(context),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 4),
+            Text(
+              isZh ? '导入学期' : 'Semester',
+              style: theme.textTheme.titleMedium,
+            ),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                selected.label(isZh),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              AppIcons.drillIn,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSheet(BuildContext context) async {
+    final years = <int>[];
+    for (final t in allTerms) {
+      if (!years.contains(t.year)) years.add(t.year);
+    }
+    final initialYearIndex = years.indexOf(selected.year);
+    final initialSemIndex = selected.semester - 1;
+
+    final yearCtrl = FixedExtentScrollController(initialItem: initialYearIndex.clamp(0, years.length - 1));
+    final semCtrl = FixedExtentScrollController(initialItem: initialSemIndex.clamp(0, 2));
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return _SemesterWheelSheet(
+          years: years,
+          allTerms: allTerms,
+          initialYearIndex: initialYearIndex.clamp(0, years.length - 1),
+          initialSemIndex: initialSemIndex.clamp(0, 2),
+          yearCtrl: yearCtrl,
+          semCtrl: semCtrl,
+          onChange: onChange,
+        );
+      },
+    );
+  }
+}
+
+class _SemesterWheelSheet extends StatefulWidget {
+  const _SemesterWheelSheet({
+    required this.years,
+    required this.allTerms,
+    required this.initialYearIndex,
+    required this.initialSemIndex,
+    required this.yearCtrl,
+    required this.semCtrl,
+    required this.onChange,
+  });
+
+  final List<int> years;
+  final List<_TermOption> allTerms;
+  final int initialYearIndex;
+  final int initialSemIndex;
+  final FixedExtentScrollController yearCtrl;
+  final FixedExtentScrollController semCtrl;
+  final ValueChanged<_TermOption> onChange;
+
+  @override
+  State<_SemesterWheelSheet> createState() => _SemesterWheelSheetState();
+}
+
+class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
+  late int _selectedYear;
+  late int _selectedSem;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedYear = widget.years[widget.initialYearIndex];
+    _selectedSem = widget.initialSemIndex + 1;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 4),
-          Text(
-            isZh ? '导入学期' : 'Semester',
-            style: theme.textTheme.titleMedium,
-          ),
-          const Spacer(),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<_TermOption>(
-              value: selected,
-              onChanged: (v) {
-                if (v != null) onChanged(v);
-              },
-              items: [
-                for (final opt in options)
-                  DropdownMenuItem(
-                    value: opt,
-                    child: Text(opt.label(isZh)),
+          // ── 标题栏 ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isZh ? '选择学期' : 'Select Semester',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
+                ),
+                ui.TextButton(
+                  onPressed: () {
+                    final match = widget.allTerms.firstWhere(
+                      (t) => t.year == _selectedYear && t.semester == _selectedSem,
+                      orElse: () => widget.allTerms.first,
+                    );
+                    widget.onChange(match);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(isZh ? '确定' : 'Done'),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 4),
+
+          // ── 滚轮 ──
+          SizedBox(
+            height: 200,
+            child: Row(
+              children: [
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: widget.yearCtrl,
+                    itemExtent: 44,
+                    onSelectedItemChanged: (i) {
+                      setState(() => _selectedYear = widget.years[i]);
+                    },
+                    children: [
+                      for (final y in widget.years)
+                        Center(
+                          child: Text(
+                            isZh ? '$y-${y + 1} 学年' : '$y-${y + 1}',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: widget.semCtrl,
+                    itemExtent: 44,
+                    onSelectedItemChanged: (i) {
+                      setState(() => _selectedSem = i + 1);
+                    },
+                    children: [
+                      for (final s in [1, 2, 3])
+                        Center(
+                          child: Text(
+                            isZh ? '第${s}学期' : 'Sem $s',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Gap(8),
         ],
       ),
     );
