@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 
 /// 教务系统 HTTP 客户端。
 ///
-/// 手动管理 cookie + 重定向链：先以 CAS cookie 做 SSO，
-/// 在重定向过程中逐环保存 JWGL 下发的 session cookie，
+/// 利用 `http.Client` 自动跟随重定向的能力做 SSO，
+/// 从最终响应的 `set-cookie` 中提取 JWGL session cookie，
 /// 后续请求自动附带。
 class JwglClient {
   JwglClient({required this.casCookie});
@@ -19,49 +19,44 @@ class JwglClient {
   static const _casLoginUrl = 'https://cas.whu.edu.cn/authserver/login';
   static const _educationSsoUrl = 'https://jwgl.whu.edu.cn/sso/jznewsixlogin';
 
-  /// SSO：手动跟随重定向链，沿途保存 Set-Cookie。
+  /// SSO：携带 CAS cookie 向 CAS 发起登录，`http.Client` 自动跟随重定向到 JWGL，
+  /// 最终响应中提取 JWGL 下发的 session cookie。
   Future<void> loginEducation() async {
     if (_sessionEstablished) return;
 
-    var uri = Uri.parse(
-      '$_casLoginUrl?service=${Uri.encodeComponent(_educationSsoUrl)}',
-    );
-
-    for (var hop = 0; hop < 10; hop++) {
-      final request = http.Request('GET', uri);
-      _attachCookies(request, uri.host);
+    final client = http.Client();
+    try {
+      final request = http.Request(
+        'GET',
+        Uri.parse(
+          '$_casLoginUrl?service=${Uri.encodeComponent(_educationSsoUrl)}',
+        ),
+      );
       request.headers['Cookie'] = casCookie;
+      // 设置 User-Agent 避免被 CAS 拦截
+      request.headers['User-Agent'] =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-      final client = http.Client();
-      try {
-        final streamed = await client.send(request);
-        final headers = streamed.headers;
+      final streamed = await client.send(request);
+      final headers = streamed.headers;
 
-        // 提取 Set-Cookie
-        _saveCookies(uri.host, headers['set-cookie']);
+      // HTTP Client 已自动跟随重定向链，headers 是最终响应的头。
+      // set-cookie 可能包含新下发的 JSESSIONID
+      _saveCookies('jwgl.whu.edu.cn', headers['set-cookie']);
 
-        if (streamed.statusCode < 300 || streamed.statusCode >= 400) {
-          final body = await streamed.stream.bytesToString();
-          if (!body.contains('教学管理信息服务平台')) {
-            _sessionEstablished = false;
-            final reason = _parseJsError(body);
-            throw Exception(
-              '教务系统登录失败！${reason.isEmpty ? '请重新登录' : reason}',
-            );
-          }
-          _sessionEstablished = true;
-          return;
-        }
-
-        final location = headers['location'];
-        if (location == null || location.isEmpty) break;
-        uri = Uri.parse(location);
-      } finally {
-        client.close();
+      final body = await streamed.stream.bytesToString();
+      if (!body.contains('教学管理信息服务平台')) {
+        _sessionEstablished = false;
+        final reason = _parseJsError(body);
+        throw Exception(
+          '教务系统登录失败！${reason.isEmpty ? '请重新登录' : reason}',
+        );
       }
+      _sessionEstablished = true;
+    } finally {
+      client.close();
     }
-
-    throw Exception('教务系统登录失败：重定向链异常。');
   }
 
   /// POST 请求（自动携带 session cookie）。
@@ -88,11 +83,12 @@ class JwglClient {
     final client = http.Client();
     try {
       final streamed = await client.send(request);
-      final headers = streamed.headers;
-      _saveCookies(url.host, headers['set-cookie']);
+      final streamedHeaders = streamed.headers;
+      _saveCookies(url.host, streamedHeaders['set-cookie']);
 
       final bodyStr = await streamed.stream.bytesToString();
-      return http.Response(bodyStr, streamed.statusCode, headers: headers);
+      return http.Response(bodyStr, streamed.statusCode,
+          headers: streamedHeaders);
     } finally {
       client.close();
     }
