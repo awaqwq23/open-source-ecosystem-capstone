@@ -161,8 +161,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
                 });
               },
             ),
-            const Gap(12),
-
             const Gap(16),
 
             // ── 第1周周一 ──
