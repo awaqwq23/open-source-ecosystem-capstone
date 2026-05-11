@@ -11,6 +11,7 @@ class CampusPage extends StatelessWidget {
   const CampusPage({super.key});
 
   static const _gridApps = <_CampusApp>[
+    _CampusApp(icon: Icons.table_chart_outlined, name: '课程表', colorAssoc: ItemColorOption.sky),
     _CampusApp(icon: Icons.event_seat, name: '自习预约', colorAssoc: ItemColorOption.indigo),
     _CampusApp(icon: Icons.local_library, name: '图书借阅', colorAssoc: ItemColorOption.amber),
     _CampusApp(icon: Icons.sports_soccer, name: '运动场馆', colorAssoc: ItemColorOption.lime),
@@ -371,6 +372,9 @@ class _AppGrid extends StatelessWidget {
 
   void _openApp(BuildContext context, String name) {
     switch (name) {
+      case '课程表':
+        context.push(AppRoutePaths.campusTimetable);
+        return;
       case '成绩':
         context.push(AppRoutePaths.campusScore);
         return;

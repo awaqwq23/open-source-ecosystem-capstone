@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
@@ -17,8 +15,6 @@ class SettingsHomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsViewModelProvider);
     final settings = state.homeSettings;
-
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -101,20 +97,6 @@ class SettingsHomePage extends ConsumerWidget {
                   ],
                 ),
               ),
-            ),
-            SettingsFlatTile(
-              title: isZh ? '课程方格设置' : 'Course Grid Settings',
-              subtitle: isZh ? '课程导入、课程表管理' : 'Course import & timetable management',
-              leading: const Icon(AppIcons.itemTypeCourse),
-              trailing: const Icon(AppIcons.drillIn, size: 20),
-              onTap: () => context.push(AppRoutePaths.settingsCourseGrid),
-            ),
-            SettingsFlatTile(
-              title: isZh ? '时间方格设置' : 'Time Grid Settings',
-              subtitle: isZh ? '开始时间、规划块时长、规划块数量' : 'Start time, block duration & count',
-              leading: const Icon(AppIcons.clock),
-              trailing: const Icon(AppIcons.drillIn, size: 20),
-              onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
             ),
           ],
         ),
