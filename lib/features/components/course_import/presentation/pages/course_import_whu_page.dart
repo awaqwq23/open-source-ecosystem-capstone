@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
@@ -11,6 +12,8 @@ import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_rep
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+
+const double _editorRowHeight = 56;
 
 class CourseImportWhuPage extends ConsumerStatefulWidget {
   const CourseImportWhuPage({super.key});
@@ -36,10 +39,13 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isZh = _isChinese(context);
     final inferredTerm = _inferCurrentTerm(DateTime.now());
     final authState = ref.watch(whuAuthProvider);
     final cookieHeader = authState.cookieHeader;
+    final hasCookie = cookieHeader.isNotEmpty;
+
     return ui.Scaffold(
       headers: [
         ui.AppBar(
@@ -49,81 +55,93 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
               onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
-          title: Text(isZh ? '武汉大学教务导入' : 'WHU Import'),
+          title: Text(isZh ? '武大教务导入' : 'WHU Import'),
         ),
       ],
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        children: [
-          Text(
-            isZh ? '请先登录教务获取会话，再导入学期课表。' : 'Login first to get session, then import timetable.',
-          ),
-          const SizedBox(height: 16),
-          ui.PrimaryButton(
-            onPressed: _submitting ? null : _openLoginPage,
-            leading: const Icon(AppIcons.web),
-            child: Text(cookieHeader.isEmpty ? (isZh ? '登录教务并授权' : 'Login to WHU') : (isZh ? '已获取会话，重新登录' : 'Session acquired, relogin')),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: isZh ? '课程表名称' : 'Timetable Name',
-              hintText: isZh ? '例如：2026 春季学期' : 'e.g. 2026 Spring',
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── 登录授权 ──
+            _EditorSection(
+              children: [
+                _ActionRow(
+                  label: isZh ? '教务授权' : 'Auth',
+                  value: hasCookie
+                      ? (isZh ? '已获取会话' : 'Session acquired')
+                      : (isZh ? '未登录' : 'Not logged in'),
+                  leadingIcon: AppIcons.web,
+                  onTap: _submitting ? null : _openLoginPage,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(AppIcons.calendar),
-            title: Text(isZh ? '自动识别学期' : 'Detected Term'),
-            subtitle: Text(
-              isZh
-                  ? '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} 学年 第${inferredTerm.semester}学期'
-                  : '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} Semester ${inferredTerm.semester}',
+            const Gap(20),
+
+            // ── 导入配置 ──
+            _EditorSection(
+              children: [
+                _RoundedTextField(
+                  controller: _nameController,
+                  hintText: isZh ? '课程表名称（如：2026 春季学期）' : 'Timetable name (e.g. 2026 Spring)',
+                ),
+                _DividerLine(),
+                _ActionRow(
+                  label: isZh ? '自动识别学期' : 'Detected Term',
+                  value: isZh
+                      ? '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} 第${inferredTerm.semester}学期'
+                      : '${inferredTerm.academicYearStart}-${inferredTerm.academicYearStart + 1} Sem ${inferredTerm.semester}',
+                  leadingIcon: AppIcons.calendar,
+                ),
+                _DividerLine(),
+                _ActionRow(
+                  label: isZh ? '第1周周一' : 'Week-1 Monday',
+                  value: _weekOneMonday == null
+                      ? (isZh ? '点击选择' : 'Tap to select')
+                      : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
+                  leadingIcon: AppIcons.calendar,
+                  onTap: _submitting ? null : () => _pickWeekOneMonday(context),
+                ),
+                _DividerLine(),
+                _RoundedTextField(
+                  controller: _termController,
+                  hintText: isZh ? '学期标识（可选，如：2025-2026-2）' : 'Term label (optional)',
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(AppIcons.calendar),
-            title: Text(isZh ? '第1周周一日期' : 'Week-1 Monday'),
-            subtitle: Text(
-              _weekOneMonday == null
-                  ? (isZh ? '点击选择' : 'Tap to select')
-                  : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
+            const Gap(24),
+
+            // ── 提交 ──
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ui.PrimaryButton(
+                onPressed: _submitting ? null : _submit,
+                leading: _submitting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(AppIcons.import, size: 18),
+                child: Text(isZh ? '开始导入' : 'Start Import'),
+              ),
             ),
-            trailing: const Icon(AppIcons.drillIn),
-            onTap: _submitting ? null : () => _pickWeekOneMonday(context),
-          ),
-          const SizedBox(height: 4),
-          TextField(
-            controller: _termController,
-            decoration: InputDecoration(
-              labelText: isZh ? '学期标识（可选）' : 'Term Label (Optional)',
-              hintText: isZh ? '例如：2025-2026-2' : 'e.g. 2025-2026-2',
-            ),
-          ),
-          const SizedBox(height: 20),
-          ui.PrimaryButton(
-            onPressed: _submitting ? null : _submit,
-            leading: _submitting
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(AppIcons.web),
-            child: Text(isZh ? '开始导入' : 'Start Import'),
-          ),
-          if (_statusText != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _statusText!,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+
+            if (_statusText != null) ...[
+              const Gap(12),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  _statusText!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -188,16 +206,17 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         final endAt = item.endAt;
         return endAt.isAfter(currentWeekStart) && startAt.isBefore(currentWeekEnd);
       }).length;
-      _showMessage(
-        isZh
-            ? '导入完成：新增 ${payload.items.length} 条课程事项，当前周命中 $currentWeekCount 条，课程表「$tableName」。'
-            : 'Imported ${payload.items.length} items ($currentWeekCount in current week) to "$tableName".',
-      );
+
       setState(() {
         _statusText = isZh
-            ? '导入完成：新增 ${payload.items.length} 条，当前周命中 $currentWeekCount 条。'
+            ? '导入完成：新增 ${payload.items.length} 条，当前周 $currentWeekCount 条。'
             : 'Import finished: ${payload.items.length} items, $currentWeekCount in current week.';
       });
+      _showMessage(
+        isZh
+            ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
+            : 'Imported ${payload.items.length} items to "$tableName".',
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -293,4 +312,149 @@ class _InferredTerm {
 
   final int academicYearStart;
   final int semester;
+}
+
+// ── Reusable editor-style components ──
+
+class _EditorSection extends StatelessWidget {
+  const _EditorSection({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1 && children[i] is! _DividerLine)
+              _DividerLine(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DividerLine extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 16,
+      endIndent: 16,
+      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.label,
+    required this.value,
+    this.leadingIcon,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final IconData? leadingIcon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: _editorRowHeight,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 16),
+            if (leadingIcon != null) ...[
+              Icon(leadingIcon, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(
+                  AppIcons.drillIn,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ] else
+              const SizedBox(width: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundedTextField extends StatelessWidget {
+  const _RoundedTextField({
+    required this.controller,
+    required this.hintText,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _editorRowHeight,
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: hintText,
+                border: InputBorder.none,
+                isCollapsed: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
+    );
+  }
 }
