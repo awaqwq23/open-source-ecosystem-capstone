@@ -11,6 +11,7 @@ import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/score_page.dart';
+import 'package:luotopia/features/pages/campus/presentation/pages/scorecalc_page.dart';
 import 'package:luotopia/features/pages/forum/presentation/pages/forum_page.dart';
 import 'package:luotopia/features/pages/ai/presentation/pages/ai_page.dart';
 import 'package:luotopia/features/pages/home/presentation/pages/home_page.dart';
@@ -91,6 +92,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'score',
                     builder: (context, state) => const ScorePage(),
+                  ),
+                  GoRoute(
+                    path: 'scorecalc',
+                    builder: (context, state) => const ScoreCalcPage(),
                   ),
                 ],
               ),
