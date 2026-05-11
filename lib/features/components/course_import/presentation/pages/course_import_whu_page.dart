@@ -83,6 +83,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   DateTime? _weekOneMonday;
   bool _submitting = false;
   String? _statusText;
+  bool _didInitLocale = false;
 
   late final List<_TermOption> _allTerms;
   _TermOption _selectedTerm;
@@ -99,7 +100,15 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       (t) => t.year == inferred.academicYearStart && t.semester == inferred.semester,
       orElse: () => _allTerms.first,
     );
-    _nameController.text = _selectedTerm.label(_isChinese(context));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInitLocale) {
+      _didInitLocale = true;
+      _nameController.text = _selectedTerm.label(_isChinese(context));
+    }
   }
 
   @override
