@@ -6,10 +6,8 @@ import 'package:luotopia/features/pages/item_editor/domain/repositories/item_edi
 import 'package:luotopia/features/pages/item_editor/domain/use_cases/build_item_editor_draft.dart';
 import 'package:luotopia/features/pages/item_editor/domain/use_cases/save_item_draft.dart';
 import 'package:luotopia/features/pages/item_editor/domain/item_editor_validator.dart';
-import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -407,22 +405,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
         courseDetails: draft.courseDetails.copyWith(
           classroomRaw: draft.location.trim(),
         ),
-      );
-    }
-    if (draft.type == ItemType.course && draft.courseDetails.timetableId.isEmpty) {
-      final timetableRepo = ref.read(courseTimetableRepositoryProvider.notifier);
-      var activeId = ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.isEmpty
-          ? null
-          : ref.read(courseTimetableRepositoryProvider).selectedTimetableIds.first;
-      if (activeId == null) {
-        final timetable = await timetableRepo.createTimetable(
-          name: '课程表 1',
-          source: CourseTimetableSource.manual,
-        );
-        activeId = timetable.id;
-      }
-      draft = draft.copyWith(
-        courseDetails: draft.courseDetails.copyWith(timetableId: activeId),
       );
     }
     await saveDraft(
