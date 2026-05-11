@@ -26,7 +26,7 @@ class LuotopiaAccountPage extends ConsumerWidget {
             title: const Text('Luotopia 账户'),
           ),
         ],
-        body: const Center(child: Text('未登录')),
+        child: const Center(child: Text('未登录')),
       );
     }
 
@@ -44,7 +44,7 @@ class LuotopiaAccountPage extends ConsumerWidget {
           title: const Text('Luotopia 账户'),
         ),
       ],
-      body: ListView(
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // 用户头像和信息卡片

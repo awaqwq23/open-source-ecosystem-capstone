@@ -116,7 +116,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
           title: const Text('成绩'),
         ),
       ],
-      body: _buildBody(whuAuth, colors),
+      child: _buildBody(whuAuth, colors),
     );
   }
 

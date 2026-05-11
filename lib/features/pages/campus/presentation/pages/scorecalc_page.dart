@@ -208,7 +208,7 @@ class _ScoreCalcPageState extends ConsumerState<ScoreCalcPage> {
           title: const Text('课程给分'),
         ),
       ],
-      body: ListView(
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildScriptSelector(colors),

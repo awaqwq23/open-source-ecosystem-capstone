@@ -203,7 +203,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         return;
       }
       if (error is WhuSessionInvalidException) {
-        await ref.read(whuAuthProvider.notifier).clearCookie();
+        await ref.read(whuAuthProvider.notifier).logout();
       }
       setState(() {
         _statusText = isZh ? '导入失败：$error' : 'Import failed: $error';
@@ -230,16 +230,15 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   }
 
   Future<void> _openLoginPage() async {
-    final cookieHeader = await context.push<String>(
-      AppRoutePaths.settingsWhuAuthLogin,
-    );
-    if (!mounted || cookieHeader == null || cookieHeader.trim().isEmpty) {
+    await context.push(AppRoutePaths.settingsWhuAuthLogin);
+    if (!mounted) {
       return;
     }
-    await ref.read(whuAuthProvider.notifier).setCookie(cookieHeader.trim());
-    _showMessage(
-      _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
-    );
+    if (ref.read(whuAuthProvider).isAuthenticated) {
+      _showMessage(
+        _isChinese(context) ? '已获取教务会话，可开始导入。' : 'Session acquired. Ready to import.',
+      );
+    }
   }
 
   Future<void> _showMessage(String message) async {

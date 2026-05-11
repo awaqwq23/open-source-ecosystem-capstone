@@ -26,7 +26,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
           title: Text(l10n.settingsAccountWhuTitle),
         ),
       ],
-      body: ListView(
+      child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           if (whuAuth.isLoading)
@@ -54,7 +54,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(AppIcons.school, size: 24, color: colors.primary),
+              Icon(AppIcons.itemTypeCourse, size: 24, color: colors.primary),
               const SizedBox(width: 10),
               Text(
                 '认证信息',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
@@ -90,7 +91,7 @@ class _LuotopiaRegisterPageState extends ConsumerState<LuotopiaRegisterPage> {
           title: const Text('注册 Luotopia'),
         ),
       ],
-      body: ListView(
+      child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 24),
