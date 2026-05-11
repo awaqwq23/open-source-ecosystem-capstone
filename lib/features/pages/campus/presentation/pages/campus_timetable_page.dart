@@ -11,7 +11,6 @@ import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 const double _rowHeight = 72;
-const double _pageHorizontalPad = 20;
 
 class CampusTimetablePage extends ConsumerWidget {
   const CampusTimetablePage({super.key});
@@ -97,7 +96,7 @@ class _TimetableListView extends ConsumerWidget {
     final selectedSet = store.selectedTimetableIds;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(_pageHorizontalPad, 8, _pageHorizontalPad, 24),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
       child: Column(
         children: [
           if (store.timetables.isEmpty)
@@ -255,7 +254,9 @@ class _TimetableCheckTile extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: canToggle ? () => onToggle(!isSelected) : null,
-          child: Row(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Checkbox(
@@ -305,6 +306,7 @@ class _TimetableCheckTile extends StatelessWidget {
               onPressed: onDelete,
             ),
           ],
+        ),
         ),
       ),
       ),
