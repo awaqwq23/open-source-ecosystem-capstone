@@ -1,121 +1,137 @@
-import 'dart:math';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:luotopia/features/whu_auth/data/whu_auth_repository.dart';
-import 'package:luotopia/features/whu_auth/domain/whu_auth_state.dart';
+import 'package:luotopia/features/whu_auth/data/whu_authorized_client.dart';
+import 'package:luotopia/features/whu_auth/data/whu_auth_storage.dart';
+import 'package:luotopia/features/whu_auth/data/whu_cas_service.dart';
+import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
+import 'package:luotopia/features/whu_auth/domain/models/whu_account.dart';
+import 'package:luotopia/features/whu_auth/domain/models/whu_auth_snapshot.dart';
+import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
+import 'package:luotopia/features/whu_auth/domain/models/whu_cas_service_request.dart';
+import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 
-final whuAuthProvider =
-    NotifierProvider<WhuAuthNotifier, WhuAuthState>(WhuAuthNotifier.new);
+final whuAuthProvider = NotifierProvider<WhuAuthNotifier, WhuAuthState>(
+  WhuAuthNotifier.new,
+);
+
+final whuCasServiceProvider = Provider<WhuCasService>((ref) {
+  return const WhuCasService();
+});
 
 class WhuAuthNotifier extends Notifier<WhuAuthState> {
-  late final WhuAuthRepository _repository;
+  final WhuAuthStorage _storage = const WhuAuthStorage();
+  final WebviewCookieManager _cookieManager = WebviewCookieManager();
+
+  String _casCookieHeader = '';
 
   @override
   WhuAuthState build() {
-    _repository = WhuAuthRepository();
-    _restoreSession();
-    return const WhuAuthState();
+    final snapshot = _storage.readSnapshot(ref.read(sharedPreferencesProvider));
+    if (snapshot == null) {
+      return const WhuAuthState();
+    }
+    _casCookieHeader = snapshot.casCookieHeader;
+    return WhuAuthState(
+      status: WhuAuthStatus.authenticated,
+      account: snapshot.account,
+      lastAuthenticatedAt: snapshot.lastAuthenticatedAt,
+      lastVerifiedAt: snapshot.lastVerifiedAt,
+    );
   }
 
-  void _restoreSession() {
-    final prefs = ref.read(sharedPreferencesProvider);
-    final cookie = prefs != null ? _repository.readSessionCookie(prefs) : null;
-    final sid = prefs != null ? _repository.readStudentId(prefs) : null;
-    final name = prefs != null ? _repository.readStudentName(prefs) : null;
-    if (cookie != null && cookie.isNotEmpty) {
+  Future<void> completeCasLogin() async {
+    state = state.copyWith(status: WhuAuthStatus.loading, clearError: true);
+    try {
+      final cookieHeader = await _readCasCookieHeader();
+      if (!_hasCasSession(cookieHeader)) {
+        throw const WhuAuthException(
+          WhuAuthExceptionCode.loginRequired,
+          '没有检测到有效的武大统一认证 Cookie。',
+        );
+      }
+
+      _casCookieHeader = cookieHeader;
+      final client = await authorizeEducation();
+      try {
+        final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
+        await _persistAuthenticated(account);
+      } finally {
+        client.close();
+      }
+    } catch (error) {
       state = WhuAuthState(
-        status: WhuAuthStatus.authenticated,
-        studentId: sid,
-        studentName: name,
-        sessionCookie: cookie,
+        status: WhuAuthStatus.unauthenticated,
+        errorMessage: error.toString(),
+      );
+      rethrow;
+    }
+  }
+
+  Future<WhuAuthorizedClient> authorizeService(WhuCasServiceRequest request) async {
+    if (_casCookieHeader.trim().isEmpty) {
+      throw const WhuAuthException(
+        WhuAuthExceptionCode.loginRequired,
+        '请先登录武大统一认证。',
       );
     }
+    return ref.read(whuCasServiceProvider).authorizeService(
+          casCookieHeader: _casCookieHeader,
+          request: request,
+        );
   }
 
-  Future<void> onLoginSuccess({
-    required String sessionCookie,
-    required String studentId,
-    required String studentName,
-  }) async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (prefs != null) {
-      await Future.wait([
-        _repository.writeSessionCookie(prefs, sessionCookie),
-        _repository.writeStudentId(prefs, studentId),
-        _repository.writeStudentName(prefs, studentName),
-      ]);
-    }
-    state = WhuAuthState(
-      status: WhuAuthStatus.authenticated,
-      studentId: studentId,
-      studentName: studentName,
-      sessionCookie: sessionCookie,
-    );
+  Future<WhuAuthorizedClient> authorizeEducation() {
+    return authorizeService(WhuCasService.educationService);
   }
 
   Future<void> logout() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (prefs != null) {
-      await _repository.clearAll(prefs);
-    }
+    _casCookieHeader = '';
+    await _storage.clear(ref.read(sharedPreferencesProvider));
+    await _cookieManager.clearCookies();
     state = const WhuAuthState();
   }
 
-  Future<http.Response> fastLogin(String serviceUrl) async {
-    final cookie = state.sessionCookie;
-    if (cookie == null || cookie.isEmpty) {
-      throw Exception('未登录武大教务账户，请先登录。');
-    }
-    return http.get(
-      Uri.parse(
-        'https://cas.whu.edu.cn/authserver/login?service=${Uri.encodeComponent(serviceUrl)}',
-      ),
-      headers: {'Cookie': cookie},
+  Future<void> _persistAuthenticated(WhuAccount account) async {
+    final now = DateTime.now();
+    final nextAccount = account.hasProfile
+        ? account
+        : state.account ??
+            const WhuAccount(
+              studentId: '',
+              name: '',
+              college: '',
+              major: '',
+            );
+    final snapshot = WhuAuthSnapshot(
+      casCookieHeader: _casCookieHeader,
+      account: nextAccount,
+      lastAuthenticatedAt: now,
+      lastVerifiedAt: now,
+    );
+    await _storage.writeSnapshot(ref.read(sharedPreferencesProvider), snapshot);
+    state = WhuAuthState(
+      status: WhuAuthStatus.authenticated,
+      account: nextAccount,
+      lastAuthenticatedAt: now,
+      lastVerifiedAt: now,
     );
   }
-}
 
-/// 携带 CAS cookie 的通用 HTTP 客户端。
-/// 消费者可使用此客户端对任意 WHU 服务发起已验证的请求。
-class WhuSessionClient {
-  WhuSessionClient({required this.sessionCookie});
-  final String sessionCookie;
-
-  Future<http.Response> post(
-    Uri url, {
-    Map<String, String>? body,
-    Map<String, String>? headers,
-  }) async {
-    final allHeaders = <String, String>{
-      'Cookie': sessionCookie,
-      if (headers != null) ...headers,
-    };
-    return http.post(url, headers: allHeaders, body: body);
+  Future<String> _readCasCookieHeader() async {
+    final cookies = await _cookieManager.getCookies(
+      'https://cas.whu.edu.cn/authserver/',
+    );
+    final casCookies = [
+      for (final cookie in cookies)
+        if ((cookie.domain == null || cookie.domain!.contains('cas.whu.edu.cn')) &&
+            cookie.name.trim().isNotEmpty &&
+            cookie.value.trim().isNotEmpty)
+          cookie,
+    ];
+    return casCookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
   }
 
-  Future<http.Response> get(
-    Uri url, {
-    Map<String, String>? headers,
-  }) async {
-    final allHeaders = <String, String>{
-      'Cookie': sessionCookie,
-      if (headers != null) ...headers,
-    };
-    return http.get(url, headers: allHeaders);
-  }
-
-  /// 生成 JWGL 接口所需的反缓存 validate 参数。
-  static String generateValidate() {
-    final random = Random();
-    return 'sl${random.nextInt(1000000000).toRadixString(36)}${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+  bool _hasCasSession(String cookieHeader) {
+    return cookieHeader.contains('CASTGC=') && cookieHeader.contains('JSESSIONID=');
   }
 }
-
-final whuSessionClientProvider = Provider<WhuSessionClient?>((ref) {
-  final state = ref.watch(whuAuthProvider);
-  final cookie = state.sessionCookie;
-  if (cookie == null || cookie.isEmpty) return null;
-  return WhuSessionClient(sessionCookie: cookie);
-});

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
-import 'package:luotopia/features/pages/campus/presentation/providers/education_providers.dart';
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -228,17 +228,19 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
-      final client = ref.read(jwglClientProvider);
-      if (client == null) {
-        throw Exception('请先登录武大教务账户。');
+      final client = await ref.read(whuAuthProvider.notifier).authorizeEducation();
+      final WhuCourseImportPayload payload;
+      try {
+        final service = WhuCourseImportService(client: client);
+        payload = await service.loadCourses(
+          year: _selectedTerm.year,
+          semester: _selectedTerm.semester,
+          weekOneMonday: _weekOneMonday!,
+          homeSettings: ref.read(appHomeSettingsProvider),
+        );
+      } finally {
+        client.close();
       }
-      final service = WhuCourseImportService(client: client);
-      final payload = await service.loadCourses(
-        year: _selectedTerm.year,
-        semester: _selectedTerm.semester,
-        weekOneMonday: _weekOneMonday!,
-        homeSettings: ref.read(appHomeSettingsProvider),
-      );
       final baseName = _nameController.text.trim();
       final tableName = baseName.isEmpty
           ? '${_selectedTerm.label(isZh)} ${_formatNow()}'

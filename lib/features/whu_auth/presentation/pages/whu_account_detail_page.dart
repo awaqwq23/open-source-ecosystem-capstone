@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/whu_auth/domain/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -12,8 +11,10 @@ class WhuAccountDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final whuAuth = ref.watch(whuAuthProvider);
-    final colors = Theme.of(context).colorScheme;
+    final authState = ref.watch(whuAuthProvider);
+    final account = authState.account;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return ui.Scaffold(
       headers: [
@@ -27,147 +28,137 @@ class WhuAccountDetailPage extends ConsumerWidget {
           title: const Text('武大教务账户'),
         ),
       ],
-      child: whuAuth.isAuthenticated
-          ? _AuthenticatedView(whuAuth: whuAuth)
-          : _UnauthenticatedView(colors: colors),
-    );
-  }
-}
-
-class _UnauthenticatedView extends StatelessWidget {
-  const _UnauthenticatedView({required this.colors});
-  final ColorScheme colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Icon(Icons.person_off_outlined, size: 64, color: colors.onSurfaceVariant),
+          ui.Card(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 34,
+                  backgroundColor: colors.primaryContainer,
+                  child: Icon(
+                    AppIcons.web,
+                    size: 30,
+                    color: colors.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  authState.isAuthenticated
+                      ? account?.displayName ?? '已认证'
+                      : '未登录',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  authState.isAuthenticated
+                      ? '武大统一认证已连接'
+                      : '登录后可授权成绩、课程表等校园服务',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
-          Text(
-            '未登录武大教务',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
+          ui.Card(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '账户信息',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                const SizedBox(height: 12),
+                _detailRow(colors, '学号', account?.studentId ?? '未获取'),
+                const Divider(height: 1),
+                _detailRow(colors, '姓名', account?.name ?? '未获取'),
+                const Divider(height: 1),
+                _detailRow(colors, '学院', account?.college ?? '未获取'),
+                const Divider(height: 1),
+                _detailRow(colors, '最近登录', _formatDateTime(authState.lastAuthenticatedAt)),
+                const Divider(height: 1),
+                _detailRow(colors, '最近验证', _formatDateTime(authState.lastVerifiedAt)),
+              ],
+            ),
           ),
+          if (authState.errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              authState.errorMessage!,
+              style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
+            ),
+          ],
           const SizedBox(height: 24),
-          ui.PrimaryButton(
-            onPressed: () => context.push(AppRoutePaths.settingsWhuAuthLogin),
-            child: const Text('登录'),
+          SizedBox(
+            width: double.infinity,
+            child: ui.PrimaryButton(
+              onPressed: () => context.push(AppRoutePaths.settingsWhuAuthLogin),
+              child: Text(authState.isAuthenticated ? '重新登录' : '登录武大统一认证'),
+            ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AuthenticatedView extends ConsumerWidget {
-  const _AuthenticatedView({required this.whuAuth});
-  final WhuAuthState whuAuth;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 头像和信息卡片
-        ui.Card(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: colors.primary.withValues(alpha: 0.1),
-                child: Icon(Icons.school, size: 32, color: colors.primary),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      whuAuth.studentName?.isNotEmpty == true
-                          ? whuAuth.studentName!
-                          : '已登录',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    if (whuAuth.studentId?.isNotEmpty == true) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '学号：${whuAuth.studentId}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colors.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
-                    Text(
-                      '会话已保存，无需重复登录',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant.withValues(alpha: 0.7),
-                          ),
-                    ),
-                  ],
+          if (authState.isAuthenticated) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ui.OutlineButton(
+                onPressed: () async {
+                  await ref.read(whuAuthProvider.notifier).logout();
+                  if (context.mounted) {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+                child: Text(
+                  '退出登录',
+                  style: TextStyle(color: colors.error),
                 ),
               ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // 操作按钮
-        SizedBox(
-          width: double.infinity,
-          child: ui.OutlineButton(
-            onPressed: () => _confirmLogout(context, ref),
-            leading: const Icon(Icons.logout, size: 18),
-            child: const Text('退出登录'),
-          ),
-        ),
-      ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final isZh = Localizations.localeOf(context).languageCode
-        .toLowerCase()
-        .startsWith('zh');
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isZh ? '退出登录' : 'Logout'),
-        content: Text(
-          isZh ? '确定要退出武大教务账户吗？' : 'Are you sure you want to logout?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(isZh ? '取消' : 'Cancel'),
+  Widget _detailRow(ColorScheme colors, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 76,
+            child: Text(
+              label,
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(isZh ? '退出' : 'Logout'),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '未获取' : value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
     );
-    if (shouldLogout == true) {
-      await ref.read(whuAuthProvider.notifier).logout();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isZh ? '已退出武大教务账户' : 'Logged out'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+  }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) {
+      return '未记录';
     }
+    final pad = (int value) => value.toString().padLeft(2, '0');
+    return '${dateTime.year}-${pad(dateTime.month)}-${pad(dateTime.day)} '
+        '${pad(dateTime.hour)}:${pad(dateTime.minute)}';
   }
 }

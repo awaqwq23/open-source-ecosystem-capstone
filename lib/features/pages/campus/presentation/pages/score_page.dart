@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/campus/data/whu_score_service.dart';
 import 'package:luotopia/features/pages/campus/domain/models/score_entity.dart';
-import 'package:luotopia/features/pages/campus/presentation/providers/education_providers.dart';
-import 'package:luotopia/features/whu_auth/domain/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
+import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ScorePage extends ConsumerStatefulWidget {
@@ -40,17 +39,14 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     });
 
     try {
-      final service = ref.read(educationApiServiceProvider);
-      if (service == null) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _errorMessage = '请先登录武大教务账户。';
-        });
-        return;
+      final client = await ref.read(whuAuthProvider.notifier).authorizeEducation();
+      final ScoreListResult result;
+      try {
+        result = await WhuScoreService(client: client).getScoreList();
+      } finally {
+        client.close();
       }
-      final result = await service.getScoreList();
-      final sorted = List<ScoreEntity>.from(result)
+      final sorted = List<ScoreEntity>.from(result.scores)
         ..sort((a, b) {
           final cmp = b.year.compareTo(a.year);
           if (cmp != 0) {
@@ -105,7 +101,6 @@ class _ScorePageState extends ConsumerState<ScorePage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final whuAuth = ref.watch(whuAuthProvider);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;

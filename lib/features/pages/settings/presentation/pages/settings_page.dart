@@ -80,7 +80,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     icon: AppIcons.web,
                     title: l10n.settingsAccountWhuTitle,
                     subtitle: whuAuth.isAuthenticated
-                        ? '${(whuAuth.studentName?.isNotEmpty == true) ? whuAuth.studentName : l10n.settingsAccountWhuLoggedIn}'
+                        ? (whuAuth.account?.displayName ?? l10n.settingsAccountWhuLoggedIn)
                         : l10n.settingsAccountWhuNotLoggedIn,
                     prominent: true,
                     showTrailing: true,

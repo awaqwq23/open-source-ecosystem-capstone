@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 
-import 'package:luotopia/features/pages/campus/data/jwgl_client.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
@@ -24,7 +25,7 @@ class WhuCourseImportPayload {
 }
 
 class WhuCourseImportService {
-  final JwglClient client;
+  final WhuAuthorizedClient client;
 
   WhuCourseImportService({required this.client});
 
@@ -40,7 +41,7 @@ class WhuCourseImportService {
     final response = await client.post(
       Uri.parse(_courseApiUrl),
       body: {
-        'validate': JwglClient.generateValidate(),
+        'validate': _generateValidate(),
         'xnm': '$year',
         'xqm': '${_mapSemester(semester)}',
         'xzlx': 'ck',
@@ -186,6 +187,16 @@ class WhuCourseImportService {
       return 16;
     }
     return 3;
+  }
+
+  String _generateValidate() {
+    const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    final random = Random();
+    final randomPart = List.generate(
+      7,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
+    return 'sl$randomPart${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
   }
 
   _ClassPeriod? _parseClassPeriod(String value) {
