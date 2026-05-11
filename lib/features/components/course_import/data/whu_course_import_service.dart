@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
-import 'package:luotopia/features/whu_auth/whu_auth.dart';
+import 'package:luotopia/features/whu_auth/data/whu_education_client.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
@@ -13,7 +13,6 @@ import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
-import 'package:http/http.dart' as http;
 
 class WhuCourseImportPayload {
   const WhuCourseImportPayload({
@@ -26,47 +25,40 @@ class WhuCourseImportPayload {
 }
 
 class WhuCourseImportService {
+  final WhuEducationClient client;
+
+  WhuCourseImportService({required this.client});
+
   static const _courseApiUrl =
       'https://jwgl.whu.edu.cn/kbcx/xskbcx_cxXsgrkb.html?gnmkdm=N2151';
-  static const _requestTimeout = Duration(seconds: 20);
-  static const _userAgent =
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-      '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
   Future<WhuCourseImportPayload> loadCourses({
-    required String cookieHeader,
     required int year,
     required int semester,
     required DateTime weekOneMonday,
     required HomeSettings homeSettings,
   }) async {
-    final response = await http
+    final response = await client
         .post(
           Uri.parse(_courseApiUrl),
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': _userAgent,
-            'Cookie': cookieHeader,
-          },
           body: {
-            'validate': _generateValidate(),
+            'validate': WhuEducationClient.generateValidate(),
             'xnm': '$year',
             'xqm': '${_mapSemester(semester)}',
             'xzlx': 'ck',
           },
         )
         .timeout(
-          _requestTimeout,
+          const Duration(seconds: 20),
           onTimeout: () =>
               throw TimeoutException('教务接口请求超时，请确认网络与会话后重试。'),
         );
+
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('教务接口请求失败（HTTP ${response.statusCode}）。');
     }
+
     final normalizedBody = response.body.replaceAll('\u00A0', '');
-    if (looksLikeWhuLoginRedirect(normalizedBody)) {
-      throw const WhuSessionInvalidException();
-    }
     final decoded = jsonDecode(normalizedBody);
     if (decoded is! Map<String, dynamic>) {
       throw Exception('教务接口返回格式异常。');
@@ -201,11 +193,6 @@ class WhuCourseImportService {
       return 16;
     }
     return 3;
-  }
-
-  String _generateValidate() {
-    final random = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    return 'sl$random';
   }
 
   _ClassPeriod? _parseClassPeriod(String value) {
@@ -413,7 +400,6 @@ class WhuCourseImportService {
     final seed = title.hashCode.abs();
     return ItemColorOption.values[seed % ItemColorOption.values.length];
   }
-
 }
 
 class _ClassPeriod {

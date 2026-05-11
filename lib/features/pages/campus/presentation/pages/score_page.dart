@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/app/app_runtime_initializer.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/whu_auth/data/education_api_service.dart';
 import 'package:luotopia/features/whu_auth/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_state.dart';
@@ -41,12 +39,16 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     });
 
     try {
-      final service = EducationApiService(
-        hotUpdateService: ref.read(hotUpdateServiceProvider),
-      );
-      final result = await service.getScoreList(
-        cookieHeader: whuAuth.cookieHeader,
-      );
+      final service = ref.read(educationApiServiceProvider);
+      if (service == null) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage = '请先登录武大教务账户。';
+        });
+        return;
+      }
+      final result = await service.getScoreList();
       final sorted = List<ScoreEntity>.from(result.scores)
         ..sort((a, b) {
           final cmp = b.year.compareTo(a.year);

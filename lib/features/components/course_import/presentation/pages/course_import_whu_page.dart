@@ -79,7 +79,6 @@ class CourseImportWhuPage extends ConsumerStatefulWidget {
 }
 
 class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
-  final _service = WhuCourseImportService();
   final _nameController = TextEditingController();
   DateTime? _weekOneMonday;
   bool _submitting = false;
@@ -229,9 +228,12 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
-      final authState = ref.read(whuAuthProvider);
-      final payload = await _service.loadCourses(
-        cookieHeader: authState.cookieHeader,
+      final client = ref.read(whuEducationClientProvider);
+      if (client == null) {
+        throw Exception('请先登录武大教务账户。');
+      }
+      final service = WhuCourseImportService(client: client);
+      final payload = await service.loadCourses(
         year: _selectedTerm.year,
         semester: _selectedTerm.semester,
         weekOneMonday: _weekOneMonday!,
