@@ -51,7 +51,7 @@ class LuotopiaAuthRepository {
   static const String baseUrl = 'http://10.0.2.2:8080';
   static const String _registerPath = '/api/v1/register';
   static const String _loginPath = '/api/v1/login';
-  static const String _mePath = '/api/v1/user/me';
+  static const String _mePath = '/api/v1/me';
 
   // -- Token 持久化 -- //
 
