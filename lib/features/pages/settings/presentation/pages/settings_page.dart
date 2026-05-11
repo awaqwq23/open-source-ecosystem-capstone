@@ -84,9 +84,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         : l10n.settingsAccountWhuNotLoggedIn,
                     prominent: true,
                     showTrailing: true,
-                    onTap: whuAuth.isAuthenticated
-                        ? () => context.push(AppRoutePaths.settingsWhuAccount)
-                        : () => context.push(AppRoutePaths.settingsWhuAuthLogin),
+                    onTap: () => context.push(AppRoutePaths.settingsWhuAccount),
                   ),
                 ],
               ),

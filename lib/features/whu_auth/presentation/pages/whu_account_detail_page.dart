@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
@@ -242,7 +244,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (state.isAuthenticated) ...[
+          if (state.isAuthenticated && state.isEducationSessionValid) ...[
             _buildActionButton(
               context,
               icon: Icons.refresh,
@@ -255,48 +257,62 @@ class WhuAccountDetailPage extends ConsumerWidget {
             _buildActionButton(
               context,
               icon: Icons.logout,
-              label: '退出登录（清除认证信息）',
+              label: '退出登录',
               isDestructive: true,
-              onTap: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('确认退出'),
-                    content: const Text('退出后将清除所有武大认证信息，需要时重新登录即可。'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('取消'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('退出'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmed == true) {
-                  await ref.read(whuAuthProvider.notifier).logout();
-                  if (context.mounted) {
-                    Navigator.of(context).maybePop();
-                  }
-                }
-              },
+              onTap: () => _confirmLogout(context, ref),
+            ),
+          ] else if (state.isAuthenticated && !state.isEducationSessionValid) ...[
+            _buildActionButton(
+              context,
+              icon: Icons.login,
+              label: '重新登录（会话已过期）',
+              onTap: () => context.push(AppRoutePaths.settingsWhuAuthLogin),
+            ),
+            const SizedBox(height: 8),
+            _buildActionButton(
+              context,
+              icon: Icons.logout,
+              label: '退出登录',
+              isDestructive: true,
+              onTap: () => _confirmLogout(context, ref),
             ),
           ] else ...[
             _buildActionButton(
               context,
               icon: AppIcons.web,
               label: '登录武大教务',
-              onTap: () {
-                // 跳转到登录页
-                Navigator.of(context).maybePop();
-              },
+              onTap: () => context.push(AppRoutePaths.settingsWhuAuthLogin),
             ),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认退出'),
+        content: const Text('退出后将清除所有武大认证信息，需要时重新登录即可。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('退出'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(whuAuthProvider.notifier).logout();
+      if (context.mounted) {
+        Navigator.of(context).maybePop();
+      }
+    }
   }
 
   Widget _buildActionButton(

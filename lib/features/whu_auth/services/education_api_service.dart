@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:luotopia/features/hot_update/data/hot_update_service.dart';
 import 'package:luotopia/features/hot_update/domain/models/script_info.dart';
-import 'package:luotopia/features/whu_auth/data/whu_education_client.dart';
+import 'package:luotopia/features/whu_auth/token/whu_education_client.dart';
 import 'package:luotopia/features/whu_auth/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/domain/whu_session_checker.dart';
 
@@ -30,10 +30,6 @@ class EducationApiService {
     this.hotUpdateService,
   });
 
-  static const _casLoginUrl =
-      'https://cas.whu.edu.cn/authserver/login'
-      '?service=https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin';
-
   static const _userInfoUrl =
       'https://jwgl.whu.edu.cn/xtgl/index_cxYhxxIndex.html'
       '?xt=jw&localeKey=zh_CN&_=1&gnmkdm=index';
@@ -45,28 +41,6 @@ class EducationApiService {
   static const _healthCheckUrl =
       'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html'
       '?doType=query&gnmkdm=N305005';
-
-  /// 从 CAS cookie 登录教务系统（SSO 握手）
-  Future<void> loginEducation() async {
-    final response = await client.get(
-      Uri.parse(_casLoginUrl),
-      skipRetry: true,
-    );
-
-    final text = response.body.replaceAll('\u00A0', ' ');
-
-    if (text.contains('教学管理信息服务平台')) {
-      return;
-    }
-
-    final errorMatch = RegExp(r'var dlktsxx="(.*?)";').firstMatch(text);
-    final errorMsg = errorMatch?.group(1);
-    if (errorMsg != null && errorMsg.isNotEmpty) {
-      throw Exception('教务系统登录失败：$errorMsg');
-    }
-
-    throw Exception('教务系统登录失败，请尝试重新登录信息门户。');
-  }
 
   /// 从教务系统拉取用户信息（学号、姓名、学院）
   Future<EducationUserInfo> getUserInfo({String? knownStudentId}) async {
@@ -168,7 +142,6 @@ class EducationApiService {
           'xqm': '',
           'queryModel.showCount': '1',
         },
-        skipRetry: true,
       );
 
       final text = response.body.replaceAll('\u00A0', ' ');
@@ -224,7 +197,7 @@ class EducationApiService {
             if (e is! Map) {
               return null;
             }
-            final m = Map<String, dynamic>.from(e as Map);
+            final m = Map<String, dynamic>.from(e);
             final score = (m['score'] as num?)?.toInt() ?? 0;
             final credit = (m['credit'] as num?)?.toDouble() ?? 0;
             if (score <= 0 || credit <= 0) {
@@ -270,7 +243,7 @@ class EducationApiService {
       if (raw is! Map) {
         continue;
       }
-      final item = Map<String, dynamic>.from(raw as Map);
+      final item = Map<String, dynamic>.from(raw);
 
       final xh = (item['xh'] as String? ?? '').trim();
       final xm = (item['xm'] as String? ?? '').trim();

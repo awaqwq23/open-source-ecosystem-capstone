@@ -3,94 +3,84 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app_runtime_initializer.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
-import 'package:luotopia/features/whu_auth/data/education_api_service.dart';
-import 'package:luotopia/features/whu_auth/data/whu_auth_repository.dart';
-import 'package:luotopia/features/whu_auth/data/whu_education_client.dart';
+import 'package:luotopia/features/whu_auth/services/education_api_service.dart';
+import 'package:luotopia/features/whu_auth/auth/whu_auth_repository.dart';
+import 'package:luotopia/features/whu_auth/token/whu_education_client.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_state.dart';
 
 final whuAuthProvider = NotifierProvider<WhuAuthNotifier, WhuAuthState>(
   WhuAuthNotifier.new,
 );
 
-/// 统一的武大教务 HTTP 客户端 Provider。
-/// 随 cookieHeader 变化自动重建。
+/// 暴露当前 WhuEducationClient 供外界（ScorePage 等）消费。
+/// 只读不建，不存在创建链，不会循环依赖。
 final whuEducationClientProvider = Provider.autoDispose<WhuEducationClient?>((ref) {
-  final authState = ref.watch(whuAuthProvider.select((s) => s.cookieHeader));
-  if (authState.isEmpty) return null;
-
-  final notifier = ref.read(whuAuthProvider.notifier);
-
-  return WhuEducationClient(
-    cookieHeader: authState,
-    onSessionExpired: () {
-      Future.microtask(() => notifier.markSessionExpired());
-    },
-    refreshSession: () async {
-      try {
-        return await notifier.refreshEducationSession();
-      } catch (_) {
-        return false;
-      }
-    },
-  );
+  return ref.watch(whuAuthProvider.notifier).client;
 });
 
-/// 基于 WhuEducationClient 的教务 API 服务 Provider。
+/// 暴露当前 EducationApiService 供外界消费。
 final educationApiServiceProvider = Provider.autoDispose<EducationApiService?>((ref) {
-  final client = ref.watch(whuEducationClientProvider);
-  if (client == null) return null;
-  return EducationApiService(
-    client: client,
-    hotUpdateService: ref.watch(hotUpdateServiceProvider),
-  );
+  return ref.watch(whuAuthProvider.notifier).apiService;
 });
 
 class WhuAuthNotifier extends Notifier<WhuAuthState> {
   late final WhuAuthRepository _repository;
+  WhuEducationClient? _client;
+  EducationApiService? _apiService;
   Timer? _healthCheckTimer;
+
+  WhuEducationClient? get client => _client;
+  EducationApiService? get apiService => _apiService;
 
   @override
   WhuAuthState build() {
     _repository = const WhuAuthRepository();
-    ref.onDispose(() => _healthCheckTimer?.cancel());
-    _loadCached();
-    return const WhuAuthState(isLoading: true);
-  }
+    ref.onDispose(() {
+      _healthCheckTimer?.cancel();
+      _client = null;
+      _apiService = null;
+    });
 
-  EducationApiService _api() {
-    final api = ref.read(educationApiServiceProvider);
-    if (api == null) {
-      throw StateError('未登录武大教务');
-    }
-    return api;
-  }
-
-  Future<void> _loadCached() async {
     final prefs = ref.read(sharedPreferencesProvider);
     final cookie = _repository.readCookie(prefs).trim();
     final studentId = _repository.readStudentId(prefs);
     final studentName = _repository.readStudentName(prefs);
     final college = _repository.readCollege(prefs);
 
-    state = WhuAuthState(
+    if (cookie.isNotEmpty) {
+      _initClient(cookie);
+      _startPeriodicHealthCheck();
+      Future.microtask(() => _checkSessionHealth());
+    }
+
+    return WhuAuthState(
       cookieHeader: cookie,
       isLoading: false,
       studentId: studentId,
       studentName: studentName,
       college: college,
-      educationSessionState:
-          studentId.isNotEmpty
-              ? EducationSessionState.valid
-              : EducationSessionState.none,
     );
-
-    if (cookie.isNotEmpty) {
-      _startPeriodicHealthCheck();
-      _checkSessionHealth();
-    }
   }
 
-  /// 完整的登录流程：设置 cookie → 教务登录 → 拉取用户信息
+  void _initClient(String cookieHeader) {
+    _client = WhuEducationClient(
+      cookieHeader: cookieHeader,
+      onCookiesUpdated: (newCookie) {
+        Future.microtask(() => updateCookies(newCookie));
+      },
+    );
+    _apiService = EducationApiService(
+      client: _client!,
+      hotUpdateService: ref.read(hotUpdateServiceProvider),
+    );
+  }
+
+  EducationApiService _api() {
+    if (_apiService == null) throw StateError('未登录武大教务');
+    return _apiService!;
+  }
+
+  /// 完整的登录流程：设置 cookie → 教务 SSO 登录 → 拉取用户信息
   Future<void> login(String cookieHeader) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
@@ -98,9 +88,10 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
       final prefs = ref.read(sharedPreferencesProvider);
       await _repository.writeCookie(prefs, cookieHeader);
 
+      _initClient(cookieHeader);
       state = state.copyWith(cookieHeader: cookieHeader, errorMessage: null);
-      await _api().loginEducation();
 
+      await _client!.refreshSession();
       final info = await _api().getUserInfo();
 
       await _repository.writeUserInfo(
@@ -127,22 +118,24 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
     }
   }
 
-  /// 重新登录（清除旧信息后触发登录流程）
-  Future<void> reLogin() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await _repository.clearUserInfo(prefs);
-    state = WhuAuthState(
-      cookieHeader: state.cookieHeader,
-      isLoading: false,
-    );
-    // 外部需要打开 WebView 重新获取 cookie 后调用 login()
-  }
-
-  /// 由 WhuEducationClient 回调调用，标记会话过期
-  void markSessionExpired() {
+  /// SSO 刷新后的状态同步
+  Future<void> updateCookies(String newCookie) async {
+    if (newCookie != state.cookieHeader) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      await _repository.writeCookie(prefs, newCookie);
+      state = WhuAuthState(
+        cookieHeader: newCookie,
+        studentId: state.studentId,
+        studentName: state.studentName,
+        college: state.college,
+        lastVerifiedAt: DateTime.now(),
+        educationSessionState: EducationSessionState.valid,
+      );
+      return;
+    }
     state = state.copyWith(
-      educationSessionState: EducationSessionState.expired,
-      errorMessage: '教务会话已过期，请刷新或重新登录。',
+      educationSessionState: EducationSessionState.valid,
+      lastVerifiedAt: DateTime.now(),
     );
   }
 
@@ -151,17 +144,12 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
     if (state.cookieHeader.isEmpty) return;
     try {
       final valid = await _api().isSessionValid();
-      if (valid && !state.isEducationSessionValid) {
-        state = state.copyWith(
-          educationSessionState: EducationSessionState.valid,
-          lastVerifiedAt: DateTime.now(),
-        );
-      } else if (!valid && state.isEducationSessionValid) {
-        state = state.copyWith(
-          educationSessionState: EducationSessionState.expired,
-          errorMessage: '教务会话已过期，请重新登录。',
-        );
-      }
+      state = state.copyWith(
+        educationSessionState:
+            valid ? EducationSessionState.valid : EducationSessionState.expired,
+        lastVerifiedAt: DateTime.now(),
+        errorMessage: null,
+      );
     } catch (_) {
       // 健康检查失败不中断用户体验
     }
@@ -170,8 +158,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
   /// 使用已有 Cookie 刷新教务会话（SSO 重新握手）
   Future<bool> refreshEducationSession() async {
     if (state.cookieHeader.isEmpty) return false;
+    if (_client == null) return false;
     try {
-      await _api().loginEducation();
+      await _client!.refreshSession();
       state = state.copyWith(
         educationSessionState: EducationSessionState.valid,
         lastVerifiedAt: DateTime.now(),
@@ -190,6 +179,8 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> {
   /// 退出登录（清除所有认证数据）
   Future<void> logout() async {
     _healthCheckTimer?.cancel();
+    _client = null;
+    _apiService = null;
     final prefs = ref.read(sharedPreferencesProvider);
     await _repository.clearAll(prefs);
     state = const WhuAuthState();

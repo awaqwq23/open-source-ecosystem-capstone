@@ -74,14 +74,7 @@ class _UnauthenticatedView extends StatelessWidget {
   }
 
   Future<void> _login(BuildContext context) async {
-    await context.push(AppRoutePaths.settingsWhuAuthLogin);
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger != null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('登录成功')),
-      );
-    }
+    await context.push(AppRoutePaths.settingsWhuAccount);
   }
 }
 

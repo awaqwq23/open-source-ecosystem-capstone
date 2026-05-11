@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:async';
 
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
-import 'package:luotopia/features/whu_auth/data/whu_education_client.dart';
+import 'package:luotopia/features/whu_auth/token/whu_education_client.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
@@ -38,21 +37,15 @@ class WhuCourseImportService {
     required DateTime weekOneMonday,
     required HomeSettings homeSettings,
   }) async {
-    final response = await client
-        .post(
-          Uri.parse(_courseApiUrl),
-          body: {
-            'validate': WhuEducationClient.generateValidate(),
-            'xnm': '$year',
-            'xqm': '${_mapSemester(semester)}',
-            'xzlx': 'ck',
-          },
-        )
-        .timeout(
-          const Duration(seconds: 20),
-          onTimeout: () =>
-              throw TimeoutException('教务接口请求超时，请确认网络与会话后重试。'),
-        );
+    final response = await client.post(
+      Uri.parse(_courseApiUrl),
+      body: {
+        'validate': WhuEducationClient.generateValidate(),
+        'xnm': '$year',
+        'xqm': '${_mapSemester(semester)}',
+        'xzlx': 'ck',
+      },
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('教务接口请求失败（HTTP ${response.statusCode}）。');
@@ -81,7 +74,7 @@ class WhuCourseImportService {
       if (rawItem is! Map) {
         continue;
       }
-      final item = Map<String, dynamic>.from(rawItem as Map);
+      final item = Map<String, dynamic>.from(rawItem);
       final title = (item['kcmc'] as String? ?? '').trim();
       if (title.isEmpty) {
         continue;

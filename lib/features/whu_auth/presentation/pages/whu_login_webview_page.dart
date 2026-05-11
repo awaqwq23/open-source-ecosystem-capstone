@@ -168,18 +168,21 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
   Future<void> _confirmCookies() async {
     final isZh = _isChinese(context);
 
-    final jwglCookies = await _cookieManager.getCookies('https://jwgl.whu.edu.cn');
-    final jwglCookieMap = <String, String>{};
-    for (final cookie in jwglCookies) {
-      if (cookie.name.isEmpty) {
-        continue;
+    final cookies = await Future.wait([
+      _cookieManager.getCookies('https://jwgl.whu.edu.cn'),
+      _cookieManager.getCookies('https://cas.whu.edu.cn'),
+    ]);
+    final cookieMap = <String, String>{};
+    for (final batch in cookies) {
+      for (final cookie in batch) {
+        if (cookie.name.isEmpty) continue;
+        cookieMap[cookie.name] = cookie.value;
       }
-      jwglCookieMap[cookie.name] = cookie.value;
     }
     if (!mounted) {
       return;
     }
-    if (jwglCookieMap.isEmpty) {
+    if (cookieMap.isEmpty) {
       _showMessage(
         isZh
             ? '未读取到教务会话，请先完成登录后再确认。'
@@ -188,7 +191,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       return;
     }
     final cookieHeader =
-        jwglCookieMap.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
+        cookieMap.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
 
     // 调用增强的登录流程：保存 cookie → 教务 SSO → 拉取用户信息
     setState(() => _isLoggingIn = true);
