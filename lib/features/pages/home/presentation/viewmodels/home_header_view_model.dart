@@ -163,8 +163,7 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
       if (item.type == ItemType.task ||
           item.type == ItemType.schedule ||
           (item.type == ItemType.course &&
-              (selectedTimetableIds.isEmpty ||
-                  selectedTimetableIds.contains(item.courseDetails.timetableId))))
+              selectedTimetableIds.contains(item.courseDetails.timetableId)))
         item,
   ];
   final laidOutItems = HomeHeaderViewModel._itemLayoutBuilder.build(
