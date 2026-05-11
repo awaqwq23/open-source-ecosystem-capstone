@@ -6,6 +6,7 @@ abstract final class AppRoutePaths {
   static const ai = '/ai';
   static const aiSessions = '/ai/sessions';
   static const campus = '/campus';
+  static const campusScore = '/campus/score';
   static const settings = '/settings';
 
   // Secondary (standard pages)

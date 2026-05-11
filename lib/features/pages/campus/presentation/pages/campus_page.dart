@@ -1,6 +1,8 @@
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -368,12 +370,18 @@ class _AppGrid extends StatelessWidget {
   }
 
   void _openApp(BuildContext context, String name) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$name 功能正在开发中'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    switch (name) {
+      case '成绩':
+        context.push(AppRoutePaths.campusScore);
+        return;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$name 功能正在开发中'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
   }
 }
 
