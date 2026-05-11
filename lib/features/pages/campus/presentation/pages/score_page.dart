@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/app/app_runtime_initializer.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/data/education_api_service.dart';
@@ -40,7 +41,9 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     });
 
     try {
-      final service = EducationApiService();
+      final service = EducationApiService(
+        hotUpdateService: ref.read(hotUpdateServiceProvider),
+      );
       final result = await service.getScoreList(
         cookieHeader: whuAuth.cookieHeader,
       );

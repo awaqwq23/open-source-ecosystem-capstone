@@ -64,8 +64,10 @@ class LuotopiaAuthRepository {
   }
 
   Future<void> clearToken(SharedPreferences? prefs) async {
-    await prefs?.remove(_tokenKey);
-    await prefs?.remove(_userKey);
+    await Future.wait([
+      prefs?.remove(_tokenKey) ?? Future.value(),
+      prefs?.remove(_userKey) ?? Future.value(),
+    ]);
   }
 
   LuotopiaUser? readUser(SharedPreferences? prefs) {
