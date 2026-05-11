@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
@@ -97,6 +99,15 @@ class SettingsHomePage extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+            SettingsFlatTile(
+              title: context.l10n.settingsHomeDayStart,
+              subtitle: MaterialLocalizations.of(context).formatTimeOfDay(
+                settings.dayStartTime,
+              ),
+              leading: const Icon(AppIcons.clock),
+              trailing: const Icon(AppIcons.drillIn, size: 20),
+              onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
             ),
           ],
         ),

@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
-import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
-import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CampusTimetablePage extends ConsumerWidget {
@@ -19,9 +15,6 @@ class CampusTimetablePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final state = ref.watch(settingsViewModelProvider);
-    final settings = state.homeSettings;
     final store = ref.watch(courseTimetableRepositoryProvider);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
 
@@ -85,78 +78,10 @@ class CampusTimetablePage extends ConsumerWidget {
                     _TimetableListTile(timetable: timetable),
               ],
             ),
-
-            // ── 时间方格设置 ──
-            SettingsFlatSection(
-              title: isZh ? '时间方格设置' : 'Time Grid Settings',
-              children: [
-                SettingsFlatTile(
-                  title: l10n.settingsHomeDayStart,
-                  subtitle: MaterialLocalizations.of(context).formatTimeOfDay(
-                    settings.dayStartTime,
-                  ),
-                  leading: const Icon(AppIcons.clock),
-                  onTap: () => _pickHomeStartTime(context, ref, settings),
-                ),
-                _StepperTile(
-                  title: l10n.settingsHomeBlockDuration,
-                  value: l10n.settingsMinutesValue(settings.blockDurationMinutes),
-                  onDecrease: settings.blockDurationMinutes > 15
-                      ? () => _save(ref, settings.copyWith(
-                            blockDurationMinutes: settings.blockDurationMinutes - 15,
-                          ))
-                      : null,
-                  onIncrease: () => _save(ref, settings.copyWith(
-                        blockDurationMinutes: settings.blockDurationMinutes + 15,
-                      )),
-                ),
-                _StepperTile(
-                  title: l10n.settingsHomeBlockGap,
-                  value: l10n.settingsMinutesValue(settings.blockGapMinutes),
-                  onDecrease: settings.blockGapMinutes > 0
-                      ? () => _save(ref, settings.copyWith(
-                            blockGapMinutes: settings.blockGapMinutes - 5,
-                          ))
-                      : null,
-                  onIncrease: () => _save(ref, settings.copyWith(
-                        blockGapMinutes: settings.blockGapMinutes + 5,
-                      )),
-                ),
-                _StepperTile(
-                  title: l10n.settingsHomeBlockCount,
-                  value: '${settings.blockCount}',
-                  onDecrease: settings.blockCount > 1
-                      ? () => _save(ref, settings.copyWith(
-                            blockCount: settings.blockCount - 1,
-                          ))
-                      : null,
-                  onIncrease: () => _save(ref, settings.copyWith(
-                        blockCount: settings.blockCount + 1,
-                      )),
-                ),
-              ],
-            ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _pickHomeStartTime(
-    BuildContext context,
-    WidgetRef ref,
-    HomeSettings settings,
-  ) async {
-    final result = await AppDateTimePickers.pickTime(
-      context,
-      initialTime: settings.dayStartTime,
-    );
-    if (result == null) return;
-    await _save(ref, settings.copyWith(dayStartTime: result));
-  }
-
-  Future<void> _save(WidgetRef ref, HomeSettings settings) {
-    return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
   }
 
   Future<void> _createEmptyTimetable(BuildContext context, WidgetRef ref) async {
@@ -279,40 +204,5 @@ class _TimetableListTile extends ConsumerWidget {
       await agendaRepo.deleteItem(itemId);
     }
     await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
-  }
-}
-
-class _StepperTile extends StatelessWidget {
-  const _StepperTile({
-    required this.title,
-    required this.value,
-    required this.onDecrease,
-    required this.onIncrease,
-  });
-
-  final String title;
-  final String value;
-  final VoidCallback? onDecrease;
-  final VoidCallback? onIncrease;
-
-  @override
-  Widget build(BuildContext context) {
-    return SettingsFlatTile(
-      title: title,
-      subtitle: value,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ui.IconButton.ghost(
-            icon: const Icon(Icons.remove),
-            onPressed: onDecrease,
-          ),
-          ui.IconButton.ghost(
-            icon: const Icon(Icons.add),
-            onPressed: onIncrease,
-          ),
-        ],
-      ),
-    );
   }
 }
