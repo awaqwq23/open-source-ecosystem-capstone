@@ -404,7 +404,6 @@ class _SemesterPicker extends StatelessWidget {
     final initialSemIndex = selected.semester - 1;
 
     final yearCtrl = FixedExtentScrollController(initialItem: initialYearIndex.clamp(0, years.length - 1));
-    final semCtrl = FixedExtentScrollController(initialItem: initialSemIndex.clamp(0, 2));
 
     await showModalBottomSheet<void>(
       context: context,
@@ -415,7 +414,6 @@ class _SemesterPicker extends StatelessWidget {
           initialYearIndex: initialYearIndex.clamp(0, years.length - 1),
           initialSemIndex: initialSemIndex.clamp(0, 2),
           yearCtrl: yearCtrl,
-          semCtrl: semCtrl,
           onChange: onChange,
         );
       },
@@ -430,7 +428,6 @@ class _SemesterWheelSheet extends StatefulWidget {
     required this.initialYearIndex,
     required this.initialSemIndex,
     required this.yearCtrl,
-    required this.semCtrl,
     required this.onChange,
   });
 
@@ -439,7 +436,6 @@ class _SemesterWheelSheet extends StatefulWidget {
   final int initialYearIndex;
   final int initialSemIndex;
   final FixedExtentScrollController yearCtrl;
-  final FixedExtentScrollController semCtrl;
   final ValueChanged<_TermOption> onChange;
 
   @override
@@ -454,13 +450,24 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
   void initState() {
     super.initState();
     _selectedYear = widget.years[widget.initialYearIndex];
-    _selectedSem = widget.initialSemIndex + 1;
+    _selectedSem = _pickInitialSem();
   }
+
+  int _pickInitialSem() {
+    final avail = _availableSems;
+    final idx = widget.initialSemIndex;
+    return idx < avail.length ? avail[idx] : avail.last;
+  }
+
+  List<int> get _availableSems =>
+      widget.allTerms.where((t) => t.year == _selectedYear).map((t) => t.semester).toList()
+        ..sort();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final availSems = _availableSems;
 
     return Container(
       padding: EdgeInsets.only(
@@ -469,7 +476,6 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── 标题栏 ──
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
             child: Row(
@@ -496,8 +502,6 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
               ],
             ),
           ),
-
-          // ── 滚轮 ──
           SizedBox(
             height: 200,
             child: Row(
@@ -507,7 +511,12 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
                     scrollController: widget.yearCtrl,
                     itemExtent: 44,
                     onSelectedItemChanged: (i) {
-                      setState(() => _selectedYear = widget.years[i]);
+                      setState(() {
+                        _selectedYear = widget.years[i];
+                        if (!_availableSems.contains(_selectedSem)) {
+                          _selectedSem = _availableSems.last;
+                        }
+                      });
                     },
                     children: [
                       for (final y in widget.years)
@@ -522,13 +531,13 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
                 ),
                 Expanded(
                   child: CupertinoPicker(
-                    scrollController: widget.semCtrl,
+                    key: ValueKey('sem_${_selectedYear}'),
                     itemExtent: 44,
                     onSelectedItemChanged: (i) {
-                      setState(() => _selectedSem = i + 1);
+                      setState(() => _selectedSem = availSems[i]);
                     },
                     children: [
-                      for (final s in [1, 2, 3])
+                      for (final s in availSems)
                         Center(
                           child: Text(
                             isZh ? '第${s}学期' : 'Sem $s',
