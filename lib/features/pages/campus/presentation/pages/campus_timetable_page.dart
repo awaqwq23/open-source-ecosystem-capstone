@@ -249,9 +249,11 @@ class _TimetableCheckTile extends StatelessWidget {
 
     return SizedBox(
       height: _rowHeight,
-      child: InkWell(
-        onTap: canToggle ? () => onToggle(!isSelected) : null,
-        child: Row(
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: canToggle ? () => onToggle(!isSelected) : null,
+          child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Checkbox(
@@ -303,6 +305,7 @@ class _TimetableCheckTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
