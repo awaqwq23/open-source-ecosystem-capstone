@@ -599,7 +599,7 @@ class OpenAiCompatibleAiService implements AiService {
     return '''
 ${basePrompt.trim()}
 
-你是”花卷日程”AI助手。
+你是 Luotopia AI 助手。
 当前时间：${now.toIso8601String()}
 事项数据：$itemSummary
 

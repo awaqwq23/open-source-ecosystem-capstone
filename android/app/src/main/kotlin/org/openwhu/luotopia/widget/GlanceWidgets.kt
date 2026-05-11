@@ -41,19 +41,19 @@ import org.openwhu.luotopia.MainActivity
 import org.openwhu.luotopia.R
 import kotlin.math.max
 
-class HuaJuanQuickCreateWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = HuaJuanQuickCreateWidget()
+class QuickCreateWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = QuickCreateWidget()
 }
 
-class HuaJuanAgendaListWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = HuaJuanAgendaListWidget()
+class AgendaListWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = AgendaListWidget()
 }
 
-class HuaJuanWeekGridWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = HuaJuanWeekGridWidget()
+class WeekGridWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = WeekGridWidget()
 }
 
-private class HuaJuanQuickCreateWidget : GlanceAppWidget() {
+private class QuickCreateWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
             DpSize(72.dp, 72.dp),
@@ -87,7 +87,7 @@ private class HuaJuanQuickCreateWidget : GlanceAppWidget() {
     }
 }
 
-private class HuaJuanAgendaListWidget : GlanceAppWidget() {
+private class AgendaListWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
             DpSize(324.dp, 240.dp),
@@ -123,7 +123,7 @@ private class HuaJuanAgendaListWidget : GlanceAppWidget() {
     }
 }
 
-private class HuaJuanWeekGridWidget : GlanceAppWidget() {
+private class WeekGridWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
             DpSize(240.dp, 156.dp),

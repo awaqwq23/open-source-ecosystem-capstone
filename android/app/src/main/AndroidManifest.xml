@@ -36,7 +36,7 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".widget.HuaJuanQuickCreateWidgetReceiver"
+            android:name=".widget.QuickCreateWidgetReceiver"
             android:exported="false"
             android:label="@string/widget_quick_create_name">
             <intent-filter>
@@ -44,10 +44,10 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/huajuan_quick_create_widget_info" />
+                android:resource="@xml/quick_create_widget_info" />
         </receiver>
         <receiver
-            android:name=".widget.HuaJuanAgendaListWidgetReceiver"
+            android:name=".widget.AgendaListWidgetReceiver"
             android:exported="false"
             android:label="@string/widget_agenda_list_name">
             <intent-filter>
@@ -55,10 +55,10 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/huajuan_agenda_list_widget_info" />
+                android:resource="@xml/agenda_list_widget_info" />
         </receiver>
         <receiver
-            android:name=".widget.HuaJuanWeekGridWidgetReceiver"
+            android:name=".widget.WeekGridWidgetReceiver"
             android:exported="false"
             android:label="@string/widget_week_grid_name">
             <intent-filter>
@@ -66,7 +66,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/huajuan_week_grid_widget_info" />
+                android:resource="@xml/week_grid_widget_info" />
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

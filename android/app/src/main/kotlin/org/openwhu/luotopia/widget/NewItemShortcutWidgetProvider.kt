@@ -11,7 +11,7 @@ import org.openwhu.luotopia.R
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
-class HuaJuanNewItemShortcutWidgetProvider : HomeWidgetProvider() {
+class NewItemShortcutWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -22,7 +22,7 @@ class HuaJuanNewItemShortcutWidgetProvider : HomeWidgetProvider() {
         appWidgetIds.forEach { widgetId ->
             val sizeTier = resolveShortcutWidgetTier(appWidgetManager.getAppWidgetOptions(widgetId))
             val subtitle = if (payload.hint.isNotBlank()) payload.hint else payload.subtitle
-            val views = RemoteViews(context.packageName, R.layout.widget_huajuan_new_item_shortcut)
+            val views = RemoteViews(context.packageName, R.layout.widget_new_item_shortcut)
                 .apply {
                     setTextViewText(R.id.widget_new_item_title, payload.title)
                     setTextViewText(R.id.widget_new_item_subtitle, subtitle)
