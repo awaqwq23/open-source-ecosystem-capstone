@@ -15,6 +15,7 @@ import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_ar
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
@@ -114,12 +115,14 @@ class HomePage extends ConsumerWidget {
                                 : Icons.view_agenda,
                           ),
                           onPressed: () {
-                            ref.read(appHomeSettingsProvider.notifier).state =
-                                homeSettings.copyWith(
-                              gridMode: homeSettings.gridMode == HomeGridMode.courseGrid
-                                  ? HomeGridMode.timeGrid
-                                  : HomeGridMode.courseGrid,
-                            );
+                            ref.read(settingsViewModelProvider.notifier).saveHomeSettings(
+                                  homeSettings.copyWith(
+                                    gridMode:
+                                        homeSettings.gridMode == HomeGridMode.courseGrid
+                                            ? HomeGridMode.timeGrid
+                                            : HomeGridMode.courseGrid,
+                                  ),
+                                );
                           },
                         ),
                       ),
