@@ -8,6 +8,7 @@ import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
+import 'package:luotopia/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:luotopia/features/pages/ai/presentation/viewmodels/ai_header_view_model.dart';
 import 'package:luotopia/features/pages/ai/presentation/widgets/ai_item_visualizer.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
@@ -31,12 +32,19 @@ class _AiPageState extends ConsumerState<AiPage> {
   bool _focusRequested = false;
   bool _isDraftRouteOpening = false;
   int? _lastHandledDraftNavigationId;
+  int _lastActivationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
     _inputFocusNode = FocusNode();
+    _lastActivationCount = ref.read(aiPageActivationProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(aiHeaderViewModelProvider.notifier).createSession();
+      }
+    });
   }
 
   @override
@@ -48,9 +56,18 @@ class _AiPageState extends ConsumerState<AiPage> {
 
   @override
   Widget build(BuildContext context) {
+    final activationCount = ref.watch(aiPageActivationProvider);
+    if (activationCount > _lastActivationCount) {
+      _lastActivationCount = activationCount;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(aiHeaderViewModelProvider.notifier).createSession();
+        }
+      });
+    }
+
     final state = ref.watch(aiHeaderViewModelProvider);
     final session = ref.watch(aiActiveSessionProvider);
-    final sessions = ref.watch(aiSessionsProvider);
     _syncController(state.input);
     _tryAutoFocus();
     _setupDraftNavigationListener();
@@ -60,24 +77,6 @@ class _AiPageState extends ConsumerState<AiPage> {
         buildTabAppBar(
           title: context.l10n.aiTitle,
           trailing: [
-            ui.Tooltip(
-              tooltip: (context) =>
-                  Text(_text(context, zh: '清空历史', en: 'Clear history')),
-              child: ui.IconButton.ghost(
-                icon: const Icon(AppIcons.delete),
-                onPressed: sessions.isEmpty
-                    ? null
-                    : () async {
-                        final confirmed = await _confirmClearSessions(context);
-                        if (!confirmed) {
-                          return;
-                        }
-                        await ref
-                            .read(aiHeaderViewModelProvider.notifier)
-                            .clearSessions();
-                      },
-              ),
-            ),
             ui.Tooltip(
               tooltip: (context) =>
                   Text(_text(context, zh: '对话列表', en: 'Conversations')),
@@ -124,7 +123,6 @@ class _AiPageState extends ConsumerState<AiPage> {
                     .requestOpenDraftEditor,
               ),
             ),
-            const Divider(height: 1),
             _ComposerBar(
               controller: _controller,
               focusNode: _inputFocusNode,
@@ -232,35 +230,6 @@ class _AiPageState extends ConsumerState<AiPage> {
         ? zh
         : en;
   }
-
-  Future<bool> _confirmClearSessions(BuildContext context) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(_text(context, zh: '清空对话历史', en: 'Clear conversations')),
-          content: Text(
-            _text(
-              context,
-              zh: '所有本地 AI 对话记录将被清空。',
-              en: 'All local AI conversations will be cleared.',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(_text(context, zh: '取消', en: 'Cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(_text(context, zh: '清空', en: 'Clear')),
-            ),
-          ],
-        );
-      },
-    );
-    return result ?? false;
-  }
 }
 
 class _ConversationTimeline extends StatefulWidget {
@@ -314,12 +283,7 @@ class _ConversationTimelineState extends State<_ConversationTimeline> {
     final hasHistory = messages.isNotEmpty;
     final hasStreaming = widget.streamingContent != null;
     if (!hasHistory && widget.pendingDraft == null && !hasStreaming) {
-      return Center(
-        child: Text(
-          _text(context, zh: '当前对话还没有消息。', en: 'No messages in this chat yet.'),
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
+      return const SizedBox.expand();
     }
 
     return NotificationListener<ScrollNotification>(
@@ -611,11 +575,26 @@ class _ComposerBar extends StatelessWidget {
   }
 }
 
-class AiSessionsPage extends ConsumerWidget {
+class AiSessionsPage extends ConsumerStatefulWidget {
   const AiSessionsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AiSessionsPage> createState() => _AiSessionsPageState();
+}
+
+class _AiSessionsPageState extends ConsumerState<AiSessionsPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(aiHeaderViewModelProvider.notifier).removeEmptySessions();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sessions = ref.watch(aiSessionsProvider);
     final activeSessionId = ref.watch(aiActiveSessionProvider)?.id;
 
@@ -625,6 +604,27 @@ class AiSessionsPage extends ConsumerWidget {
           context,
           title: _text(context, zh: '对话列表', en: 'Conversations'),
           trailing: [
+            ui.Tooltip(
+              tooltip: (context) =>
+                  Text(_text(context, zh: '清空历史', en: 'Clear history')),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.delete),
+                onPressed: sessions.isEmpty
+                    ? null
+                    : () async {
+                        final confirmed = await _confirmClearSessions(context);
+                        if (!confirmed) {
+                          return;
+                        }
+                        await ref
+                            .read(aiHeaderViewModelProvider.notifier)
+                            .clearSessions();
+                        await ref
+                            .read(aiHeaderViewModelProvider.notifier)
+                            .removeEmptySessions();
+                      },
+              ),
+            ),
             ui.Tooltip(
               tooltip: (context) =>
                   Text(_text(context, zh: '新对话', en: 'New chat')),
@@ -765,6 +765,35 @@ class AiSessionsPage extends ConsumerWidget {
     );
     final trimmed = result?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<bool> _confirmClearSessions(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(_text(context, zh: '清空对话历史', en: 'Clear conversations')),
+          content: Text(
+            _text(
+              context,
+              zh: '所有本地 AI 对话记录将被清空。',
+              en: 'All local AI conversations will be cleared.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(_text(context, zh: '取消', en: 'Cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(_text(context, zh: '清空', en: 'Clear')),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 }
 

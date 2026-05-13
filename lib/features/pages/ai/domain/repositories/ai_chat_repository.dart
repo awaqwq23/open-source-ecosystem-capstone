@@ -8,5 +8,6 @@ abstract class AiChatRepository {
   Future<void> renameSession(String sessionId, String title);
   Future<void> deleteSession(String sessionId);
   Future<void> clearSessions();
+  Future<void> removeEmptySessions();
   Future<void> appendToActiveSession(AiChatMessage message);
 }

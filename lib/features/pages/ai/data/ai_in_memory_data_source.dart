@@ -125,6 +125,28 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
   }
 
   @override
+  Future<void> removeEmptySessions() async {
+    final sessions = [
+      for (final session in state.sessions)
+        if (!session.isEmpty || session.id == state.activeSessionId) session,
+    ];
+    if (sessions.length == state.sessions.length) {
+      return;
+    }
+    state = sessions.isEmpty
+        ? const AiChatSessionStore(sessions: [], activeSessionId: '')
+        : AiChatSessionStore(
+            sessions: sessions,
+            activeSessionId: sessions.any(
+              (session) => session.id == state.activeSessionId,
+            )
+                ? state.activeSessionId
+                : sessions.first.id,
+          );
+    await _persist();
+  }
+
+  @override
   Future<void> appendToActiveSession(AiChatMessage message) async {
     final active = state.activeSession ?? await createSession();
     final updatedMessage = message.sessionId == active.id
@@ -152,9 +174,13 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
   }
 
   Future<void> _persist() async {
+    final persistedSessions = [
+      for (final session in state.sessions)
+        if (!session.isEmpty || session.id == state.activeSessionId) session,
+    ];
     await _prefs?.setString(
       AppBootstrapStorageKeys.aiSessions,
-      AiChatSessionStorageMapper.encodeSessions(state.sessions),
+      AiChatSessionStorageMapper.encodeSessions(persistedSessions),
     );
     await _persistActiveSessionId();
   }
