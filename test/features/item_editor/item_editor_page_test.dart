@@ -13,16 +13,17 @@ void main() {
     await tester.pumpWidget(const _TestApp(child: ItemEditorPage()));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('任务'));
+    await tester.pumpAndSettle();
+
     expect(find.text('截止时间'), findsOneWidget);
     expect(find.text('目标日期'), findsNothing);
 
-    await tester.tap(find.text('任务'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('备忘'));
     await tester.pumpAndSettle();
 
     expect(find.text('目标日期'), findsOneWidget);
-    expect(find.text('预计完成时长'), findsOneWidget);
+    expect(find.text('预计时长'), findsOneWidget);
     expect(find.text('截止时间'), findsNothing);
   });
 
@@ -30,10 +31,18 @@ void main() {
     await tester.pumpWidget(const _TestApp(child: ItemEditorPage()));
     await tester.pumpAndSettle();
 
-    final titleSize = tester.getSize(find.byKey(const ValueKey('item-editor-field-title')));
-    final allDaySize = tester.getSize(find.byKey(const ValueKey('item-editor-row-all-day')));
-    final startSize = tester.getSize(find.byKey(const ValueKey('item-editor-row-start')));
-    final detailsSize = tester.getSize(find.byKey(const ValueKey('item-editor-field-details')));
+    final titleSize = tester.getSize(
+      find.byKey(const ValueKey('item-editor-field-title')),
+    );
+    final allDaySize = tester.getSize(
+      find.byKey(const ValueKey('item-editor-row-all-day')),
+    );
+    final startSize = tester.getSize(
+      find.byKey(const ValueKey('item-editor-row-start')),
+    );
+    final detailsSize = tester.getSize(
+      find.byKey(const ValueKey('item-editor-field-details')),
+    );
 
     expect(titleSize.height, 56);
     expect(allDaySize.height, 56);
@@ -47,7 +56,9 @@ void main() {
 
     final startRow = find.byKey(const ValueKey('item-editor-row-start'));
     final label = find.byKey(const ValueKey('item-editor-row-start-label'));
-    final trailingGroup = find.byKey(const ValueKey('item-editor-row-start-trailing-group'));
+    final trailingGroup = find.byKey(
+      const ValueKey('item-editor-row-start-trailing-group'),
+    );
     final value = find.byKey(const ValueKey('item-editor-row-start-value'));
     final chevron = find.byKey(const ValueKey('item-editor-row-start-chevron'));
 
@@ -59,7 +70,10 @@ void main() {
 
     expect(labelCenter.dx, lessThan(valueCenter.dx));
     expect(valueCenter.dx, lessThan(chevronCenter.dx));
-    expect((rowRect.right - trailingGroupRect.right).abs(), lessThanOrEqualTo(1));
+    expect(
+      (rowRect.right - trailingGroupRect.right).abs(),
+      lessThanOrEqualTo(1),
+    );
     expect((labelCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
     expect((valueCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
     expect((chevronCenter.dy - rowRect.center.dy).abs(), lessThanOrEqualTo(1));
@@ -67,9 +81,7 @@ void main() {
 }
 
 class _TestApp extends StatelessWidget {
-  const _TestApp({
-    required this.child,
-  });
+  const _TestApp({required this.child});
 
   final Widget child;
 

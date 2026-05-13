@@ -10,9 +10,9 @@ void main() {
     addTearDown(container.dispose);
     final notifier = container.read(homeHeaderViewModelProvider.notifier);
     final initialState = container.read(homeHeaderViewModelProvider);
-    final initialWeekStart = DateUtils.dateOnly(initialState.anchor).subtract(
-      Duration(days: initialState.anchor.weekday - DateTime.monday),
-    );
+    final initialWeekStart = DateUtils.dateOnly(
+      initialState.anchor,
+    ).subtract(Duration(days: initialState.anchor.weekday - DateTime.monday));
     final nextWeekStart = initialWeekStart.add(const Duration(days: 7));
 
     notifier.selectCell(initialWeekStart.add(const Duration(days: 2)), 3);
@@ -33,6 +33,6 @@ void main() {
     final jumpedState = container.read(homeHeaderViewModelProvider);
     expect(jumpedState.anchor, DateTime(2026, 5, 1));
     expect(jumpedState.selectedSlotIndex, isNull);
-    expect(jumpedState.selectedDate, DateTime(2026, 5, 11));
+    expect(jumpedState.selectedDate, nextWeekStart);
   });
 }
