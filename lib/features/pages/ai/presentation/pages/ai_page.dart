@@ -8,7 +8,6 @@ import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
-import 'package:luotopia/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
 import 'package:luotopia/features/pages/ai/presentation/viewmodels/ai_header_view_model.dart';
 import 'package:luotopia/features/pages/ai/presentation/widgets/ai_item_visualizer.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
@@ -18,10 +17,7 @@ import 'package:intl/intl.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AiPage extends ConsumerStatefulWidget {
-  const AiPage({
-    this.autoFocusInput = false,
-    super.key,
-  });
+  const AiPage({this.autoFocusInput = false, super.key});
 
   final bool autoFocusInput;
 
@@ -35,20 +31,12 @@ class _AiPageState extends ConsumerState<AiPage> {
   bool _focusRequested = false;
   bool _isDraftRouteOpening = false;
   int? _lastHandledDraftNavigationId;
-  int _lastActivationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
     _inputFocusNode = FocusNode();
-    _lastActivationCount = ref.read(aiPageActivationProvider);
-    // 每次进入 AI 页都创建新 session
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(aiHeaderViewModelProvider.notifier).createSession();
-      }
-    });
   }
 
   @override
@@ -60,19 +48,9 @@ class _AiPageState extends ConsumerState<AiPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 检测 AI 标签页被重新激活（从其他 tab 切回），创建新 session
-    final activationCount = ref.watch(aiPageActivationProvider);
-    if (activationCount > _lastActivationCount) {
-      _lastActivationCount = activationCount;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(aiHeaderViewModelProvider.notifier).createSession();
-        }
-      });
-    }
-
     final state = ref.watch(aiHeaderViewModelProvider);
     final session = ref.watch(aiActiveSessionProvider);
+    final sessions = ref.watch(aiSessionsProvider);
     _syncController(state.input);
     _tryAutoFocus();
     _setupDraftNavigationListener();
@@ -83,17 +61,39 @@ class _AiPageState extends ConsumerState<AiPage> {
           title: context.l10n.aiTitle,
           trailing: [
             ui.Tooltip(
-              tooltip: (context) => Text(_text(context, zh: '对话列表', en: 'Conversations')),
+              tooltip: (context) =>
+                  Text(_text(context, zh: '清空历史', en: 'Clear history')),
+              child: ui.IconButton.ghost(
+                icon: const Icon(AppIcons.delete),
+                onPressed: sessions.isEmpty
+                    ? null
+                    : () async {
+                        final confirmed = await _confirmClearSessions(context);
+                        if (!confirmed) {
+                          return;
+                        }
+                        await ref
+                            .read(aiHeaderViewModelProvider.notifier)
+                            .clearSessions();
+                      },
+              ),
+            ),
+            ui.Tooltip(
+              tooltip: (context) =>
+                  Text(_text(context, zh: '对话列表', en: 'Conversations')),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.openTimePicker),
                 onPressed: () => context.push(AppRoutePaths.aiSessions),
               ),
             ),
             ui.Tooltip(
-              tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),
+              tooltip: (context) =>
+                  Text(_text(context, zh: '新对话', en: 'New chat')),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.add),
-                onPressed: ref.read(aiHeaderViewModelProvider.notifier).createSession,
+                onPressed: ref
+                    .read(aiHeaderViewModelProvider.notifier)
+                    .createSession,
               ),
             ),
           ],
@@ -105,18 +105,23 @@ class _AiPageState extends ConsumerState<AiPage> {
           children: [
             if (!state.composerEnabled || state.lastError != null)
               _ErrorBanner(
-                message: state.composerDisabledReason ??
+                message:
+                    state.composerDisabledReason ??
                     state.lastError ??
                     _text(context, zh: 'AI 服务异常', en: 'AI service error'),
                 onOpenSettings: () => context.go(AppRoutePaths.settingsAi),
-                onRetry: ref.read(aiHeaderViewModelProvider.notifier).retryEnableComposer,
+                onRetry: ref
+                    .read(aiHeaderViewModelProvider.notifier)
+                    .retryEnableComposer,
               ),
             Expanded(
               child: _ConversationTimeline(
                 session: session,
                 pendingDraft: state.pendingDraft,
                 streamingContent: state.streamingContent,
-                onOpenDraft: ref.read(aiHeaderViewModelProvider.notifier).requestOpenDraftEditor,
+                onOpenDraft: ref
+                    .read(aiHeaderViewModelProvider.notifier)
+                    .requestOpenDraftEditor,
               ),
             ),
             const Divider(height: 1),
@@ -125,7 +130,9 @@ class _AiPageState extends ConsumerState<AiPage> {
               focusNode: _inputFocusNode,
               canSend: state.canSend,
               isBusy: state.isBusy,
-              onChanged: ref.read(aiHeaderViewModelProvider.notifier).updateInput,
+              onChanged: ref
+                  .read(aiHeaderViewModelProvider.notifier)
+                  .updateInput,
               onSend: ref.read(aiHeaderViewModelProvider.notifier).sendMessage,
             ),
           ],
@@ -156,9 +163,7 @@ class _AiPageState extends ConsumerState<AiPage> {
     final notifier = ref.read(aiHeaderViewModelProvider.notifier);
     notifier.consumeDraftNavigationRequest();
     final result = await context.openItemEditorFlow<bool>(
-      extra: ItemEditorArgs(
-        prefill: _draftToPrefill(draft),
-      ),
+      extra: ItemEditorArgs(prefill: _draftToPrefill(draft)),
     );
     if (!mounted) {
       return;
@@ -183,7 +188,7 @@ class _AiPageState extends ConsumerState<AiPage> {
       deadline: itemDraft.deadline,
       targetDate: itemDraft.targetDate,
       estimatedDuration: itemDraft.estimatedDuration,
-	    );
+    );
   }
 
   @override
@@ -218,8 +223,43 @@ class _AiPageState extends ConsumerState<AiPage> {
     );
   }
 
-  static String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+  static String _text(
+    BuildContext context, {
+    required String zh,
+    required String en,
+  }) {
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
+  }
+
+  Future<bool> _confirmClearSessions(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(_text(context, zh: '清空对话历史', en: 'Clear conversations')),
+          content: Text(
+            _text(
+              context,
+              zh: '所有本地 AI 对话记录将被清空。',
+              en: 'All local AI conversations will be cleared.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(_text(context, zh: '取消', en: 'Cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(_text(context, zh: '清空', en: 'Clear')),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 }
 
@@ -285,7 +325,8 @@ class _ConversationTimelineState extends State<_ConversationTimeline> {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is UserScrollNotification) {
-          final isAtBottom = _scrollController.hasClients &&
+          final isAtBottom =
+              _scrollController.hasClients &&
               _scrollController.position.pixels >=
                   _scrollController.position.maxScrollExtent - 20;
           _autoScroll = isAtBottom;
@@ -310,7 +351,9 @@ class _ConversationTimelineState extends State<_ConversationTimeline> {
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
   }
 }
 
@@ -349,9 +392,7 @@ class _StreamingMessage extends StatelessWidget {
 }
 
 class _MessageLine extends StatefulWidget {
-  const _MessageLine({
-    required this.message,
-  });
+  const _MessageLine({required this.message});
 
   final AiChatMessage message;
 
@@ -372,11 +413,16 @@ class _MessageLineState extends State<_MessageLine> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: Column(
-            crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: isUser
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
               if (isUser)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(18),
@@ -384,9 +430,9 @@ class _MessageLineState extends State<_MessageLine> {
                   child: Text(
                     widget.message.content,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.5,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
                 )
               else
@@ -434,7 +480,9 @@ class _MarkdownContent extends StatelessWidget {
         ),
         listBullet: theme.textTheme.bodyLarge,
         horizontalRuleDecoration: BoxDecoration(
-          border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+          border: Border(
+            top: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
         ),
       ),
     );
@@ -470,16 +518,16 @@ class _DraftEntryLine extends StatelessWidget {
           children: [
             Text(
               _text(context, zh: '草稿已生成：$title', en: 'Draft ready: $title'),
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 2),
             Text(
               timeLabel,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 4),
             ui.GhostButton(
@@ -493,7 +541,9 @@ class _DraftEntryLine extends StatelessWidget {
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
   }
 }
 
@@ -555,7 +605,9 @@ class _ComposerBar extends StatelessWidget {
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
   }
 }
 
@@ -565,7 +617,7 @@ class AiSessionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(aiSessionsProvider);
-    final activeSessionId = ref.watch(aiChatRepositoryProvider).activeSessionId;
+    final activeSessionId = ref.watch(aiActiveSessionProvider)?.id;
 
     return ui.Scaffold(
       headers: [
@@ -574,11 +626,14 @@ class AiSessionsPage extends ConsumerWidget {
           title: _text(context, zh: '对话列表', en: 'Conversations'),
           trailing: [
             ui.Tooltip(
-              tooltip: (context) => Text(_text(context, zh: '新对话', en: 'New chat')),
+              tooltip: (context) =>
+                  Text(_text(context, zh: '新对话', en: 'New chat')),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.add),
                 onPressed: () async {
-                  await ref.read(aiHeaderViewModelProvider.notifier).createSession();
+                  await ref
+                      .read(aiHeaderViewModelProvider.notifier)
+                      .createSession();
                   if (context.mounted) {
                     context.pop();
                   }
@@ -593,12 +648,15 @@ class AiSessionsPage extends ConsumerWidget {
         child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           itemCount: sessions.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final session = sessions[index];
             final selected = session.id == activeSessionId;
             return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 6,
+              ),
               leading: Icon(
                 selected ? AppIcons.selected : AppIcons.aiOutlined,
                 color: selected ? Theme.of(context).colorScheme.primary : null,
@@ -613,7 +671,42 @@ class AiSessionsPage extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              trailing: const Icon(AppIcons.drillIn, size: 18),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ui.Tooltip(
+                    tooltip: (context) =>
+                        Text(_text(context, zh: '重命名', en: 'Rename')),
+                    child: ui.IconButton.ghost(
+                      icon: const Icon(AppIcons.edit, size: 18),
+                      onPressed: () async {
+                        final title = await _promptRenameSession(
+                          context,
+                          session,
+                        );
+                        if (title == null) {
+                          return;
+                        }
+                        await ref
+                            .read(aiHeaderViewModelProvider.notifier)
+                            .renameSession(session.id, title);
+                      },
+                    ),
+                  ),
+                  ui.Tooltip(
+                    tooltip: (context) =>
+                        Text(_text(context, zh: '删除', en: 'Delete')),
+                    child: ui.IconButton.ghost(
+                      icon: const Icon(AppIcons.delete, size: 18),
+                      onPressed: () async {
+                        await ref
+                            .read(aiHeaderViewModelProvider.notifier)
+                            .deleteSession(session.id);
+                      },
+                    ),
+                  ),
+                ],
+              ),
               onTap: () async {
                 await ref
                     .read(aiHeaderViewModelProvider.notifier)
@@ -630,8 +723,13 @@ class AiSessionsPage extends ConsumerWidget {
   }
 
   String _sessionTitle(BuildContext context, AiChatSession session) {
+    final customTitle = session.title?.trim();
+    if (customTitle != null && customTitle.isNotEmpty) {
+      return customTitle;
+    }
     for (final message in session.messages) {
-      if (message.role == AiChatRole.user && message.content.trim().isNotEmpty) {
+      if (message.role == AiChatRole.user &&
+          message.content.trim().isNotEmpty) {
         final content = message.content.trim();
         return content.length > 28 ? '${content.substring(0, 28)}...' : content;
       }
@@ -650,7 +748,48 @@ class AiSessionsPage extends ConsumerWidget {
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
+  }
+
+  Future<String?> _promptRenameSession(
+    BuildContext context,
+    AiChatSession session,
+  ) async {
+    final controller = TextEditingController(
+      text: session.title ?? _sessionTitle(context, session),
+    );
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(_text(context, zh: '重命名对话', en: 'Rename conversation')),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 48,
+            decoration: InputDecoration(
+              labelText: _text(context, zh: '标题', en: 'Title'),
+            ),
+            onSubmitted: (value) => Navigator.of(context).pop(value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(_text(context, zh: '取消', en: 'Cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: Text(_text(context, zh: '保存', en: 'Save')),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    final trimmed = result?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }
 
@@ -670,16 +809,15 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.55),
+      color: Theme.of(
+        context,
+      ).colorScheme.errorContainer.withValues(alpha: 0.55),
       child: Wrap(
         spacing: 10,
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(
-            message,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(message, style: Theme.of(context).textTheme.bodySmall),
           ui.GhostButton(
             onPressed: onOpenSettings,
             child: Text(_text(context, zh: 'AI 设置', en: 'AI Settings')),
@@ -694,6 +832,8 @@ class _ErrorBanner extends StatelessWidget {
   }
 
   String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh') ? zh : en;
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
   }
 }

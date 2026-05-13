@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app_bootstrap.dart';
+import 'package:luotopia/features/pages/ai/data/ai_chat_session_storage_mapper.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_action_models.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
 import 'package:luotopia/features/pages/ai/domain/models/ai_stream_event.dart';
@@ -24,18 +25,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 final aiChatBootstrapSessionStoreProvider = Provider<AiChatSessionStore>((ref) {
-  final now = DateTime.now();
-  return AiChatSessionStore(
-    sessions: [
-      AiChatSession(
-        id: 'session_initial',
-        createdAt: now,
-        updatedAt: now,
-        messages: const [],
-      ),
-    ],
-    activeSessionId: 'session_initial',
-  );
+  return AiChatSessionStorageMapper.emptyStore();
 });
 
 class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
@@ -78,6 +68,63 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
   }
 
   @override
+  Future<void> renameSession(String sessionId, String title) async {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      return;
+    }
+    var changed = false;
+    final sessions = [
+      for (final session in state.sessions)
+        if (session.id == sessionId)
+          () {
+            changed = true;
+            return session.copyWith(
+              title: normalizedTitle,
+              updatedAt: DateTime.now(),
+            );
+          }()
+        else
+          session,
+    ]..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    if (!changed) {
+      return;
+    }
+    state = AiChatSessionStore(
+      sessions: sessions,
+      activeSessionId: state.resolvedActiveSessionId ?? sessions.first.id,
+    );
+    await _persist();
+  }
+
+  @override
+  Future<void> deleteSession(String sessionId) async {
+    final remaining = [
+      for (final session in state.sessions)
+        if (session.id != sessionId) session,
+    ];
+    if (remaining.length == state.sessions.length) {
+      return;
+    }
+    if (remaining.isEmpty) {
+      state = AiChatSessionStorageMapper.emptyStore();
+      await _persist();
+      return;
+    }
+    final activeId = state.activeSessionId == sessionId
+        ? remaining.first.id
+        : (state.resolvedActiveSessionId ?? remaining.first.id);
+    state = AiChatSessionStore(sessions: remaining, activeSessionId: activeId);
+    await _persist();
+  }
+
+  @override
+  Future<void> clearSessions() async {
+    state = AiChatSessionStorageMapper.emptyStore();
+    await _persist();
+  }
+
+  @override
   Future<void> appendToActiveSession(AiChatMessage message) async {
     final active = state.activeSession ?? await createSession();
     final updatedMessage = message.sessionId == active.id
@@ -100,19 +147,14 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
       for (final session in state.sessions)
         if (session.id != active.id) session,
     ]..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
-    state = AiChatSessionStore(
-      sessions: sessions,
-      activeSessionId: active.id,
-    );
+    state = AiChatSessionStore(sessions: sessions, activeSessionId: active.id);
     await _persist();
   }
 
   Future<void> _persist() async {
     await _prefs?.setString(
       AppBootstrapStorageKeys.aiSessions,
-      jsonEncode([
-        for (final session in state.sessions) _sessionToJson(session),
-      ]),
+      AiChatSessionStorageMapper.encodeSessions(state.sessions),
     );
     await _persistActiveSessionId();
   }
@@ -124,45 +166,12 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
     );
   }
 
-  Map<String, dynamic> _sessionToJson(AiChatSession session) {
-    return {
-      'id': session.id,
-      'createdAt': session.createdAt.toIso8601String(),
-      'updatedAt': session.updatedAt.toIso8601String(),
-      'messages': [
-        for (final message in session.messages) _messageToJson(message),
-      ],
-    };
-  }
-
-  Map<String, dynamic> _messageToJson(AiChatMessage item) {
-    return {
-      'id': item.id,
-      'sessionId': item.sessionId,
-      'content': item.content,
-      'createdAt': item.createdAt.toIso8601String(),
-      'role': item.role.name,
-      'kind': item.kind.name,
-      'citations': [
-        for (final citation in item.citations)
-          {
-            'itemId': citation.itemId,
-            'title': citation.title,
-            'type': citation.type.name,
-            'startAt': citation.startAt?.toIso8601String(),
-            'endAt': citation.endAt?.toIso8601String(),
-            'reason': citation.reason,
-          },
-      ],
-    };
-  }
-
   SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);
 }
 
 class OpenAiConfigurationException extends AiServiceException {
   const OpenAiConfigurationException(String message)
-      : super(code: AiServiceErrorCode.configuration, message: message);
+    : super(code: AiServiceErrorCode.configuration, message: message);
 }
 
 class OpenAiCompatibleAiService implements AiService {
@@ -191,14 +200,13 @@ class OpenAiCompatibleAiService implements AiService {
               items: items,
             ),
           },
-          ...history.map((m) => {
-                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
-                'content': m.content,
-              }),
-          {
-            'role': 'user',
-            'content': message,
-          },
+          ...history.map(
+            (m) => {
+              'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+              'content': m.content,
+            },
+          ),
+          {'role': 'user', 'content': message},
         ],
       );
 
@@ -277,18 +285,19 @@ class OpenAiCompatibleAiService implements AiService {
               items: items,
             ),
           },
-          ...history.map((m) => {
-                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
-                'content': m.content,
-              }),
-          {
-            'role': 'user',
-            'content': message,
-          },
+          ...history.map(
+            (m) => {
+              'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+              'content': m.content,
+            },
+          ),
+          {'role': 'user', 'content': message},
         ],
       });
 
-      final response = await client.send(request).timeout(const Duration(seconds: 120));
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: 120));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final errorBody = await response.stream.bytesToString();
@@ -299,8 +308,9 @@ class OpenAiCompatibleAiService implements AiService {
           errorJson = <String, dynamic>{};
         }
         final errorMessage = (errorJson['error'] is Map<String, dynamic>)
-            ? (((errorJson['error'] as Map<String, dynamic>)['message'] as String?) ??
-                '请求失败')
+            ? (((errorJson['error'] as Map<String, dynamic>)['message']
+                      as String?) ??
+                  '请求失败')
             : ((errorJson['message'] as String?) ?? '请求失败');
         throw AiServiceException(
           code: AiServiceErrorCode.network,
@@ -332,7 +342,8 @@ class OpenAiCompatibleAiService implements AiService {
           if (delta == null) {
             continue;
           }
-          final deltaContent = (delta['delta'] as Map<String, dynamic>?)?['content'] as String?;
+          final deltaContent =
+              (delta['delta'] as Map<String, dynamic>?)?['content'] as String?;
           if (deltaContent == null || deltaContent.isEmpty) {
             continue;
           }
@@ -354,7 +365,9 @@ class OpenAiCompatibleAiService implements AiService {
       // 解析 <data> 标签中的 JSON payload
       final reply = _extractReplyFromStream(full);
       final payload = _extractJsonFromStreamData(full);
-      final intent = payload != null ? _parseIntent(payload['intent'] as String?) : AiResolvedIntentType.fallback;
+      final intent = payload != null
+          ? _parseIntent(payload['intent'] as String?)
+          : AiResolvedIntentType.fallback;
       final citations = _parseCitations(
         payload?['citations'] as List<dynamic>?,
         items: items,
@@ -404,7 +417,10 @@ class OpenAiCompatibleAiService implements AiService {
   }
 
   Map<String, dynamic>? _extractJsonFromStreamData(String fullContent) {
-    final dataMatch = RegExp(r'<data>\s*([\s\S]*?)\s*</data>', caseSensitive: false).firstMatch(fullContent);
+    final dataMatch = RegExp(
+      r'<data>\s*([\s\S]*?)\s*</data>',
+      caseSensitive: false,
+    ).firstMatch(fullContent);
     if (dataMatch == null) {
       return null;
     }
@@ -424,16 +440,11 @@ class OpenAiCompatibleAiService implements AiService {
   }
 
   @override
-  Future<void> validateConnection({
-    required AiSettings settings,
-  }) async {
+  Future<void> validateConnection({required AiSettings settings}) async {
     await _postChatCompletion(
       settings: settings,
       messages: const [
-        {
-          'role': 'user',
-          'content': 'Ping',
-        },
+        {'role': 'user', 'content': 'Ping'},
       ],
       maxTokens: 1,
     );
@@ -463,7 +474,7 @@ class OpenAiCompatibleAiService implements AiService {
             'model': settings.model.trim(),
             'messages': messages,
             'enable_thinking': false,
-            if (maxTokens != null) 'max_tokens': maxTokens,
+            ...?(maxTokens == null ? null : {'max_tokens': maxTokens}),
           }),
         )
         .timeout(const Duration(seconds: 60));
@@ -481,7 +492,7 @@ class OpenAiCompatibleAiService implements AiService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = (body['error'] is Map<String, dynamic>)
           ? (((body['error'] as Map<String, dynamic>)['message'] as String?) ??
-              '请求失败')
+                '请求失败')
           : ((body['message'] as String?) ?? '请求失败');
       throw AiServiceException(
         code: AiServiceErrorCode.network,
@@ -498,7 +509,9 @@ class OpenAiCompatibleAiService implements AiService {
         ? parsed.path.substring(0, parsed.path.length - 1)
         : parsed.path;
     final hasEndpoint = normalizedPath.endsWith('/chat/completions');
-    final path = hasEndpoint ? normalizedPath : '$normalizedPath/chat/completions';
+    final path = hasEndpoint
+        ? normalizedPath
+        : '$normalizedPath/chat/completions';
     return parsed.replace(path: path);
   }
 
@@ -593,8 +606,8 @@ class OpenAiCompatibleAiService implements AiService {
                 'endAt': item.endAt.toIso8601String(),
                 'deadline': item.deadline?.toIso8601String(),
                 'targetDate': item.targetDate.toIso8601String(),
-	              },
-	          ]);
+              },
+          ]);
 
     return '''
 ${basePrompt.trim()}
@@ -644,7 +657,10 @@ ${basePrompt.trim()}
   }
 
   Map<String, dynamic> _extractJsonPayload(String raw) {
-    final fenced = RegExp(r'```json\s*([\s\S]*?)```', caseSensitive: false).firstMatch(raw);
+    final fenced = RegExp(
+      r'```json\s*([\s\S]*?)```',
+      caseSensitive: false,
+    ).firstMatch(raw);
     final candidate = fenced?.group(1)?.trim() ?? raw.trim();
     final firstBrace = candidate.indexOf('{');
     final lastBrace = candidate.lastIndexOf('}');
@@ -673,20 +689,29 @@ ${basePrompt.trim()}
     required List<AgendaItem> items,
   }) {
     final map = createMap ?? const <String, dynamic>{};
-    final type = _itemTypeFromString(map['type'] as String?) ?? ItemType.schedule;
+    final type =
+        _itemTypeFromString(map['type'] as String?) ?? ItemType.schedule;
     final title = (map['title'] as String? ?? '').trim();
     final details = (map['details'] as String? ?? '').trim();
     final location = (map['location'] as String? ?? '').trim();
-    final startAt = DateTime.tryParse((map['start_at'] as String? ?? '').trim());
+    final startAt = DateTime.tryParse(
+      (map['start_at'] as String? ?? '').trim(),
+    );
     final endAt = DateTime.tryParse((map['end_at'] as String? ?? '').trim());
-    final deadline = DateTime.tryParse((map['deadline'] as String? ?? '').trim());
-    final targetDate = DateTime.tryParse((map['target_date'] as String? ?? '').trim());
+    final deadline = DateTime.tryParse(
+      (map['deadline'] as String? ?? '').trim(),
+    );
+    final targetDate = DateTime.tryParse(
+      (map['target_date'] as String? ?? '').trim(),
+    );
     final estimatedMinutes = (map['estimated_minutes'] as num?)?.toInt();
     final isImportant = map['is_important'] as bool? ?? false;
 
     final normalizedStart = startAt ?? _roundToHalfHour(now);
-    final normalizedEnd = (endAt ?? normalizedStart.add(const Duration(hours: 1)))
-        .isAfter(normalizedStart)
+    final normalizedEnd =
+        (endAt ?? normalizedStart.add(const Duration(hours: 1))).isAfter(
+          normalizedStart,
+        )
         ? (endAt ?? normalizedStart.add(const Duration(hours: 1)))
         : normalizedStart.add(const Duration(hours: 1));
     final normalizedTargetDate = DateTime(
@@ -727,8 +752,11 @@ ${basePrompt.trim()}
 
     final missingRequired = <String>[
       if (title.isEmpty) 'title',
-      if ((type == ItemType.schedule || type == ItemType.task) && startAt == null) 'start_at',
-      if ((type == ItemType.schedule || type == ItemType.task) && endAt == null) 'end_at',
+      if ((type == ItemType.schedule || type == ItemType.task) &&
+          startAt == null)
+        'start_at',
+      if ((type == ItemType.schedule || type == ItemType.task) && endAt == null)
+        'end_at',
       if (type == ItemType.memo && targetDate == null) 'target_date',
     ];
 
@@ -772,9 +800,7 @@ ${basePrompt.trim()}
       return const [];
     }
 
-    final byId = {
-      for (final item in items) item.id: item,
-    };
+    final byId = {for (final item in items) item.id: item};
     final citations = <AiCitation>[];
     for (final row in raw) {
       if (row is! Map<String, dynamic>) {
@@ -824,8 +850,8 @@ ${basePrompt.trim()}
 
 final aiChatRepositoryProvider =
     NotifierProvider<InMemoryAiChatRepository, AiChatSessionStore>(
-  InMemoryAiChatRepository.new,
-);
+      InMemoryAiChatRepository.new,
+    );
 
 final aiChatRepositoryNotifierProvider = Provider<AiChatRepository>((ref) {
   return ref.read(aiChatRepositoryProvider.notifier);
