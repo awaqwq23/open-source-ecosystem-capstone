@@ -757,39 +757,71 @@ class AiSessionsPage extends ConsumerWidget {
     BuildContext context,
     AiChatSession session,
   ) async {
-    final controller = TextEditingController(
-      text: session.title ?? _sessionTitle(context, session),
-    );
     final result = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(_text(context, zh: '重命名对话', en: 'Rename conversation')),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 48,
-            decoration: InputDecoration(
-              labelText: _text(context, zh: '标题', en: 'Title'),
-            ),
-            onSubmitted: (value) => Navigator.of(context).pop(value),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(_text(context, zh: '取消', en: 'Cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: Text(_text(context, zh: '保存', en: 'Save')),
-            ),
-          ],
-        );
-      },
+      builder: (context) => _RenameSessionDialog(
+        initialTitle: session.title ?? _sessionTitle(context, session),
+      ),
     );
-    controller.dispose();
     final trimmed = result?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+}
+
+class _RenameSessionDialog extends StatefulWidget {
+  const _RenameSessionDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameSessionDialog> createState() => _RenameSessionDialogState();
+}
+
+class _RenameSessionDialogState extends State<_RenameSessionDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_text(context, zh: '重命名对话', en: 'Rename conversation')),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: 48,
+        decoration: InputDecoration(
+          labelText: _text(context, zh: '标题', en: 'Title'),
+        ),
+        onSubmitted: (value) => Navigator.of(context).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(_text(context, zh: '取消', en: 'Cancel')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: Text(_text(context, zh: '保存', en: 'Save')),
+        ),
+      ],
+    );
+  }
+
+  String _text(BuildContext context, {required String zh, required String en}) {
+    return Localizations.localeOf(context).languageCode.startsWith('zh')
+        ? zh
+        : en;
   }
 }
 
