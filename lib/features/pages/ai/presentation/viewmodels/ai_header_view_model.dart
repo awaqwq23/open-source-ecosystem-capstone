@@ -62,7 +62,9 @@ class AiHeaderState {
     return AiHeaderState(
       input: input ?? this.input,
       phase: phase ?? this.phase,
-      pendingDraft: clearPendingDraft ? null : (pendingDraft ?? this.pendingDraft),
+      pendingDraft: clearPendingDraft
+          ? null
+          : (pendingDraft ?? this.pendingDraft),
       pendingDraftNavigationId: clearPendingDraftNavigation
           ? null
           : (pendingDraftNavigationId ?? this.pendingDraftNavigationId),
@@ -71,7 +73,9 @@ class AiHeaderState {
       composerDisabledReason: clearComposerDisabledReason
           ? null
           : (composerDisabledReason ?? this.composerDisabledReason),
-      streamingContent: clearStreamingContent ? null : (streamingContent ?? this.streamingContent),
+      streamingContent: clearStreamingContent
+          ? null
+          : (streamingContent ?? this.streamingContent),
     );
   }
 }
@@ -100,7 +104,8 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       return;
     }
     if (!settings.isConfigured &&
-        (state.composerEnabled || state.composerDisabledReason != '请先在设置中完成 AI 配置。')) {
+        (state.composerEnabled ||
+            state.composerDisabledReason != '请先在设置中完成 AI 配置。')) {
       state = state.copyWith(
         composerEnabled: false,
         composerDisabledReason: '请先在设置中完成 AI 配置。',
@@ -130,13 +135,43 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
   }
 
+  Future<void> renameSession(String sessionId, String title) async {
+    await ref
+        .read(aiChatRepositoryNotifierProvider)
+        .renameSession(sessionId, title);
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    await ref.read(aiChatRepositoryNotifierProvider).deleteSession(sessionId);
+    state = state.copyWith(
+      input: '',
+      phase: AiWorkflowPhase.idle,
+      clearPendingDraft: true,
+      clearPendingDraftNavigation: true,
+      clearError: true,
+    );
+  }
+
+  Future<void> clearSessions() async {
+    await ref.read(aiChatRepositoryNotifierProvider).clearSessions();
+    state = state.copyWith(
+      input: '',
+      phase: AiWorkflowPhase.idle,
+      clearPendingDraft: true,
+      clearPendingDraftNavigation: true,
+      clearError: true,
+    );
+  }
+
   void retryEnableComposer() {
     final settings = ref.read(appAiSettingsProvider);
     state = state.copyWith(
       composerEnabled: settings.isConfigured,
       composerDisabledReason: settings.isConfigured ? null : '请先在设置中完成 AI 配置。',
       clearError: true,
-      phase: state.pendingDraft == null ? AiWorkflowPhase.idle : AiWorkflowPhase.awaitingConfirm,
+      phase: state.pendingDraft == null
+          ? AiWorkflowPhase.idle
+          : AiWorkflowPhase.awaitingConfirm,
     );
   }
 
@@ -155,7 +190,8 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     final service = ref.read(aiServiceProvider);
     final now = DateTime.now();
     final messageId = 'user_${now.microsecondsSinceEpoch}';
-    final sessionId = repository.getActiveSession()?.id ??
+    final sessionId =
+        repository.getActiveSession()?.id ??
         (await repository.createSession()).id;
 
     // 添加用户消息
@@ -181,10 +217,8 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
       final items = ref.read(agendaItemRepositoryProvider);
       final session = repository.getActiveSession();
       // 传入所有历史消息（不含刚追加的当前消息），让 AI 拥有完整上下文
-      final history = session?.messages
-              .where((m) => m.id != messageId)
-              .toList() ??
-          [];
+      final history =
+          session?.messages.where((m) => m.id != messageId).toList() ?? [];
       final stream = service.streamMessage(
         message: content,
         items: items,
@@ -205,6 +239,11 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
         }
       }
     } on OpenAiConfigurationException catch (error) {
+      await _appendAssistantMessage(
+        content: error.message,
+        kind: AiMessageKind.system,
+        sessionId: sessionId,
+      );
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
         streamingContent: null,
@@ -214,17 +253,30 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
         lastError: error.message,
       );
     } on AiServiceException catch (error) {
-      final shouldDisableComposer = error.code == AiServiceErrorCode.network ||
+      final shouldDisableComposer =
+          error.code == AiServiceErrorCode.network ||
           error.code == AiServiceErrorCode.configuration;
+      await _appendAssistantMessage(
+        content: error.message,
+        kind: AiMessageKind.system,
+        sessionId: sessionId,
+      );
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
         clearStreamingContent: true,
         composerEnabled: !shouldDisableComposer,
-        composerDisabledReason: shouldDisableComposer ? 'AI 服务暂不可用，请先修复配置或网络。' : null,
+        composerDisabledReason: shouldDisableComposer
+            ? 'AI 服务暂不可用，请先修复配置或网络。'
+            : null,
         clearComposerDisabledReason: !shouldDisableComposer,
         lastError: error.message,
       );
     } catch (_) {
+      await _appendAssistantMessage(
+        content: 'AI 服务暂不可用，请稍后重试。',
+        kind: AiMessageKind.system,
+        sessionId: sessionId,
+      );
       state = state.copyWith(
         phase: AiWorkflowPhase.failed,
         clearStreamingContent: true,
@@ -331,9 +383,7 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
   }
 
-  Future<void> onDraftEditorClosed({
-    required bool created,
-  }) async {
+  Future<void> onDraftEditorClosed({required bool created}) async {
     final draft = state.pendingDraft;
     if (created && draft != null) {
       await _appendAssistantMessage(
@@ -384,9 +434,7 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
 }
 
 final aiHeaderViewModelProvider =
-    NotifierProvider<AiHeaderViewModel, AiHeaderState>(
-  AiHeaderViewModel.new,
-);
+    NotifierProvider<AiHeaderViewModel, AiHeaderState>(AiHeaderViewModel.new);
 
 final aiActiveSessionProvider = Provider<AiChatSession?>((ref) {
   return ref.watch(aiChatRepositoryProvider).activeSession;

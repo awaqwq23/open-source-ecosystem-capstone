@@ -20,16 +20,9 @@ class AiChatMessage {
   final List<AiCitation> citations;
 }
 
-enum AiChatRole {
-  user,
-  assistant,
-}
+enum AiChatRole { user, assistant }
 
-enum AiMessageKind {
-  chat,
-  answer,
-  system,
-}
+enum AiMessageKind { chat, answer, system }
 
 class AiCitation {
   const AiCitation({
@@ -55,12 +48,14 @@ class AiChatSession {
     required this.createdAt,
     required this.updatedAt,
     required this.messages,
+    this.title,
   });
 
   final String id;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<AiChatMessage> messages;
+  final String? title;
 
   bool get isEmpty => messages.isEmpty;
 
@@ -68,12 +63,15 @@ class AiChatSession {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<AiChatMessage>? messages,
+    String? title,
+    bool clearTitle = false,
   }) {
     return AiChatSession(
       id: id,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       messages: messages ?? this.messages,
+      title: clearTitle ? null : (title ?? this.title),
     );
   }
 }
@@ -95,6 +93,8 @@ class AiChatSessionStore {
     }
     return sessions.isEmpty ? null : sessions.first;
   }
+
+  String? get resolvedActiveSessionId => activeSession?.id;
 
   AiChatSessionStore copyWith({
     List<AiChatSession>? sessions,

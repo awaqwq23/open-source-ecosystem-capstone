@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/features/pages/ai/data/ai_chat_session_storage_mapper.dart';
+import 'package:luotopia/features/pages/ai/domain/models/ai_conversation_models.dart';
 import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
@@ -21,6 +23,7 @@ class AppBootstrapData {
     required this.aiSettings,
     required this.widgetSettings,
     required this.navigationSettings,
+    required this.aiChatSessionStore,
     required this.agendaItems,
     required this.courseTimetableStore,
   });
@@ -31,6 +34,7 @@ class AppBootstrapData {
   final AiSettings aiSettings;
   final WidgetSettings widgetSettings;
   final NavigationSettings navigationSettings;
+  final AiChatSessionStore aiChatSessionStore;
   final List<AgendaItem> agendaItems;
   final CourseTimetableStore courseTimetableStore;
 }
@@ -61,6 +65,7 @@ class AppBootstrapLoader {
       aiSettings: _readAiSettings(preferences),
       widgetSettings: _readWidgetSettings(preferences),
       navigationSettings: _readNavigationSettings(preferences),
+      aiChatSessionStore: _readAiChatSessionStore(preferences),
       agendaItems: _readAgendaItems(preferences),
       courseTimetableStore: _readCourseTimetableStore(preferences),
     );
@@ -108,8 +113,10 @@ class AppBootstrapLoader {
           'courseGrid' => HomeGridMode.courseGrid,
           _ => HomeGridMode.timeGrid,
         },
-        itemOpacityPercent:
-            ((json['itemOpacityPercent'] as int? ?? 100).clamp(0, 100) as int),
+        itemOpacityPercent: (json['itemOpacityPercent'] as int? ?? 100).clamp(
+          0,
+          100,
+        ),
       );
     } catch (_) {
       return const HomeSettings.defaults();
@@ -139,8 +146,12 @@ class AppBootstrapLoader {
     }
   }
 
-  static NavigationSettings _readNavigationSettings(SharedPreferences preferences) {
-    final raw = preferences.getString(AppBootstrapStorageKeys.navigationSettings);
+  static NavigationSettings _readNavigationSettings(
+    SharedPreferences preferences,
+  ) {
+    final raw = preferences.getString(
+      AppBootstrapStorageKeys.navigationSettings,
+    );
     if (raw == null || raw.isEmpty) {
       return const NavigationSettings.defaults();
     }
@@ -176,6 +187,17 @@ class AppBootstrapLoader {
     }
   }
 
+  static AiChatSessionStore _readAiChatSessionStore(
+    SharedPreferences preferences,
+  ) {
+    return AiChatSessionStorageMapper.fromStorage(
+      sessionsRaw: preferences.getString(AppBootstrapStorageKeys.aiSessions),
+      activeSessionId: preferences.getString(
+        AppBootstrapStorageKeys.activeAiSessionId,
+      ),
+    );
+  }
+
   static List<AgendaItem> _readAgendaItems(SharedPreferences preferences) {
     final raw = preferences.getString(AppBootstrapStorageKeys.agendaItems);
     if (raw == null || raw.isEmpty) {
@@ -194,9 +216,13 @@ class AppBootstrapLoader {
     }
   }
 
-  static CourseTimetableStore _readCourseTimetableStore(SharedPreferences preferences) {
+  static CourseTimetableStore _readCourseTimetableStore(
+    SharedPreferences preferences,
+  ) {
     final raw = preferences.getString(AppBootstrapStorageKeys.courseTimetables);
-    final rawSelected = preferences.getString(AppBootstrapStorageKeys.activeCourseTimetableId);
+    final rawSelected = preferences.getString(
+      AppBootstrapStorageKeys.activeCourseTimetableId,
+    );
     if (raw == null || raw.isEmpty) {
       return const CourseTimetableStore(timetables: []);
     }
@@ -236,5 +262,4 @@ class AppBootstrapLoader {
       return const CourseTimetableStore(timetables: []);
     }
   }
-
 }
