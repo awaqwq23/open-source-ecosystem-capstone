@@ -163,6 +163,10 @@ class AiHeaderViewModel extends Notifier<AiHeaderState> {
     );
   }
 
+  Future<void> removeEmptySessions() async {
+    await ref.read(aiChatRepositoryNotifierProvider).removeEmptySessions();
+  }
+
   void retryEnableComposer() {
     final settings = ref.read(appAiSettingsProvider);
     state = state.copyWith(

@@ -99,7 +99,7 @@ void main() {
       );
     });
 
-    test('clearing sessions creates a persisted empty session', () async {
+    test('clearing sessions keeps the active empty session visible', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final store = AiChatSessionStore(
@@ -117,14 +117,17 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(aiChatRepositoryNotifierProvider).clearSessions();
+      await container
+          .read(aiChatRepositoryNotifierProvider)
+          .removeEmptySessions();
 
       final next = container.read(aiChatRepositoryProvider);
       expect(next.sessions, hasLength(1));
       expect(next.activeSessionId, next.sessions.first.id);
       expect(next.sessions.first.messages, isEmpty);
       expect(
-        prefs.getString(AppBootstrapStorageKeys.activeAiSessionId),
-        next.sessions.first.id,
+        prefs.getString(AppBootstrapStorageKeys.aiSessions),
+        AiChatSessionStorageMapper.encodeSessions(next.sessions),
       );
     });
   });
