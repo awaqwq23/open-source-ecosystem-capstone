@@ -14,6 +14,7 @@ import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_timetable_page.dart';
+import 'package:luotopia/features/pages/campus/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/score_page.dart';
 import 'package:luotopia/features/pages/forum/presentation/pages/forum_page.dart';
 import 'package:luotopia/features/pages/ai/presentation/pages/ai_page.dart';
@@ -99,6 +100,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'timetable',
                     builder: (context, state) => const CampusTimetablePage(),
+                  ),
+                  GoRoute(
+                    path: 'luojia-ecard',
+                    builder: (context, state) => const LuojiaEcardWebViewPage(
+                      entry: LuojiaEcardEntry.card,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'ecard-payment-code',
+                    builder: (context, state) => const LuojiaEcardWebViewPage(
+                      entry: LuojiaEcardEntry.paymentCode,
+                    ),
                   ),
                 ],
               ),

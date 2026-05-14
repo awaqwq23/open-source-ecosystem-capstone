@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/storage/shared_preferences_provider.dart';
 import 'package:luotopia/features/whu_auth/data/whu_auth_storage.dart';
@@ -90,6 +92,27 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     return authorizeService(WhuCasService.educationService);
   }
 
+  @override
+  Future<void> primeCasCookiesForWebView() async {
+    if (!_hasCasSession(_casCookieHeader)) {
+      throw const WhuAuthException(
+        WhuAuthExceptionCode.loginRequired,
+        '请先登录武大统一认证。',
+      );
+    }
+    final cookies = buildWhuCasWebViewCookies(_casCookieHeader);
+    if (cookies.isEmpty) {
+      throw const WhuAuthException(
+        WhuAuthExceptionCode.loginRequired,
+        '请先登录武大统一认证。',
+      );
+    }
+    await _cookieManager.setCookies(
+      cookies,
+      origin: 'https://cas.whu.edu.cn',
+    );
+  }
+
   Future<void> logout() async {
     _casCookieHeader = '';
     await _storage.clear(ref.read(sharedPreferencesProvider));
@@ -140,4 +163,28 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   bool _hasCasSession(String cookieHeader) {
     return cookieHeader.contains('CASTGC=') && cookieHeader.contains('JSESSIONID=');
   }
+}
+
+List<Cookie> buildWhuCasWebViewCookies(String cookieHeader) {
+  final cookies = <Cookie>[];
+  for (final part in cookieHeader.split(';')) {
+    final trimmed = part.trim();
+    if (trimmed.isEmpty || !trimmed.contains('=')) {
+      continue;
+    }
+    final separator = trimmed.indexOf('=');
+    final name = trimmed.substring(0, separator).trim();
+    final value = trimmed.substring(separator + 1).trim();
+    if (name.isEmpty || value.isEmpty) {
+      continue;
+    }
+    cookies.add(
+      Cookie(name, value)
+        ..domain = 'cas.whu.edu.cn'
+        ..path = '/'
+        ..secure = true
+        ..httpOnly = true,
+    );
+  }
+  return cookies;
 }
