@@ -6,6 +6,8 @@ abstract class WhuServiceSession extends http.BaseClient {
 }
 
 abstract class WhuAuthGateway {
+  Future<void> ensureCasSessionFresh();
+
   Future<WhuServiceSession> authorizeService(WhuCasServiceRequest request);
 
   Future<WhuServiceSession> authorizeEducation();
