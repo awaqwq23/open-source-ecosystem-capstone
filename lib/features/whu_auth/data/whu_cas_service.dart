@@ -26,9 +26,10 @@ class WhuCasService {
     }
     final client = WhuAuthorizedClient(initialCookieHeader: casCookieHeader);
     try {
-      final loginUri = Uri.parse(
-        'https://cas.whu.edu.cn/authserver/login?service=${Uri.encodeComponent(request.serviceUrl.toString())}',
-      );
+      final loginUri = request.entryUrl ??
+          Uri.parse(
+            'https://cas.whu.edu.cn/authserver/login?service=${Uri.encodeComponent(request.serviceUrl.toString())}',
+          );
       final response = await client.get(loginUri);
       if (!request.isSuccess(response)) {
         final reason = request.parseFailure?.call(response);

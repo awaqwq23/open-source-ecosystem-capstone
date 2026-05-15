@@ -7,10 +7,12 @@ class WhuCasServiceRequest {
   const WhuCasServiceRequest({
     required this.serviceUrl,
     required this.isSuccess,
+    this.entryUrl,
     this.parseFailure,
   });
 
   final Uri serviceUrl;
+  final Uri? entryUrl;
   final WhuCasSuccessPredicate isSuccess;
   final WhuCasFailureParser? parseFailure;
 }

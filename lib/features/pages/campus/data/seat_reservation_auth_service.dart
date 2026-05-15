@@ -23,6 +23,10 @@ class SeatReservationAuthService {
       'https://seat.lib.whu.edu.cn/static/sso/login'
       '?redirectUrl=https%3A%2F%2Fseat.lib.whu.edu.cn%2Fseat',
     ),
+    entryUrl: Uri.parse(
+      'https://seat.lib.whu.edu.cn/static/sso/login'
+      '?redirectUrl=https%3A%2F%2Fseat.lib.whu.edu.cn%2Fseat',
+    ),
     isSuccess: _hasSeatToken,
     parseFailure: _parseSeatFailure,
   );
