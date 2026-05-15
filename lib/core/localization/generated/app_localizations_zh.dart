@@ -250,7 +250,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listTabMyDay => '我的一天';
 
   @override
-  String get listTabAllItems => '全部事项列表';
+  String get listTabAllItems => '全部事项';
 
   @override
   String get listTabTasks => '任务列表';

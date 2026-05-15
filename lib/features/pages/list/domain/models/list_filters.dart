@@ -1,8 +1,8 @@
 enum ListHeaderTab {
   myDay,
   allItems,
-  tasks,
   schedules,
+  tasks,
   memos,
 }
 
