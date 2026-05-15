@@ -227,9 +227,10 @@ Map<String, dynamic> _buildAgendaListPayload({
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
+  final dateLabel = zh ? '${today.month}月${today.day}日' : '${today.month}/${today.day}';
   final leftStatusLabel = leftItems.isEmpty
       ? (zh ? '今日无日程' : 'No schedule today')
-      : (zh ? '今日日程' : 'Today');
+      : dateLabel;
 
   final rightItems = items
       .where(_shouldShowInRightColumn)
@@ -275,7 +276,7 @@ Map<String, dynamic> _buildAgendaListPayload({
         ),
     ],
     'weekdayLabel': weekSubtitle,
-    'weekLabel': leftStatusLabel,
+    'weekLabel': dateLabel,
   };
 }
 

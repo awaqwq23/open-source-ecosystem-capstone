@@ -115,11 +115,12 @@ object WidgetSnapshotModelBuilder {
         val leftItems = snapshot.items
             .filter { shouldShowInLeftColumn(it, now, today) }
             .sortedWith(compareBy<WidgetSnapshotItem> { sortStart(it, today) }.thenBy { it.manualOrder })
+        val dateLabel = if (zh) "${month(today)}月${dayOfMonth(today)}日" else "${month(today)}/${dayOfMonth(today)}"
         val leftStatusLabel =
             if (leftItems.isEmpty()) {
                 if (zh) "今日无日程" else "No schedule today"
             } else {
-                if (zh) "今日日程" else "Today"
+                dateLabel
             }
 
         val rightItems = snapshot.items
@@ -139,7 +140,7 @@ object WidgetSnapshotModelBuilder {
             leftRows = leftItems.take(40).map { toAgendaRow(it, today, zh, includeDay = false, snapshot.settings.darkMode) },
             rightRows = rightItems.take(80).map { toAgendaRow(it, displayDay(it, today), zh, includeDay = true, snapshot.settings.darkMode) },
             weekdayLabel = weekSubtitle,
-            weekLabel = leftStatusLabel,
+            weekLabel = dateLabel,
         )
     }
 
