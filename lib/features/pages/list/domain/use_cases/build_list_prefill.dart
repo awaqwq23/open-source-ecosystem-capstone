@@ -11,7 +11,6 @@ class BuildListPrefillUseCase {
       ListHeaderTab.myDay => ItemEditorPrefill(
           startAt: today.add(const Duration(hours: 9)),
           endAt: today.add(const Duration(hours: 10)),
-          targetDate: today,
         ),
       ListHeaderTab.allItems => const ItemEditorPrefill(),
       ListHeaderTab.tasks => ItemEditorPrefill(
@@ -27,8 +26,6 @@ class BuildListPrefillUseCase {
         ),
       ListHeaderTab.memos => ItemEditorPrefill(
           type: ItemType.memo,
-          targetDate: today,
-          estimatedDuration: const Duration(hours: 1),
         ),
     };
   }

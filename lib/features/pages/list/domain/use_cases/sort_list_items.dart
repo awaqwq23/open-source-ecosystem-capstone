@@ -71,7 +71,7 @@ class SortListItemsUseCase {
 
   DateTime _primaryDateOf(AgendaItem item) {
     return switch (item.type) {
-      ItemType.memo => item.targetDate,
+      ItemType.memo => item.createdAt,
       ItemType.task => item.deadline ?? item.startAt,
       ItemType.schedule => item.startAt,
       ItemType.course => item.startAt,
@@ -80,7 +80,7 @@ class SortListItemsUseCase {
 
   DateTime? _dueDateOf(AgendaItem item) {
     return switch (item.type) {
-      ItemType.memo => item.targetDate,
+      ItemType.memo => null,
       ItemType.task => item.deadline ?? item.endAt,
       ItemType.schedule => item.startAt,
       ItemType.course => item.startAt,
@@ -89,8 +89,8 @@ class SortListItemsUseCase {
 
   int _todayFocusScore(AgendaItem item, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
-    final targetDate = _primaryDateOf(item);
-    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final focusDate = _primaryDateOf(item);
+    final target = DateTime(focusDate.year, focusDate.month, focusDate.day);
     final distance = target.difference(today).inDays.abs();
     return math.max(0, 100 - distance * 10);
   }

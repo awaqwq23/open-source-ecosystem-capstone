@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
@@ -25,7 +24,6 @@ class ItemEditorDefaults {
     );
     final start = prefill?.startAt ?? roundedStart;
     final end = prefill?.endAt ?? start.add(const Duration(hours: 1));
-    final targetDate = _dateOnly(prefill?.targetDate ?? start);
 
     return ItemDraft(
       type: prefill?.type ?? ItemType.schedule,
@@ -51,11 +49,9 @@ class ItemEditorDefaults {
           ),
         ),
         deadline: prefill?.deadline,
-      ),
-      memoDetails: ItemMemoDetails(
-        targetDate: targetDate,
         estimatedDuration: prefill?.estimatedDuration ?? Duration.zero,
       ),
+      memoDetails: const ItemMemoDetails(),
       courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
     );
   }
@@ -73,13 +69,8 @@ class ItemEditorDefaults {
       details: type == ItemType.course ? '' : draft.details,
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
-      targetDate: type == ItemType.memo ? _dateOnly(draft.targetDate) : draft.targetDate,
       estimatedDuration: draft.estimatedDuration,
     );
-  }
-
-  static DateTime _dateOnly(DateTime dateTime) {
-    return DateUtils.dateOnly(dateTime);
   }
 }
 

@@ -17,7 +17,6 @@ class ItemEditorPrefill {
     this.startAt,
     this.endAt,
     this.deadline,
-    this.targetDate,
     this.estimatedDuration,
     this.courseDetails,
   });
@@ -33,7 +32,6 @@ class ItemEditorPrefill {
   final DateTime? startAt;
   final DateTime? endAt;
   final DateTime? deadline;
-  final DateTime? targetDate;
   final Duration? estimatedDuration;
   final ItemCourseDetails? courseDetails;
 }

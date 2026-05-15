@@ -37,13 +37,10 @@ void main() {
       expect(errors.deadline, isNotNull);
     });
 
-    test('备忘预计时长大于零时通过校验', () {
-      final date = DateTime(2026, 3, 20);
+    test('备忘不需要时间属性时通过校验', () {
       final draft = ItemEditorDefaults.createDraft().copyWith(
         type: ItemType.memo,
         title: '备忘',
-        targetDate: date,
-        estimatedDuration: const Duration(minutes: 30),
       );
 
       final errors = ItemEditorValidator.validate(

@@ -88,7 +88,6 @@ class ItemDetailPage extends ConsumerWidget {
           startAt: item.startAt,
           endAt: item.endAt,
           deadline: item.deadline,
-          targetDate: item.targetDate,
           estimatedDuration: item.estimatedDuration,
           courseDetails: item.courseDetails,
         ),
@@ -205,10 +204,7 @@ class _ItemDetailContent extends ConsumerWidget {
     }
 
     // ── Time ──
-    if (item.type == ItemType.memo) {
-      addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.targetDate));
-      addRow(AppIcons.clock, '预计 ${_formatDuration(context, item.estimatedDuration)}');
-    } else if (item.isAllDay) {
+    if (item.isAllDay) {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));
     } else if (_isSameDay(item.startAt, item.endAt)) {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));

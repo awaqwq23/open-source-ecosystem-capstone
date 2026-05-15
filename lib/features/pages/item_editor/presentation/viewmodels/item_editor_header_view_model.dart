@@ -284,7 +284,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       state.draft.copyWith(
         startAt: start,
         endAt: end.isBefore(start) ? start : end,
-        targetDate: date,
       ),
     );
   }
@@ -295,7 +294,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       state.draft.copyWith(
         startAt: dateTime,
         endAt: end,
-        targetDate: dateTime,
       ),
     );
   }
@@ -379,10 +377,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(state.draft.copyWith(clearDeadline: true));
   }
 
-  void updateTargetDate(DateTime date) {
-    _updateDraft(state.draft.copyWith(targetDate: date));
-  }
-
   void updateEstimatedDuration(Duration duration) {
     _updateDraft(state.draft.copyWith(estimatedDuration: duration));
   }
@@ -445,7 +439,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   ItemDraft _normalizeDraftForSave(ItemDraft draft) {
-    if (draft.type != ItemType.task && draft.type != ItemType.memo) {
+    if (draft.type != ItemType.task) {
       return draft;
     }
     if (draft.estimatedDuration > Duration.zero) {

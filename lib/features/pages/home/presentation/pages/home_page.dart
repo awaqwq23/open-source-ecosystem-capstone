@@ -184,7 +184,6 @@ class HomePage extends ConsumerWidget {
                             startAt: item.item.startAt,
                             endAt: item.item.endAt,
                             deadline: item.item.deadline,
-                            targetDate: item.item.targetDate,
                             estimatedDuration: item.item.estimatedDuration,
                             courseDetails: item.item.courseDetails,
                           ),

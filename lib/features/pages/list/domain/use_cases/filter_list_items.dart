@@ -24,8 +24,7 @@ class FilterListItemsUseCase {
   bool _isInMyDay(AgendaItem item, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
     if (item.type == ItemType.memo) {
-      final target = item.targetDate;
-      return target.year == today.year && target.month == today.month && target.day == today.day;
+      return true;
     }
 
     final startDay = DateTime(item.startAt.year, item.startAt.month, item.startAt.day);

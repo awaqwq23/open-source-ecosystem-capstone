@@ -161,18 +161,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         if (state.draft.type == ItemType.memo) ...[
                           const Gap(12),
                           _PlainActionRow(
-                            rowKey: const ValueKey('item-editor-row-target-date'),
-                            label: l10n.editorFieldTargetDate,
-                            value: _formatDate(context, state.draft.targetDate),
-                            onTap: () => _pickTargetDate(context, ref, state),
-                          ),
-                          _PlainActionRow(
-                            label: l10n.editorFieldEstimatedDuration,
-                            value: _formatDuration(context, state.draft.estimatedDuration),
-                            errorText: state.errors.estimatedDuration,
-                            onTap: () => _pickEstimatedDuration(context, ref, state),
-                          ),
-                          _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-reminder'),
                             label: l10n.editorSectionReminder,
                             value: _reminderLabel(l10n, state.draft.reminder),
@@ -487,22 +475,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     );
     if (picked != null && mounted) {
       ref.read(itemEditorPageControllerProvider.notifier).updateStartDate(picked);
-    }
-  }
-
-  Future<void> _pickTargetDate(
-    BuildContext context,
-    WidgetRef ref,
-    ItemEditorPageState state,
-  ) async {
-    final picked = await AppDateTimePickers.pickDate(
-      context,
-      initialDate: state.draft.targetDate,
-    );
-    if (picked != null && mounted) {
-      ref.read(itemEditorPageControllerProvider.notifier).updateTargetDate(
-            DateTime(picked.year, picked.month, picked.day),
-          );
     }
   }
 
