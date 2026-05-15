@@ -27,8 +27,6 @@ data class WidgetSnapshotItem(
     val startAt: Date,
     val endAt: Date,
     val isAllDay: Boolean,
-    val targetDate: Date,
-    val estimatedDurationMinutes: Int,
     val timetableId: String,
     val accentColorLight: String,
     val accentColorDark: String,
@@ -71,7 +69,6 @@ object WidgetSnapshotReader {
             val obj = array.optJSONObject(index) ?: continue
             val startAt = parseDate(obj.optString("startAt")) ?: continue
             val endAt = parseDate(obj.optString("endAt")) ?: continue
-            val targetDate = parseDate(obj.optString("targetDate")) ?: startAt
             items += WidgetSnapshotItem(
                 id = obj.optString("id"),
                 type = obj.optString("type", "task"),
@@ -82,8 +79,6 @@ object WidgetSnapshotReader {
                 startAt = startAt,
                 endAt = endAt,
                 isAllDay = obj.optBoolean("isAllDay", false),
-                targetDate = targetDate,
-                estimatedDurationMinutes = obj.optInt("estimatedDurationMinutes", 0),
                 timetableId = obj.optString("timetableId"),
                 accentColorLight = obj.optString("accentColorLight"),
                 accentColorDark = obj.optString("accentColorDark"),
@@ -97,9 +92,7 @@ object WidgetSnapshotModelBuilder {
     fun build(snapshot: WidgetSnapshot, now: Date = Date()): WidgetPayloadV4 {
         val zh = snapshot.settings.languageCode.lowercase(Locale.ROOT).startsWith("zh")
         val today = startOfDay(now)
-        val tomorrow = addDays(today, 1)
-        val weekStart = startOfWeek(now)
-        val weekSubtitle = semesterWeekLabel(snapshot, now, zh) ?: periodLabel(weekStart, zh)
+        val weekSubtitle = semesterWeekLabel(snapshot, now, zh) ?: periodLabel(startOfWeek(now), zh)
 
         return WidgetPayloadV4(
             version = 4,
@@ -108,15 +101,7 @@ object WidgetSnapshotModelBuilder {
                 locale = snapshot.settings.languageCode,
                 timezone = timezoneLabel(),
             ),
-            quickCreate = QuickCreateWidgetModel(
-                title = if (zh) "快速创建事项" else "Quick Create",
-                newItemLabel = if (zh) "新建事项" else "New Item",
-                scheduleLabel = if (zh) "日程" else "Schedule",
-                taskLabel = if (zh) "任务" else "Task",
-                memoLabel = if (zh) "备忘" else "Memo",
-            ),
-            agendaList = buildAgendaList(snapshot, now, today, tomorrow, zh, weekSubtitle),
-            weekGrid = buildWeekGrid(snapshot, now, weekStart, zh, weekSubtitle),
+            agendaList = buildAgendaList(snapshot, now, today, zh, weekSubtitle),
         )
     }
 
@@ -124,24 +109,18 @@ object WidgetSnapshotModelBuilder {
         snapshot: WidgetSnapshot,
         now: Date,
         today: Date,
-        tomorrow: Date,
         zh: Boolean,
         weekSubtitle: String,
     ): AgendaListWidgetModel {
-        val todayLeft = snapshot.items
+        val leftItems = snapshot.items
             .filter { shouldShowInLeftColumn(it, now, today) }
             .sortedWith(compareBy<WidgetSnapshotItem> { sortStart(it, today) }.thenBy { it.manualOrder })
-        val tomorrowLeft = snapshot.items
-            .filter { shouldShowInLeftColumn(it, now, tomorrow) }
-            .sortedWith(compareBy<WidgetSnapshotItem> { sortStart(it, tomorrow) }.thenBy { it.manualOrder })
-        val useToday = todayLeft.isNotEmpty()
-        val leftDay = if (useToday) today else tomorrow
-        val leftItems = if (useToday) todayLeft else tomorrowLeft
-        val leftStatusLabel = when {
-            useToday -> if (zh) "今日日程" else "Today"
-            leftItems.isNotEmpty() -> if (zh) "明日日程" else "Tomorrow"
-            else -> if (zh) "明日无日程" else "No schedule tomorrow"
-        }
+        val leftStatusLabel =
+            if (leftItems.isEmpty()) {
+                if (zh) "今日无日程" else "No schedule today"
+            } else {
+                if (zh) "今日日程" else "Today"
+            }
 
         val rightItems = snapshot.items
             .filter { !it.isCompleted && (it.type == "task" || it.type == "memo") }
@@ -154,39 +133,13 @@ object WidgetSnapshotModelBuilder {
         return AgendaListWidgetModel(
             title = if (zh) "事项列表" else "Agenda List",
             subtitle = if (zh) "左列日程，右列任务与备忘" else "Schedule left, tasks and memos right",
-            mode = if (useToday) "today_schedule" else if (leftItems.isNotEmpty()) "tomorrow_schedule" else "tomorrow_empty",
+            mode = if (leftItems.isEmpty()) "today_empty" else "today_schedule",
             leftTitle = leftStatusLabel,
             rightTitle = if (zh) "任务备忘" else "Tasks & Memos",
-            leftRows = leftItems.take(40).map { toAgendaRow(it, leftDay, zh, includeDay = false, snapshot.settings.darkMode) },
+            leftRows = leftItems.take(40).map { toAgendaRow(it, today, zh, includeDay = false, snapshot.settings.darkMode) },
             rightRows = rightItems.take(80).map { toAgendaRow(it, displayDay(it, today), zh, includeDay = true, snapshot.settings.darkMode) },
             weekdayLabel = weekSubtitle,
             weekLabel = leftStatusLabel,
-        )
-    }
-
-    private fun buildWeekGrid(
-        snapshot: WidgetSnapshot,
-        now: Date,
-        weekStart: Date,
-        zh: Boolean,
-        weekSubtitle: String,
-    ): WeekGridWidgetModel {
-        val days = (0 until 7).map { offset ->
-            val day = addDays(weekStart, offset)
-            val dayItems = snapshot.items
-                .filter { it.type != "course" && itemInDay(it, day) }
-                .sortedBy { sortStart(it, day) }
-            WeekDayWidgetModel(
-                dateLabel = "${month(day)}/${dayOfMonth(day)}",
-                weekdayLabel = weekdayShort(zh, weekday(day)),
-                items = dayItems.take(8).map { toCompactDayLine(it, day, zh) },
-            )
-        }
-        return WeekGridWidgetModel(
-            title = if (zh) "本周" else "This Week",
-            subtitle = weekSubtitle,
-            weekStartIso = isoDate(weekStart),
-            days = days,
         )
     }
 
@@ -218,17 +171,6 @@ object WidgetSnapshotModelBuilder {
         )
     }
 
-    private fun toCompactDayLine(item: WidgetSnapshotItem, day: Date, zh: Boolean): String {
-        val prefix = when (item.type) {
-            "schedule" -> if (zh) "日" else "S"
-            "task" -> if (zh) "任" else "T"
-            "memo" -> if (zh) "备" else "M"
-            "course" -> if (zh) "课" else "C"
-            else -> if (zh) "任" else "T"
-        }
-        val title = item.title.trim().ifEmpty { if (zh) "未命名" else "Untitled" }
-        return "[$prefix] ${buildItemTimeText(item, day, zh, includeDay = false)} $title"
-    }
 }
 
 fun snapshotRefreshIntervalMinutes(value: String): Long {
@@ -250,8 +192,7 @@ private fun typeLabel(type: String, zh: Boolean): String {
 
 private fun buildItemTimeText(item: WidgetSnapshotItem, day: Date, zh: Boolean, includeDay: Boolean): String {
     if (item.type == "memo") {
-        val text = if (zh) "全天/${item.estimatedDurationMinutes}分" else "AllDay/${item.estimatedDurationMinutes}m"
-        return if (includeDay) "${month(day)}/${dayOfMonth(day)} $text" else text
+        return if (zh) "备忘" else "Memo"
     }
     if (item.isAllDay) {
         val text = if (zh) "全天" else "All day"
@@ -268,12 +209,12 @@ private fun buildItemTimeText(item: WidgetSnapshotItem, day: Date, zh: Boolean, 
 private fun itemInDay(item: WidgetSnapshotItem, day: Date): Boolean {
     val dayStart = startOfDay(day)
     val dayEnd = addDays(dayStart, 1)
-    if (item.type == "memo") return sameDay(item.targetDate, dayStart)
+    if (item.type == "memo") return true
     return item.endAt.after(dayStart) && item.startAt.before(dayEnd)
 }
 
 private fun displayDay(item: WidgetSnapshotItem, fallback: Date): Date {
-    return if (item.type == "memo") startOfDay(item.targetDate) else startOfDay(item.startAt)
+    return if (item.type == "memo") fallback else startOfDay(item.startAt)
 }
 
 private fun sortStart(item: WidgetSnapshotItem, day: Date): Date {
@@ -318,29 +259,6 @@ private fun periodLabel(weekStart: Date, zh: Boolean): String {
         } else {
             "Week ${weekOfYear(weekStart)} of ${year(weekStart)}"
         }
-    }
-}
-
-private fun weekdayShort(zh: Boolean, weekday: Int): String {
-    if (zh) {
-        return when (weekday) {
-            Calendar.MONDAY -> "周一"
-            Calendar.TUESDAY -> "周二"
-            Calendar.WEDNESDAY -> "周三"
-            Calendar.THURSDAY -> "周四"
-            Calendar.FRIDAY -> "周五"
-            Calendar.SATURDAY -> "周六"
-            else -> "周日"
-        }
-    }
-    return when (weekday) {
-        Calendar.MONDAY -> "Mon"
-        Calendar.TUESDAY -> "Tue"
-        Calendar.WEDNESDAY -> "Wed"
-        Calendar.THURSDAY -> "Thu"
-        Calendar.FRIDAY -> "Fri"
-        Calendar.SATURDAY -> "Sat"
-        else -> "Sun"
     }
 }
 
@@ -390,8 +308,6 @@ private fun calendar(date: Date): Calendar = Calendar.getInstance().apply { time
 
 private fun formatHm(date: Date): String = SimpleDateFormat("HH:mm", Locale.US).format(date)
 
-private fun isoDate(date: Date): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US).format(date)
-
 private fun timezoneLabel(): String {
     val offset = TimeZone.getDefault().rawOffset
     val sign = if (offset < 0) "-" else "+"
@@ -410,7 +326,6 @@ private fun clipText(value: String, maxChars: Int): String {
 private fun year(date: Date): Int = calendar(date).get(Calendar.YEAR)
 private fun month(date: Date): Int = calendar(date).get(Calendar.MONTH) + 1
 private fun dayOfMonth(date: Date): Int = calendar(date).get(Calendar.DAY_OF_MONTH)
-private fun weekday(date: Date): Int = calendar(date).get(Calendar.DAY_OF_WEEK)
 private fun weekOfMonth(date: Date): Int = calendar(date).get(Calendar.WEEK_OF_MONTH)
 private fun weekOfYear(date: Date): Int = calendar(date).get(Calendar.WEEK_OF_YEAR)
 private fun englishMonth(date: Date): String = SimpleDateFormat("MMMM yyyy", Locale.US).format(date)

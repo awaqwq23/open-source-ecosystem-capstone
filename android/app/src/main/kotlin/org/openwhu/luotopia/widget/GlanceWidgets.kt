@@ -35,56 +35,13 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.text.TextAlign
 import androidx.glance.unit.ColorProvider
 import org.openwhu.luotopia.MainActivity
 import org.openwhu.luotopia.R
 import kotlin.math.max
 
-class QuickCreateWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = QuickCreateWidget()
-}
-
 class AgendaListWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = AgendaListWidget()
-}
-
-class WeekGridWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = WeekGridWidget()
-}
-
-private class QuickCreateWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(72.dp, 72.dp),
-            DpSize(156.dp, 72.dp),
-            DpSize(72.dp, 156.dp),
-            DpSize(72.dp, 240.dp),
-            DpSize(72.dp, 324.dp),
-            DpSize(72.dp, 408.dp),
-            DpSize(72.dp, 492.dp),
-            DpSize(156.dp, 156.dp),
-            DpSize(240.dp, 156.dp),
-            DpSize(156.dp, 240.dp),
-            DpSize(240.dp, 240.dp),
-            DpSize(324.dp, 240.dp),
-            DpSize(240.dp, 324.dp),
-            DpSize(324.dp, 324.dp),
-            DpSize(408.dp, 324.dp),
-            DpSize(324.dp, 408.dp),
-            DpSize(492.dp, 72.dp),
-        ),
-    )
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val payload = WidgetPayloadReader.read(context)
-        provideContent {
-            val span = resolveSpan(LocalSize.current)
-            CardShell(clickUri = WidgetDeepLinkFactory.createChooser()) {
-                QuickCreateContent(span = span, model = payload.quickCreate)
-            }
-        }
-    }
 }
 
 private class AgendaListWidget : GlanceAppWidget() {
@@ -123,39 +80,6 @@ private class AgendaListWidget : GlanceAppWidget() {
     }
 }
 
-private class WeekGridWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(240.dp, 156.dp),
-            DpSize(324.dp, 156.dp),
-            DpSize(324.dp, 240.dp),
-            DpSize(408.dp, 240.dp),
-            DpSize(408.dp, 324.dp),
-            DpSize(492.dp, 324.dp),
-            DpSize(492.dp, 408.dp),
-        ),
-    )
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val payload = WidgetPayloadReader.read(context)
-        provideContent {
-            val span = resolveSpan(LocalSize.current)
-            val dayCount = max(3, minOf(7, span.cols + 1))
-            val lineBudget = max(1, span.rows - 1)
-            CardShell(clickUri = WidgetDeepLinkFactory.homeWeek(payload.weekGrid.weekStartIso)) {
-                Text(text = payload.weekGrid.title, style = titleStyle(), maxLines = 1)
-                Text(text = payload.weekGrid.subtitle, style = tertiaryStyle(), maxLines = 1)
-                Spacer(modifier = GlanceModifier.height(8.dp))
-                WeekGridPanel(
-                    days = payload.weekGrid.days.take(dayCount),
-                    perDayLines = lineBudget,
-                    locale = payload.meta.locale,
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun CardShell(
     clickUri: String,
@@ -173,177 +97,6 @@ private fun CardShell(
         Column(modifier = GlanceModifier.fillMaxSize()) {
             content()
         }
-    }
-}
-
-@Composable
-private fun QuickCreateContent(
-    span: WidgetSpan,
-    model: QuickCreateWidgetModel,
-) {
-    if (span.cols == 1 && span.rows == 1) {
-        QuickCreateButton(
-            text = "+",
-            clickUri = WidgetDeepLinkFactory.createChooser(),
-            compact = false,
-        )
-        return
-    }
-
-    if ((span.cols == 1 && span.rows == 2) || (span.cols == 2 && span.rows == 1)) {
-        QuickCreateButton(
-            text = model.newItemLabel,
-            clickUri = WidgetDeepLinkFactory.createChooser(),
-            compact = false,
-        )
-        return
-    }
-
-    if ((span.cols == 1 && span.rows == 3) || (span.cols == 3 && span.rows == 1)) {
-        TrioButtons(model = model, compact = true)
-        return
-    }
-
-    if ((span.cols == 1 && span.rows >= 4) || (span.rows == 1 && span.cols >= 4)) {
-        Text(text = model.title, style = titleStyle(), maxLines = 1)
-        Spacer(modifier = GlanceModifier.height(6.dp))
-        TrioButtons(model = model, compact = true)
-        return
-    }
-
-    if (span.cols == 2 && span.rows == 2) {
-        QuadButtons(model = model)
-        return
-    }
-
-    if (span.cols == 3 && span.rows == 2) {
-        TrioButtons(model = model, compact = false)
-        return
-    }
-
-    if (span.cols == 2 && span.rows == 3) {
-        Text(text = model.title, style = titleStyle(), maxLines = 1)
-        Spacer(modifier = GlanceModifier.height(6.dp))
-        TrioButtons(model = model, compact = true)
-        return
-    }
-
-    if (span.cols == 3 && span.rows == 3) {
-        QuickCreateLine(icon = "日", text = model.scheduleLabel, clickUri = WidgetDeepLinkFactory.createSchedule())
-        QuickCreateLine(icon = "任", text = model.taskLabel, clickUri = WidgetDeepLinkFactory.createTask())
-        QuickCreateLine(icon = "备", text = model.memoLabel, clickUri = WidgetDeepLinkFactory.createMemo())
-        return
-    }
-
-    Text(text = model.title, style = titleStyle(), maxLines = 1)
-    Spacer(modifier = GlanceModifier.height(6.dp))
-    TrioButtons(model = model, compact = false)
-}
-
-@Composable
-private fun TrioButtons(model: QuickCreateWidgetModel, compact: Boolean) {
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        QuickCreateButton(
-            text = model.scheduleLabel,
-            clickUri = WidgetDeepLinkFactory.createSchedule(),
-            compact = compact,
-        )
-        Spacer(modifier = GlanceModifier.width(4.dp))
-        QuickCreateButton(
-            text = model.taskLabel,
-            clickUri = WidgetDeepLinkFactory.createTask(),
-            compact = compact,
-        )
-        Spacer(modifier = GlanceModifier.width(4.dp))
-        QuickCreateButton(
-            text = model.memoLabel,
-            clickUri = WidgetDeepLinkFactory.createMemo(),
-            compact = compact,
-        )
-    }
-}
-
-@Composable
-private fun QuadButtons(model: QuickCreateWidgetModel) {
-    Column(modifier = GlanceModifier.fillMaxSize()) {
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            QuickCreateButton(
-                text = "+",
-                clickUri = WidgetDeepLinkFactory.createChooser(),
-                compact = false,
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            QuickCreateButton(
-                text = model.scheduleLabel,
-                clickUri = WidgetDeepLinkFactory.createSchedule(),
-                compact = true,
-            )
-        }
-        Spacer(modifier = GlanceModifier.height(4.dp))
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            QuickCreateButton(
-                text = model.taskLabel,
-                clickUri = WidgetDeepLinkFactory.createTask(),
-                compact = true,
-            )
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            QuickCreateButton(
-                text = model.memoLabel,
-                clickUri = WidgetDeepLinkFactory.createMemo(),
-                compact = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickCreateLine(icon: String, text: String, clickUri: String) {
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        Box(
-            modifier = GlanceModifier
-                .width(22.dp)
-                .background(ColorProvider(R.color.widget_badge_bg))
-                .padding(vertical = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = icon, style = bodyStrongStyle(), maxLines = 1)
-        }
-        Spacer(modifier = GlanceModifier.width(6.dp))
-        QuickCreateButton(
-            text = text,
-            clickUri = clickUri,
-            compact = false,
-        )
-    }
-    Spacer(modifier = GlanceModifier.height(4.dp))
-}
-
-@Composable
-private fun QuickCreateButton(
-    text: String,
-    clickUri: String,
-    compact: Boolean,
-    modifier: GlanceModifier = GlanceModifier,
-) {
-    val context = LocalContext.current
-    val action = actionStartActivity(buildDeepLinkIntent(context, clickUri))
-    Box(
-        modifier = modifier
-            .background(ColorProvider(R.color.widget_badge_bg))
-            .clickable(action)
-            .padding(horizontal = 6.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = TextStyle(
-                color = ColorProvider(R.color.widget_badge_text),
-                fontWeight = FontWeight.Medium,
-                fontSize = if (compact) 11.sp else 12.sp,
-                textAlign = TextAlign.Center,
-            ),
-            maxLines = 1,
-        )
     }
 }
 
@@ -440,48 +193,8 @@ private fun AgendaColumnRows(
     }
 }
 
-@Composable
-private fun WeekGridPanel(days: List<WeekDayWidgetModel>, perDayLines: Int, locale: String) {
-    if (days.isEmpty()) {
-        Text(text = localizedEmptyItemsText(locale), style = secondaryStyle(), maxLines = 1)
-        return
-    }
-
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        days.forEach { day ->
-            Column(
-                modifier = GlanceModifier
-                    .padding(horizontal = 2.dp),
-            ) {
-                Text(text = day.weekdayLabel, style = tertiaryStyle(), maxLines = 1)
-                Text(text = day.dateLabel, style = bodyStrongStyle(), maxLines = 1)
-                Spacer(modifier = GlanceModifier.height(2.dp))
-                day.items.take(perDayLines).forEach { line ->
-                    Text(text = line, style = bodyStyle(), maxLines = 1)
-                }
-            }
-        }
-    }
-}
-
 private object WidgetDeepLinkFactory {
-    fun createChooser(): String = "luotopia://app/item-editor/flow?showTypePicker=1&source=widget"
-
-    fun createSchedule(): String = "luotopia://app/item-editor/flow?presetType=schedule&source=widget"
-
-    fun createTask(): String = "luotopia://app/item-editor/flow?presetType=task&source=widget"
-
-    fun createMemo(): String = "luotopia://app/item-editor/flow?presetType=memo&source=widget"
-
     fun list(): String = "luotopia://app/?source=widget"
-
-    fun homeWeek(weekStartIso: String): String {
-        return if (weekStartIso.isBlank()) {
-            "luotopia://app/?source=widget"
-        } else {
-            "luotopia://app/?source=widget&weekStart=${Uri.encode(weekStartIso)}"
-        }
-    }
 }
 
 private fun buildDeepLinkIntent(context: Context, uri: String): Intent {
@@ -561,13 +274,6 @@ private fun topMetaSecondaryStyle(): TextStyle {
     )
 }
 
-private fun bodyStyle(): TextStyle {
-    return TextStyle(
-        color = ColorProvider(R.color.widget_text_primary),
-        fontSize = 12.sp,
-    )
-}
-
 private fun metaStyle(): TextStyle {
     return TextStyle(
         color = ColorProvider(R.color.widget_text_secondary),
@@ -634,8 +340,4 @@ private fun resolveAgendaRowBudget(size: DpSize, showSubtitle: Boolean): AgendaR
 
 private fun localizedEmptyText(locale: String): String {
     return if (locale.startsWith("zh", ignoreCase = true)) "暂无" else "No items"
-}
-
-private fun localizedEmptyItemsText(locale: String): String {
-    return if (locale.startsWith("zh", ignoreCase = true)) "暂无事项" else "No agenda items"
 }

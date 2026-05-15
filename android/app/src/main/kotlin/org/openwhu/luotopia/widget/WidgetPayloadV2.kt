@@ -10,14 +10,6 @@ data class WidgetMetaModel(
     val timezone: String,
 )
 
-data class QuickCreateWidgetModel(
-    val title: String,
-    val newItemLabel: String,
-    val scheduleLabel: String,
-    val taskLabel: String,
-    val memoLabel: String,
-)
-
 data class AgendaListRowModel(
     val id: String,
     val title: String,
@@ -40,25 +32,10 @@ data class AgendaListWidgetModel(
     val weekLabel: String,
 )
 
-data class WeekDayWidgetModel(
-    val dateLabel: String,
-    val weekdayLabel: String,
-    val items: List<String>,
-)
-
-data class WeekGridWidgetModel(
-    val title: String,
-    val subtitle: String,
-    val weekStartIso: String,
-    val days: List<WeekDayWidgetModel>,
-)
-
 data class WidgetPayloadV4(
     val version: Int,
     val meta: WidgetMetaModel,
-    val quickCreate: QuickCreateWidgetModel,
     val agendaList: AgendaListWidgetModel,
-    val weekGrid: WeekGridWidgetModel,
 )
 
 object WidgetPayloadReader {
@@ -80,9 +57,7 @@ object WidgetPayloadReader {
             }
 
             val metaJson = root.optJSONObject("meta") ?: JSONObject()
-            val quickCreateJson = root.optJSONObject("quickCreate") ?: JSONObject()
             val agendaListJson = root.optJSONObject("agendaList") ?: JSONObject()
-            val weekGridJson = root.optJSONObject("weekGrid") ?: JSONObject()
 
             WidgetPayloadV4(
                 version = 4,
@@ -90,13 +65,6 @@ object WidgetPayloadReader {
                     updatedLabel = metaJson.optString("updatedLabel", ""),
                     locale = metaJson.optString("languageCode", "zh"),
                     timezone = metaJson.optString("timezone", ""),
-                ),
-                quickCreate = QuickCreateWidgetModel(
-                    title = quickCreateJson.optString("title", "快速创建事项"),
-                    newItemLabel = quickCreateJson.optString("newItemLabel", "新建事项"),
-                    scheduleLabel = quickCreateJson.optString("scheduleLabel", "日程"),
-                    taskLabel = quickCreateJson.optString("taskLabel", "任务"),
-                    memoLabel = quickCreateJson.optString("memoLabel", "备忘"),
                 ),
                 agendaList = AgendaListWidgetModel(
                     title = agendaListJson.optString("title", "事项列表"),
@@ -108,12 +76,6 @@ object WidgetPayloadReader {
                     rightRows = readAgendaRows(agendaListJson.optJSONArray("rightRows")),
                     weekdayLabel = agendaListJson.optString("weekdayLabel", "星期一"),
                     weekLabel = agendaListJson.optString("weekLabel", "第1周"),
-                ),
-                weekGrid = WeekGridWidgetModel(
-                    title = weekGridJson.optString("title", "周视图"),
-                    subtitle = weekGridJson.optString("subtitle", "本周总览"),
-                    weekStartIso = weekGridJson.optString("weekStartIso", ""),
-                    days = readWeekDays(weekGridJson.optJSONArray("days")),
                 ),
             )
         } catch (_: Throwable) {
@@ -145,32 +107,6 @@ object WidgetPayloadReader {
         return rows
     }
 
-    private fun readWeekDays(array: JSONArray?): List<WeekDayWidgetModel> {
-        if (array == null) {
-            return emptyList()
-        }
-        val days = mutableListOf<WeekDayWidgetModel>()
-        for (index in 0 until array.length()) {
-            val obj = array.optJSONObject(index) ?: continue
-            val lines = mutableListOf<String>()
-            val itemsArray = obj.optJSONArray("items")
-            if (itemsArray != null) {
-                for (itemIndex in 0 until itemsArray.length()) {
-                    val line = itemsArray.optString(itemIndex).trim()
-                    if (line.isNotEmpty()) {
-                        lines += line
-                    }
-                }
-            }
-            days += WeekDayWidgetModel(
-                dateLabel = obj.optString("dateLabel", ""),
-                weekdayLabel = obj.optString("weekdayLabel", ""),
-                items = lines,
-            )
-        }
-        return days
-    }
-
     private fun fallback(): WidgetPayloadV4 {
         return WidgetPayloadV4(
             version = 4,
@@ -178,13 +114,6 @@ object WidgetPayloadReader {
                 updatedLabel = "",
                 locale = "zh",
                 timezone = "",
-            ),
-            quickCreate = QuickCreateWidgetModel(
-                title = "快速创建事项",
-                newItemLabel = "新建事项",
-                scheduleLabel = "日程",
-                taskLabel = "任务",
-                memoLabel = "备忘",
             ),
             agendaList = AgendaListWidgetModel(
                 title = "事项列表",
@@ -196,12 +125,6 @@ object WidgetPayloadReader {
                 rightRows = emptyList(),
                 weekdayLabel = "星期一",
                 weekLabel = "第1周",
-            ),
-            weekGrid = WeekGridWidgetModel(
-                title = "周视图",
-                subtitle = "本周总览",
-                weekStartIso = "",
-                days = emptyList(),
             ),
         )
     }
