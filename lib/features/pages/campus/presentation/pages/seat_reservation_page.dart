@@ -146,20 +146,12 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   var targets = [
     '/static/frontApi/make/freeBook/',
     '/static/frontApi/make/quickBook/',
-    '/static/frontApi/make/planBook/',
-    '/static/frontApi/user/currentUseMake',
-    '/static/frontApi/user/lastMake'
+    '/static/frontApi/make/planBook/'
   ];
   function isTarget(url) {
     return targets.some(function (target) {
       return String(url || '').indexOf(target) >= 0;
     });
-  }
-  function isMakeTarget(url) {
-    var text = String(url || '');
-    return text.indexOf('/static/frontApi/make/freeBook/') >= 0 ||
-      text.indexOf('/static/frontApi/make/quickBook/') >= 0 ||
-      text.indexOf('/static/frontApi/make/planBook/') >= 0;
   }
   function notify(source, url, status, responseText) {
     if (!isTarget(url) || status < 200 || status >= 300) return;
@@ -174,20 +166,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       }));
     } catch (_) {}
   }
-  function rememberAction() {
-    window.__luotopiaSeatRecentActionAt = Date.now();
-  }
-  document.addEventListener('click', function (event) {
-    var text = '';
-    var node = event.target;
-    for (var i = 0; node && i < 4; i += 1) {
-      text += ' ' + (node.innerText || node.textContent || '');
-      node = node.parentElement;
-    }
-    if (/预约|确认|随机|提交|make|book/i.test(text)) {
-      rememberAction();
-    }
-  }, true);
   var open = XMLHttpRequest.prototype.open;
   var send = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url) {
@@ -196,7 +174,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   };
   XMLHttpRequest.prototype.send = function () {
     var xhr = this;
-    if (isMakeTarget(xhr.__luotopiaSeatUrl || '')) rememberAction();
     xhr.addEventListener('load', function () {
       notify('xhr', xhr.__luotopiaSeatUrl || '', xhr.status, xhr.responseText || '');
     });
@@ -206,7 +183,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
-      if (isMakeTarget(url)) rememberAction();
       return originalFetch.apply(this, arguments).then(function (response) {
         if (!isTarget(url)) return response;
         try {
@@ -217,71 +193,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
         return response;
       });
     };
-  }
-  function storageItem(key) {
-    try {
-      if (window.sessionStorageProxy && sessionStorageProxy.getItem) {
-        var proxied = sessionStorageProxy.getItem(key);
-        if (proxied) return proxied;
-      }
-    } catch (_) {}
-    try { return window.sessionStorage.getItem(key) || ''; } catch (_) {}
-    return '';
-  }
-  function uuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      var r = Math.random() * 16 | 0;
-      var v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
-  function hmacHeaders(method) {
-    try {
-      var info = JSON.parse(storageItem('systemInfo') || '{}');
-      if (!info || Number(info.hmac) !== 1 || !info.hmacKey || !window.CryptoJS) return {};
-      var requestId = uuid();
-      var requestDate = String(Date.now());
-      var key = CryptoJS.enc.Utf8.parse('server_date_time');
-      var iv = CryptoJS.enc.Utf8.parse('client_date_time');
-      var decrypted = CryptoJS.AES.decrypt(info.hmacKey, key, {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }).toString(CryptoJS.enc.Utf8);
-      var raw = 'seat::' + requestId + '::' + requestDate + '::' + method.toUpperCase();
-      return {
-        'X-request-id': requestId,
-        'X-request-date': requestDate,
-        'X-hmac-request-key': CryptoJS.HmacSHA256(raw, decrypted).toString()
-      };
-    } catch (_) {
-      return {};
-    }
-  }
-  function pollCurrentUseMake() {
-    var recentAt = Number(window.__luotopiaSeatRecentActionAt || 0);
-    if (!recentAt || Date.now() - recentAt > 120000) return;
-    var token = storageItem('token');
-    var baseUrl = (window.Global && Global.BASEURL) || 'https://seat.lib.whu.edu.cn/jsq';
-    if (!token || !window.fetch) return;
-    var url = baseUrl + '/static/frontApi/user/currentUseMake';
-    var headers = Object.assign({
-      'Content-Type': 'application/json;charset=UTF-8',
-      'token': token,
-      'loginType': 'MOBILE'
-    }, hmacHeaders('POST'));
-    fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: '{}'
-    }).then(function (response) {
-      return response.text().then(function (text) {
-        notify('currentUseMake', url, response.status, text || '');
-      });
-    }).catch(function () {});
-  }
-  if (!window.__luotopiaSeatPoller) {
-    window.__luotopiaSeatPoller = setInterval(pollCurrentUseMake, 5000);
   }
   try {
     SeatReservationBridge.postMessage(JSON.stringify({
