@@ -152,10 +152,7 @@ class WhuCourseImportService {
               ),
               deadline: null,
             ),
-            memoDetails: ItemMemoDetails(
-              targetDate: DateTime(date.year, date.month, date.day),
-              estimatedDuration: endAt.difference(startAt),
-            ),
+            memoDetails: const ItemMemoDetails(),
             courseDetails: ItemCourseDetails(
               sourceKind: CourseItemSourceKind.whuJw,
               sourceCourseId: courseId,

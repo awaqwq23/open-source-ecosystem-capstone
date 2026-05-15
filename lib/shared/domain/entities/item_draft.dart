@@ -39,8 +39,7 @@ class ItemDraft {
   DateTime get startAt => activeScheduleDetails.range.start;
   DateTime get endAt => activeScheduleDetails.range.end;
   DateTime? get deadline => taskDetails.deadline;
-  DateTime get targetDate => memoDetails.targetDate;
-  Duration get estimatedDuration => memoDetails.estimatedDuration;
+  Duration get estimatedDuration => taskDetails.estimatedDuration;
 
   ItemScheduleDetails get activeScheduleDetails {
     return switch (type) {
@@ -64,7 +63,6 @@ class ItemDraft {
     DateTime? endAt,
     DateTime? deadline,
     bool clearDeadline = false,
-    DateTime? targetDate,
     Duration? estimatedDuration,
     ItemScheduleDetails? scheduleDetails,
     ItemTaskDetails? taskDetails,
@@ -94,10 +92,6 @@ class ItemDraft {
           ),
           deadline: deadline,
           clearDeadline: clearDeadline,
-        );
-    final nextMemoDetails = memoDetails ??
-        this.memoDetails.copyWith(
-          targetDate: targetDate,
           estimatedDuration: estimatedDuration,
         );
     return ItemDraft(
@@ -110,7 +104,7 @@ class ItemDraft {
       repeatRule: repeatRule ?? this.repeatRule,
       scheduleDetails: nextScheduleDetails,
       taskDetails: nextTaskDetails,
-      memoDetails: nextMemoDetails,
+      memoDetails: memoDetails ?? this.memoDetails,
       courseDetails: courseDetails ?? this.courseDetails,
     );
   }

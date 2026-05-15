@@ -120,6 +120,7 @@ class AgendaItemStorageMapper {
     return {
       'schedule': _scheduleToJson(details.schedule),
       'deadline': details.deadline?.toIso8601String(),
+      'estimatedDurationMinutes': details.estimatedDuration.inMinutes,
     };
   }
 
@@ -134,30 +135,19 @@ class AgendaItemStorageMapper {
     return ItemTaskDetails(
       schedule: schedule,
       deadline: DateTime.tryParse(value['deadline'] as String? ?? ''),
+      estimatedDuration: Duration(
+        minutes: value['estimatedDurationMinutes'] as int? ?? 0,
+      ),
     );
   }
 
-  static Map<String, dynamic> _memoToJson(ItemMemoDetails details) {
-    return {
-      'targetDate': details.targetDate.toIso8601String(),
-      'estimatedDurationMinutes': details.estimatedDuration.inMinutes,
-    };
-  }
+  static Map<String, dynamic> _memoToJson(ItemMemoDetails details) => const {};
 
   static ItemMemoDetails? _memoFromJson(Object? value) {
     if (value is! Map) {
       return null;
     }
-    final targetDate = DateTime.tryParse(value['targetDate'] as String? ?? '');
-    if (targetDate == null) {
-      return null;
-    }
-    return ItemMemoDetails(
-      targetDate: targetDate,
-      estimatedDuration: Duration(
-        minutes: value['estimatedDurationMinutes'] as int? ?? 0,
-      ),
-    );
+    return const ItemMemoDetails();
   }
 
   static Map<String, dynamic> _courseToJson(ItemCourseDetails details) {

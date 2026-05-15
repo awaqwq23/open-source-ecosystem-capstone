@@ -55,8 +55,7 @@ class AgendaItem {
   DateTime get startAt => activeScheduleDetails.range.start;
   DateTime get endAt => activeScheduleDetails.range.end;
   DateTime? get deadline => taskDetails.deadline;
-  DateTime get targetDate => memoDetails.targetDate;
-  Duration get estimatedDuration => memoDetails.estimatedDuration;
+  Duration get estimatedDuration => taskDetails.estimatedDuration;
   bool get supportsManualCompletion {
     return switch (type) {
       ItemType.task || ItemType.memo || ItemType.schedule || ItemType.course => true,

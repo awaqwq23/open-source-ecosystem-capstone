@@ -172,9 +172,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {
     return switch (item.type) {
-      ItemType.memo =>
-        !item.targetDate.isBefore(range.start) &&
-            !item.targetDate.isAfter(range.end),
+      ItemType.memo => true,
       _ => item.endAt.isAfter(range.start) && item.startAt.isBefore(range.end),
     };
   }
