@@ -10,6 +10,10 @@ class WhuAuthorizedClient extends WhuServiceSession {
 
   final http.Client _inner;
   final _CookieJar _cookieJar;
+  Uri? _lastResponseUri;
+
+  @override
+  Uri? get lastResponseUri => _lastResponseUri;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -18,6 +22,7 @@ class WhuAuthorizedClient extends WhuServiceSession {
       current.followRedirects = false;
       _attachHeaders(current);
       final response = await _inner.send(current);
+      _lastResponseUri = response.request?.url ?? current.url;
       final setCookie = response.headers['set-cookie'];
       if (setCookie != null && setCookie.isNotEmpty) {
         _cookieJar.mergeSetCookieHeader(setCookie);
