@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
@@ -30,7 +32,7 @@ class ItemEditorDefaults {
       title: prefill?.title ?? '',
       details: prefill?.details ?? '',
       location: prefill?.location ?? '',
-      color: prefill?.color ?? ItemColorOption.sky,
+      color: prefill?.color ?? _randomColor(),
       reminder: prefill?.reminder ?? ReminderOption.none,
       repeatRule: prefill?.repeatRule ?? RepeatRule.none,
       scheduleDetails: ItemScheduleDetails(
@@ -54,6 +56,11 @@ class ItemEditorDefaults {
       memoDetails: const ItemMemoDetails(),
       courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
     );
+  }
+
+  static ItemColorOption _randomColor() {
+    final colors = ItemColorOption.values;
+    return colors[Random().nextInt(colors.length)];
   }
 
   static ItemDraft applyType(ItemDraft draft, ItemType type) {

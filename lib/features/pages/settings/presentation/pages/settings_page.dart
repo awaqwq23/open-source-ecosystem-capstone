@@ -207,7 +207,6 @@ class _SettingsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final imageHeight = _settingsHeroImageHeight(context);
     final cardTop = imageHeight - _settingsHeroCardImageOverlap;
 
@@ -219,9 +218,6 @@ class _SettingsHero extends StatelessWidget {
           _SettingsExpandableHeroImage(
             scrollController: scrollController,
             height: imageHeight,
-            gradientStartColor:
-                theme.colorScheme.surface.withValues(alpha: 0.08),
-            gradientEndColor: theme.colorScheme.surface.withValues(alpha: 0.52),
           ),
           Positioned(
             left: _settingsHeroHorizontalPadding,
@@ -239,14 +235,10 @@ class _SettingsExpandableHeroImage extends StatelessWidget {
   const _SettingsExpandableHeroImage({
     required this.scrollController,
     required this.height,
-    required this.gradientStartColor,
-    required this.gradientEndColor,
   });
 
   final ScrollController scrollController;
   final double height;
-  final Color gradientStartColor;
-  final Color gradientEndColor;
 
   @override
   Widget build(BuildContext context) {
@@ -271,24 +263,7 @@ class _SettingsExpandableHeroImage extends StatelessWidget {
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const AppWallpaperBackground(),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    gradientStartColor,
-                    gradientEndColor,
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: const AppWallpaperBackground(),
       ),
     );
   }
