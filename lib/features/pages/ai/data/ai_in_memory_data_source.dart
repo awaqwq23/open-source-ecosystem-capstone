@@ -631,7 +631,6 @@ class OpenAiCompatibleAiService implements AiService {
                 'startAt': item.startAt.toIso8601String(),
                 'endAt': item.endAt.toIso8601String(),
                 'deadline': item.deadline?.toIso8601String(),
-                'targetDate': item.targetDate.toIso8601String(),
               },
           ]);
 
@@ -660,8 +659,6 @@ ${basePrompt.trim()}
     “start_at”: “ISO8601，可空”,
     “end_at”: “ISO8601，可空”,
     “deadline”: “ISO8601，可空”,
-    “target_date”: “ISO8601，可空”,
-    “estimated_minutes”: 数字，可空,
     “is_important”: 布尔，可空
   },
   “citations”: [
@@ -727,10 +724,6 @@ ${basePrompt.trim()}
     final deadline = DateTime.tryParse(
       (map['deadline'] as String? ?? '').trim(),
     );
-    final targetDate = DateTime.tryParse(
-      (map['target_date'] as String? ?? '').trim(),
-    );
-    final estimatedMinutes = (map['estimated_minutes'] as num?)?.toInt();
     final isImportant = map['is_important'] as bool? ?? false;
 
     final normalizedStart = startAt ?? _roundToHalfHour(now);
@@ -740,17 +733,6 @@ ${basePrompt.trim()}
         )
         ? (endAt ?? normalizedStart.add(const Duration(hours: 1)))
         : normalizedStart.add(const Duration(hours: 1));
-    final normalizedTargetDate = DateTime(
-      (targetDate ?? normalizedStart).year,
-      (targetDate ?? normalizedStart).month,
-      (targetDate ?? normalizedStart).day,
-    );
-    final normalizedEstimate = Duration(
-      minutes: (estimatedMinutes == null || estimatedMinutes <= 0)
-          ? 60
-          : estimatedMinutes,
-    );
-
     final draft = ItemDraft(
       type: type,
       title: title,
@@ -769,11 +751,9 @@ ${basePrompt.trim()}
           isAllDay: false,
         ),
         deadline: deadline,
+        estimatedDuration: normalizedEnd.difference(normalizedStart),
       ),
-      memoDetails: ItemMemoDetails(
-        targetDate: normalizedTargetDate,
-        estimatedDuration: normalizedEstimate,
-      ),
+      memoDetails: const ItemMemoDetails(),
     );
 
     final missingRequired = <String>[
@@ -783,7 +763,6 @@ ${basePrompt.trim()}
         'start_at',
       if ((type == ItemType.schedule || type == ItemType.task) && endAt == null)
         'end_at',
-      if (type == ItemType.memo && targetDate == null) 'target_date',
     ];
 
     return AiCreateItemDraft(

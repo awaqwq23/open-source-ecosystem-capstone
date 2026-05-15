@@ -94,26 +94,11 @@ class HomeWidgetSyncService {
           'updatedAt': now.toIso8601String(),
           'updatedLabel': _formatWidgetTimestamp(now, zh),
         },
-        'quickCreate': {
-          'title': zh ? '快速创建事项' : 'Quick Create',
-          'newItemLabel': zh ? '新建事项' : 'New Item',
-          'scheduleLabel': zh ? '日程' : 'Schedule',
-          'taskLabel': zh ? '任务' : 'Task',
-          'memoLabel': zh ? '备忘' : 'Memo',
-        },
         'agendaList': _buildAgendaListPayload(
           items: items,
           now: now,
           zh: zh,
           darkMode: _isDarkMode(settings, themeMode),
-          weekSubtitle: intendedLabel,
-        ),
-        'weekGrid': _buildWeekGridPayload(
-          items: items,
-          week: week,
-          now: now,
-          zh: zh,
-          weekLabel: zh ? '本周' : 'This Week',
           weekSubtitle: intendedLabel,
         ),
       };
@@ -215,8 +200,6 @@ Map<String, dynamic> _buildSnapshotPayload({
           'startAt': item.startAt.toIso8601String(),
           'endAt': item.endAt.toIso8601String(),
           'isAllDay': item.isAllDay,
-          'targetDate': item.targetDate.toIso8601String(),
-          'estimatedDurationMinutes': item.estimatedDuration.inMinutes,
           'timetableId': item.courseDetails.timetableId,
           'accentColorLight': _toArgbHex(item.color.resolve(Brightness.light)),
           'accentColorDark': _toArgbHex(item.color.resolve(Brightness.dark)),
@@ -233,9 +216,8 @@ Map<String, dynamic> _buildAgendaListPayload({
   required String weekSubtitle,
 }) {
   final today = DateTime(now.year, now.month, now.day);
-  final tomorrow = today.add(const Duration(days: 1));
 
-  final todayLeftItems = items
+  final leftItems = items
       .where((item) => _shouldShowInLeftColumn(item, now: now, day: today))
       .toList(growable: false)
     ..sort((a, b) {
@@ -245,24 +227,9 @@ Map<String, dynamic> _buildAgendaListPayload({
       }
       return a.manualOrder.compareTo(b.manualOrder);
     });
-  final tomorrowLeftItems = items
-      .where((item) => _shouldShowInLeftColumn(item, now: now, day: tomorrow))
-      .toList(growable: false)
-    ..sort((a, b) {
-      final byStart = _sortStart(a, tomorrow).compareTo(_sortStart(b, tomorrow));
-      if (byStart != 0) {
-        return byStart;
-      }
-      return a.manualOrder.compareTo(b.manualOrder);
-    });
-  final useTodayLeft = todayLeftItems.isNotEmpty;
-  final leftDay = useTodayLeft ? today : tomorrow;
-  final leftItems = useTodayLeft ? todayLeftItems : tomorrowLeftItems;
-  final leftStatusLabel = useTodayLeft
-      ? (zh ? '今日日程' : 'Today')
-      : leftItems.isNotEmpty
-          ? (zh ? '明日日程' : 'Tomorrow')
-          : (zh ? '明日无日程' : 'No schedule tomorrow');
+  final leftStatusLabel = leftItems.isEmpty
+      ? (zh ? '今日无日程' : 'No schedule today')
+      : (zh ? '今日日程' : 'Today');
 
   final rightItems = items
       .where(_shouldShowInRightColumn)
@@ -284,18 +251,14 @@ Map<String, dynamic> _buildAgendaListPayload({
   return {
     'title': zh ? '事项列表' : 'Agenda List',
     'subtitle': zh ? '左列日程，右列任务与备忘' : 'Schedule left, tasks and memos right',
-    'mode': useTodayLeft
-        ? 'today_schedule'
-        : leftItems.isNotEmpty
-            ? 'tomorrow_schedule'
-            : 'tomorrow_empty',
+    'mode': leftItems.isEmpty ? 'today_empty' : 'today_schedule',
     'leftTitle': leftStatusLabel,
     'rightTitle': zh ? '任务备忘' : 'Tasks & Memos',
     'leftRows': [
       for (final item in leftItems.take(40))
         _toAgendaListRow(
           item,
-          leftDay,
+          today,
           zh,
           darkMode: darkMode,
           includeDay: false,
@@ -349,7 +312,7 @@ DateTime _displayDayForItem(
   required DateTime fallback,
 }) {
   if (item.type == ItemType.memo) {
-    return DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
+    return fallback;
   }
   return DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
 }
@@ -404,46 +367,6 @@ Map<String, dynamic> _toAgendaListRow(
   };
 }
 
-Map<String, dynamic> _buildWeekGridPayload({
-  required List<AgendaItem> items,
-  required DateTimeRange week,
-  required DateTime now,
-  required bool zh,
-  required String weekLabel,
-  required String weekSubtitle,
-}) {
-  final filtered = items
-      .where((item) => item.type != ItemType.course)
-      .toList(growable: false);
-
-  final days = <Map<String, dynamic>>[];
-  for (var i = 0; i < 7; i++) {
-    final day = week.start.add(Duration(days: i));
-    final dayItems = filtered.where((item) => _itemInDay(item, day)).toList(growable: false)
-      ..sort((a, b) => _sortStart(a, day).compareTo(_sortStart(b, day)));
-
-    days.add({
-      'weekdayLabel': _weekdayShort(zh, day.weekday),
-      'dateLabel': '${day.month}/${day.day}',
-      'items': [
-        for (final item in dayItems.take(8)) _toCompactDayLine(item, day, zh),
-      ],
-    });
-  }
-
-  return {
-    'title': weekLabel,
-    'subtitle': weekSubtitle,
-    'weekStartIso': DateTime(
-      week.start.year,
-      week.start.month,
-      week.start.day,
-    ).toIso8601String(),
-    'days': days,
-    'generatedAt': now.toIso8601String(),
-  };
-}
-
 DateTimeRange _weekRange(DateTime now) {
   final start = DateTime(now.year, now.month, now.day)
       .subtract(Duration(days: now.weekday - DateTime.monday));
@@ -455,10 +378,7 @@ bool _itemInDay(AgendaItem item, DateTime day) {
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
   if (item.type == ItemType.memo) {
-    final target = DateTime(item.targetDate.year, item.targetDate.month, item.targetDate.day);
-    return target.year == dayStart.year &&
-        target.month == dayStart.month &&
-        target.day == dayStart.day;
+    return true;
   }
   return item.endAt.isAfter(dayStart) && item.startAt.isBefore(dayEnd);
 }
@@ -471,18 +391,6 @@ DateTime _sortStart(AgendaItem item, DateTime day) {
   return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
 }
 
-String _toCompactDayLine(AgendaItem item, DateTime day, bool zh) {
-  final prefix = switch (item.type) {
-    ItemType.schedule => zh ? '日' : 'S',
-    ItemType.task => zh ? '任' : 'T',
-    ItemType.memo => zh ? '备' : 'M',
-    ItemType.course => zh ? '课' : 'C',
-  };
-  final when = _buildItemTimeText(item, day, zh);
-  final title = item.title.trim().isEmpty ? (zh ? '未命名' : 'Untitled') : item.title.trim();
-  return '[$prefix] $when $title';
-}
-
 String _buildItemTimeText(
   AgendaItem item,
   DateTime day,
@@ -490,12 +398,7 @@ String _buildItemTimeText(
   bool includeDay = false,
 }) {
   if (item.type == ItemType.memo) {
-    final minutes = item.estimatedDuration.inMinutes;
-    final memoText = zh ? '全天/${minutes}分' : 'AllDay/${minutes}m';
-    if (!includeDay) {
-      return memoText;
-    }
-    return '${day.month}/${day.day} $memoText';
+    return zh ? '备忘' : 'Memo';
   }
   if (item.isAllDay) {
     final allDayText = zh ? '全天' : 'All day';
@@ -514,29 +417,6 @@ String _buildItemTimeText(
     return range;
   }
   return '${day.month}/${day.day} $range';
-}
-
-String _weekdayShort(bool zh, int weekday) {
-  if (zh) {
-    return switch (weekday) {
-      DateTime.monday => '周一',
-      DateTime.tuesday => '周二',
-      DateTime.wednesday => '周三',
-      DateTime.thursday => '周四',
-      DateTime.friday => '周五',
-      DateTime.saturday => '周六',
-      _ => '周日',
-    };
-  }
-  return switch (weekday) {
-    DateTime.monday => 'Mon',
-    DateTime.tuesday => 'Tue',
-    DateTime.wednesday => 'Wed',
-    DateTime.thursday => 'Thu',
-    DateTime.friday => 'Fri',
-    DateTime.saturday => 'Sat',
-    _ => 'Sun',
-  };
 }
 
 bool _isSameDay(DateTime a, DateTime b) {

@@ -184,7 +184,6 @@ class _AiPageState extends ConsumerState<AiPage> {
       startAt: itemDraft.startAt,
       endAt: itemDraft.endAt,
       deadline: itemDraft.deadline,
-      targetDate: itemDraft.targetDate,
       estimatedDuration: itemDraft.estimatedDuration,
     );
   }
@@ -470,7 +469,7 @@ class _DraftEntryLine extends StatelessWidget {
         ? _text(context, zh: '未命名事项', en: 'Untitled item')
         : draft.title.trim();
     final timeLabel = draft.type.name == 'memo'
-        ? DateFormat.yMd(locale).format(draft.targetDate)
+        ? _text(context, zh: '备忘', en: 'Memo')
         : '${DateFormat.yMd(locale).format(draft.startAt)} ${DateFormat.Hm(locale).format(draft.startAt)}';
 
     return Align(
