@@ -67,7 +67,7 @@ class _LuojiaEcardWebViewPageState
     final authState = ref.read(whuAuthProvider);
     if (!authState.isAuthenticated || authState.isExpired) {
       if (!mounted) {
-        return;
+        return null;
       }
       setState(() {
         _needsLogin = true;
