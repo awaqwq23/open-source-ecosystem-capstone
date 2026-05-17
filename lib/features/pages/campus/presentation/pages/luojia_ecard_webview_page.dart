@@ -98,7 +98,7 @@ class _LuojiaEcardWebViewPageState
             }
             setState(() {
               _loading = false;
-              _errorMessage = '页面加载失败：${error.description}';
+              _errorMessage = '页面加载失败，请检查网络连接后重试。';
             });
           },
           onNavigationRequest: (request) {

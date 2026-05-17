@@ -57,12 +57,18 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
       }
 
       _casCookieHeader = cookieHeader;
-      final client = await authorizeEducation();
+      await _persistAuthenticated(state.account);
+
       try {
-        final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
-        await _persistAuthenticated(account);
-      } finally {
-        client.close();
+        final client = await authorizeEducation();
+        try {
+          final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
+          await _persistAuthenticated(account);
+        } finally {
+          client.close();
+        }
+      } catch (_) {
+        return;
       }
     } catch (error) {
       state = WhuAuthState(
@@ -120,9 +126,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     state = const WhuAuthState();
   }
 
-  Future<void> _persistAuthenticated(WhuAccount account) async {
+  Future<void> _persistAuthenticated(WhuAccount? account) async {
     final now = DateTime.now();
-    final nextAccount = account.hasProfile
+    final nextAccount = account != null && account.hasProfile
         ? account
         : state.account ??
             const WhuAccount(
