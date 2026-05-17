@@ -40,6 +40,7 @@ class HomePage extends ConsumerWidget {
       homeViewDataProvider(query),
     );
     final theme = Theme.of(context);
+    final showBackToCurrentWeek = _shouldShowBackToCurrentWeek(viewData);
 
     return ui.Scaffold(
       headers: [
@@ -56,9 +57,38 @@ class HomePage extends ConsumerWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: ui.IconButton.ghost(
-                    icon: const Icon(AppIcons.previousPeriod),
-                    onPressed: () => viewModel.showPrevious(viewData.scope),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ui.IconButton.ghost(
+                        icon: const Icon(AppIcons.previousPeriod),
+                        onPressed: () => viewModel.showPrevious(viewData.scope),
+                      ),
+                      ui.Tooltip(
+                        tooltip: (context) => Text(
+                          homeSettings.gridMode == HomeGridMode.courseGrid
+                              ? '切换为时间方格'
+                              : '切换为课程方格',
+                        ),
+                        child: ui.IconButton.ghost(
+                          icon: Icon(
+                            homeSettings.gridMode == HomeGridMode.courseGrid
+                                ? Icons.view_module
+                                : Icons.view_agenda,
+                          ),
+                          onPressed: () {
+                            ref.read(settingsViewModelProvider.notifier).saveHomeSettings(
+                                  homeSettings.copyWith(
+                                    gridMode:
+                                        homeSettings.gridMode == HomeGridMode.courseGrid
+                                            ? HomeGridMode.timeGrid
+                                            : HomeGridMode.courseGrid,
+                                  ),
+                                );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Center(
@@ -102,30 +132,16 @@ class HomePage extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ui.Tooltip(
-                        tooltip: (context) => Text(
-                          homeSettings.gridMode == HomeGridMode.courseGrid
-                              ? '切换为时间方格'
-                              : '切换为课程方格',
-                        ),
-                        child: ui.IconButton.ghost(
-                          icon: Icon(
-                            homeSettings.gridMode == HomeGridMode.courseGrid
-                                ? Icons.view_module
-                                : Icons.view_agenda,
+                      if (showBackToCurrentWeek)
+                        ui.Tooltip(
+                          tooltip: (context) => Text(
+                            _isChinese(context) ? '返回本周' : 'Back to this week',
                           ),
-                          onPressed: () {
-                            ref.read(settingsViewModelProvider.notifier).saveHomeSettings(
-                                  homeSettings.copyWith(
-                                    gridMode:
-                                        homeSettings.gridMode == HomeGridMode.courseGrid
-                                            ? HomeGridMode.timeGrid
-                                            : HomeGridMode.courseGrid,
-                                  ),
-                                );
-                          },
+                          child: ui.IconButton.ghost(
+                            icon: const Icon(Icons.today_outlined),
+                            onPressed: () => viewModel.showCurrentPeriod(viewData.scope),
+                          ),
                         ),
-                      ),
                       ui.IconButton.ghost(
                         icon: const Icon(AppIcons.nextPeriod),
                         onPressed: () => viewModel.showNext(viewData.scope),
@@ -218,6 +234,22 @@ class HomePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  bool _shouldShowBackToCurrentWeek(HomeViewData viewData) {
+    if (viewData.scope != HomeDisplayScope.week) {
+      return false;
+    }
+    final today = DateUtils.dateOnly(DateTime.now());
+    final currentWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    return !DateUtils.isSameDay(
+      currentWeekStart,
+      DateUtils.dateOnly(viewData.visibleRange.start),
+    );
+  }
+
+  bool _isChinese(BuildContext context) {
+    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
   }
 
   Future<void> _openTimePicker(

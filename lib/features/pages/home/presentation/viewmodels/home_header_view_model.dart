@@ -81,6 +81,18 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
     );
   }
 
+  void showCurrentPeriod(HomeDisplayScope scope) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    _moveToAnchor(
+      switch (scope) {
+        HomeDisplayScope.week => today,
+        HomeDisplayScope.month => DateTime(today.year, today.month, 1),
+      },
+      scope: scope,
+      fallbackSelectedDate: today,
+    );
+  }
+
   void selectDate(DateTime date) {
     state = state.copyWith(selectedDate: DateUtils.dateOnly(date));
   }
