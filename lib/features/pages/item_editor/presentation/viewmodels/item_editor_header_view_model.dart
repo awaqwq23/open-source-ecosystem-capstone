@@ -12,6 +12,11 @@ import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
+enum CourseColorUpdateScope {
+  singleItem,
+  sameTitleCourses,
+}
+
 class ItemEditorPageState {
   const ItemEditorPageState({
     required this.itemId,
@@ -51,6 +56,7 @@ class ItemEditorPageState {
 class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> {
   static const _buildDraft = BuildItemEditorDraftUseCase();
   ItemEditorArgs? _args;
+  CourseColorUpdateScope _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
 
   @override
   ItemEditorPageState build() {
@@ -66,6 +72,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     }
 
     _args = args;
+    _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
     final prefill = args?.prefill;
     var draft = _buildDraft(prefill);
     if (draft.type == ItemType.course &&
@@ -80,6 +87,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void selectType(ItemType type) {
+    if (type != ItemType.course) {
+      _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
+    }
     _updateDraft(ItemEditorDefaults.applyType(state.draft, type));
   }
 
@@ -120,7 +130,11 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     );
   }
 
-  void selectColor(ItemColorOption color) {
+  void selectColor(
+    ItemColorOption color, {
+    CourseColorUpdateScope courseScope = CourseColorUpdateScope.singleItem,
+  }) {
+    _courseColorUpdateScope = courseScope;
     _updateDraft(state.draft.copyWith(color: color));
   }
 
@@ -405,6 +419,15 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       itemId: state.itemId,
       draft: draft,
     );
+    if (draft.type == ItemType.course &&
+        state.itemId != null &&
+        _courseColorUpdateScope == CourseColorUpdateScope.sameTitleCourses) {
+      await repository.updateCourseColorByTitle(
+        title: draft.title,
+        color: draft.color,
+      );
+    }
+    _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
     state = state.copyWith(
       isSubmitting: false,
       submitSucceeded: true,

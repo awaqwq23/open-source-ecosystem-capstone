@@ -397,9 +397,16 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         color: color.resolve(Theme.of(context).brightness),
                         label: _colorLabel(l10n, color),
                         selected: state.draft.color == color,
-                        onPressed: () {
-                          ref.read(itemEditorPageControllerProvider.notifier).selectColor(color);
+                        onPressed: () async {
                           ui.closeDrawer(sheetContext);
+                          final scope = await _resolveColorUpdateScope(context, ref, color);
+                          if (scope == null || !mounted) {
+                            return;
+                          }
+                          ref.read(itemEditorPageControllerProvider.notifier).selectColor(
+                                color,
+                                courseScope: scope,
+                              );
                         },
                       ),
                   ],
@@ -407,6 +414,59 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<CourseColorUpdateScope?> _resolveColorUpdateScope(
+    BuildContext context,
+    WidgetRef ref,
+    ItemColorOption color,
+  ) async {
+    final state = ref.read(itemEditorPageControllerProvider);
+    if (!state.isEditing ||
+        state.draft.type != ItemType.course ||
+        state.draft.color == color ||
+        state.draft.title.trim().isEmpty) {
+      return CourseColorUpdateScope.singleItem;
+    }
+    return _showCourseColorScopeDialog(context, state.draft.title.trim());
+  }
+
+  Future<CourseColorUpdateScope?> _showCourseColorScopeDialog(
+    BuildContext context,
+    String title,
+  ) {
+    final isZh = _isChinese(context);
+    return showDialog<CourseColorUpdateScope>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(isZh ? '应用颜色到哪里？' : 'Apply color to'),
+          content: Text(
+            isZh
+                ? '要只修改当前这一项，还是修改所有名称为「$title」的课程？'
+                : 'Change only this item, or every course named "$title"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(isZh ? '取消' : 'Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(
+                CourseColorUpdateScope.singleItem,
+              ),
+              child: Text(isZh ? '只改这一项' : 'This item'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(
+                CourseColorUpdateScope.sameTitleCourses,
+              ),
+              child: Text(isZh ? '改这门课程' : 'All same-name courses'),
+            ),
+          ],
         );
       },
     );

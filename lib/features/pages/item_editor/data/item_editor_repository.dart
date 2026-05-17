@@ -4,6 +4,8 @@ import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_reposito
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
+import 'package:luotopia/shared/value_objects/item_color_option.dart';
 
 class SharedItemEditorRepository implements ItemEditorRepository {
   const SharedItemEditorRepository(this._repository);
@@ -18,6 +20,31 @@ class SharedItemEditorRepository implements ItemEditorRepository {
   @override
   Future<AgendaItem?> updateItem(String id, ItemDraft draft) {
     return _repository.updateItem(id, draft);
+  }
+
+  @override
+  Future<int> updateCourseColorByTitle({
+    required String title,
+    required ItemColorOption color,
+  }) async {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      return 0;
+    }
+
+    var updatedCount = 0;
+    final targets = [
+      for (final item in _repository.items)
+        if (item.type == ItemType.course && item.title.trim() == normalizedTitle) item,
+    ];
+    for (final item in targets) {
+      await _repository.updateItem(
+        item.id,
+        item.toDraft().copyWith(color: color),
+      );
+      updatedCount++;
+    }
+    return updatedCount;
   }
 }
 
