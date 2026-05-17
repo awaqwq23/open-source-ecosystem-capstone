@@ -70,7 +70,7 @@ class WhuCourseImportService {
       weekOneMonday.month,
       weekOneMonday.day,
     );
-    final items = <ItemDraft>[];
+    final courses = <_ParsedWhuCourse>[];
     for (final rawItem in rawList) {
       if (rawItem is! Map) {
         continue;
@@ -106,15 +106,34 @@ class WhuCourseImportService {
       final instructor = (item['xm'] as String? ?? '').trim();
       final location = (item['cdmc'] as String? ?? '').trim();
       final weekMeta = (item['zcd'] as String? ?? '').trim();
-      final color = _pickColor(title);
-
-      for (final week in weeks) {
-        final date = normalizedWeekOne.add(Duration(days: (week - 1) * 7 + (weekday - 1)));
-        final periodTime = _parsePeriodTime(
+      courses.add(
+        _ParsedWhuCourse(
+          title: title,
+          weekday: weekday,
+          classPeriod: classPeriod,
+          weeks: weeks,
+          courseId: courseId,
+          courseNature: courseNature,
+          instructor: instructor,
+          location: location,
+          weekMeta: weekMeta,
           startText: _pickFirstText(item, const ['kssj', 'sksj_kssj', 'kssj_hhmm']),
           endText: _pickFirstText(item, const ['jssj', 'sksj_jssj', 'jssj_hhmm']),
-          classFrom: classPeriod.classFrom,
-          classTo: classPeriod.classTo,
+        ),
+      );
+    }
+
+    final colorByTitle = _assignCourseColors(courses.map((course) => course.title));
+    final items = <ItemDraft>[];
+    for (final course in courses) {
+      final color = colorByTitle[course.title] ?? _pickColor(course.title);
+      for (final week in course.weeks) {
+        final date = normalizedWeekOne.add(Duration(days: (week - 1) * 7 + (course.weekday - 1)));
+        final periodTime = _parsePeriodTime(
+          startText: course.startText,
+          endText: course.endText,
+          classFrom: course.classPeriod.classFrom,
+          classTo: course.classPeriod.classTo,
         );
         final startMinute = periodTime.startMinute;
         final endMinute = periodTime.endMinute;
@@ -135,9 +154,9 @@ class WhuCourseImportService {
         items.add(
           ItemDraft(
             type: ItemType.course,
-            title: title,
+            title: course.title,
             details: '',
-            location: location,
+            location: course.location,
             color: color,
             reminder: ReminderOption.none,
             repeatRule: RepeatRule.none,
@@ -155,11 +174,11 @@ class WhuCourseImportService {
             memoDetails: const ItemMemoDetails(),
             courseDetails: ItemCourseDetails(
               sourceKind: CourseItemSourceKind.whuJw,
-              sourceCourseId: courseId,
-              courseNature: courseNature,
-              instructor: instructor,
-              classroomRaw: location,
-              weekMeta: weekMeta,
+              sourceCourseId: course.courseId,
+              courseNature: course.courseNature,
+              instructor: course.instructor,
+              classroomRaw: course.location,
+              weekMeta: course.weekMeta,
             ),
           ),
         );
@@ -398,9 +417,100 @@ class WhuCourseImportService {
   }
 
   ItemColorOption _pickColor(String title) {
-    final seed = title.hashCode.abs();
+    final seed = _stableHash(title);
     return ItemColorOption.values[seed % ItemColorOption.values.length];
   }
+
+  Map<String, ItemColorOption> _assignCourseColors(Iterable<String> titles) {
+    final colors = ItemColorOption.values;
+    final result = <String, ItemColorOption>{};
+    final useCounts = {
+      for (final color in colors) color: 0,
+    };
+
+    for (final title in titles) {
+      if (result.containsKey(title)) {
+        continue;
+      }
+      final seed = _stableHash(title);
+      final color = result.length < colors.length
+          ? _pickUnusedColor(colors: colors, useCounts: useCounts, seed: seed)
+          : _pickLeastUsedColor(colors: colors, useCounts: useCounts, seed: seed);
+      result[title] = color;
+      useCounts[color] = (useCounts[color] ?? 0) + 1;
+    }
+
+    return result;
+  }
+
+  ItemColorOption _pickUnusedColor({
+    required List<ItemColorOption> colors,
+    required Map<ItemColorOption, int> useCounts,
+    required int seed,
+  }) {
+    for (var offset = 0; offset < colors.length; offset++) {
+      final candidate = colors[(seed + offset) % colors.length];
+      if ((useCounts[candidate] ?? 0) == 0) {
+        return candidate;
+      }
+    }
+    return colors[seed % colors.length];
+  }
+
+  ItemColorOption _pickLeastUsedColor({
+    required List<ItemColorOption> colors,
+    required Map<ItemColorOption, int> useCounts,
+    required int seed,
+  }) {
+    var best = colors[seed % colors.length];
+    var bestCount = useCounts[best] ?? 0;
+    for (var offset = 1; offset < colors.length; offset++) {
+      final candidate = colors[(seed + offset) % colors.length];
+      final count = useCounts[candidate] ?? 0;
+      if (count < bestCount) {
+        best = candidate;
+        bestCount = count;
+      }
+    }
+    return best;
+  }
+
+  int _stableHash(String value) {
+    var hash = 0x811C9DC5;
+    for (final unit in value.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash;
+  }
+}
+
+class _ParsedWhuCourse {
+  const _ParsedWhuCourse({
+    required this.title,
+    required this.weekday,
+    required this.classPeriod,
+    required this.weeks,
+    required this.courseId,
+    required this.courseNature,
+    required this.instructor,
+    required this.location,
+    required this.weekMeta,
+    required this.startText,
+    required this.endText,
+  });
+
+  final String title;
+  final int weekday;
+  final _ClassPeriod classPeriod;
+  final List<int> weeks;
+  final String courseId;
+  final String courseNature;
+  final String instructor;
+  final String location;
+  final String weekMeta;
+  final String startText;
+  final String endText;
 }
 
 class _ClassPeriod {
