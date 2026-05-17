@@ -94,9 +94,17 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       return false;
     }
     if (mounted) {
-      Navigator.of(context).maybePop();
+      _exitSeatReservationPage();
     }
     return true;
+  }
+
+  void _exitSeatReservationPage() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutePaths.campus);
+    }
   }
 
   Future<WebViewController> _buildController() async {
@@ -314,9 +322,7 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
             leading: [
               ui.IconButton.ghost(
                 icon: const Icon(AppIcons.back),
-                onPressed: () {
-                  Navigator.of(context).maybePop();
-                },
+                onPressed: _exitSeatReservationPage,
               ),
             ],
             title: const Text('自习预约'),
