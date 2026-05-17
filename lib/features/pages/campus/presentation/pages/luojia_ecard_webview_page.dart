@@ -25,10 +25,10 @@ enum LuojiaEcardEntry {
   Uri get uri {
     return switch (this) {
       LuojiaEcardEntry.card => Uri.parse(
-        'https://zhlj.whu.edu.cn/mobile/homepageapi/showApp?appid=100000083&go=3A951E717A54699002E12202B5C8D490EBE93316D812B5451C0AFB2325B5E2CE293FA9EA8BE096D45A5B8E6CE4F15CBF',
+        'https://zhlj.whu.edu.cn/mobile/homepageapi/showApp?appid=100000083&go=3A951E717A54699002E12202B5C8D4900DE42F32C030654FD17718CFBFB249AEFFE16B734A902AA80213296633D535817FC5933ADD813784A17E766EAB7860A453551EF48221E88B745FA0BB5AC35586BC7600F17BD706D54BED697A39BBAC1A56AAFE6F5F1C944C8263D962BB28A68E',
       ),
       LuojiaEcardEntry.paymentCode => Uri.parse(
-        'https://zhlj.whu.edu.cn/mobile/homepageapi/showApp?appid=100000068&go=3A951E717A54699002E12202B5C8D490EBE93316D812B5451C0AFB2325B5E2CE293FA9EA8BE096D45A5B8E6CE4F15CBF',
+        'https://zhlj.whu.edu.cn/mobile/homepageapi/showApp?appid=100000068&go=3A951E717A54699002E12202B5C8D4900DE42F32C030654FD17718CFBFB249AEFFE16B734A902AA80213296633D535817FC5933ADD813784A17E766EAB7860A453551EF48221E88B745FA0BB5AC355865ACAB3000D34391C989BE65D60DF5342FE9087B270C80BE0F488AE36F6C4A96D',
       ),
     };
   }
@@ -46,11 +46,18 @@ class LuojiaEcardWebViewPage extends ConsumerStatefulWidget {
 
 class _LuojiaEcardWebViewPageState
     extends ConsumerState<LuojiaEcardWebViewPage> {
-  static const _mobileUserAgent =
-      'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 '
-      '(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36';
+  static const _smartCampusPackage = 'com.chaoxing.mobile.wuhanuniversity';
+  static const _smartCampusReferer =
+      'https://zhlj.whu.edu.cn/mobile/homepage?customizecolor=0x01A185';
+  static const _zhljReferer = 'https://zhlj.whu.edu.cn/';
+  static const _smartCampusUserAgent =
+      'Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.59 Mobile Safari/537.36 '
+      'Language/zh_CN '
+      'com.chaoxing.mobile.wuhanuniversity/ChaoXingStudy_1000028_5.4_android_phone_640_233';
 
   late final WebViewController _controller;
+  final Set<String> _smartCampusHeaderLoadUrls = <String>{};
   var _preparing = true;
   var _loading = true;
   var _needsLogin = false;
@@ -104,6 +111,14 @@ class _LuojiaEcardWebViewPageState
               }
               return NavigationDecision.prevent;
             }
+            if (_shouldLoadWithSmartCampusHeaders(uri)) {
+              final url = uri.toString();
+              if (_smartCampusHeaderLoadUrls.remove(url)) {
+                return NavigationDecision.navigate;
+              }
+              unawaited(_loadSmartCampusRequest(uri));
+              return NavigationDecision.prevent;
+            }
             return NavigationDecision.navigate;
           },
         ),
@@ -137,8 +152,8 @@ class _LuojiaEcardWebViewPageState
     try {
       await ref.read(whuAuthProvider.notifier).primeCasCookiesForWebView();
       await _configurePlatformController();
-      await _controller.setUserAgent(_mobileUserAgent);
-      await _controller.loadRequest(widget.entry.uri);
+      await _controller.setUserAgent(_smartCampusUserAgent);
+      await _loadSmartCampusRequest(widget.entry.uri);
       if (!mounted) {
         return;
       }
@@ -184,6 +199,14 @@ class _LuojiaEcardWebViewPageState
       _progress = 0;
     });
     await _controller.reload();
+  }
+
+  Future<void> _loadSmartCampusRequest(Uri uri) async {
+    _smartCampusHeaderLoadUrls.add(uri.toString());
+    await _controller.loadRequest(
+      uri,
+      headers: luojiaEcardSmartCampusHeaders(uri),
+    );
   }
 
   Future<void> _openLoginGuide() async {
@@ -245,6 +268,46 @@ class _LuojiaEcardWebViewPageState
   bool _isWebScheme(String scheme) {
     return scheme == 'https' || scheme == 'http';
   }
+
+  bool _shouldLoadWithSmartCampusHeaders(Uri uri) {
+    if (uri.host == 'zhlj.whu.edu.cn' &&
+        uri.path == '/mobile/homepageapi/showApp') {
+      return true;
+    }
+    if (uri.host == 'zsgx.whu.edu.cn') {
+      return uri.path == '/mobile/api/dologin' ||
+          uri.path == '/ydd/card/ematong' ||
+          uri.path == '/ydd/card/paycode';
+    }
+    if (uri.host == 'app.xiaoyuan.ccb.com') {
+      return uri.path == '/LHECISM/CCBYXLgServiceReqServlet';
+    }
+    return false;
+  }
+}
+
+Map<String, String> luojiaEcardSmartCampusHeaders(Uri uri) {
+  final referer = uri.host == 'zhlj.whu.edu.cn'
+      ? _LuojiaEcardWebViewPageState._smartCampusReferer
+      : _LuojiaEcardWebViewPageState._zhljReferer;
+
+  return <String, String>{
+    'Accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'zh_CN',
+    'Referer': referer,
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': _LuojiaEcardWebViewPageState._smartCampusUserAgent,
+    'X-Requested-With': _LuojiaEcardWebViewPageState._smartCampusPackage,
+    'sec-ch-ua':
+        '"Not(A:Brand";v="8", "Chromium";v="144", "Android WebView";v="144"',
+    'sec-ch-ua-mobile': '?1',
+    'sec-ch-ua-platform': '"Android"',
+  };
 }
 
 class _LoadingOverlay extends StatelessWidget {
