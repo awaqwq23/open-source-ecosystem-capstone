@@ -1,15 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
+import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 enum LuojiaEcardEntry {
   card,
@@ -56,84 +53,15 @@ class _LuojiaEcardWebViewPageState
       'Language/zh_CN '
       'com.chaoxing.mobile.wuhanuniversity/ChaoXingStudy_1000028_5.4_android_phone_640_233';
 
-  late final WebViewController _controller;
-  final Set<String> _smartCampusHeaderLoadUrls = <String>{};
-  var _preparing = true;
-  var _loading = true;
   var _needsLogin = false;
-  var _progress = 0;
   String? _errorMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (progress) {
-            if (mounted) {
-              setState(() => _progress = progress);
-            }
-          },
-          onPageStarted: (_) {
-            if (mounted) {
-              setState(() {
-                _loading = true;
-                _errorMessage = null;
-              });
-            }
-          },
-          onPageFinished: (_) {
-            if (mounted) {
-              setState(() {
-                _loading = false;
-                _progress = 100;
-              });
-            }
-          },
-          onWebResourceError: (error) {
-            if (error.isForMainFrame == false || !mounted) {
-              return;
-            }
-            setState(() {
-              _loading = false;
-              _errorMessage = '页面加载失败，请检查网络连接后重试。';
-            });
-          },
-          onNavigationRequest: (request) {
-            final uri = Uri.tryParse(request.url);
-            if (uri == null || !_isWebScheme(uri.scheme)) {
-              if (mounted) {
-                setState(() {
-                  _errorMessage = '当前链接需要在浏览器或学校应用中打开。';
-                });
-              }
-              return NavigationDecision.prevent;
-            }
-            if (_shouldLoadWithSmartCampusHeaders(uri)) {
-              final url = uri.toString();
-              if (_smartCampusHeaderLoadUrls.remove(url)) {
-                return NavigationDecision.navigate;
-              }
-              unawaited(_loadSmartCampusRequest(uri));
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..enableZoom(true);
-    unawaited(_prepareAndLoad());
-  }
-
-  Future<void> _prepareAndLoad() async {
+  Future<AppWebViewRequest?> _prepareInitialRequest(
+    WebViewController controller,
+  ) async {
     setState(() {
-      _preparing = true;
-      _loading = true;
       _needsLogin = false;
       _errorMessage = null;
-      _progress = 0;
     });
 
     final authState = ref.read(whuAuthProvider);
@@ -142,126 +70,130 @@ class _LuojiaEcardWebViewPageState
         return;
       }
       setState(() {
-        _preparing = false;
-        _loading = false;
         _needsLogin = true;
       });
-      return;
+      return null;
     }
 
     try {
       await ref.read(whuAuthProvider.notifier).primeCasCookiesForWebView();
-      await _configurePlatformController();
-      await _controller.setUserAgent(_smartCampusUserAgent);
-      await _loadSmartCampusRequest(widget.entry.uri);
-      if (!mounted) {
-        return;
-      }
-      setState(() => _preparing = false);
+      await controller.setUserAgent(_smartCampusUserAgent);
+      return AppWebViewRequest(
+        uri: widget.entry.uri,
+        headers: luojiaEcardSmartCampusHeaders(widget.entry.uri),
+      );
     } on WhuAuthException catch (error) {
       if (!mounted) {
-        return;
+        return null;
       }
       setState(() {
-        _preparing = false;
-        _loading = false;
         _needsLogin = true;
         _errorMessage = error.message;
       });
+      return null;
     } catch (error) {
       if (!mounted) {
-        return;
+        return null;
       }
       setState(() {
-        _preparing = false;
-        _loading = false;
         _errorMessage = '页面准备失败：$error';
       });
+      return null;
     }
   }
 
-  Future<void> _configurePlatformController() async {
-    final platformController = _controller.platform;
-    if (platformController is AndroidWebViewController) {
-      await platformController.setUseWideViewPort(true);
-      await platformController.setTextZoom(100);
-    }
-  }
-
-  Future<void> _refresh() async {
+  Future<void> _refresh(
+    WebViewController controller,
+    Future<void> Function() loadInitialRequest,
+  ) async {
     if (_needsLogin) {
-      await _prepareAndLoad();
+      await loadInitialRequest();
       return;
     }
     setState(() {
-      _loading = true;
       _errorMessage = null;
-      _progress = 0;
     });
-    await _controller.reload();
+    await controller.reload();
   }
 
-  Future<void> _loadSmartCampusRequest(Uri uri) async {
-    _smartCampusHeaderLoadUrls.add(uri.toString());
-    await _controller.loadRequest(
-      uri,
-      headers: luojiaEcardSmartCampusHeaders(uri),
-    );
-  }
-
-  Future<void> _openLoginGuide() async {
+  Future<void> _openLoginGuide(WebViewController controller) async {
     await context.push(AppRoutePaths.settingsWhuAccount);
-    if (mounted) {
-      await _prepareAndLoad();
+    if (!mounted) {
+      return;
+    }
+    final request = await _prepareInitialRequest(controller);
+    if (request != null) {
+      await controller.loadRequest(request.uri, headers: request.headers);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ui.Scaffold(
-      headers: [
-        ui.AppBar(
-          leading: [
-            ui.IconButton.ghost(
-              icon: const Icon(AppIcons.back),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-          ],
-          title: Text(widget.entry.title),
-          trailing: [
-            ui.IconButton.ghost(
-              icon: const Icon(Icons.refresh),
-              onPressed: _refresh,
-            ),
-          ],
-        ),
-      ],
-      child: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_preparing || _loading) _LoadingOverlay(progress: _progress),
-          if (_needsLogin)
-            _StateOverlay(
-              icon: Icons.account_circle_outlined,
-              title: '需要登录武大统一认证',
-              message: _errorMessage ?? '登录后可继续访问${widget.entry.title}。',
-              primaryText: '去登录',
-              onPrimary: _openLoginGuide,
-              secondaryText: '重试',
-              onSecondary: _prepareAndLoad,
-            ),
-          if (!_needsLogin && _errorMessage != null)
-            _StateOverlay(
-              icon: Icons.wifi_off_outlined,
-              title: '页面暂时无法打开',
-              message: _errorMessage!,
-              primaryText: '刷新',
-              onPrimary: _refresh,
-              secondaryText: '账户状态',
-              onSecondary: _openLoginGuide,
-            ),
-        ],
-      ),
+    return AppWebViewPage(
+      title: widget.entry.title,
+      initialRequest: _prepareInitialRequest,
+      loadingMessage: '正在加载${widget.entry.title}...',
+      preparingMessage: '正在准备${widget.entry.title}...',
+      onRefresh: _refresh,
+      onNavigationRequest: (request, _) {
+        final uri = Uri.tryParse(request.url);
+        if (uri == null || !_isWebScheme(uri.scheme)) {
+          if (mounted) {
+            setState(() {
+              _errorMessage = '当前链接需要在浏览器或学校应用中打开。';
+            });
+          }
+          return const AppWebViewNavigationAction.prevent();
+        }
+        if (_shouldLoadWithSmartCampusHeaders(uri)) {
+          return AppWebViewNavigationAction.reloadWithHeaders(
+            uri,
+            luojiaEcardSmartCampusHeaders(uri),
+          );
+        }
+        return const AppWebViewNavigationAction.navigate();
+      },
+      overlayBuilder: (context, state, controller) {
+        if (_needsLogin) {
+          return _StateOverlay(
+            icon: Icons.account_circle_outlined,
+            title: '需要登录武大统一认证',
+            message: _errorMessage ?? '登录后可继续访问${widget.entry.title}。',
+            primaryText: '去登录',
+            onPrimary: () => _openLoginGuide(controller),
+            secondaryText: '重试',
+            onSecondary: () => _refresh(controller, () async {
+              final request = await _prepareInitialRequest(controller);
+              if (request != null) {
+                await controller.loadRequest(
+                  request.uri,
+                  headers: request.headers,
+                );
+              }
+            }),
+          );
+        }
+        if (_errorMessage != null) {
+          return _StateOverlay(
+            icon: Icons.wifi_off_outlined,
+            title: '页面暂时无法打开',
+            message: _errorMessage!,
+            primaryText: '刷新',
+            onPrimary: () => _refresh(controller, () async {
+              final request = await _prepareInitialRequest(controller);
+              if (request != null) {
+                await controller.loadRequest(
+                  request.uri,
+                  headers: request.headers,
+                );
+              }
+            }),
+            secondaryText: '账户状态',
+            onSecondary: () => _openLoginGuide(controller),
+          );
+        }
+        return null;
+      },
     );
   }
 
@@ -308,26 +240,6 @@ Map<String, String> luojiaEcardSmartCampusHeaders(Uri uri) {
     'sec-ch-ua-mobile': '?1',
     'sec-ch-ua-platform': '"Android"',
   };
-}
-
-class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay({required this.progress});
-
-  final int progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ColoredBox(
-      color: colors.surface.withValues(alpha: 0.58),
-      child: Column(
-        children: [
-          LinearProgressIndicator(value: progress <= 0 ? null : progress / 100),
-          const Expanded(child: Center(child: CircularProgressIndicator())),
-        ],
-      ),
-    );
-  }
 }
 
 class _StateOverlay extends StatelessWidget {

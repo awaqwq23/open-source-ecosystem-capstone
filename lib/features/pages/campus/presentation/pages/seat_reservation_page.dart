@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/data/seat_reservation_auth_service.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
@@ -18,9 +17,9 @@ import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
+import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 class SeatReservationPage extends ConsumerStatefulWidget {
   const SeatReservationPage({super.key});
@@ -31,30 +30,18 @@ class SeatReservationPage extends ConsumerStatefulWidget {
 
 class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   WebViewController? _controller;
-  bool _loadingSession = false;
-  bool _loadingPage = false;
   bool _showingSyncDialog = false;
   String? _errorMessage;
   String? _lastHandledSourceId;
   final Map<String, _SeatReservationTimeContext> _timeContexts = {};
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadSeatSession();
-    });
-  }
-
-  Future<void> _loadSeatSession() async {
+  Future<AppWebViewRequest?> _loadSeatSession(WebViewController controller) async {
     final authState = ref.read(whuAuthProvider);
-    if (!authState.isAuthenticated || _loadingSession) {
-      return;
+    if (!authState.isAuthenticated) {
+      return null;
     }
 
     setState(() {
-      _loadingSession = true;
-      _loadingPage = true;
       _errorMessage = null;
     });
 
@@ -62,42 +49,22 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       final session = await SeatReservationAuthService(
         gateway: ref.read(whuAuthGatewayProvider),
       ).createWebSession();
-      final controller = await _buildController();
       if (!mounted) {
-        return;
+        return null;
       }
       setState(() {
         _controller = controller;
       });
-      await controller.loadRequest(session.launchUri);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _loadingSession = false;
-      });
+      return AppWebViewRequest(uri: session.launchUri);
     } catch (error) {
       if (!mounted) {
-        return;
+        return null;
       }
       setState(() {
-        _loadingSession = false;
-        _loadingPage = false;
         _errorMessage = error.toString();
       });
+      return null;
     }
-  }
-
-  Future<bool> _handleBackNavigation() async {
-    final controller = _controller;
-    if (controller != null && await controller.canGoBack()) {
-      await controller.goBack();
-      return false;
-    }
-    if (mounted) {
-      _exitSeatReservationPage();
-    }
-    return true;
   }
 
   void _exitSeatReservationPage() {
@@ -108,38 +75,12 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
     }
   }
 
-  Future<WebViewController> _buildController() async {
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..addJavaScriptChannel(
-        'SeatReservationBridge',
-        onMessageReceived: _handleBridgeMessage,
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (url) async {
-            debugPrint('[SeatReservationWebView] finished ${_sanitizeSeatUrl(url)}');
-            if (mounted) {
-              setState(() => _loadingPage = false);
-            }
-            await _injectReservationBridge();
-          },
-          onPageStarted: (url) {
-            debugPrint('[SeatReservationWebView] started ${_sanitizeSeatUrl(url)}');
-            if (mounted) {
-              setState(() => _loadingPage = true);
-            }
-          },
-        ),
-      )
-      ..enableZoom(false);
-
-    final platformController = controller.platform;
-    if (platformController is AndroidWebViewController) {
-      await platformController.setUseWideViewPort(true);
-      await platformController.setTextZoom(100);
-    }
-    return controller;
+  Future<void> _configureSeatController(WebViewController controller) async {
+    _controller = controller;
+    await controller.addJavaScriptChannel(
+      'SeatReservationBridge',
+      onMessageReceived: _handleBridgeMessage,
+    );
   }
 
   Future<void> _injectReservationBridge() async {
@@ -342,79 +283,60 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(whuAuthProvider);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (!didPop) {
-          await _handleBackNavigation();
-        }
-      },
-      child: ui.Scaffold(
-        headers: [
-          ui.AppBar(
-            leading: [
-              ui.IconButton.ghost(
-                icon: const Icon(AppIcons.back),
-                onPressed: _exitSeatReservationPage,
-              ),
-            ],
-            title: const Text('自习预约'),
-            trailing: [
-              ui.IconButton.ghost(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  if (!_loadingSession) {
-                    _loadSeatSession();
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
-        child: _buildBody(authState),
-      ),
-    );
+    return _buildBody(authState);
   }
 
   Widget _buildBody(WhuAuthState authState) {
     if (!authState.isAuthenticated) {
-      return _LoginRequiredView(onLogin: () async {
-        await context.push(AppRoutePaths.settingsWhuAccount);
-        if (mounted) {
-          await _loadSeatSession();
-        }
-      });
-    }
-
-    if (_errorMessage != null && _controller == null) {
-      return _ErrorView(
-        message: _errorMessage!,
-        onRetry: _loadSeatSession,
+      return ui.Scaffold(
+        child: _LoginRequiredView(onLogin: () async {
+          await context.push(AppRoutePaths.settingsWhuAccount);
+          if (mounted) {
+            setState(() {});
+          }
+        }),
       );
     }
 
-    final controller = _controller;
-    return Stack(
-      children: [
-        if (controller != null)
-          WebViewWidget(controller: controller)
-        else
-          const SizedBox.expand(),
-        if (_loadingSession || _loadingPage)
-          ColoredBox(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.72),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  Text(_loadingSession ? '正在授权座位预约系统...' : '正在加载座位预约...'),
-                ],
-              ),
-            ),
+    return AppWebViewPage(
+      title: '自习预约',
+      enableZoom: false,
+      preparingMessage: '正在授权座位预约系统...',
+      loadingMessage: '正在加载座位预约...',
+      errorTitle: '座位预约暂时无法打开',
+      initialRequest: _loadSeatSession,
+      onControllerCreated: _configureSeatController,
+      onPageStarted: (url, _) {
+        debugPrint('[SeatReservationWebView] started ${_sanitizeSeatUrl(url)}');
+      },
+      onPageFinished: (url, _) async {
+        debugPrint('[SeatReservationWebView] finished ${_sanitizeSeatUrl(url)}');
+        await _injectReservationBridge();
+      },
+      onRefresh: (_, loadInitialRequest) => loadInitialRequest(),
+      onExit: _exitSeatReservationPage,
+      overlayBuilder: (context, state, controller) {
+        final errorMessage = _errorMessage;
+        if (errorMessage == null) {
+          return null;
+        }
+        return ColoredBox(
+          color: Theme.of(context).colorScheme.surface,
+          child: _ErrorView(
+            message: errorMessage,
+            onRetry: () async {
+              setState(() => _errorMessage = null);
+              final request = await _loadSeatSession(controller);
+              if (request != null) {
+                await controller.loadRequest(
+                  request.uri,
+                  headers: request.headers,
+                );
+              }
+            },
           ),
-      ],
+        );
+      },
     );
   }
 }
