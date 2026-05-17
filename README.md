@@ -2,15 +2,37 @@
 
 本文档面向接下来参与 Luotopia 共同开发的贡献者，欢迎大家直接选择自己心怡的模块直接开始开发！
 
+## 开发规范
+
+### 代码结构
+
 开发时请遵循现有项目结构：页面型功能放在 `lib/features/pages/`，可复用组件型能力放在 `lib/features/components/`，跨模块通用实体、仓储接口和值对象放在 `lib/shared/`，主题、路由、本地化、时间等基础设施放在 `lib/core/`。
+
+就校园页子应用页面来说，其代码应放在 `lib/features/pages/campus/sub_apps/` 下。`sub_apps/` 的每个一级代码目录必须与某个实际子应用一一对应，辅助代码应放在所属子应用。具体规则见 [校园页子应用架构迁移指南](docs/校园页子应用架构迁移指南.md)。
+
+### 武汉大学教务认证
 
 涉及武汉大学教务系统的能力请使用 `whu_auth`模块提供的接口，无需自行实现令牌获取、持久化等功能，可以参考 [校园页教务认证开发指南](docs/校园页教务认证开发指南.md)
 
 `whu_auth` 模块使用时如有力所不能及之处请提 issue 我们更新解决之。
 
+### Webview 的统一创建器
+
+新增或迁移 WebView 页面时请优先复用 `app_web_view_page.dart` 中的 `AppWebViewPage` （ Webview 统一创建器）。
+
+不属于业务页面重复创建范畴： `WebViewController` 的创建或复制加载层、错误层、返回、刷新逻辑。
+
+属于业务也没自己处理的部分：认证检查、CAS Cookie 准备、Header 规则、导航拦截和 JS Bridge 属于具体业务页面，通过 `AppWebViewPage` 提供的回调接入。
+
+详细接入方式见 [WebView 页面调用规范](docs/WebView页面调用规范.md)。
+
+### UI 规范
+
 本仓库中的 UI 开发请使用 [shadcn_flutter](https://sunarya-thito.github.io/shadcn_flutter/) 组件库或与之风格相同的自建组件，以使全局风格统一。
 
 自建组件请从页面中独立出来以便复用。
+
+## 待开发功能列表目录
 
 待开发模块分`客户端功能`和`服务端协同功能`，前者可以直接在本仓库开发完了，后者需要一并认领`Luotopia-Server`仓库里的对应issue一并开发完成之。
 
