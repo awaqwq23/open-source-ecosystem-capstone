@@ -291,7 +291,7 @@ class _AppWebViewPageState extends State<AppWebViewPage> {
     }
     widget.onExit?.call();
     if (widget.onExit == null && mounted) {
-      Navigator.of(context).maybePop();
+      Navigator.of(context).pop();
     }
   }
 
