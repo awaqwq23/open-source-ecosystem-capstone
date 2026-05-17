@@ -67,14 +67,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
     }
   }
 
-  void _exitSeatReservationPage() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(AppRoutePaths.campus);
-    }
-  }
-
   Future<void> _configureSeatController(WebViewController controller) async {
     _controller = controller;
     await controller.addJavaScriptChannel(
@@ -314,7 +306,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
         await _injectReservationBridge();
       },
       onRefresh: (_, loadInitialRequest) => loadInitialRequest(),
-      onExit: _exitSeatReservationPage,
       overlayBuilder: (context, state, controller) {
         final errorMessage = _errorMessage;
         if (errorMessage == null) {
