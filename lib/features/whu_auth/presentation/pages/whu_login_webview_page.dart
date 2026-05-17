@@ -53,9 +53,11 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       errorTitle: '无法打开页面',
       errorMessage: '页面加载失败，请检查网络连接后重试。',
       initialRequest: _buildLoginRequest,
-      onPageFinished: (url, _) {
+      onPageFinished: (url, controller) async {
         final uri = Uri.tryParse(url);
-        if (uri != null && _isEducationPage(uri)) {
+        if (uri != null &&
+            _isEducationPage(uri) &&
+            await _isEducationHomePage(controller)) {
           _completeLoginFromEducationPage();
         }
       },
@@ -130,6 +132,16 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     return uri.host == 'jwgl.whu.edu.cn' &&
         (uri.path == '/xtgl/index_initMenu.html' ||
             uri.path == '/xtgl/login_slogin.html');
+  }
+
+  Future<bool> _isEducationHomePage(WebViewController controller) async {
+    final content = await controller.runJavaScriptReturningResult(
+      'document.documentElement.innerText + "\\n" + document.documentElement.innerHTML',
+    );
+    final pageText = content.toString();
+    return pageText.contains('教学管理信息服务平台') ||
+        pageText.contains('index_cxYhxxIndex.html') ||
+        pageText.contains('xh_id=');
   }
 }
 
