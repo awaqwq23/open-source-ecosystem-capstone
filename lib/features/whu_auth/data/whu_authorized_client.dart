@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 
@@ -5,11 +6,18 @@ class WhuAuthorizedClient extends WhuServiceSession {
   WhuAuthorizedClient({
     required String initialCookieHeader,
     http.Client? inner,
-  })  : _cookieJar = _CookieJar.fromHeader(initialCookieHeader),
+  })  : _cookieJar = _CookieJar.fromHeader(
+          initialCookieHeader,
+          host: 'cas.whu.edu.cn',
+        ),
         _inner = inner ?? http.Client();
 
   final http.Client _inner;
   final _CookieJar _cookieJar;
+  Uri? _lastResponseUri;
+
+  @override
+  Uri? get lastResponseUri => _lastResponseUri;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -18,10 +26,15 @@ class WhuAuthorizedClient extends WhuServiceSession {
       current.followRedirects = false;
       _attachHeaders(current);
       final response = await _inner.send(current);
+      _lastResponseUri = response.request?.url ?? current.url;
       final setCookie = response.headers['set-cookie'];
       if (setCookie != null && setCookie.isNotEmpty) {
-        _cookieJar.mergeSetCookieHeader(setCookie);
+        _cookieJar.mergeSetCookieHeader(setCookie, current.url);
       }
+      debugPrint(
+        '[WhuAuthorizedClient] ${current.method} ${_sanitizeUri(current.url)} '
+        '-> ${response.statusCode}; cookies=${_cookieJar.debugNamesFor(current.url)}',
+      );
       if (!_isRedirect(response) || redirectCount == current.maxRedirects) {
         return response;
       }
@@ -31,6 +44,7 @@ class WhuAuthorizedClient extends WhuServiceSession {
       }
       await response.stream.drain<void>();
       final redirectedUri = current.url.resolve(location);
+      debugPrint('[WhuAuthorizedClient] redirect to ${_sanitizeUri(redirectedUri)}');
       current = http.Request('GET', redirectedUri)
         ..headers.addAll(current.headers)
         ..followRedirects = false
@@ -40,9 +54,11 @@ class WhuAuthorizedClient extends WhuServiceSession {
   }
 
   void _attachHeaders(http.BaseRequest request) {
-    final cookieHeader = _cookieJar.header;
+    final cookieHeader = _cookieJar.headerFor(request.url);
     if (cookieHeader.isNotEmpty) {
       request.headers['Cookie'] = cookieHeader;
+    } else {
+      request.headers.remove('Cookie');
     }
     request.headers.putIfAbsent(
       'User-Agent',
@@ -59,6 +75,18 @@ class WhuAuthorizedClient extends WhuServiceSession {
         response.statusCode == 308;
   }
 
+  String _sanitizeUri(Uri uri) {
+    final queryKeys = uri.queryParameters.keys
+        .where((key) {
+          final lower = key.toLowerCase();
+          return lower != 'ticket' && lower != 'token';
+        })
+        .toList(growable: false)
+      ..sort();
+    final queryText = queryKeys.isEmpty ? '' : '?${queryKeys.join(',')}';
+    return '${uri.scheme}://${uri.host}${uri.path}$queryText';
+  }
+
   @override
   void close() {
     _inner.close();
@@ -69,8 +97,8 @@ class WhuAuthorizedClient extends WhuServiceSession {
 class _CookieJar {
   _CookieJar(this._values);
 
-  factory _CookieJar.fromHeader(String header) {
-    final values = <String, String>{};
+  factory _CookieJar.fromHeader(String header, {required String host}) {
+    final values = <_CookieKey, String>{};
     for (final part in header.split(';')) {
       final trimmed = part.trim();
       if (trimmed.isEmpty || !trimmed.contains('=')) {
@@ -80,22 +108,33 @@ class _CookieJar {
       final name = trimmed.substring(0, index).trim();
       final value = trimmed.substring(index + 1).trim();
       if (name.isNotEmpty && value.isNotEmpty) {
-        values[name] = value;
+        values[_CookieKey(host: host, name: name)] = value;
       }
     }
     return _CookieJar(values);
   }
 
-  final Map<String, String> _values;
+  final Map<_CookieKey, String> _values;
 
-  String get header => _values.entries
-      .where((entry) => entry.key.isNotEmpty && entry.value.isNotEmpty)
-      .map((entry) => '${entry.key}=${entry.value}')
+  String headerFor(Uri uri) => _values.entries
+      .where((entry) => entry.value.isNotEmpty && entry.key.matches(uri.host))
+      .map((entry) => '${entry.key.name}=${entry.value}')
       .join('; ');
 
-  void mergeSetCookieHeader(String header) {
+  String debugNamesFor(Uri uri) {
+    final names = _values.keys
+        .where((key) => key.matches(uri.host))
+        .map((key) => key.name)
+        .toSet()
+        .toList(growable: false)
+      ..sort();
+    return names.isEmpty ? '<none>' : names.join(',');
+  }
+
+  void mergeSetCookieHeader(String header, Uri uri) {
     for (final rawCookie in _splitSetCookie(header)) {
-      final firstPart = rawCookie.split(';').first.trim();
+      final parts = rawCookie.split(';').map((part) => part.trim()).toList(growable: false);
+      final firstPart = parts.first;
       if (!firstPart.contains('=')) {
         continue;
       }
@@ -103,9 +142,26 @@ class _CookieJar {
       final name = firstPart.substring(0, index).trim();
       final value = firstPart.substring(index + 1).trim();
       if (name.isNotEmpty) {
-        _values[name] = value;
+        _values[_CookieKey(host: _cookieDomain(parts, uri.host), name: name)] = value;
       }
     }
+  }
+
+  String _cookieDomain(List<String> parts, String fallbackHost) {
+    for (final part in parts.skip(1)) {
+      final index = part.indexOf('=');
+      if (index <= 0) {
+        continue;
+      }
+      final name = part.substring(0, index).trim().toLowerCase();
+      if (name == 'domain') {
+        final value = part.substring(index + 1).trim().toLowerCase();
+        if (value.isNotEmpty) {
+          return value;
+        }
+      }
+    }
+    return fallbackHost.toLowerCase();
   }
 
   List<String> _splitSetCookie(String header) {
@@ -132,4 +188,34 @@ class _CookieJar {
     final semicolon = rest.indexOf(';');
     return equals > 0 && (semicolon == -1 || equals < semicolon);
   }
+}
+
+class _CookieKey {
+  const _CookieKey({
+    required this.host,
+    required this.name,
+  });
+
+  final String host;
+  final String name;
+
+  bool matches(String requestHost) {
+    final normalizedHost = requestHost.toLowerCase();
+    final normalizedCookieHost = host.toLowerCase();
+    if (normalizedHost == normalizedCookieHost) {
+      return true;
+    }
+    if (normalizedCookieHost.startsWith('.')) {
+      return normalizedHost.endsWith(normalizedCookieHost.substring(1));
+    }
+    return false;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is _CookieKey && other.host == host && other.name == name;
+  }
+
+  @override
+  int get hashCode => Object.hash(host, name);
 }

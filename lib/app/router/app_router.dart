@@ -15,6 +15,7 @@ import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_timetable_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/score_page.dart';
+import 'package:luotopia/features/pages/campus/presentation/pages/seat_reservation_page.dart';
 import 'package:luotopia/features/pages/forum/presentation/pages/forum_page.dart';
 import 'package:luotopia/features/pages/ai/presentation/pages/ai_page.dart';
 import 'package:luotopia/features/pages/home/presentation/pages/home_page.dart';
@@ -99,6 +100,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'timetable',
                     builder: (context, state) => const CampusTimetablePage(),
+                  ),
+                  GoRoute(
+                    path: 'seat-reservation',
+                    builder: (context, state) => const SeatReservationPage(),
                   ),
                 ],
               ),

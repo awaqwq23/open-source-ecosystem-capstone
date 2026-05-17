@@ -8,6 +8,7 @@ abstract final class AppRoutePaths {
   static const campus = '/campus';
   static const campusScore = '/campus/score';
   static const campusTimetable = '/campus/timetable';
+  static const campusSeatReservation = '/campus/seat-reservation';
   static const settings = '/settings';
 
   // Secondary (standard pages)

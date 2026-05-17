@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/storage/shared_preferences_provider.dart';
 import 'package:luotopia/features/whu_auth/data/whu_auth_storage.dart';
@@ -72,7 +73,19 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   @override
+  Future<void> ensureCasSessionFresh() async {
+    await _refreshCasCookieHeader();
+    if (_casCookieHeader.trim().isEmpty) {
+      throw const WhuAuthException(
+        WhuAuthExceptionCode.loginRequired,
+        '请先登录武大统一认证。',
+      );
+    }
+  }
+
+  @override
   Future<WhuServiceSession> authorizeService(WhuCasServiceRequest request) async {
+    await _refreshCasCookieHeader();
     if (_casCookieHeader.trim().isEmpty) {
       throw const WhuAuthException(
         WhuAuthExceptionCode.loginRequired,
@@ -83,6 +96,16 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
           casCookieHeader: _casCookieHeader,
           request: request,
         );
+  }
+
+  Future<void> _refreshCasCookieHeader() async {
+    final latestCookieHeader = await _readCasCookieHeader();
+    if (_hasCasSession(latestCookieHeader)) {
+      _casCookieHeader = latestCookieHeader;
+      debugPrint('[WhuAuth] refreshed CAS cookies before service authorization');
+    } else {
+      debugPrint('[WhuAuth] no fresh CAS cookies found before service authorization');
+    }
   }
 
   @override

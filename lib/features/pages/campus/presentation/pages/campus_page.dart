@@ -378,6 +378,9 @@ class _AppGrid extends StatelessWidget {
       case '成绩':
         context.push(AppRoutePaths.campusScore);
         return;
+      case '自习预约':
+        context.push(AppRoutePaths.campusSeatReservation);
+        return;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
