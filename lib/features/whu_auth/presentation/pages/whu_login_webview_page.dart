@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -107,7 +108,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).maybePop();
+      context.pop();
     } catch (error) {
       if (mounted) {
         setState(() {
