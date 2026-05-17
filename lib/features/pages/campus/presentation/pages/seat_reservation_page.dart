@@ -36,6 +36,7 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   bool _showingSyncDialog = false;
   String? _errorMessage;
   String? _lastHandledSourceId;
+  final Map<String, _SeatReservationTimeContext> _timeContexts = {};
 
   @override
   void initState() {
@@ -154,20 +155,24 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   var targets = [
     '/static/frontApi/make/freeBook/',
     '/static/frontApi/make/quickBook/',
-    '/static/frontApi/make/planBook/'
+    '/static/frontApi/make/planBook/',
+    '/static/frontApi/res/findRoomDuration/',
+    '/static/frontApi/res/freeSeatIdsDuration/',
+    '/static/frontApi/res/getEndTimes/'
   ];
   function isTarget(url) {
     return targets.some(function (target) {
       return String(url || '').indexOf(target) >= 0;
     });
   }
-  function notify(source, url, status, responseText) {
+  function notify(source, url, status, responseText, requestBody) {
     if (!isTarget(url) || status < 200 || status >= 300) return;
     try {
       SeatReservationBridge.postMessage(JSON.stringify({
         source: source,
         url: String(url || ''),
         status: status,
+        requestBody: requestBody || '',
         responseText: responseText || '',
         href: window.location.href,
         pageText: document.body ? document.body.innerText : ''
@@ -182,8 +187,9 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   };
   XMLHttpRequest.prototype.send = function () {
     var xhr = this;
+    var requestBody = arguments.length > 0 && arguments[0] ? String(arguments[0]) : '';
     xhr.addEventListener('load', function () {
-      notify('xhr', xhr.__luotopiaSeatUrl || '', xhr.status, xhr.responseText || '');
+      notify('xhr', xhr.__luotopiaSeatUrl || '', xhr.status, xhr.responseText || '', requestBody);
     });
     return send.apply(this, arguments);
   };
@@ -191,11 +197,12 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
+      var requestBody = init && init.body ? String(init.body) : '';
       return originalFetch.apply(this, arguments).then(function (response) {
         if (!isTarget(url)) return response;
         try {
           response.clone().text().then(function (text) {
-            notify('fetch', url, response.status, text || '');
+            notify('fetch', url, response.status, text || '', requestBody);
           }).catch(function () {});
         } catch (_) {}
         return response;
@@ -229,7 +236,14 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       '[SeatReservationSync] captured $source ${_sanitizeSeatUrl(url)} '
       'status=$status',
     );
-    final candidate = _SeatReservationCandidate.tryParse(message.message);
+    _rememberTimeContext(payload);
+    if (!_isSeatMakeUrl(url)) {
+      return;
+    }
+    final candidate = _SeatReservationCandidate.tryParse(
+      message.message,
+      timeContextFor: _timeContextFor,
+    );
     if (candidate == null || !candidate.remoteSucceeded) {
       debugPrint(
         '[SeatReservationSync] ignored: '
@@ -263,6 +277,25 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       return;
     }
     _showSnackBar('座位预约已添加到日程。');
+  }
+
+  void _rememberTimeContext(Map<String, dynamic>? payload) {
+    final context = _SeatReservationTimeContext.tryParse(payload);
+    if (context == null) {
+      return;
+    }
+    _timeContexts[context.key] = context;
+    _timeContexts[context.dateKey] = context;
+    debugPrint(
+      '[SeatReservationSync] remembered beginMinute=${context.beginMinute} '
+      'for ${context.key}',
+    );
+  }
+
+  _SeatReservationTimeContext? _timeContextFor(String seatId, String dateText) {
+    final normalizedDate = _normalizeSeatDateText(dateText);
+    return _timeContexts[_SeatReservationTimeContext.keyFor(seatId, normalizedDate)] ??
+        _timeContexts[_SeatReservationTimeContext.dateKeyFor(normalizedDate)];
   }
 
   bool _hasSynced(String sourceId) {
@@ -474,7 +507,10 @@ class _SeatReservationCandidate {
   final String location;
   final String seatId;
 
-  static _SeatReservationCandidate? tryParse(String rawMessage) {
+  static _SeatReservationCandidate? tryParse(
+    String rawMessage, {
+    _SeatReservationTimeContext? Function(String seatId, String dateText)? timeContextFor,
+  }) {
     final payload = decodePayload(rawMessage);
     if (payload == null) {
       return null;
@@ -482,7 +518,8 @@ class _SeatReservationCandidate {
     final response = _decodeMap('${payload['responseText'] ?? ''}');
     final remoteSucceeded = _isRemoteSuccess(response);
     final url = '${payload['url'] ?? ''}';
-    final parsed = _parseBookUrl(url) ?? _parseFromResponse(response);
+    final parsed = _parseBookUrl(url, timeContextFor: timeContextFor) ??
+        _parseFromResponse(response);
     if (parsed == null) {
       return null;
     }
@@ -557,7 +594,10 @@ class _SeatReservationCandidate {
     return code == 200 || code == '200';
   }
 
-  static _ParsedFreeBook? _parseBookUrl(String rawUrl) {
+  static _ParsedFreeBook? _parseBookUrl(
+    String rawUrl, {
+    _SeatReservationTimeContext? Function(String seatId, String dateText)? timeContextFor,
+  }) {
     final uri = Uri.tryParse(rawUrl);
     if (uri == null) {
       return null;
@@ -586,12 +626,14 @@ class _SeatReservationCandidate {
     final dateAndTime = segments.sublist(freeBookIndex + 2);
     final dateParts = _parseDateParts(dateAndTime.first);
     if (dateParts != null && dateAndTime.length >= 3) {
+      final normalizedDate = _normalizeSeatDateText(dateAndTime.first);
+      final context = timeContextFor?.call(seatId, normalizedDate);
       return _parsedFromParts(
         seatId: seatId,
         year: dateParts.year,
         month: dateParts.month,
         day: dateParts.day,
-        startMinute: int.tryParse(dateAndTime[1]),
+        startMinute: context?.beginMinute,
         endMinute: int.tryParse(dateAndTime[2]),
       );
     } else if (dateAndTime.length >= 5) {
@@ -606,7 +648,7 @@ class _SeatReservationCandidate {
         year: year,
         month: month,
         day: day,
-        startMinute: int.tryParse(dateAndTime[3]),
+        startMinute: timeContextFor?.call(seatId, '$year-$month-$day')?.beginMinute,
         endMinute: int.tryParse(dateAndTime[4]),
       );
     } else {
@@ -864,6 +906,99 @@ class _ParsedFreeBook {
   final DateTime endAt;
 }
 
+class _SeatReservationTimeContext {
+  const _SeatReservationTimeContext({
+    required this.seatOrRoomId,
+    required this.dateText,
+    required this.beginMinute,
+  });
+
+  final String seatOrRoomId;
+  final String dateText;
+  final int beginMinute;
+
+  String get key => keyFor(seatOrRoomId, dateText);
+
+  String get dateKey => dateKeyFor(dateText);
+
+  static _SeatReservationTimeContext? tryParse(Map<String, dynamic>? payload) {
+    if (payload == null) {
+      return null;
+    }
+    final url = '${payload['url'] ?? ''}';
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return null;
+    }
+    final requestBody = _SeatReservationCandidate._decodeMap(
+      '${payload['requestBody'] ?? ''}',
+    );
+    final segments = uri.pathSegments;
+
+    final getEndTimesIndex = segments.indexOf('getEndTimes');
+    if (getEndTimesIndex >= 0 && segments.length > getEndTimesIndex + 3) {
+      return _fromParts(
+        seatOrRoomId: segments[getEndTimesIndex + 1],
+        dateText: segments[getEndTimesIndex + 2],
+        beginMinute: int.tryParse(segments[getEndTimesIndex + 3]),
+      );
+    }
+
+    final freeSeatIndex = segments.indexOf('freeSeatIdsDuration');
+    if (freeSeatIndex >= 0 && segments.length > freeSeatIndex + 2) {
+      return _fromParts(
+        seatOrRoomId: segments[freeSeatIndex + 1],
+        dateText: segments[freeSeatIndex + 2],
+        beginMinute: _SeatReservationCandidate._findInt(
+          requestBody,
+          const ['beginMinute'],
+        ),
+      );
+    }
+
+    final findRoomIndex = segments.indexOf('findRoomDuration');
+    if (findRoomIndex >= 0 && segments.length > findRoomIndex + 2) {
+      return _fromParts(
+        seatOrRoomId: segments[findRoomIndex + 1],
+        dateText: segments[findRoomIndex + 2],
+        beginMinute: _SeatReservationCandidate._findInt(
+          requestBody,
+          const ['beginMinute'],
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  static _SeatReservationTimeContext? _fromParts({
+    required String seatOrRoomId,
+    required String dateText,
+    required int? beginMinute,
+  }) {
+    if (seatOrRoomId.trim().isEmpty || beginMinute == null || beginMinute < 0) {
+      return null;
+    }
+    final normalizedDate = _normalizeSeatDateText(dateText);
+    if (normalizedDate.isEmpty) {
+      return null;
+    }
+    return _SeatReservationTimeContext(
+      seatOrRoomId: seatOrRoomId,
+      dateText: normalizedDate,
+      beginMinute: beginMinute,
+    );
+  }
+
+  static String keyFor(String seatOrRoomId, String dateText) {
+    return '${seatOrRoomId.trim()}:${_normalizeSeatDateText(dateText)}';
+  }
+
+  static String dateKeyFor(String dateText) {
+    return 'date:${_normalizeSeatDateText(dateText)}';
+  }
+}
+
 class _DateParts {
   const _DateParts({
     required this.year,
@@ -877,6 +1012,31 @@ class _DateParts {
 }
 
 String _sourceMarker(String sourceId) => '座位预约同步ID：$sourceId';
+
+bool _isSeatMakeUrl(String rawUrl) {
+  final uri = Uri.tryParse(rawUrl);
+  if (uri == null) {
+    return false;
+  }
+  final segments = uri.pathSegments;
+  return segments.contains('freeBook') ||
+      segments.contains('quickBook') ||
+      segments.contains('planBook');
+}
+
+String _normalizeSeatDateText(String value) {
+  final match = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(value);
+  if (match == null) {
+    return value.trim();
+  }
+  final year = int.tryParse(match.group(1) ?? '');
+  final month = int.tryParse(match.group(2) ?? '');
+  final day = int.tryParse(match.group(3) ?? '');
+  if (year == null || month == null || day == null) {
+    return value.trim();
+  }
+  return '$year-${_two(month)}-${_two(day)}';
+}
 
 String _sanitizeSeatUrl(String rawUrl) {
   final uri = Uri.tryParse(rawUrl);
