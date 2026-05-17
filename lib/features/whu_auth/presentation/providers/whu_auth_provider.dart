@@ -30,6 +30,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   final WebviewCookieManager _cookieManager = WebviewCookieManager();
 
   String _casCookieHeader = '';
+  String _educationCookieHeader = '';
 
   @override
   WhuAuthState build() {
@@ -38,6 +39,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
       return const WhuAuthState();
     }
     _casCookieHeader = snapshot.casCookieHeader;
+    _educationCookieHeader = snapshot.educationCookieHeader;
     return WhuAuthState(
       status: WhuAuthStatus.authenticated,
       account: snapshot.account,
@@ -50,6 +52,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     state = state.copyWith(status: WhuAuthStatus.loading, clearError: true);
     try {
       final cookieHeader = await _readCasCookieHeader();
+      final educationCookieHeader = await _readEducationCookieHeader();
       if (!_hasCasSession(cookieHeader)) {
         throw const WhuAuthException(
           WhuAuthExceptionCode.loginRequired,
@@ -58,6 +61,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
       }
 
       _casCookieHeader = cookieHeader;
+      _educationCookieHeader = educationCookieHeader;
       final client = await authorizeEducation();
       try {
         final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
@@ -111,7 +115,17 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   @override
-  Future<WhuServiceSession> authorizeEducation() {
+  Future<WhuServiceSession> authorizeEducation() async {
+    await _refreshWebViewCookieHeaders();
+    if (_educationCookieHeader.trim().isNotEmpty) {
+      try {
+        return ref.read(whuCasServiceProvider).authorizeEducationWithCookies(
+              educationCookieHeader: _educationCookieHeader,
+            );
+      } on WhuAuthException catch (error) {
+        debugPrint('[WhuAuth] education cookie authorization failed: $error');
+      }
+    }
     return authorizeService(WhuCasService.educationService);
   }
 
@@ -138,6 +152,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
 
   Future<void> logout() async {
     _casCookieHeader = '';
+    _educationCookieHeader = '';
     await _storage.clear(ref.read(sharedPreferencesProvider));
     await _cookieManager.clearCookies();
     state = const WhuAuthState();
@@ -156,6 +171,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
             );
     final snapshot = WhuAuthSnapshot(
       casCookieHeader: _casCookieHeader,
+      educationCookieHeader: _educationCookieHeader,
       account: nextAccount,
       lastAuthenticatedAt: now,
       lastVerifiedAt: now,
@@ -181,6 +197,31 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
           cookie,
     ];
     return casCookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+  }
+
+  Future<String> _readEducationCookieHeader() async {
+    final cookies = await _cookieManager.getCookies(
+      'https://jwgl.whu.edu.cn/',
+    );
+    final educationCookies = [
+      for (final cookie in cookies)
+        if ((cookie.domain == null || cookie.domain!.contains('jwgl.whu.edu.cn')) &&
+            cookie.name.trim().isNotEmpty &&
+            cookie.value.trim().isNotEmpty)
+          cookie,
+    ];
+    return educationCookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+  }
+
+  Future<void> _refreshWebViewCookieHeaders() async {
+    final latestCasCookieHeader = await _readCasCookieHeader();
+    final latestEducationCookieHeader = await _readEducationCookieHeader();
+    if (_hasCasSession(latestCasCookieHeader)) {
+      _casCookieHeader = latestCasCookieHeader;
+    }
+    if (latestEducationCookieHeader.trim().isNotEmpty) {
+      _educationCookieHeader = latestEducationCookieHeader;
+    }
   }
 
   bool _hasCasSession(String cookieHeader) {

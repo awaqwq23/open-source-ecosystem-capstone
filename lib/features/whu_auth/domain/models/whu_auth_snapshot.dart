@@ -3,12 +3,14 @@ import 'package:luotopia/features/whu_auth/domain/models/whu_account.dart';
 class WhuAuthSnapshot {
   const WhuAuthSnapshot({
     required this.casCookieHeader,
+    this.educationCookieHeader = '',
     required this.account,
     required this.lastAuthenticatedAt,
     this.lastVerifiedAt,
   });
 
   final String casCookieHeader;
+  final String educationCookieHeader;
   final WhuAccount account;
   final DateTime lastAuthenticatedAt;
   final DateTime? lastVerifiedAt;
@@ -16,6 +18,7 @@ class WhuAuthSnapshot {
   Map<String, dynamic> toJson() {
     return {
       'casCookieHeader': casCookieHeader,
+      'educationCookieHeader': educationCookieHeader,
       'account': account.toJson(),
       'lastAuthenticatedAt': lastAuthenticatedAt.toIso8601String(),
       'lastVerifiedAt': lastVerifiedAt?.toIso8601String(),
@@ -26,6 +29,7 @@ class WhuAuthSnapshot {
     final accountJson = json['account'];
     return WhuAuthSnapshot(
       casCookieHeader: json['casCookieHeader'] as String? ?? '',
+      educationCookieHeader: json['educationCookieHeader'] as String? ?? '',
       account: accountJson is Map<String, dynamic>
           ? WhuAccount.fromJson(accountJson)
           : const WhuAccount(

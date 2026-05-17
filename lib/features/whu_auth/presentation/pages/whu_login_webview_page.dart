@@ -14,18 +14,18 @@ class WhuLoginWebViewPage extends ConsumerStatefulWidget {
 
 class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
   static final _loginUri = Uri.parse(
-    'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fcas.whu.edu.cn%2Fauthserver%2Fmobile%2Fcallback%3FappId%3D985180443&login_type=mobileLogin',
+    'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin',
   );
 
   bool _completing = false;
-  bool _callbackReached = false;
+  bool _educationReached = false;
   String? _loginErrorMessage;
 
   AppWebViewRequest _buildLoginRequest(WebViewController controller) {
     if (mounted) {
       setState(() {
         _completing = false;
-        _callbackReached = false;
+        _educationReached = false;
         _loginErrorMessage = null;
       });
     }
@@ -36,7 +36,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     if (mounted) {
       setState(() {
         _completing = false;
-        _callbackReached = false;
+        _educationReached = false;
         _loginErrorMessage = null;
       });
     }
@@ -53,13 +53,13 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       errorTitle: '无法打开页面',
       errorMessage: '页面加载失败，请检查网络连接后重试。',
       initialRequest: _buildLoginRequest,
-      onPageFinished: (_, _) => _tryCompleteLogin(),
-      onNavigationRequest: (request, _) {
-        final uri = Uri.tryParse(request.url);
-        if (uri != null && _isLoginCallback(uri)) {
-          _completeLoginFromCallback();
-          return const AppWebViewNavigationAction.prevent();
+      onPageFinished: (url, _) {
+        final uri = Uri.tryParse(url);
+        if (uri != null && _isEducationPage(uri)) {
+          _completeLoginFromEducationPage();
         }
+      },
+      onNavigationRequest: (request, _) {
         if (request.url ==
             'https://homewh.chaoxing.com/agree/privacyPolicy?appId=1000028') {
           return const AppWebViewNavigationAction.prevent();
@@ -110,7 +110,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       if (mounted) {
         setState(() {
           _completing = false;
-          if (_callbackReached) {
+          if (_educationReached) {
             _loginErrorMessage = '登录状态验证失败：$error';
           }
         });
@@ -118,18 +118,18 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     }
   }
 
-  void _completeLoginFromCallback() {
+  void _completeLoginFromEducationPage() {
     if (_completing) {
       return;
     }
-    _callbackReached = true;
+    _educationReached = true;
     Future<void>.microtask(_tryCompleteLogin);
   }
 
-  bool _isLoginCallback(Uri uri) {
-    return uri.host == 'cas.whu.edu.cn' &&
-        uri.path == '/authserver/mobile/callback' &&
-        uri.queryParameters['appId'] == '985180443';
+  bool _isEducationPage(Uri uri) {
+    return uri.host == 'jwgl.whu.edu.cn' &&
+        (uri.path == '/xtgl/index_initMenu.html' ||
+            uri.path == '/xtgl/login_slogin.html');
   }
 }
 

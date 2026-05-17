@@ -5,10 +5,11 @@ import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.
 class WhuAuthorizedClient extends WhuServiceSession {
   WhuAuthorizedClient({
     required String initialCookieHeader,
+    String initialCookieHost = 'cas.whu.edu.cn',
     http.Client? inner,
   })  : _cookieJar = _CookieJar.fromHeader(
           initialCookieHeader,
-          host: 'cas.whu.edu.cn',
+          host: initialCookieHost,
         ),
         _inner = inner ?? http.Client();
 
