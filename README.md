@@ -18,11 +18,11 @@
 
 ### Webview 的统一创建器
 
-新增或迁移 WebView 页面时请优先复用 `app_web_view_page.dart` 中的 `AppWebViewPage` （ Webview 统一创建器）。
+新增或迁移 WebView 页面时请使用 Webview 统一创建器（ `app_web_view_page.dart` 中的 `AppWebViewPage` ）。
 
-不属于业务页面重复创建范畴： `WebViewController` 的创建或复制加载层、错误层、返回、刷新逻辑。
+统一创建器负责： `WebViewController` 的创建或复制加载层、错误层、返回、刷新逻辑。
 
-属于业务也没自己处理的部分：认证检查、CAS Cookie 准备、Header 规则、导航拦截和 JS Bridge 属于具体业务页面，通过 `AppWebViewPage` 提供的回调接入。
+属于业务页面负责：认证检查、CAS Cookie 准备、Header 规则、导航拦截、 JS Bridge。通过 `AppWebViewPage` 提供的回调接入。
 
 详细接入方式见 [WebView 页面调用规范](docs/WebView页面调用规范.md)。
 
