@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/components/course_import/data/wakeup_course_import_adapter.dart';
-import 'package:luotopia/features/components/course_import/domain/models/course_import_models.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/data/wakeup_course_import_adapter.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/domain/models/course_import_models.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 

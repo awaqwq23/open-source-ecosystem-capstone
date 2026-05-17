@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/features/pages/campus/data/seat_reservation_auth_service.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/seat_reservation/data/seat_reservation_auth_service.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';

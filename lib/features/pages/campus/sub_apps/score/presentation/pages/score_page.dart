@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/campus/data/whu_score_service.dart';
-import 'package:luotopia/features/pages/campus/domain/models/score_entity.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/score/data/whu_score_service.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/score/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;

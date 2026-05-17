@@ -25,7 +25,8 @@
 ### features 归类
 
 - `features/pages/`：完整页面入口，例如主页、日程页、论坛页、校园页、事项编辑页、设置页。
-- `features/components/`：可被页面调用的独立组件或跨端能力，例如时间选择器、课程导入、桌面小组件同步。
+- `features/components/`：可被页面调用的独立组件或跨端能力，例如时间选择器、桌面小组件同步。
+- 页面内部的子应用放在所属页面模块下，例如校园页使用 `features/pages/campus/sub_apps/`。
 - 页面型与组件型模块内部都按实际需要保留 `presentation / domain / data`，不为占位强行建目录。
 
 ### 当前阶段

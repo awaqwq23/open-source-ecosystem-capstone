@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/components/course_import/data/whu_course_import_service.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/data/whu_course_import_service.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';

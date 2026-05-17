@@ -7,7 +7,7 @@
 - `pages/home/`：主页表格页。
 - `pages/list/`：日程列表页。
 - `pages/forum/`：论坛页。
-- `pages/campus/`：校园页。
+- `pages/campus/`：校园页及其子应用，子应用放在 `sub_apps/`。
 - `pages/item_editor/`：事项添加与编辑页。
 - `pages/item_detail/`：事项详情页。
 - `pages/settings/`：设置页及设置二级页。
@@ -15,7 +15,6 @@
 ### 组件型模块
 
 - `components/time_picker/`：日周月时间选择组件。
-- `components/course_import/`：课程导入相关页面、适配器与服务。
 - `components/home_widgets/`：系统桌面小组件同步能力。
 - `components/wallpaper/`：应用内壁纸获取、缓存与展示能力。
 

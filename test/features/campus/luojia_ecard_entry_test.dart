@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/features/pages/campus/presentation/pages/luojia_ecard_webview_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 
 void main() {
   group('LuojiaEcardEntry', () {

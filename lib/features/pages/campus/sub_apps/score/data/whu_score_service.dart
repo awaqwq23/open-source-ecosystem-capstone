@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:luotopia/features/pages/campus/domain/models/score_entity.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/score/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 
 class WhuScoreService {
