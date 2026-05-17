@@ -11,4 +11,6 @@ abstract class WhuAuthGateway {
   Future<WhuServiceSession> authorizeService(WhuCasServiceRequest request);
 
   Future<WhuServiceSession> authorizeEducation();
+
+  Future<void> primeCasCookiesForWebView();
 }

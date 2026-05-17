@@ -14,9 +14,15 @@ class WhuLoginWebViewPage extends ConsumerStatefulWidget {
 }
 
 class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
+  static final _loginUri = Uri.parse(
+    'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fcas.whu.edu.cn%2Fauthserver%2Fmobile%2Fcallback%3FappId%3D985180443&login_type=mobileLogin',
+  );
+
   late final WebViewController _controller;
   bool _loading = true;
   bool _completing = false;
+  bool _callbackReached = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -27,11 +33,29 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
         NavigationDelegate(
           onPageFinished: (_) async {
             if (mounted) {
-              setState(() => _loading = false);
+              setState(() {
+                _loading = false;
+                _errorMessage = null;
+              });
             }
             await _tryCompleteLogin();
           },
+          onWebResourceError: (error) {
+            if (error.isForMainFrame == false || !mounted) {
+              return;
+            }
+            setState(() {
+              _loading = false;
+              _completing = false;
+              _errorMessage = '页面加载失败，请检查网络连接后重试。';
+            });
+          },
           onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            if (uri != null && _isLoginCallback(uri)) {
+              _completeLoginFromCallback();
+              return NavigationDecision.prevent;
+            }
             if (request.url == 'https://homewh.chaoxing.com/agree/privacyPolicy?appId=1000028') {
               return NavigationDecision.prevent;
             }
@@ -49,11 +73,15 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       await platformController.setUseWideViewPort(true);
       await platformController.setTextZoom(100);
     }
-    await _controller.loadRequest(
-      Uri.parse(
-        'https://cas.whu.edu.cn/authserver/login?service=https%3A%2F%2Fcas.whu.edu.cn%2Fauthserver%2Fmobile%2Fcallback%3FappId%3D985180443&login_type=mobileLogin',
-      ),
-    );
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _completing = false;
+        _callbackReached = false;
+        _errorMessage = null;
+      });
+    }
+    await _controller.loadRequest(_loginUri);
   }
 
   @override
@@ -73,6 +101,12 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       child: Stack(
         children: [
           WebViewWidget(controller: _controller),
+          if (_errorMessage != null)
+            _LoginStateOverlay(
+              title: '无法打开页面',
+              message: _errorMessage!,
+              onRetry: _loadLoginPage,
+            ),
           if (_loading || _completing)
             ColoredBox(
               color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.72),
@@ -103,10 +137,85 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
         return;
       }
       Navigator.of(context).maybePop();
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _completing = false);
+        setState(() {
+          _completing = false;
+          if (_callbackReached) {
+            _errorMessage = '登录状态验证失败：$error';
+          }
+        });
       }
     }
+  }
+
+  void _completeLoginFromCallback() {
+    if (_completing) {
+      return;
+    }
+    _callbackReached = true;
+    Future<void>.microtask(_tryCompleteLogin);
+  }
+
+  bool _isLoginCallback(Uri uri) {
+    return uri.host == 'cas.whu.edu.cn' &&
+        uri.path == '/authserver/mobile/callback' &&
+        uri.queryParameters['appId'] == '985180443';
+  }
+}
+
+class _LoginStateOverlay extends StatelessWidget {
+  const _LoginStateOverlay({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return ColoredBox(
+      color: colors.surface,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.wifi_off_outlined, size: 48, color: colors.primary),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ui.PrimaryButton(
+                  onPressed: onRetry,
+                  child: const Text('重试'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
