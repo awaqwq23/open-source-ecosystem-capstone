@@ -40,7 +40,6 @@ class HomePage extends ConsumerWidget {
       homeViewDataProvider(query),
     );
     final theme = Theme.of(context);
-    final showBackToCurrentWeek = _shouldShowBackToCurrentWeek(viewData);
 
     return ui.Scaffold(
       headers: [
@@ -132,16 +131,15 @@ class HomePage extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (showBackToCurrentWeek)
-                        ui.Tooltip(
-                          tooltip: (context) => Text(
-                            _isChinese(context) ? '返回本周' : 'Back to this week',
-                          ),
-                          child: ui.IconButton.ghost(
-                            icon: const Icon(Icons.today_outlined),
-                            onPressed: () => viewModel.showCurrentPeriod(viewData.scope),
-                          ),
+                      ui.Tooltip(
+                        tooltip: (context) => Text(
+                          _isChinese(context) ? '返回本周' : 'Back to this week',
                         ),
+                        child: ui.IconButton.ghost(
+                          icon: const Icon(AppIcons.backToCurrentPeriod),
+                          onPressed: () => viewModel.showCurrentPeriod(viewData.scope),
+                        ),
+                      ),
                       ui.IconButton.ghost(
                         icon: const Icon(AppIcons.nextPeriod),
                         onPressed: () => viewModel.showNext(viewData.scope),
@@ -233,18 +231,6 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  bool _shouldShowBackToCurrentWeek(HomeViewData viewData) {
-    if (viewData.scope != HomeDisplayScope.week) {
-      return false;
-    }
-    final today = DateUtils.dateOnly(DateTime.now());
-    final currentWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
-    return !DateUtils.isSameDay(
-      currentWeekStart,
-      DateUtils.dateOnly(viewData.visibleRange.start),
     );
   }
 

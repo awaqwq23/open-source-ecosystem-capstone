@@ -25,6 +25,7 @@ abstract final class AppIcons {
   static const IconData back = Icons.arrow_back;
   static const IconData previousPeriod = Icons.chevron_left;
   static const IconData nextPeriod = Icons.chevron_right;
+  static const IconData backToCurrentPeriod = Icons.restore;
   static const IconData expandSelection = Icons.keyboard_arrow_down;
   static const IconData drillIn = Icons.chevron_right;
   static const IconData selected = Icons.check_circle;
