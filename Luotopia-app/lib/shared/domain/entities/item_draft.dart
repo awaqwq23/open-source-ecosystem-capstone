@@ -1,7 +1,6 @@
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -12,48 +11,42 @@ class ItemDraft {
   const ItemDraft({
     required this.type,
     required this.title,
-    required this.details,
+    required this.notes,
     required this.location,
     required this.color,
     required this.reminder,
     required this.repeatRule,
-    required this.scheduleDetails,
+    required this.startAt,
+    required this.endAt,
+    required this.isAllDay,
     required this.taskDetails,
-    required this.memoDetails,
     this.courseDetails = const ItemCourseDetails(),
+    this.sourceKind = AgendaItemSourceKind.manual,
+    this.sourceRef = '',
   });
 
   final ItemType type;
   final String title;
-  final String details;
+  final String notes;
   final String location;
   final ItemColorOption color;
   final ReminderOption reminder;
   final RepeatRule repeatRule;
-  final ItemScheduleDetails scheduleDetails;
+  final DateTime startAt;
+  final DateTime endAt;
+  final bool isAllDay;
   final ItemTaskDetails taskDetails;
-  final ItemMemoDetails memoDetails;
   final ItemCourseDetails courseDetails;
+  final AgendaItemSourceKind sourceKind;
+  final String sourceRef;
 
-  bool get isAllDay => activeScheduleDetails.isAllDay;
-  DateTime get startAt => activeScheduleDetails.range.start;
-  DateTime get endAt => activeScheduleDetails.range.end;
   DateTime? get deadline => taskDetails.deadline;
   Duration get estimatedDuration => taskDetails.estimatedDuration;
-
-  ItemScheduleDetails get activeScheduleDetails {
-    return switch (type) {
-      ItemType.task => taskDetails.schedule,
-      ItemType.schedule => scheduleDetails,
-      ItemType.memo => scheduleDetails,
-      ItemType.course => scheduleDetails,
-    };
-  }
 
   ItemDraft copyWith({
     ItemType? type,
     String? title,
-    String? details,
+    String? notes,
     String? location,
     ItemColorOption? color,
     ReminderOption? reminder,
@@ -64,32 +57,15 @@ class ItemDraft {
     DateTime? deadline,
     bool clearDeadline = false,
     Duration? estimatedDuration,
-    ItemScheduleDetails? scheduleDetails,
     ItemTaskDetails? taskDetails,
-    ItemMemoDetails? memoDetails,
     ItemCourseDetails? courseDetails,
+    AgendaItemSourceKind? sourceKind,
+    String? sourceRef,
   }) {
-    final nextScheduleDetails = scheduleDetails ??
-        this.scheduleDetails.copyWith(
-          isAllDay: isAllDay,
-          range: startAt != null || endAt != null
-              ? DateTimeRangeValue(
-                  start: startAt ?? this.scheduleDetails.range.start,
-                  end: endAt ?? this.scheduleDetails.range.end,
-                )
-              : null,
-        );
+    final nextStartAt = startAt ?? this.startAt;
+    final nextEndAt = endAt ?? this.endAt;
     final nextTaskDetails = taskDetails ??
         this.taskDetails.copyWith(
-          schedule: this.taskDetails.schedule.copyWith(
-            isAllDay: isAllDay,
-            range: startAt != null || endAt != null
-                ? DateTimeRangeValue(
-                    start: startAt ?? this.taskDetails.schedule.range.start,
-                    end: endAt ?? this.taskDetails.schedule.range.end,
-                  )
-                : null,
-          ),
           deadline: deadline,
           clearDeadline: clearDeadline,
           estimatedDuration: estimatedDuration,
@@ -97,15 +73,22 @@ class ItemDraft {
     return ItemDraft(
       type: type ?? this.type,
       title: title ?? this.title,
-      details: details ?? this.details,
+      notes: notes ?? this.notes,
       location: location ?? this.location,
       color: color ?? this.color,
       reminder: reminder ?? this.reminder,
       repeatRule: repeatRule ?? this.repeatRule,
-      scheduleDetails: nextScheduleDetails,
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+      isAllDay: isAllDay ?? this.isAllDay,
       taskDetails: nextTaskDetails,
-      memoDetails: memoDetails ?? this.memoDetails,
       courseDetails: courseDetails ?? this.courseDetails,
+      sourceKind: sourceKind ?? this.sourceKind,
+      sourceRef: sourceRef ?? this.sourceRef,
     );
+  }
+
+  DateTimeRangeValue get range {
+    return DateTimeRangeValue(start: startAt, end: endAt);
   }
 }

@@ -1,7 +1,5 @@
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -13,47 +11,46 @@ class AgendaItem {
     required this.id,
     required this.type,
     required this.title,
-    required this.details,
+    required this.notes,
     required this.location,
     required this.color,
     required this.reminder,
     required this.repeatRule,
-    required this.scheduleDetails,
+    required this.startAt,
+    required this.endAt,
+    required this.isAllDay,
     required this.taskDetails,
-    required this.memoDetails,
     this.courseDetails = const ItemCourseDetails(),
     required this.isCompleted,
     required this.createdAt,
+    required this.updatedAt,
     required this.completedAt,
-    required this.manualOrder,
-    this.updatedAt,
-    this.syncState = AgendaItemSyncState.localOnly,
-    this.sourceId,
+    required this.sortOrder,
+    this.sourceKind = AgendaItemSourceKind.manual,
+    this.sourceRef = '',
   });
 
   final String id;
   final ItemType type;
   final String title;
-  final String details;
+  final String notes;
   final String location;
   final ItemColorOption color;
   final ReminderOption reminder;
   final RepeatRule repeatRule;
-  final ItemScheduleDetails scheduleDetails;
+  final DateTime startAt;
+  final DateTime endAt;
+  final bool isAllDay;
   final ItemTaskDetails taskDetails;
-  final ItemMemoDetails memoDetails;
   final ItemCourseDetails courseDetails;
   final bool isCompleted;
   final DateTime createdAt;
-  final DateTime? updatedAt;
+  final DateTime updatedAt;
   final DateTime? completedAt;
-  final double manualOrder;
-  final AgendaItemSyncState syncState;
-  final String? sourceId;
+  final double sortOrder;
+  final AgendaItemSourceKind sourceKind;
+  final String sourceRef;
 
-  bool get isAllDay => activeScheduleDetails.isAllDay;
-  DateTime get startAt => activeScheduleDetails.range.start;
-  DateTime get endAt => activeScheduleDetails.range.end;
   DateTime? get deadline => taskDetails.deadline;
   Duration get estimatedDuration => taskDetails.estimatedDuration;
   bool get supportsManualCompletion {
@@ -69,58 +66,50 @@ class AgendaItem {
     return !endAt.isAfter(now);
   }
 
-  ItemScheduleDetails get activeScheduleDetails {
-    return switch (type) {
-      ItemType.task => taskDetails.schedule,
-      ItemType.schedule => scheduleDetails,
-      ItemType.memo => scheduleDetails,
-      ItemType.course => scheduleDetails,
-    };
-  }
-
   AgendaItem copyWith({
     String? id,
     ItemType? type,
     String? title,
-    String? details,
+    String? notes,
     String? location,
     ItemColorOption? color,
     ReminderOption? reminder,
     RepeatRule? repeatRule,
-    ItemScheduleDetails? scheduleDetails,
+    DateTime? startAt,
+    DateTime? endAt,
+    bool? isAllDay,
     ItemTaskDetails? taskDetails,
-    ItemMemoDetails? memoDetails,
     ItemCourseDetails? courseDetails,
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? completedAt,
     bool clearCompletedAt = false,
-    double? manualOrder,
-    AgendaItemSyncState? syncState,
-    String? sourceId,
-    bool clearSourceId = false,
+    double? sortOrder,
+    AgendaItemSourceKind? sourceKind,
+    String? sourceRef,
   }) {
     return AgendaItem(
       id: id ?? this.id,
       type: type ?? this.type,
       title: title ?? this.title,
-      details: details ?? this.details,
+      notes: notes ?? this.notes,
       location: location ?? this.location,
       color: color ?? this.color,
       reminder: reminder ?? this.reminder,
       repeatRule: repeatRule ?? this.repeatRule,
-      scheduleDetails: scheduleDetails ?? this.scheduleDetails,
+      startAt: startAt ?? this.startAt,
+      endAt: endAt ?? this.endAt,
+      isAllDay: isAllDay ?? this.isAllDay,
       taskDetails: taskDetails ?? this.taskDetails,
-      memoDetails: memoDetails ?? this.memoDetails,
       courseDetails: courseDetails ?? this.courseDetails,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
-      manualOrder: manualOrder ?? this.manualOrder,
-      syncState: syncState ?? this.syncState,
-      sourceId: clearSourceId ? null : (sourceId ?? this.sourceId),
+      sortOrder: sortOrder ?? this.sortOrder,
+      sourceKind: sourceKind ?? this.sourceKind,
+      sourceRef: sourceRef ?? this.sourceRef,
     );
   }
 
@@ -128,15 +117,18 @@ class AgendaItem {
     return ItemDraft(
       type: type,
       title: title,
-      details: details,
+      notes: notes,
       location: location,
       color: color,
       reminder: reminder,
       repeatRule: repeatRule,
-      scheduleDetails: scheduleDetails,
+      startAt: startAt,
+      endAt: endAt,
+      isAllDay: isAllDay,
       taskDetails: taskDetails,
-      memoDetails: memoDetails,
       courseDetails: courseDetails,
+      sourceKind: sourceKind,
+      sourceRef: sourceRef,
     );
   }
 
@@ -144,7 +136,8 @@ class AgendaItem {
     required String id,
     required ItemDraft draft,
     required DateTime createdAt,
-    required double manualOrder,
+    required DateTime updatedAt,
+    required double sortOrder,
     bool isCompleted = false,
     DateTime? completedAt,
   }) {
@@ -152,26 +145,31 @@ class AgendaItem {
       id: id,
       type: draft.type,
       title: draft.title.trim(),
-      details: draft.details.trim(),
+      notes: draft.notes.trim(),
       location: draft.location.trim(),
       color: draft.color,
       reminder: draft.reminder,
       repeatRule: draft.repeatRule,
-      scheduleDetails: draft.scheduleDetails,
+      startAt: draft.startAt,
+      endAt: draft.endAt,
+      isAllDay: draft.isAllDay,
       taskDetails: draft.taskDetails,
-      memoDetails: draft.memoDetails,
       courseDetails: draft.courseDetails,
       isCompleted: isCompleted,
       createdAt: createdAt,
+      updatedAt: updatedAt,
       completedAt: completedAt,
-      manualOrder: manualOrder,
+      sortOrder: sortOrder,
+      sourceKind: draft.sourceKind,
+      sourceRef: draft.sourceRef.trim(),
     );
   }
 }
 
-enum AgendaItemSyncState {
-  localOnly,
-  pendingUpload,
-  synced,
-  pendingDelete,
+enum AgendaItemSourceKind {
+  manual,
+  whuCourse,
+  wakeupCourse,
+  seatReservation,
+  aiGenerated,
 }

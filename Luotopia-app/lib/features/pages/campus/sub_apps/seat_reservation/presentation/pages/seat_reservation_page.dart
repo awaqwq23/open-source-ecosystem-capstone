@@ -8,12 +8,10 @@ import 'package:luotopia/features/pages/campus/sub_apps/seat_reservation/data/se
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
-import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -232,10 +230,11 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   }
 
   bool _hasSynced(String sourceId) {
-    final marker = _sourceMarker(sourceId);
     return ref
         .read(agendaItemRepositoryProvider)
-        .any((item) => item.details.contains(marker));
+        .any((item) =>
+            item.sourceKind == AgendaItemSourceKind.seatReservation &&
+            item.sourceRef == sourceId);
   }
 
   Future<bool?> _confirmSync(_SeatReservationCandidate candidate) {
@@ -452,27 +451,24 @@ class _SeatReservationCandidate {
   static Map<String, dynamic>? decodePayload(String raw) => _decodeMap(raw);
 
   ItemDraft toDraft() {
-    final schedule = ItemScheduleDetails(
-      isAllDay: false,
-      range: DateTimeRangeValue(start: startAt, end: endAt),
-    );
     return ItemDraft(
       type: ItemType.schedule,
       title: '图书馆座位预约',
-      details: '来源：武汉大学图书馆座位预约系统\n'
-          '座位 ID：$seatId\n'
-          '${_sourceMarker(sourceId)}',
+      notes: '来源：武汉大学图书馆座位预约系统\n'
+          '座位 ID：$seatId',
       location: location,
       color: ItemColorOption.indigo,
       reminder: ReminderOption.none,
       repeatRule: RepeatRule.none,
-      scheduleDetails: schedule,
+      startAt: startAt,
+      endAt: endAt,
+      isAllDay: false,
       taskDetails: ItemTaskDetails(
-        schedule: schedule,
         deadline: null,
         estimatedDuration: endAt.difference(startAt),
       ),
-      memoDetails: const ItemMemoDetails(),
+      sourceKind: AgendaItemSourceKind.seatReservation,
+      sourceRef: sourceId,
     );
   }
 
@@ -923,8 +919,6 @@ class _DateParts {
   final int month;
   final int day;
 }
-
-String _sourceMarker(String sourceId) => '座位预约同步ID：$sourceId';
 
 bool _isSeatMakeUrl(String rawUrl) {
   final uri = Uri.tryParse(rawUrl);

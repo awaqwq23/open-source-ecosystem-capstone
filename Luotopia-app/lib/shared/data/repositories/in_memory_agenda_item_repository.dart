@@ -50,7 +50,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     final nextOrder = state.isEmpty
         ? 0.0
         : state
-                .map((item) => item.manualOrder)
+                .map((item) => item.sortOrder)
                 .reduce((value, element) => value > element ? value : element) +
             1;
     final item = _normalizeCompletionByType(
@@ -58,7 +58,8 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         id: _createUniqueAgendaItemId(),
         draft: draft,
         createdAt: now,
-        manualOrder: nextOrder,
+        updatedAt: now,
+        sortOrder: nextOrder,
       ),
     );
     state = [...state, item];
@@ -77,16 +78,19 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     final updated = _normalizeCompletionByType(current.copyWith(
       type: draft.type,
       title: draft.title.trim(),
-      details: draft.details.trim(),
+      notes: draft.notes.trim(),
       location: draft.location.trim(),
       color: draft.color,
       reminder: draft.reminder,
       repeatRule: draft.repeatRule,
-      scheduleDetails: draft.scheduleDetails,
+      startAt: draft.startAt,
+      endAt: draft.endAt,
+      isAllDay: draft.isAllDay,
       taskDetails: draft.taskDetails,
-      memoDetails: draft.memoDetails,
       courseDetails: draft.courseDetails,
       updatedAt: DateTime.now(),
+      sourceKind: draft.sourceKind,
+      sourceRef: draft.sourceRef.trim(),
     ));
     state = [
       ...state.take(index),
@@ -137,7 +141,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     state = [
       for (final item in state)
         item.copyWith(
-          manualOrder: orderMap[item.id] ?? item.manualOrder,
+          sortOrder: orderMap[item.id] ?? item.sortOrder,
           updatedAt: DateTime.now(),
         ),
     ];

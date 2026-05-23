@@ -1,13 +1,11 @@
 import 'dart:math';
 
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -30,31 +28,21 @@ class ItemEditorDefaults {
     return ItemDraft(
       type: prefill?.type ?? ItemType.schedule,
       title: prefill?.title ?? '',
-      details: prefill?.details ?? '',
+      notes: prefill?.notes ?? '',
       location: prefill?.location ?? '',
       color: prefill?.color ?? _randomColor(),
       reminder: prefill?.reminder ?? ReminderOption.none,
       repeatRule: prefill?.repeatRule ?? RepeatRule.none,
-      scheduleDetails: ItemScheduleDetails(
-        isAllDay: prefill?.isAllDay ?? false,
-        range: DateTimeRangeValue(
-          start: start,
-          end: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-        ),
-      ),
+      startAt: start,
+      endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+      isAllDay: prefill?.isAllDay ?? false,
       taskDetails: ItemTaskDetails(
-        schedule: ItemScheduleDetails(
-          isAllDay: prefill?.isAllDay ?? false,
-          range: DateTimeRangeValue(
-            start: start,
-            end: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-          ),
-        ),
         deadline: prefill?.deadline,
         estimatedDuration: prefill?.estimatedDuration ?? Duration.zero,
       ),
-      memoDetails: const ItemMemoDetails(),
       courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
+      sourceKind: prefill?.sourceKind ?? AgendaItemSourceKind.manual,
+      sourceRef: prefill?.sourceRef ?? '',
     );
   }
 
@@ -73,7 +61,6 @@ class ItemEditorDefaults {
       isAllDay: type == ItemType.memo ? false : draft.isAllDay,
       reminder: type == ItemType.course ? ReminderOption.none : draft.reminder,
       repeatRule: type == ItemType.course ? RepeatRule.none : draft.repeatRule,
-      details: type == ItemType.course ? '' : draft.details,
       clearDeadline: type != ItemType.task,
       deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
       estimatedDuration: draft.estimatedDuration,

@@ -189,7 +189,7 @@ class HomePage extends ConsumerWidget {
                           prefill: ItemEditorPrefill(
                             type: item.item.type,
                             title: item.item.title,
-                            details: item.item.details,
+                            notes: item.item.notes,
                             location: item.item.location,
                             color: item.item.color,
                             isAllDay: item.item.isAllDay,
@@ -1096,7 +1096,7 @@ class _AgendaBlock extends StatelessWidget {
 
   String _buildDetailsText(bool isCourseItem) {
     if (!isCourseItem) {
-      return item.item.details;
+      return item.item.notes;
     }
     final instructor = item.item.courseDetails.instructor.trim();
     final location = _resolveCourseLocation();
@@ -1118,7 +1118,7 @@ class _AgendaBlock extends StatelessWidget {
     if (location.isNotEmpty) {
       return location;
     }
-    return item.item.courseDetails.classroomRaw.trim();
+    return item.item.location.trim();
   }
 }
 

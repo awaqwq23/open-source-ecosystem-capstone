@@ -49,9 +49,9 @@ class SortListItemsUseCase {
         }
         return _compareByTimeThenCreated(a, b);
       case ListSortMode.manual:
-        final manualOrder = a.manualOrder.compareTo(b.manualOrder);
-        if (manualOrder != 0) {
-          return manualOrder;
+        final sortOrder = a.sortOrder.compareTo(b.sortOrder);
+        if (sortOrder != 0) {
+          return sortOrder;
         }
         return _compareByTimeThenCreated(a, b);
     }

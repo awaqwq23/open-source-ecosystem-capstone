@@ -13,11 +13,8 @@ import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart'
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
-import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -626,7 +623,7 @@ class OpenAiCompatibleAiService implements AiService {
                 'id': item.id,
                 'type': item.type.name,
                 'title': item.title,
-                'details': item.details,
+                'notes': item.notes,
                 'location': item.location,
                 'startAt': item.startAt.toIso8601String(),
                 'endAt': item.endAt.toIso8601String(),
@@ -654,7 +651,7 @@ ${basePrompt.trim()}
   “create_item”: {
     “type”: “schedule” | “task” | “memo”,
     “title”: “字符串”,
-    “details”: “字符串，可空”,
+    “notes”: “字符串，可空”,
     “location”: “字符串，可空”,
     “start_at”: “ISO8601，可空”,
     “end_at”: “ISO8601，可空”,
@@ -715,7 +712,8 @@ ${basePrompt.trim()}
     final type =
         _itemTypeFromString(map['type'] as String?) ?? ItemType.schedule;
     final title = (map['title'] as String? ?? '').trim();
-    final details = (map['details'] as String? ?? '').trim();
+    final notes =
+        (map['notes'] as String? ?? map['details'] as String? ?? '').trim();
     final location = (map['location'] as String? ?? '').trim();
     final startAt = DateTime.tryParse(
       (map['start_at'] as String? ?? '').trim(),
@@ -736,24 +734,19 @@ ${basePrompt.trim()}
     final draft = ItemDraft(
       type: type,
       title: title,
-      details: details,
+      notes: notes,
       location: location,
       color: ItemColorOption.sky,
       reminder: ReminderOption.none,
       repeatRule: RepeatRule.none,
-      scheduleDetails: ItemScheduleDetails(
-        range: DateTimeRangeValue(start: normalizedStart, end: normalizedEnd),
-        isAllDay: false,
-      ),
+      startAt: normalizedStart,
+      endAt: normalizedEnd,
+      isAllDay: false,
       taskDetails: ItemTaskDetails(
-        schedule: ItemScheduleDetails(
-          range: DateTimeRangeValue(start: normalizedStart, end: normalizedEnd),
-          isAllDay: false,
-        ),
         deadline: deadline,
         estimatedDuration: normalizedEnd.difference(normalizedStart),
       ),
-      memoDetails: const ItemMemoDetails(),
+      sourceKind: AgendaItemSourceKind.aiGenerated,
     );
 
     final missingRequired = <String>[

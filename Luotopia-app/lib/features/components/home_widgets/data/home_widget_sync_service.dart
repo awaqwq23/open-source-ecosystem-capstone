@@ -196,7 +196,7 @@ Map<String, dynamic> _buildSnapshotPayload({
           'title': item.title,
           'location': item.location,
           'isCompleted': item.isCompleted,
-          'manualOrder': item.manualOrder,
+          'sortOrder': item.sortOrder,
           'startAt': item.startAt.toIso8601String(),
           'endAt': item.endAt.toIso8601String(),
           'isAllDay': item.isAllDay,
@@ -225,7 +225,7 @@ Map<String, dynamic> _buildAgendaListPayload({
       if (byStart != 0) {
         return byStart;
       }
-      return a.manualOrder.compareTo(b.manualOrder);
+      return a.sortOrder.compareTo(b.sortOrder);
     });
   final dateLabel = zh ? '${today.month}月${today.day}日' : '${today.month}/${today.day}';
   final leftStatusLabel = leftItems.isEmpty
@@ -246,7 +246,7 @@ Map<String, dynamic> _buildAgendaListPayload({
       if (byStart != 0) {
         return byStart;
       }
-      return a.manualOrder.compareTo(b.manualOrder);
+      return a.sortOrder.compareTo(b.sortOrder);
     });
 
   return {

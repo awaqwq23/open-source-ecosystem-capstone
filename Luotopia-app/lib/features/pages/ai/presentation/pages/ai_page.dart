@@ -175,7 +175,7 @@ class _AiPageState extends ConsumerState<AiPage> {
     return ItemEditorPrefill(
       type: itemDraft.type,
       title: itemDraft.title,
-      details: itemDraft.details,
+      notes: itemDraft.notes,
       location: itemDraft.location,
       color: itemDraft.color,
       isAllDay: itemDraft.isAllDay,

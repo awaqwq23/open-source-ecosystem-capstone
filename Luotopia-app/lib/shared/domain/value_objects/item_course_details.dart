@@ -11,7 +11,6 @@ class ItemCourseDetails {
     this.sourceCourseId = '',
     this.courseNature = '',
     this.instructor = '',
-    this.classroomRaw = '',
     this.weekMeta = '',
   });
 
@@ -20,7 +19,6 @@ class ItemCourseDetails {
   final String sourceCourseId;
   final String courseNature;
   final String instructor;
-  final String classroomRaw;
   final String weekMeta;
 
   ItemCourseDetails copyWith({
@@ -29,7 +27,6 @@ class ItemCourseDetails {
     String? sourceCourseId,
     String? courseNature,
     String? instructor,
-    String? classroomRaw,
     String? weekMeta,
   }) {
     return ItemCourseDetails(
@@ -38,7 +35,6 @@ class ItemCourseDetails {
       sourceCourseId: sourceCourseId ?? this.sourceCourseId,
       courseNature: courseNature ?? this.courseNature,
       instructor: instructor ?? this.instructor,
-      classroomRaw: classroomRaw ?? this.classroomRaw,
       weekMeta: weekMeta ?? this.weekMeta,
     );
   }

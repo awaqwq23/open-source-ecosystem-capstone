@@ -3,13 +3,11 @@ import 'dart:math';
 
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
+import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
-import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -155,31 +153,26 @@ class WhuCourseImportService {
           ItemDraft(
             type: ItemType.course,
             title: course.title,
-            details: '',
+            notes: '',
             location: course.location,
             color: color,
             reminder: ReminderOption.none,
             repeatRule: RepeatRule.none,
-            scheduleDetails: ItemScheduleDetails(
-              isAllDay: false,
-              range: DateTimeRangeValue(start: startAt, end: endAt),
-            ),
+            startAt: startAt,
+            endAt: endAt,
+            isAllDay: false,
             taskDetails: ItemTaskDetails(
-              schedule: ItemScheduleDetails(
-                isAllDay: false,
-                range: DateTimeRangeValue(start: startAt, end: endAt),
-              ),
               deadline: null,
             ),
-            memoDetails: const ItemMemoDetails(),
             courseDetails: ItemCourseDetails(
               sourceKind: CourseItemSourceKind.whuJw,
               sourceCourseId: course.courseId,
               courseNature: course.courseNature,
               instructor: course.instructor,
-              classroomRaw: course.location,
               weekMeta: course.weekMeta,
             ),
+            sourceKind: AgendaItemSourceKind.whuCourse,
+            sourceRef: course.courseId,
           ),
         );
       }

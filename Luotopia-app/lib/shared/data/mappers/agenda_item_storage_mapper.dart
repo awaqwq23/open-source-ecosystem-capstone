@@ -1,10 +1,7 @@
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_memo_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_schedule_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
-import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -17,22 +14,24 @@ class AgendaItemStorageMapper {
       'id': item.id,
       'type': item.type.name,
       'title': item.title,
-      'details': item.details,
+      'notes': item.notes,
       'location': item.location,
       'color': item.color.name,
       'reminder': item.reminder.name,
       'repeatRule': item.repeatRule.name,
-      'scheduleDetails': _scheduleToJson(item.scheduleDetails),
-      'taskDetails': _taskToJson(item.taskDetails),
-      'memoDetails': _memoToJson(item.memoDetails),
+      'startAt': item.startAt.toIso8601String(),
+      'endAt': item.endAt.toIso8601String(),
+      'isAllDay': item.isAllDay,
+      'deadline': item.deadline?.toIso8601String(),
+      'estimatedDurationMinutes': item.estimatedDuration.inMinutes,
       'courseDetails': _courseToJson(item.courseDetails),
       'isCompleted': item.isCompleted,
       'createdAt': item.createdAt.toIso8601String(),
-      'updatedAt': item.updatedAt?.toIso8601String(),
+      'updatedAt': item.updatedAt.toIso8601String(),
       'completedAt': item.completedAt?.toIso8601String(),
-      'manualOrder': item.manualOrder,
-      'syncState': item.syncState.name,
-      'sourceId': item.sourceId,
+      'sortOrder': item.sortOrder,
+      'sourceKind': item.sourceKind.name,
+      'sourceRef': item.sourceRef,
     };
   }
 
@@ -40,34 +39,22 @@ class AgendaItemStorageMapper {
     final id = json['id'] as String?;
     final title = json['title'] as String?;
     final createdAt = DateTime.tryParse(json['createdAt'] as String? ?? '');
-    if (id == null || id.isEmpty || title == null || createdAt == null) {
+    final startAt = DateTime.tryParse(json['startAt'] as String? ?? '');
+    final endAt = DateTime.tryParse(json['endAt'] as String? ?? '');
+    if (id == null ||
+        id.isEmpty ||
+        title == null ||
+        createdAt == null ||
+        startAt == null ||
+        endAt == null) {
       return null;
     }
-
-    final scheduleDetails = _scheduleFromJson(json['scheduleDetails']);
-    final taskDetails = _taskFromJson(json['taskDetails']);
-    final memoDetails = _memoFromJson(json['memoDetails']);
-    final courseDetails = _courseFromJson(json['courseDetails']);
-    if (scheduleDetails == null ||
-        taskDetails == null ||
-        memoDetails == null ||
-        courseDetails == null) {
-      return null;
-    }
-
-    final details = json['details'] as String? ?? '';
-    final type = _enumByName(ItemType.values, json['type'] as String?) ?? ItemType.task;
-    final normalizedCourseDetails = type == ItemType.course &&
-            courseDetails.instructor.trim().isEmpty &&
-            _extractLegacyInstructor(details).isNotEmpty
-        ? courseDetails.copyWith(instructor: _extractLegacyInstructor(details))
-        : courseDetails;
 
     return AgendaItem(
       id: id,
-      type: type,
+      type: _enumByName(ItemType.values, json['type'] as String?) ?? ItemType.task,
       title: title,
-      details: details,
+      notes: json['notes'] as String? ?? '',
       location: json['location'] as String? ?? '',
       color: _enumByName(ItemColorOption.values, json['color'] as String?) ??
           ItemColorOption.sky,
@@ -75,79 +62,26 @@ class AgendaItemStorageMapper {
           ReminderOption.none,
       repeatRule: _enumByName(RepeatRule.values, json['repeatRule'] as String?) ??
           RepeatRule.none,
-      scheduleDetails: scheduleDetails,
-      taskDetails: taskDetails,
-      memoDetails: memoDetails,
-      courseDetails: normalizedCourseDetails,
+      startAt: startAt,
+      endAt: endAt,
+      isAllDay: json['isAllDay'] as bool? ?? false,
+      taskDetails: ItemTaskDetails(
+        deadline: DateTime.tryParse(json['deadline'] as String? ?? ''),
+        estimatedDuration: Duration(
+          minutes: json['estimatedDurationMinutes'] as int? ?? 0,
+        ),
+      ),
+      courseDetails: _courseFromJson(json['courseDetails']),
       isCompleted: json['isCompleted'] as bool? ?? false,
       createdAt: createdAt,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? createdAt,
       completedAt: DateTime.tryParse(json['completedAt'] as String? ?? ''),
-      manualOrder: (json['manualOrder'] as num?)?.toDouble() ?? 0,
-      syncState: _enumByName(
-            AgendaItemSyncState.values,
-            json['syncState'] as String?,
-          ) ??
-          AgendaItemSyncState.localOnly,
-      sourceId: json['sourceId'] as String?,
+      sortOrder: (json['sortOrder'] as num?)?.toDouble() ?? 0,
+      sourceKind:
+          _enumByName(AgendaItemSourceKind.values, json['sourceKind'] as String?) ??
+              AgendaItemSourceKind.manual,
+      sourceRef: json['sourceRef'] as String? ?? '',
     );
-  }
-
-  static Map<String, dynamic> _scheduleToJson(ItemScheduleDetails details) {
-    return {
-      'start': details.range.start.toIso8601String(),
-      'end': details.range.end.toIso8601String(),
-      'isAllDay': details.isAllDay,
-    };
-  }
-
-  static ItemScheduleDetails? _scheduleFromJson(Object? value) {
-    if (value is! Map) {
-      return null;
-    }
-    final start = DateTime.tryParse(value['start'] as String? ?? '');
-    final end = DateTime.tryParse(value['end'] as String? ?? '');
-    if (start == null || end == null) {
-      return null;
-    }
-    return ItemScheduleDetails(
-      range: DateTimeRangeValue(start: start, end: end),
-      isAllDay: value['isAllDay'] as bool? ?? false,
-    );
-  }
-
-  static Map<String, dynamic> _taskToJson(ItemTaskDetails details) {
-    return {
-      'schedule': _scheduleToJson(details.schedule),
-      'deadline': details.deadline?.toIso8601String(),
-      'estimatedDurationMinutes': details.estimatedDuration.inMinutes,
-    };
-  }
-
-  static ItemTaskDetails? _taskFromJson(Object? value) {
-    if (value is! Map) {
-      return null;
-    }
-    final schedule = _scheduleFromJson(value['schedule']);
-    if (schedule == null) {
-      return null;
-    }
-    return ItemTaskDetails(
-      schedule: schedule,
-      deadline: DateTime.tryParse(value['deadline'] as String? ?? ''),
-      estimatedDuration: Duration(
-        minutes: value['estimatedDurationMinutes'] as int? ?? 0,
-      ),
-    );
-  }
-
-  static Map<String, dynamic> _memoToJson(ItemMemoDetails details) => const {};
-
-  static ItemMemoDetails? _memoFromJson(Object? value) {
-    if (value is! Map) {
-      return null;
-    }
-    return const ItemMemoDetails();
   }
 
   static Map<String, dynamic> _courseToJson(ItemCourseDetails details) {
@@ -157,12 +91,11 @@ class AgendaItemStorageMapper {
       'sourceCourseId': details.sourceCourseId,
       'courseNature': details.courseNature,
       'instructor': details.instructor,
-      'classroomRaw': details.classroomRaw,
       'weekMeta': details.weekMeta,
     };
   }
 
-  static ItemCourseDetails? _courseFromJson(Object? value) {
+  static ItemCourseDetails _courseFromJson(Object? value) {
     if (value is! Map) {
       return const ItemCourseDetails();
     }
@@ -176,7 +109,6 @@ class AgendaItemStorageMapper {
       sourceCourseId: value['sourceCourseId'] as String? ?? '',
       courseNature: value['courseNature'] as String? ?? '',
       instructor: value['instructor'] as String? ?? '',
-      classroomRaw: value['classroomRaw'] as String? ?? '',
       weekMeta: value['weekMeta'] as String? ?? '',
     );
   }
@@ -191,16 +123,5 @@ class AgendaItemStorageMapper {
       }
     }
     return null;
-  }
-
-  static String _extractLegacyInstructor(String details) {
-    final text = details.trim();
-    if (text.startsWith('教师：')) {
-      return text.substring('教师：'.length).trim();
-    }
-    if (text.startsWith('Teacher:')) {
-      return text.substring('Teacher:'.length).trim();
-    }
-    return '';
   }
 }

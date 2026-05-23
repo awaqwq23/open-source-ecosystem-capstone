@@ -414,7 +414,7 @@ class ListPage extends ConsumerWidget {
             prefill: ItemEditorPrefill(
               type: item.type,
               title: item.title,
-              details: item.details,
+              notes: item.notes,
               location: item.location,
               color: item.color,
               isAllDay: item.isAllDay,
@@ -519,7 +519,7 @@ class _PendingTaskRowList extends ConsumerWidget {
         prefill: ItemEditorPrefill(
           type: item.type,
           title: item.title,
-          details: item.details,
+          notes: item.notes,
           location: item.location,
           color: item.color,
           isAllDay: item.isAllDay,

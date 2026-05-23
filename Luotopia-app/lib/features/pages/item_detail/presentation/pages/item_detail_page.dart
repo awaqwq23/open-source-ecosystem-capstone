@@ -79,7 +79,7 @@ class ItemDetailPage extends ConsumerWidget {
         prefill: ItemEditorPrefill(
           type: item.type,
           title: item.title,
-          details: item.details,
+          notes: item.notes,
           location: item.location,
           color: item.color,
           isAllDay: item.isAllDay,
@@ -90,6 +90,8 @@ class ItemDetailPage extends ConsumerWidget {
           deadline: item.deadline,
           estimatedDuration: item.estimatedDuration,
           courseDetails: item.courseDetails,
+          sourceKind: item.sourceKind,
+          sourceRef: item.sourceRef,
         ),
       ),
     );
@@ -241,11 +243,9 @@ class _ItemDetailContent extends ConsumerWidget {
       if (c.instructor.trim().isNotEmpty) {
         addRow(AppIcons.person, c.instructor.trim());
       }
-      final loc = c.classroomRaw.trim();
+      final loc = item.location.trim();
       if (loc.isNotEmpty) {
         addRow(AppIcons.location, loc);
-      } else if (item.location.trim().isNotEmpty) {
-        addRow(AppIcons.location, item.location.trim());
       }
       if (c.weekMeta.trim().isNotEmpty) {
         addRow(AppIcons.calendar, c.weekMeta.trim());
@@ -253,8 +253,8 @@ class _ItemDetailContent extends ConsumerWidget {
     }
 
     // ── Details ──
-    if (item.details.trim().isNotEmpty) {
-      rows.add(_DetailsBlock(text: item.details.trim()));
+    if (item.notes.trim().isNotEmpty) {
+      rows.add(_DetailsBlock(text: item.notes.trim()));
     }
 
     // ── Reminder / Repeat ──

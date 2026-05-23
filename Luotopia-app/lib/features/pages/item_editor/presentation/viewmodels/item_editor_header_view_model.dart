@@ -75,11 +75,6 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
     final prefill = args?.prefill;
     var draft = _buildDraft(prefill);
-    if (draft.type == ItemType.course &&
-        draft.location.trim().isEmpty &&
-        draft.courseDetails.classroomRaw.trim().isNotEmpty) {
-      draft = draft.copyWith(location: draft.courseDetails.classroomRaw.trim());
-    }
     state = ItemEditorPageState(
       itemId: args?.itemId,
       draft: _normalizeDraft(draft),
@@ -98,19 +93,10 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateDetails(String value) {
-    _updateDraft(state.draft.copyWith(details: value));
+    _updateDraft(state.draft.copyWith(notes: value));
   }
 
   void updateLocation(String value) {
-    if (state.draft.type == ItemType.course) {
-      _updateDraft(
-        state.draft.copyWith(
-          location: value,
-          courseDetails: state.draft.courseDetails.copyWith(classroomRaw: value),
-        ),
-      );
-      return;
-    }
     _updateDraft(state.draft.copyWith(location: value));
   }
 
@@ -407,12 +393,8 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     var draft = _normalizeDraftForSave(state.draft);
     if (draft.type == ItemType.course) {
       draft = draft.copyWith(
-        details: '',
         reminder: ReminderOption.none,
         repeatRule: RepeatRule.none,
-        courseDetails: draft.courseDetails.copyWith(
-          classroomRaw: draft.location.trim(),
-        ),
       );
     }
     await saveDraft(

@@ -317,7 +317,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
 
   void _syncControllers(ItemEditorPageState state) {
     _syncTextController(_titleController, state.draft.title);
-    _syncTextController(_detailsController, state.draft.details);
+    _syncTextController(_detailsController, state.draft.notes);
     _syncTextController(_locationController, state.draft.location);
     _syncTextController(_courseNatureController, state.draft.courseDetails.courseNature);
     _syncTextController(_courseInstructorController, state.draft.courseDetails.instructor);
