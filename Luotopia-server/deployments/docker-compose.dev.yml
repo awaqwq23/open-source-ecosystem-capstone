@@ -1,5 +1,7 @@
 services:
   server:
+    profiles:
+      - app
     build:
       context: ..
       dockerfile: Dockerfile
@@ -21,6 +23,8 @@ services:
       retries: 6
 
   migrate:
+    profiles:
+      - app
     build:
       context: ..
       dockerfile: Dockerfile

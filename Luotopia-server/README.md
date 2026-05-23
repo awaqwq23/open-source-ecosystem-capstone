@@ -23,10 +23,28 @@ go test ./...
 
 ## Docker 开发环境
 
-后端开发环境统一由 Docker Compose 启动，包含 HTTP 服务、数据库迁移、Postgres 和 Redis。
+后端开发环境默认只用 Docker Compose 启动状态服务，应用服务仍可直接在本机运行，便于调试和快速迭代。
 
 ```powershell
-docker compose -f deployments/docker-compose.dev.yml up --build
+docker compose -f deployments/docker-compose.dev.yml up -d
+```
+
+默认启动内容：
+
+- Postgres
+- Redis
+
+本机运行迁移和服务：
+
+```powershell
+go run ./cmd/migrate
+go run ./cmd/server
+```
+
+需要完整容器化联调时启用 `app` profile：
+
+```powershell
+docker compose -f deployments/docker-compose.dev.yml --profile app up --build
 ```
 
 服务启动后访问：
@@ -45,4 +63,4 @@ docker compose -f deployments/docker-compose.dev.yml down -v
 
 服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/config.example.env` 为 `configs/.env`，再按本机环境修改数据库、Redis、短信、SMTP 和令牌密钥配置。
 
-Docker Compose 使用 `configs/config.docker.env`，其中数据库和 Redis 地址指向 Compose 内部服务名。
+完整容器化联调使用 `configs/config.docker.env`，其中数据库和 Redis 地址指向 Compose 内部服务名。
