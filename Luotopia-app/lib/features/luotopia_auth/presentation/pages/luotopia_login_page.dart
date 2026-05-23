@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
@@ -14,71 +12,98 @@ class LuotopiaLoginPage extends ConsumerStatefulWidget {
   ConsumerState<LuotopiaLoginPage> createState() => _LuotopiaLoginPageState();
 }
 
-class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  final _phoneCtrl = TextEditingController();
-  final _codeCtrl = TextEditingController();
+class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
   final _identifierCtrl = TextEditingController();
+  final _codeCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  _LoginMode _mode = _LoginMode.code;
   bool _obscurePassword = true;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
-    _phoneCtrl.dispose();
-    _codeCtrl.dispose();
     _identifierCtrl.dispose();
+    _codeCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _sendCode() async {
-    final phone = _phoneCtrl.text.trim();
-    if (phone.isEmpty) {
-      _showSnackBar('请填写手机号');
+    final credential = _parseCredential();
+    if (credential == null) {
       return;
     }
-    await ref.read(luotopiaAuthProvider.notifier).sendLoginCode(
-          targetType: 'phone',
-          target: phone,
+    await ref
+        .read(luotopiaAuthProvider.notifier)
+        .sendLoginCode(
+          targetType: credential.targetType,
+          target: credential.value,
         );
     _showStateMessage();
   }
 
   Future<void> _loginWithCode() async {
-    final phone = _phoneCtrl.text.trim();
+    final credential = _parseCredential();
     final code = _codeCtrl.text.trim();
-    if (phone.isEmpty || code.isEmpty) {
-      _showSnackBar('请填写手机号和验证码');
+    if (credential == null) {
       return;
     }
-    await ref.read(luotopiaAuthProvider.notifier).loginWithCode(
-          targetType: 'phone',
-          target: phone,
+    if (code.isEmpty) {
+      _showSnackBar('请填写验证码');
+      return;
+    }
+    await ref
+        .read(luotopiaAuthProvider.notifier)
+        .loginWithCode(
+          targetType: credential.targetType,
+          target: credential.value,
           code: code,
         );
     _finishIfAuthenticated();
   }
 
   Future<void> _loginWithPassword() async {
-    final identifier = _identifierCtrl.text.trim();
+    final credential = _parseCredential();
     final password = _passwordCtrl.text;
-    if (identifier.isEmpty || password.isEmpty) {
-      _showSnackBar('请填写手机号/邮箱和密码');
+    if (credential == null) {
       return;
     }
-    await ref.read(luotopiaAuthProvider.notifier).loginWithPassword(
-          identifier: identifier,
-          password: password,
-        );
+    if (password.isEmpty) {
+      _showSnackBar('请填写密码');
+      return;
+    }
+    await ref
+        .read(luotopiaAuthProvider.notifier)
+        .loginWithPassword(identifier: credential.value, password: password);
     _finishIfAuthenticated();
+  }
+
+  Future<void> _login() {
+    return switch (_mode) {
+      _LoginMode.code => _loginWithCode(),
+      _LoginMode.password => _loginWithPassword(),
+    };
+  }
+
+  _Credential? _parseCredential() {
+    final value = _identifierCtrl.text.trim();
+    if (_phonePattern.hasMatch(value)) {
+      return _Credential(targetType: 'phone', value: value);
+    }
+    if (_emailPattern.hasMatch(value)) {
+      return _Credential(targetType: 'email', value: value);
+    }
+    _showSnackBar('请填写有效的手机号或邮箱');
+    return null;
+  }
+
+  void _switchMode() {
+    setState(() {
+      _mode = _mode == _LoginMode.code ? _LoginMode.password : _LoginMode.code;
+    });
+  }
+
+  void _showUnavailable(String name) {
+    _showSnackBar('$name登录暂未开放');
   }
 
   void _finishIfAuthenticated() {
@@ -113,6 +138,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage>
     final loading = authState.status == LuotopiaAuthStatus.loading;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isCodeMode = _mode == _LoginMode.code;
 
     return ui.Scaffold(
       headers: [
@@ -123,7 +149,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage>
               onPressed: () => Navigator.of(context).maybePop(),
             ),
           ],
-          title: const Text('登录 Luotopia'),
+          title: const Text('Luotopia 账户'),
         ),
       ],
       child: ListView(
@@ -140,111 +166,117 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage>
             ),
           ),
           const SizedBox(height: 24),
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: '验证码'),
-              Tab(text: '密码'),
-            ],
+          TextField(
+            controller: _identifierCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: '手机号 / 邮箱',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+            textInputAction: TextInputAction.next,
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 250,
-            child: TabBarView(
-              controller: _tabController,
+          const SizedBox(height: 12),
+          if (isCodeMode)
+            Row(
               children: [
-                Column(
-                  children: [
-                    TextField(
-                      controller: _phoneCtrl,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: '手机号',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
+                Expanded(
+                  child: TextField(
+                    controller: _codeCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '验证码',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _codeCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: '验证码',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          onPressed: loading ? null : _sendCode,
-                          child: const Text('发送'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: loading ? null : _loginWithCode,
-                        child: Text(loading ? '处理中...' : '登录 / 注册'),
-                      ),
-                    ),
-                  ],
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _loginWithCode(),
+                  ),
                 ),
-                Column(
-                  children: [
-                    TextField(
-                      controller: _identifierCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '手机号 / 邮箱',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _passwordCtrl,
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: '密码',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
-                        ),
-                      ),
-                      onSubmitted: (_) => _loginWithPassword(),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: loading ? null : _loginWithPassword,
-                        child: Text(loading ? '登录中...' : '登录'),
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: loading ? null : _sendCode,
+                    child: const Text('发送验证码'),
+                  ),
                 ),
               ],
+            )
+          else
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: '密码',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _loginWithPassword(),
+            ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: loading ? null : _login,
+              child: Text(loading ? '处理中...' : '登录'),
             ),
           ),
-          TextButton(
-            onPressed: () => context.push(AppRoutePaths.settingsLuotopiaRegister),
-            child: const Text('第一次使用？用手机号验证码创建账户'),
+          const SizedBox(height: 8),
+          Text(
+            '新账户将自动注册',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              TextButton(
+                onPressed: loading ? null : _switchMode,
+                child: Text(isCodeMode ? '账号密码登录' : '验证码登录'),
+              ),
+              TextButton.icon(
+                onPressed: loading ? null : () => _showUnavailable('微信'),
+                icon: const Icon(Icons.wechat, size: 18),
+                label: const Text('微信登录'),
+              ),
+              TextButton.icon(
+                onPressed: loading ? null : () => _showUnavailable('QQ'),
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                label: const Text('QQ 登录'),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+enum _LoginMode { code, password }
+
+class _Credential {
+  const _Credential({required this.targetType, required this.value});
+
+  final String targetType;
+  final String value;
+}
+
+final _phonePattern = RegExp(r'^1[3-9]\d{9}$');
+final _emailPattern = RegExp(
+  r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+  r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+  r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+);

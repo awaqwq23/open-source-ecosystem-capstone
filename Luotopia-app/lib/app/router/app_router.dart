@@ -9,7 +9,6 @@ import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/presentation/pages/course_timetables_page.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_account_page.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_login_page.dart';
-import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_register_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
@@ -77,7 +76,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutePaths.ai,
                 builder: (context, state) => AiPage(
-                  autoFocusInput: state.uri.queryParameters['focusInput'] == '1',
+                  autoFocusInput:
+                      state.uri.queryParameters['focusInput'] == '1',
                 ),
                 routes: [
                   GoRoute(
@@ -173,10 +173,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const LuotopiaLoginPage(),
                   ),
                   GoRoute(
-                    path: 'luotopia-auth/register',
-                    builder: (context, state) => const LuotopiaRegisterPage(),
-                  ),
-                  GoRoute(
                     path: 'luotopia-auth/account',
                     builder: (context, state) => const LuotopiaAccountPage(),
                   ),
@@ -192,57 +188,61 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutePaths.itemEditorFlow,
-        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
-          context,
-          state,
-          ProviderScope(
-            key: state.pageKey,
-            child: ItemEditorPage(
-              args: _resolveItemEditorArgs(state),
-              autoPopOnSubmit: true,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              ProviderScope(
+                key: state.pageKey,
+                child: ItemEditorPage(
+                  args: _resolveItemEditorArgs(state),
+                  autoPopOnSubmit: true,
+                ),
+              ),
+              type: SharedAxisTransitionType.horizontal,
             ),
-          ),
-          type: SharedAxisTransitionType.horizontal,
-        ),
       ),
       GoRoute(
         path: AppRoutePaths.itemDetail,
-        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<void>(
-          context,
-          state,
-          ItemDetailPage(
-            args: state.extra is ItemDetailArgs
-                ? state.extra! as ItemDetailArgs
-                : null,
-          ),
-          type: SharedAxisTransitionType.scaled,
-        ),
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              ItemDetailPage(
+                args: state.extra is ItemDetailArgs
+                    ? state.extra! as ItemDetailArgs
+                    : null,
+              ),
+              type: SharedAxisTransitionType.scaled,
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.repeatSettings,
-        pageBuilder: (context, state) => AppRouteTransitions.sharedAxisPage<RepeatRule>(
-          context,
-          state,
-          RepeatSettingsPage(
-            initialRule:
-                state.extra is RepeatRule ? state.extra! as RepeatRule : RepeatRule.none,
-          ),
-          type: SharedAxisTransitionType.horizontal,
-        ),
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<RepeatRule>(
+              context,
+              state,
+              RepeatSettingsPage(
+                initialRule: state.extra is RepeatRule
+                    ? state.extra! as RepeatRule
+                    : RepeatRule.none,
+              ),
+              type: SharedAxisTransitionType.horizontal,
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.reminderSettings,
         pageBuilder: (context, state) =>
             AppRouteTransitions.sharedAxisPage<ReminderOption>(
-          context,
-          state,
-          ReminderSettingsPage(
-            initialReminder: state.extra is ReminderOption
-                ? state.extra! as ReminderOption
-                : ReminderOption.none,
-          ),
-          type: SharedAxisTransitionType.horizontal,
-        ),
+              context,
+              state,
+              ReminderSettingsPage(
+                initialReminder: state.extra is ReminderOption
+                    ? state.extra! as ReminderOption
+                    : ReminderOption.none,
+              ),
+              type: SharedAxisTransitionType.horizontal,
+            ),
       ),
     ],
   );
@@ -259,25 +259,26 @@ ItemType? _parsePresetType(String? value) {
 
 ItemEditorArgs? _resolveItemEditorArgs(GoRouterState state) {
   final showTypePicker = state.uri.queryParameters['showTypePicker'] == '1';
-  final presetType = _parsePresetType(
-    state.uri.queryParameters['presetType'],
-  );
-  final presetPrefill = presetType == null ? null : ItemEditorPrefill(type: presetType);
+  final presetType = _parsePresetType(state.uri.queryParameters['presetType']);
+  final presetPrefill = presetType == null
+      ? null
+      : ItemEditorPrefill(type: presetType);
 
   return switch (state.extra) {
     final ItemEditorArgs value => value.copyWith(
-        showTypePickerOnLaunch: showTypePicker,
-        prefill: presetPrefill ?? value.prefill,
-      ),
+      showTypePickerOnLaunch: showTypePicker,
+      prefill: presetPrefill ?? value.prefill,
+    ),
     final ItemEditorPrefill prefill => ItemEditorArgs(
-        prefill: presetPrefill ?? prefill,
-        showTypePickerOnLaunch: showTypePicker,
-      ),
-    _ => (showTypePicker || presetPrefill != null)
-        ? ItemEditorArgs(
-            prefill: presetPrefill,
-            showTypePickerOnLaunch: showTypePicker,
-          )
-        : null,
+      prefill: presetPrefill ?? prefill,
+      showTypePickerOnLaunch: showTypePicker,
+    ),
+    _ =>
+      (showTypePicker || presetPrefill != null)
+          ? ItemEditorArgs(
+              prefill: presetPrefill,
+              showTypePickerOnLaunch: showTypePicker,
+            )
+          : null,
   };
 }
