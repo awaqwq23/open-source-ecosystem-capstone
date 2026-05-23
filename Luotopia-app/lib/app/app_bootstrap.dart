@@ -8,10 +8,6 @@ import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart'
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
-import 'package:luotopia/shared/data/mappers/agenda_item_storage_mapper.dart';
-import 'package:luotopia/shared/data/mappers/course_timetable_storage_mapper.dart';
-import 'package:luotopia/shared/domain/entities/agenda_item.dart';
-import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -24,8 +20,6 @@ class AppBootstrapData {
     required this.widgetSettings,
     required this.navigationSettings,
     required this.aiChatSessionStore,
-    required this.agendaItems,
-    required this.courseTimetableStore,
   });
 
   final Locale locale;
@@ -35,8 +29,6 @@ class AppBootstrapData {
   final WidgetSettings widgetSettings;
   final NavigationSettings navigationSettings;
   final AiChatSessionStore aiChatSessionStore;
-  final List<AgendaItem> agendaItems;
-  final CourseTimetableStore courseTimetableStore;
 }
 
 abstract final class AppBootstrapStorageKeys {
@@ -46,9 +38,6 @@ abstract final class AppBootstrapStorageKeys {
   static const aiSettings = 'settings.ai';
   static const widgetSettings = 'settings.widget';
   static const navigationSettings = 'settings.navigation';
-  static const agendaItems = 'agenda.items';
-  static const courseTimetables = 'course.timetables';
-  static const activeCourseTimetableId = 'course.activeTimetableId';
 
   static const aiSessions = 'ai.sessions';
   static const activeAiSessionId = 'ai.activeSessionId';
@@ -66,8 +55,6 @@ class AppBootstrapLoader {
       widgetSettings: _readWidgetSettings(preferences),
       navigationSettings: _readNavigationSettings(preferences),
       aiChatSessionStore: _readAiChatSessionStore(preferences),
-      agendaItems: _readAgendaItems(preferences),
-      courseTimetableStore: _readCourseTimetableStore(preferences),
     );
   }
 
@@ -198,68 +185,4 @@ class AppBootstrapLoader {
     );
   }
 
-  static List<AgendaItem> _readAgendaItems(SharedPreferences preferences) {
-    final raw = preferences.getString(AppBootstrapStorageKeys.agendaItems);
-    if (raw == null || raw.isEmpty) {
-      return const [];
-    }
-
-    try {
-      final json = jsonDecode(raw) as List<dynamic>;
-      return json
-          .whereType<Map<String, dynamic>>()
-          .map(AgendaItemStorageMapper.fromJson)
-          .whereType<AgendaItem>()
-          .toList(growable: false);
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  static CourseTimetableStore _readCourseTimetableStore(
-    SharedPreferences preferences,
-  ) {
-    final raw = preferences.getString(AppBootstrapStorageKeys.courseTimetables);
-    final rawSelected = preferences.getString(
-      AppBootstrapStorageKeys.activeCourseTimetableId,
-    );
-    if (raw == null || raw.isEmpty) {
-      return const CourseTimetableStore(timetables: []);
-    }
-
-    try {
-      final json = jsonDecode(raw) as List<dynamic>;
-      final timetables = json
-          .whereType<Map<String, dynamic>>()
-          .map(CourseTimetableStorageMapper.fromJson)
-          .whereType<CourseTimetable>()
-          .toList(growable: false);
-
-      Set<String> parseSelected(String? raw) {
-        if (raw == null || raw.isEmpty) {
-          return {};
-        }
-        try {
-          final parsed = jsonDecode(raw);
-          if (parsed is List) {
-            return parsed.whereType<String>().toSet();
-          }
-        } catch (_) {}
-        // Legacy: single ID string
-        return {raw};
-      }
-
-      var selected = parseSelected(rawSelected);
-      // Filter out IDs that no longer exist
-      final validIds = timetables.map((t) => t.id).toSet();
-      selected = selected.where(validIds.contains).toSet();
-
-      return CourseTimetableStore(
-        timetables: timetables,
-        selectedTimetableIds: selected,
-      );
-    } catch (_) {
-      return const CourseTimetableStore(timetables: []);
-    }
-  }
 }
