@@ -106,7 +106,8 @@ func (s SMTPSender) Send(_ context.Context, email string, code string, purpose d
 	auth := smtp.PlainAuth("", s.cfg.SMTPUsername, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 	subject := "Luotopia 验证码"
 	body := fmt.Sprintf("你的 Luotopia 验证码是 %s，用途：%s，10 分钟内有效。", code, purpose)
-	message := []byte("To: " + email + "\r\nSubject: " + subject + "\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
+	from := "Luotopia <" + s.cfg.SMTPFrom + ">"
+	message := []byte("From: " + from + "\r\nTo: " + email + "\r\nSubject: " + subject + "\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
 	return smtp.SendMail(addr, auth, s.cfg.SMTPFrom, []string{email}, message)
 }
 
