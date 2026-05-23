@@ -58,6 +58,7 @@ dependencies:
   material_symbols_icons: ^4.2928.1
   uuid: ^4.5.3
   flutter_js: ^0.8.7
+  font_awesome_flutter: ^11.0.0
 
 dev_dependencies:
   flutter_test:
