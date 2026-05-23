@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: luotopia
+      POSTGRES_USER: luotopia
+      POSTGRES_PASSWORD: luotopia
+    ports:
+      - "5432:5432"
+    volumes:
+      - luotopia-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  luotopia-postgres-data:
