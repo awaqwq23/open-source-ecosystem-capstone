@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
@@ -139,6 +140,8 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final isCodeMode = _mode == _LoginMode.code;
+    const wechatColor = Color(0xFF188038);
+    const qqColor = Color(0xFF2563EB);
 
     return ui.Scaffold(
       headers: [
@@ -187,6 +190,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
                     decoration: const InputDecoration(
                       labelText: '验证码',
                       border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.pin_outlined),
                     ),
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _loginWithCode(),
@@ -221,15 +225,15 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _loginWithPassword(),
             ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
               onPressed: loading ? null : _login,
-              child: Text(loading ? '处理中...' : '登录 / 注册'),
+              child: Text(loading ? '处理中...' : (isCodeMode ? '登录 / 注册' : '登录')),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 32),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -237,26 +241,26 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
                 onPressed: loading ? null : _switchMode,
                 child: Text(isCodeMode ? '账号密码登录' : '验证码登录'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                    color: const Color(0xFF188038).withValues(alpha: 0.48),
-                  ),
+                  side: BorderSide(color: wechatColor.withValues(alpha: 0.48)),
                 ),
                 onPressed: loading ? null : () => _showUnavailable('微信'),
-                icon: const Icon(Icons.wechat, size: 18),
+                icon: const Icon(Icons.wechat, size: 18, color: wechatColor),
                 label: const Text('微信登录'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.48),
-                  ),
+                  side: BorderSide(color: qqColor.withValues(alpha: 0.48)),
                 ),
                 onPressed: loading ? null : () => _showUnavailable('QQ'),
-                icon: const _QqIcon(),
+                icon: const FaIcon(
+                  FontAwesomeIcons.qq,
+                  size: 18,
+                  color: qqColor,
+                ),
                 label: const Text('QQ 登录'),
               ),
             ],
@@ -274,24 +278,6 @@ class _Credential {
 
   final String targetType;
   final String value;
-}
-
-class _QqIcon extends StatelessWidget {
-  const _QqIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 18,
-      height: 18,
-      child: Center(
-        child: Text(
-          'QQ',
-          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
 }
 
 final _phonePattern = RegExp(r'^1[3-9]\d{9}$');
