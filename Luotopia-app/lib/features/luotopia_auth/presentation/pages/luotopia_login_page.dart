@@ -229,14 +229,6 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
               child: Text(loading ? '处理中...' : '登录 / 注册'),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '新账户将自动注册',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-          ),
           const SizedBox(height: 18),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -248,7 +240,6 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF188038),
                   side: BorderSide(
                     color: const Color(0xFF188038).withValues(alpha: 0.48),
                   ),
@@ -260,13 +251,12 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
                   side: BorderSide(
                     color: const Color(0xFF2563EB).withValues(alpha: 0.48),
                   ),
                 ),
                 onPressed: loading ? null : () => _showUnavailable('QQ'),
-                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                icon: const _QqIcon(),
                 label: const Text('QQ 登录'),
               ),
             ],
@@ -284,6 +274,24 @@ class _Credential {
 
   final String targetType;
   final String value;
+}
+
+class _QqIcon extends StatelessWidget {
+  const _QqIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 18,
+      height: 18,
+      child: Center(
+        child: Text(
+          'QQ',
+          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
 }
 
 final _phonePattern = RegExp(r'^1[3-9]\d{9}$');
