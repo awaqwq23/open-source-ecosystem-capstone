@@ -101,6 +101,7 @@ class LuotopiaAuthRepository {
 
   final http.Client _client;
   final LuotopiaTokenStore _tokenStore;
+  static const _requestTimeout = Duration(seconds: 10);
 
   Future<String?> readRefreshToken() => _tokenStore.readRefreshToken();
 
@@ -115,15 +116,23 @@ class LuotopiaAuthRepository {
     required String target,
     required String purpose,
   }) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl/api/v1/auth/verification-codes'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'target_type': targetType,
-        'target': target,
-        'purpose': purpose,
-      }),
-    );
+    final response = await _client
+        .post(
+          Uri.parse('$baseUrl/api/v1/auth/verification-codes'),
+          headers: _jsonHeaders(),
+          body: jsonEncode({
+            'target_type': targetType,
+            'target': target,
+            'purpose': purpose,
+          }),
+        )
+        .timeout(
+          _requestTimeout,
+          onTimeout: () => throw const LuotopiaAuthException(
+            '请求超时，请检查后端是否已启动或网络是否可达',
+            code: 'request_timeout',
+          ),
+        );
     if (response.statusCode != 200) {
       throw _parseError(response);
     }

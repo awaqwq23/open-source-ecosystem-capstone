@@ -128,8 +128,18 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    ui.showToast(
+      context: context,
+      location: ui.ToastLocation.bottomCenter,
+      builder: (context, overlay) {
+        return ui.Alert(
+          title: Text(msg),
+          trailing: ui.IconButton.ghost(
+            icon: const Icon(Icons.close, size: 16),
+            onPressed: overlay.close,
+          ),
+        );
+      },
     );
   }
 
