@@ -20,3 +20,7 @@ Luotopia Server 是 Luotopia 的 Go 模块化单体服务端骨架。
 ```powershell
 go test ./...
 ```
+
+## 本地配置
+
+服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/config.example.env` 为 `configs/.env`，再按本机环境修改数据库、Redis、短信、SMTP 和令牌密钥配置。

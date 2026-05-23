@@ -37,6 +37,7 @@ Luotopia-app/lib/core/localization/generated/
 **/build/
 /coverage/
 **/coverage/
+**/.gocache/
 
 # Symbolication related
 app.*.symbols
@@ -51,6 +52,8 @@ app.*.map.json
 
 # Local environment files
 /Luotopia-app/android/local.properties
+/Luotopia-app/.env
+/Luotopia-server/configs/.env
 **/Flutter/ephemeral/
 
 # Claude

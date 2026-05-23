@@ -135,7 +135,7 @@ func (s *Service) LoginWithVerificationCode(ctx context.Context, cmd Verificatio
 
 	user, err := s.users.FindUserByIdentity(ctx, cmd.TargetType, target)
 	if errors.Is(err, domain.ErrIdentityNotFound) {
-		if cmd.TargetType != domain.IdentityPhone {
+		if cmd.TargetType != domain.IdentityPhone && cmd.TargetType != domain.IdentityEmail {
 			return AuthResult{}, domain.ErrIdentityNotFound
 		}
 		user, err = s.users.CreateUserWithIdentity(ctx, cmd.TargetType, target)

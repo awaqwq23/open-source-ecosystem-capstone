@@ -1,9 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -61,60 +64,82 @@ type EmailConfig struct {
 }
 
 func Load() Config {
+	loadDotEnv()
+
 	return Config{
-		Environment: env("LUOTOPIA_ENV", "development"),
+		Environment: requiredEnv("LUOTOPIA_ENV"),
 		HTTP: HTTPConfig{
-			Address:         env("LUOTOPIA_HTTP_ADDR", ":8080"),
-			ReadTimeout:     durationEnv("LUOTOPIA_HTTP_READ_TIMEOUT", 5*time.Second),
-			WriteTimeout:    durationEnv("LUOTOPIA_HTTP_WRITE_TIMEOUT", 10*time.Second),
-			ShutdownTimeout: durationEnv("LUOTOPIA_HTTP_SHUTDOWN_TIMEOUT", 10*time.Second),
+			Address:         requiredEnv("LUOTOPIA_HTTP_ADDR"),
+			ReadTimeout:     requiredDurationEnv("LUOTOPIA_HTTP_READ_TIMEOUT"),
+			WriteTimeout:    requiredDurationEnv("LUOTOPIA_HTTP_WRITE_TIMEOUT"),
+			ShutdownTimeout: requiredDurationEnv("LUOTOPIA_HTTP_SHUTDOWN_TIMEOUT"),
 		},
-		Database: DatabaseConfig{URL: os.Getenv("LUOTOPIA_DATABASE_URL")},
-		Redis:    RedisConfig{URL: os.Getenv("LUOTOPIA_REDIS_URL")},
+		Database: DatabaseConfig{URL: declaredEnv("LUOTOPIA_DATABASE_URL")},
+		Redis:    RedisConfig{URL: declaredEnv("LUOTOPIA_REDIS_URL")},
 		Storage: StorageConfig{
-			Bucket: os.Getenv("LUOTOPIA_STORAGE_BUCKET"),
-			Region: os.Getenv("LUOTOPIA_STORAGE_REGION"),
+			Bucket: declaredEnv("LUOTOPIA_STORAGE_BUCKET"),
+			Region: declaredEnv("LUOTOPIA_STORAGE_REGION"),
 		},
 		Auth: AuthConfig{
-			AccessTokenSecret: env("LUOTOPIA_AUTH_ACCESS_TOKEN_SECRET", "development-only-change-me"),
-			AccessTokenTTL:    durationEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_TTL", 10*time.Minute),
-			RefreshTokenTTL:   durationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL", 30*24*time.Hour),
+			AccessTokenSecret: requiredEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_SECRET"),
+			AccessTokenTTL:    requiredDurationEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_TTL"),
+			RefreshTokenTTL:   requiredDurationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL"),
 		},
 		SMS: SMSConfig{
-			TencentSecretID:   os.Getenv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
-			TencentSecretKey:  os.Getenv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
-			TencentRegion:     env("LUOTOPIA_TENCENT_SMS_REGION", "ap-guangzhou"),
-			TencentAppID:      os.Getenv("LUOTOPIA_TENCENT_SMS_APP_ID"),
-			TencentSignName:   os.Getenv("LUOTOPIA_TENCENT_SMS_SIGN_NAME"),
-			TencentTemplateID: os.Getenv("LUOTOPIA_TENCENT_SMS_TEMPLATE_ID"),
+			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
+			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
+			TencentRegion:     requiredEnv("LUOTOPIA_TENCENT_SMS_REGION"),
+			TencentAppID:      declaredEnv("LUOTOPIA_TENCENT_SMS_APP_ID"),
+			TencentSignName:   declaredEnv("LUOTOPIA_TENCENT_SMS_SIGN_NAME"),
+			TencentTemplateID: declaredEnv("LUOTOPIA_TENCENT_SMS_TEMPLATE_ID"),
 		},
 		Email: EmailConfig{
-			SMTPHost:     os.Getenv("LUOTOPIA_SMTP_HOST"),
-			SMTPPort:     env("LUOTOPIA_SMTP_PORT", "587"),
-			SMTPUsername: os.Getenv("LUOTOPIA_SMTP_USERNAME"),
-			SMTPPassword: os.Getenv("LUOTOPIA_SMTP_PASSWORD"),
-			SMTPFrom:     os.Getenv("LUOTOPIA_SMTP_FROM"),
+			SMTPHost:     declaredEnv("LUOTOPIA_SMTP_HOST"),
+			SMTPPort:     requiredEnv("LUOTOPIA_SMTP_PORT"),
+			SMTPUsername: declaredEnv("LUOTOPIA_SMTP_USERNAME"),
+			SMTPPassword: declaredEnv("LUOTOPIA_SMTP_PASSWORD"),
+			SMTPFrom:     declaredEnv("LUOTOPIA_SMTP_FROM"),
 		},
 	}
 }
 
-func env(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
+func loadDotEnv() {
+	configErr := godotenv.Load("configs/.env")
+	if configErr == nil {
+		return
+	}
+	rootErr := godotenv.Load(".env")
+	if rootErr == nil {
+		return
+	}
+	panic(fmt.Sprintf("无法加载 .env 配置：configs/.env: %v; .env: %v", configErr, rootErr))
+}
+
+func declaredEnv(key string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		panic(fmt.Sprintf("缺少环境变量：%s", key))
 	}
 	return value
 }
 
-func durationEnv(key string, fallback time.Duration) time.Duration {
-	raw := os.Getenv(key)
+func requiredEnv(key string) string {
+	value := declaredEnv(key)
+	if value == "" {
+		panic(fmt.Sprintf("环境变量 %s 不能为空", key))
+	}
+	return value
+}
+
+func requiredDurationEnv(key string) time.Duration {
+	raw := requiredEnv(key)
 	if raw == "" {
-		return fallback
+		panic(fmt.Sprintf("缺少环境变量：%s", key))
 	}
 
 	seconds, err := strconv.Atoi(raw)
 	if err != nil || seconds <= 0 {
-		return fallback
+		panic(fmt.Sprintf("环境变量 %s 必须是正整数秒数", key))
 	}
 	return time.Duration(seconds) * time.Second
 }

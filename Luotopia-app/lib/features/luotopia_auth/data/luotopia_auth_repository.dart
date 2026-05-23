@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class LuotopiaUser {
@@ -94,7 +95,9 @@ class LuotopiaAuthRepository {
   })  : _client = client ?? http.Client(),
         _tokenStore = tokenStore ?? LuotopiaTokenStore();
 
-  static const String baseUrl = 'http://10.0.2.2:8080';
+  static String get baseUrl {
+    return dotenv.get('LUOTOPIA_API_BASE_URL');
+  }
 
   final http.Client _client;
   final LuotopiaTokenStore _tokenStore;
