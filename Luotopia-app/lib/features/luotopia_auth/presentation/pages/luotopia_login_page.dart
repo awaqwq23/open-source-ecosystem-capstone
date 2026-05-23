@@ -226,7 +226,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
             width: double.infinity,
             child: FilledButton(
               onPressed: loading ? null : _login,
-              child: Text(loading ? '处理中...' : '登录'),
+              child: Text(loading ? '处理中...' : '登录 / 注册'),
             ),
           ),
           const SizedBox(height: 8),
@@ -237,22 +237,34 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
               color: colors.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 8,
+          const SizedBox(height: 18),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextButton(
+              OutlinedButton(
                 onPressed: loading ? null : _switchMode,
                 child: Text(isCodeMode ? '账号密码登录' : '验证码登录'),
               ),
-              TextButton.icon(
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF188038),
+                  side: BorderSide(
+                    color: const Color(0xFF188038).withValues(alpha: 0.48),
+                  ),
+                ),
                 onPressed: loading ? null : () => _showUnavailable('微信'),
                 icon: const Icon(Icons.wechat, size: 18),
                 label: const Text('微信登录'),
               ),
-              TextButton.icon(
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563EB),
+                  side: BorderSide(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.48),
+                  ),
+                ),
                 onPressed: loading ? null : () => _showUnavailable('QQ'),
                 icon: const Icon(Icons.chat_bubble_outline, size: 18),
                 label: const Text('QQ 登录'),
