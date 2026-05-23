@@ -12,6 +12,9 @@ import (
 	authapp "github.com/openwhu/luotopia/server/internal/modules/auth/app"
 	authinfra "github.com/openwhu/luotopia/server/internal/modules/auth/infra"
 	authtransport "github.com/openwhu/luotopia/server/internal/modules/auth/transport"
+	syncapp "github.com/openwhu/luotopia/server/internal/modules/sync/app"
+	syncinfra "github.com/openwhu/luotopia/server/internal/modules/sync/infra"
+	synctransport "github.com/openwhu/luotopia/server/internal/modules/sync/transport"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/openwhu/luotopia/server/internal/platform/database"
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
@@ -30,11 +33,36 @@ func main() {
 	server.RegisterHealth()
 	server.RegisterRouteGroups()
 	registerAuth(server, cfg, log)
+	registerSync(server, cfg, log)
 
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("服务启动失败", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+}
+
+func registerSync(server *httpserver.Server, cfg config.Config, log *slog.Logger) {
+	if cfg.Database.URL == "" {
+		log.Error("缺少数据库连接配置", slog.String("env", "LUOTOPIA_DATABASE_URL"))
+		os.Exit(1)
+	}
+	db, err := database.OpenPostgres(cfg.Database.URL)
+	if err != nil {
+		log.Error("数据库连接失败", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Error("数据库句柄获取失败", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := sqlDB.PingContext(context.Background()); err != nil {
+		log.Error("数据库连接失败", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	service := syncapp.NewService(syncinfra.NewGormRepository(db))
+	synctransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
 func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger) {
