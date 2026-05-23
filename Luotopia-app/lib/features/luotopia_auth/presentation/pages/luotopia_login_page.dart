@@ -14,35 +14,87 @@ class LuotopiaLoginPage extends ConsumerStatefulWidget {
   ConsumerState<LuotopiaLoginPage> createState() => _LuotopiaLoginPageState();
 }
 
-class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
-  final _usernameCtrl = TextEditingController();
+class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final _phoneCtrl = TextEditingController();
+  final _codeCtrl = TextEditingController();
+  final _identifierCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
-    _usernameCtrl.dispose();
+    _tabController.dispose();
+    _phoneCtrl.dispose();
+    _codeCtrl.dispose();
+    _identifierCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _doLogin() async {
-    final username = _usernameCtrl.text.trim();
-    final password = _passwordCtrl.text;
-    if (username.isEmpty || password.isEmpty) {
-      _showSnackBar('请填写用户名和密码');
+  Future<void> _sendCode() async {
+    final phone = _phoneCtrl.text.trim();
+    if (phone.isEmpty) {
+      _showSnackBar('请填写手机号');
       return;
     }
-    await ref.read(luotopiaAuthProvider.notifier).login(
-          username: username,
+    await ref.read(luotopiaAuthProvider.notifier).sendLoginCode(
+          targetType: 'phone',
+          target: phone,
+        );
+    _showStateMessage();
+  }
+
+  Future<void> _loginWithCode() async {
+    final phone = _phoneCtrl.text.trim();
+    final code = _codeCtrl.text.trim();
+    if (phone.isEmpty || code.isEmpty) {
+      _showSnackBar('请填写手机号和验证码');
+      return;
+    }
+    await ref.read(luotopiaAuthProvider.notifier).loginWithCode(
+          targetType: 'phone',
+          target: phone,
+          code: code,
+        );
+    _finishIfAuthenticated();
+  }
+
+  Future<void> _loginWithPassword() async {
+    final identifier = _identifierCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    if (identifier.isEmpty || password.isEmpty) {
+      _showSnackBar('请填写手机号/邮箱和密码');
+      return;
+    }
+    await ref.read(luotopiaAuthProvider.notifier).loginWithPassword(
+          identifier: identifier,
           password: password,
         );
+    _finishIfAuthenticated();
+  }
 
-    if (mounted) {
-      final state = ref.read(luotopiaAuthProvider);
-      if (state.status == LuotopiaAuthStatus.authenticated) {
-        Navigator.of(context).maybePop();
-      }
+  void _finishIfAuthenticated() {
+    final state = ref.read(luotopiaAuthProvider);
+    if (state.isAuthenticated && mounted) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    _showStateMessage();
+  }
+
+  void _showStateMessage() {
+    final state = ref.read(luotopiaAuthProvider);
+    final message = state.errorMessage ?? state.noticeMessage;
+    if (message != null) {
+      _showSnackBar(message);
     }
   }
 
@@ -58,6 +110,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(luotopiaAuthProvider);
+    final loading = authState.status == LuotopiaAuthStatus.loading;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
@@ -76,80 +129,119 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const SizedBox(height: 32),
-          Icon(Icons.account_circle, size: 64, color: colors.primary),
+          const SizedBox(height: 24),
+          Icon(Icons.account_circle_outlined, size: 64, color: colors.primary),
           const SizedBox(height: 16),
           Text(
-            '欢迎回来',
+            'Luotopia 账户',
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _usernameCtrl,
-            decoration: const InputDecoration(
-              labelText: '用户名 / 邮箱',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _passwordCtrl,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              labelText: '密码',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                ),
-                onPressed: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _doLogin(),
-          ),
-          if (authState.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              authState.errorMessage!,
-              style: TextStyle(color: colors.error, fontSize: 13),
-            ),
-          ],
           const SizedBox(height: 24),
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: '验证码'),
+              Tab(text: '密码'),
+            ],
+          ),
+          const SizedBox(height: 20),
           SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed:
-                  authState.status == LuotopiaAuthStatus.loading ? null : _doLogin,
-              child: Text(
-                authState.status == LuotopiaAuthStatus.loading
-                    ? '登录中...'
-                    : '登录',
-              ),
+            height: 250,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                Column(
+                  children: [
+                    TextField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: '手机号',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _codeCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: '验证码',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          onPressed: loading ? null : _sendCode,
+                          child: const Text('发送'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: loading ? null : _loginWithCode,
+                        child: Text(loading ? '处理中...' : '登录 / 注册'),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    TextField(
+                      controller: _identifierCtrl,
+                      decoration: const InputDecoration(
+                        labelText: '手机号 / 邮箱',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _passwordCtrl,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: '密码',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                        ),
+                      ),
+                      onSubmitted: (_) => _loginWithPassword(),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: loading ? null : _loginWithPassword,
+                        child: Text(loading ? '登录中...' : '登录'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '还没有账户？',
-                style: TextStyle(color: colors.onSurfaceVariant),
-              ),
-              TextButton(
-                onPressed: () => context.push(AppRoutePaths.settingsLuotopiaRegister),
-                child: const Text('注册'),
-              ),
-            ],
+          TextButton(
+            onPressed: () => context.push(AppRoutePaths.settingsLuotopiaRegister),
+            child: const Text('第一次使用？用手机号验证码创建账户'),
           ),
         ],
       ),

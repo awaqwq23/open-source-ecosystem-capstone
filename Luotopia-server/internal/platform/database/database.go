@@ -1,6 +1,11 @@
 package database
 
-import "context"
+import (
+	"context"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
 
 type DB interface {
 	Ping(ctx context.Context) error
@@ -15,4 +20,8 @@ func (NoopDB) Ping(context.Context) error {
 
 func (NoopDB) Close() error {
 	return nil
+}
+
+func OpenPostgres(dsn string) (*gorm.DB, error) {
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
 }

@@ -2,18 +2,18 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 )
 
 type Server struct {
 	config config.HTTPConfig
 	logger *slog.Logger
-	mux    *http.ServeMux
+	engine *gin.Engine
 }
 
 func New(cfg config.HTTPConfig, logger *slog.Logger) *Server {
@@ -21,32 +21,40 @@ func New(cfg config.HTTPConfig, logger *slog.Logger) *Server {
 		logger = slog.Default()
 	}
 
+	gin.SetMode(gin.ReleaseMode)
+	engine := gin.New()
+	engine.Use(gin.Recovery())
+
 	return &Server{
 		config: cfg,
 		logger: logger,
-		mux:    http.NewServeMux(),
+		engine: engine,
 	}
 }
 
 func (s *Server) RegisterHealth() {
-	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	s.engine.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 }
 
 func (s *Server) RegisterRouteGroups() {
-	s.mux.HandleFunc("GET /api/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"group": "client", "status": "ok"})
+	s.engine.GET("/api/v1/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"group": "client", "status": "ok"})
 	})
-	s.mux.HandleFunc("GET /admin/api/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"group": "admin", "status": "ok"})
+	s.engine.GET("/admin/api/v1/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"group": "admin", "status": "ok"})
 	})
+}
+
+func (s *Server) ClientAPI() gin.IRouter {
+	return s.engine.Group("/api/v1")
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	server := &http.Server{
 		Addr:         s.config.Address,
-		Handler:      s.mux,
+		Handler:      s.engine,
 		ReadTimeout:  s.config.ReadTimeout,
 		WriteTimeout: s.config.WriteTimeout,
 	}
@@ -69,10 +77,4 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	case err := <-errCh:
 		return err
 	}
-}
-
-func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(payload)
 }

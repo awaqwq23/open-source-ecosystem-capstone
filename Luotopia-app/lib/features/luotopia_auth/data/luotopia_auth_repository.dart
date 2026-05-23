@@ -1,190 +1,277 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LuotopiaUser {
-  final int id;
-  final String username;
-  final String email;
-  final String? displayName;
-  final String? bio;
-  final String? avatar;
-  final bool isAdmin;
-  final DateTime createdAt;
+  const LuotopiaUser({required this.id});
 
-  const LuotopiaUser({
-    required this.id,
-    required this.username,
-    this.email = '',
-    this.displayName,
-    this.bio,
-    this.avatar,
-    this.isAdmin = false,
-    required this.createdAt,
-  });
+  final String id;
 
-  String get displayNameStr => displayName ?? username;
+  String get shortId {
+    if (id.length <= 8) {
+      return id;
+    }
+    return id.substring(0, 8);
+  }
 
   factory LuotopiaUser.fromJson(Map<String, dynamic> json) {
-    return LuotopiaUser(
-      id: json['id'] as int? ?? 0,
-      username: json['username'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      displayName: json['display_name'] as String?,
-      bio: json['bio'] as String?,
-      avatar: json['avatar'] as String?,
-      isAdmin: json['is_admin'] as bool? ?? false,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
-          : DateTime.now(),
+    return LuotopiaUser(id: json['id'] as String? ?? '');
+  }
+}
+
+class LuotopiaTokenPair {
+  const LuotopiaTokenPair({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.expiresIn,
+  });
+
+  final String accessToken;
+  final String refreshToken;
+  final int expiresIn;
+
+  factory LuotopiaTokenPair.fromJson(Map<String, dynamic> json) {
+    return LuotopiaTokenPair(
+      accessToken: json['access_token'] as String? ?? '',
+      refreshToken: json['refresh_token'] as String? ?? '',
+      expiresIn: json['expires_in'] as int? ?? 0,
     );
   }
 }
 
+class LuotopiaAuthResult {
+  const LuotopiaAuthResult({required this.user, required this.tokens});
+
+  final LuotopiaUser user;
+  final LuotopiaTokenPair tokens;
+
+  factory LuotopiaAuthResult.fromJson(Map<String, dynamic> json) {
+    return LuotopiaAuthResult(
+      user: LuotopiaUser.fromJson(json['user'] as Map<String, dynamic>? ?? {}),
+      tokens: LuotopiaTokenPair.fromJson(
+        json['tokens'] as Map<String, dynamic>? ?? {},
+      ),
+    );
+  }
+}
+
+class LuotopiaAuthException implements Exception {
+  const LuotopiaAuthException(this.message, {this.code});
+
+  final String message;
+  final String? code;
+
+  @override
+  String toString() => message;
+}
+
+class LuotopiaTokenStore {
+  LuotopiaTokenStore({FlutterSecureStorage? storage})
+      : _storage = storage ?? const FlutterSecureStorage();
+
+  static const _refreshTokenKey = 'luotopia.auth.refresh_token';
+
+  final FlutterSecureStorage _storage;
+
+  Future<String?> readRefreshToken() {
+    return _storage.read(key: _refreshTokenKey);
+  }
+
+  Future<void> writeRefreshToken(String token) {
+    return _storage.write(key: _refreshTokenKey, value: token);
+  }
+
+  Future<void> clear() {
+    return _storage.delete(key: _refreshTokenKey);
+  }
+}
+
 class LuotopiaAuthRepository {
-  static const _tokenKey = 'luotopia.auth.token';
-  static const _userKey = 'luotopia.auth.user';
+  LuotopiaAuthRepository({
+    http.Client? client,
+    LuotopiaTokenStore? tokenStore,
+  })  : _client = client ?? http.Client(),
+        _tokenStore = tokenStore ?? LuotopiaTokenStore();
 
-  // 配置：服务端地址
-  // 开发环境使用本地地址，生产环境需修改
   static const String baseUrl = 'http://10.0.2.2:8080';
-  static const String _registerPath = '/api/v1/register';
-  static const String _loginPath = '/api/v1/login';
-  static const String _mePath = '/api/v1/me';
 
-  // -- Token 持久化 -- //
+  final http.Client _client;
+  final LuotopiaTokenStore _tokenStore;
 
-  String? readToken(SharedPreferences? prefs) {
-    return prefs?.getString(_tokenKey);
+  Future<String?> readRefreshToken() => _tokenStore.readRefreshToken();
+
+  Future<void> saveRefreshToken(String refreshToken) {
+    return _tokenStore.writeRefreshToken(refreshToken);
   }
 
-  Future<void> writeToken(SharedPreferences? prefs, String token) async {
-    await prefs?.setString(_tokenKey, token);
-  }
+  Future<void> clearTokens() => _tokenStore.clear();
 
-  Future<void> clearToken(SharedPreferences? prefs) async {
-    await Future.wait([
-      prefs?.remove(_tokenKey) ?? Future.value(),
-      prefs?.remove(_userKey) ?? Future.value(),
-    ]);
-  }
-
-  LuotopiaUser? readUser(SharedPreferences? prefs) {
-    final json = prefs?.getString(_userKey);
-    if (json == null || json.isEmpty) {
-      return null;
-    }
-    try {
-      return LuotopiaUser.fromJson(jsonDecode(json) as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> writeUser(SharedPreferences? prefs, LuotopiaUser user) async {
-    await prefs?.setString(_userKey, jsonEncode({
-      'id': user.id,
-      'username': user.username,
-      'email': user.email,
-      'display_name': user.displayName,
-      'bio': user.bio,
-      'avatar': user.avatar,
-      'is_admin': user.isAdmin,
-      'created_at': user.createdAt.toIso8601String(),
-    }));
-  }
-
-  // -- API 调用 -- //
-
-  Future<({String token, LuotopiaUser user})> register({
-    required String username,
-    required String password,
-    String? email,
+  Future<void> sendVerificationCode({
+    required String targetType,
+    required String target,
+    required String purpose,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl$_registerPath'),
-      headers: {'Content-Type': 'application/json'},
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/verification-codes'),
+      headers: _jsonHeaders(),
       body: jsonEncode({
-        'username': username,
-        'password': password,
-        if (email != null && email.isNotEmpty) 'email': email,
+        'target_type': targetType,
+        'target': target,
+        'purpose': purpose,
       }),
     );
-
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = data['token'] as String? ?? '';
-      final userData = data['user'] as Map<String, dynamic>?;
-      final user = userData != null
-          ? LuotopiaUser.fromJson(userData)
-          : LuotopiaUser(id: 0, username: username, createdAt: DateTime.now());
-      return (token: token, user: user);
+    if (response.statusCode != 200) {
+      throw _parseError(response);
     }
-
-    final error = _parseError(response);
-    throw Exception(error);
   }
 
-  Future<({String token, LuotopiaUser user})> login({
-    required String username,
-    required String password,
+  Future<LuotopiaAuthResult> loginWithVerificationCode({
+    required String targetType,
+    required String target,
+    required String code,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl$_loginPath'),
-      headers: {'Content-Type': 'application/json'},
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/login/verification-code'),
+      headers: _jsonHeaders(),
       body: jsonEncode({
-        'username': username,
-        'password': password,
+        'target_type': targetType,
+        'target': target,
+        'code': code,
+        'device_name': 'Flutter',
       }),
     );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = data['token'] as String? ?? '';
-      final userData = data['user'] as Map<String, dynamic>?;
-      if (token.isEmpty) {
-        throw Exception('登录失败：未返回令牌');
-      }
-      final user = userData != null
-          ? LuotopiaUser.fromJson(userData)
-          : LuotopiaUser(id: 0, username: username, createdAt: DateTime.now());
-      return (token: token, user: user);
-    }
-
-    final error = _parseError(response);
-    throw Exception(error);
+    return _readAuthResult(response);
   }
 
-  Future<LuotopiaUser> getMe(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl$_mePath'),
+  Future<LuotopiaAuthResult> loginWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/login/password'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({
+        'identifier': identifier,
+        'password': password,
+        'device_name': 'Flutter',
+      }),
+    );
+    return _readAuthResult(response);
+  }
+
+  Future<LuotopiaAuthResult> refresh(String refreshToken) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/token/refresh'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({
+        'refresh_token': refreshToken,
+        'device_name': 'Flutter',
+      }),
+    );
+    return _readAuthResult(response);
+  }
+
+  Future<LuotopiaUser> getMe(String accessToken) async {
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/v1/auth/me'),
       headers: {
         'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
+        'Authorization': 'Bearer $accessToken',
       },
     );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final userData = data['user'] as Map<String, dynamic>?;
-      if (userData == null) {
-        throw Exception('获取用户信息失败');
-      }
-      return LuotopiaUser.fromJson(userData);
+    if (response.statusCode != 200) {
+      throw _parseError(response);
     }
-
-    throw Exception('获取用户信息失败（${response.statusCode}）');
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return LuotopiaUser.fromJson(data['user'] as Map<String, dynamic>? ?? {});
   }
 
-  String _parseError(http.Response response) {
+  Future<void> setPassword({
+    required String accessToken,
+    required String password,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/password'),
+      headers: _authHeaders(accessToken),
+      body: jsonEncode({'password': password}),
+    );
+    if (response.statusCode != 200) {
+      throw _parseError(response);
+    }
+  }
+
+  Future<void> bindEmail({
+    required String accessToken,
+    required String email,
+    required String code,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/identities/email'),
+      headers: _authHeaders(accessToken),
+      body: jsonEncode({'email': email, 'code': code}),
+    );
+    if (response.statusCode != 200) {
+      throw _parseError(response);
+    }
+  }
+
+  Future<void> logout(String refreshToken) async {
+    await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/logout'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'refresh_token': refreshToken}),
+    );
+  }
+
+  Future<void> logoutAll(String accessToken) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/v1/auth/logout-all'),
+      headers: _authHeaders(accessToken),
+    );
+    if (response.statusCode != 200) {
+      throw _parseError(response);
+    }
+  }
+
+  LuotopiaAuthResult _readAuthResult(http.Response response) {
+    if (response.statusCode != 200) {
+      throw _parseError(response);
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = LuotopiaAuthResult.fromJson(data);
+    if (result.tokens.accessToken.isEmpty || result.tokens.refreshToken.isEmpty) {
+      throw const LuotopiaAuthException('登录失败：服务端未返回完整令牌');
+    }
+    return result;
+  }
+
+  Map<String, String> _jsonHeaders() {
+    return {'Accept': 'application/json', 'Content-Type': 'application/json'};
+  }
+
+  Map<String, String> _authHeaders(String accessToken) {
+    return {
+      ..._jsonHeaders(),
+      'Authorization': 'Bearer $accessToken',
+    };
+  }
+
+  LuotopiaAuthException _parseError(http.Response response) {
     try {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return data['error'] as String? ??
-          data['message'] as String? ??
-          '请求失败（${response.statusCode}）';
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        return LuotopiaAuthException(
+          error['message'] as String? ?? '请求失败（${response.statusCode}）',
+          code: error['code'] as String?,
+        );
+      }
+      return LuotopiaAuthException(
+        data['message'] as String? ?? '请求失败（${response.statusCode}）',
+      );
     } catch (_) {
-      return '请求失败（${response.statusCode}）';
+      return LuotopiaAuthException('请求失败（${response.statusCode}）');
     }
   }
 }

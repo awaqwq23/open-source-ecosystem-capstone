@@ -12,6 +12,9 @@ type Config struct {
 	Database    DatabaseConfig
 	Redis       RedisConfig
 	Storage     StorageConfig
+	Auth        AuthConfig
+	SMS         SMSConfig
+	Email       EmailConfig
 }
 
 type HTTPConfig struct {
@@ -34,6 +37,29 @@ type StorageConfig struct {
 	Region string
 }
 
+type AuthConfig struct {
+	AccessTokenSecret string
+	AccessTokenTTL    time.Duration
+	RefreshTokenTTL   time.Duration
+}
+
+type SMSConfig struct {
+	TencentSecretID   string
+	TencentSecretKey  string
+	TencentRegion     string
+	TencentAppID      string
+	TencentSignName   string
+	TencentTemplateID string
+}
+
+type EmailConfig struct {
+	SMTPHost     string
+	SMTPPort     string
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFrom     string
+}
+
 func Load() Config {
 	return Config{
 		Environment: env("LUOTOPIA_ENV", "development"),
@@ -48,6 +74,26 @@ func Load() Config {
 		Storage: StorageConfig{
 			Bucket: os.Getenv("LUOTOPIA_STORAGE_BUCKET"),
 			Region: os.Getenv("LUOTOPIA_STORAGE_REGION"),
+		},
+		Auth: AuthConfig{
+			AccessTokenSecret: env("LUOTOPIA_AUTH_ACCESS_TOKEN_SECRET", "development-only-change-me"),
+			AccessTokenTTL:    durationEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_TTL", 10*time.Minute),
+			RefreshTokenTTL:   durationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL", 30*24*time.Hour),
+		},
+		SMS: SMSConfig{
+			TencentSecretID:   os.Getenv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
+			TencentSecretKey:  os.Getenv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
+			TencentRegion:     env("LUOTOPIA_TENCENT_SMS_REGION", "ap-guangzhou"),
+			TencentAppID:      os.Getenv("LUOTOPIA_TENCENT_SMS_APP_ID"),
+			TencentSignName:   os.Getenv("LUOTOPIA_TENCENT_SMS_SIGN_NAME"),
+			TencentTemplateID: os.Getenv("LUOTOPIA_TENCENT_SMS_TEMPLATE_ID"),
+		},
+		Email: EmailConfig{
+			SMTPHost:     os.Getenv("LUOTOPIA_SMTP_HOST"),
+			SMTPPort:     env("LUOTOPIA_SMTP_PORT", "587"),
+			SMTPUsername: os.Getenv("LUOTOPIA_SMTP_USERNAME"),
+			SMTPPassword: os.Getenv("LUOTOPIA_SMTP_PASSWORD"),
+			SMTPFrom:     os.Getenv("LUOTOPIA_SMTP_FROM"),
 		},
 	}
 }
