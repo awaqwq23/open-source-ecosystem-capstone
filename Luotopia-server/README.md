@@ -21,6 +21,28 @@ Luotopia Server 是 Luotopia 的 Go 模块化单体服务端骨架。
 go test ./...
 ```
 
+## Docker 开发环境
+
+后端开发环境统一由 Docker Compose 启动，包含 HTTP 服务、数据库迁移、Postgres 和 Redis。
+
+```powershell
+docker compose -f deployments/docker-compose.dev.yml up --build
+```
+
+服务启动后访问：
+
+```text
+http://localhost:8080/healthz
+```
+
+如需清空本地开发数据库：
+
+```powershell
+docker compose -f deployments/docker-compose.dev.yml down -v
+```
+
 ## 本地配置
 
 服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/config.example.env` 为 `configs/.env`，再按本机环境修改数据库、Redis、短信、SMTP 和令牌密钥配置。
+
+Docker Compose 使用 `configs/config.docker.env`，其中数据库和 Redis 地址指向 Compose 内部服务名。
