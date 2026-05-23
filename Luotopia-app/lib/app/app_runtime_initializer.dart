@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/hot_update/data/hot_update_service.dart';
+import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
+import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/home_widgets/data/home_widget_sync_service.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:luotopia/shared/data/sync/sync_service.dart';
 
 class AppRuntimeInitializer extends ConsumerStatefulWidget {
   const AppRuntimeInitializer({
@@ -49,10 +52,16 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _homeWidgetSyncService = service;
     await service.initialize();
     _subs.add(
-      ref.listenManual(agendaItemRepositoryProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(agendaItemRepositoryProvider, (_, __) {
+        service.syncDebounced();
+        _syncAgendaDebounced();
+      }),
     );
     _subs.add(
-      ref.listenManual(courseTimetableRepositoryProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(courseTimetableRepositoryProvider, (_, __) {
+        service.syncDebounced();
+        _syncAgendaDebounced();
+      }),
     );
     _subs.add(
       ref.listenManual(appHomeSettingsProvider, (_, __) => service.syncDebounced()),
@@ -66,6 +75,30 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _subs.add(
       ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
     );
+    _subs.add(
+      ref.listenManual(luotopiaAuthProvider, (_, next) {
+        if (next.status == LuotopiaAuthStatus.authenticated &&
+            next.accessToken != null &&
+            next.accessToken!.isNotEmpty) {
+          ref.read(agendaSyncServiceProvider).syncDebounced(
+                next.accessToken!,
+                delay: const Duration(milliseconds: 300),
+              );
+        }
+      }),
+    );
+    _syncAgendaDebounced();
+  }
+
+  void _syncAgendaDebounced() {
+    final auth = ref.read(luotopiaAuthProvider);
+    final token = auth.accessToken;
+    if (auth.status != LuotopiaAuthStatus.authenticated ||
+        token == null ||
+        token.isEmpty) {
+      return;
+    }
+    ref.read(agendaSyncServiceProvider).syncDebounced(token);
   }
 
   @override
