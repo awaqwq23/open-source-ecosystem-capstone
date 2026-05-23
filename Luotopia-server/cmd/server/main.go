@@ -42,26 +42,40 @@ func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger
 	if cfg.Database.URL != "" {
 		db, err := database.OpenPostgres(cfg.Database.URL)
 		if err != nil {
-			log.Error("数据库连接失败，账号模块退回内存仓储", slog.String("error", err.Error()))
-			users = authapp.NewMemoryUserRepository()
-		} else {
-			users = authinfra.NewGormUserRepository(db)
+			log.Error("数据库连接失败", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
+		sqlDB, err := db.DB()
+		if err != nil {
+			log.Error("数据库句柄获取失败", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		if err := sqlDB.PingContext(context.Background()); err != nil {
+			log.Error("数据库连接失败", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		users = authinfra.NewGormUserRepository(db)
 	} else {
-		users = authapp.NewMemoryUserRepository()
+		log.Error("缺少数据库连接配置", slog.String("env", "LUOTOPIA_DATABASE_URL"))
+		os.Exit(1)
 	}
 
 	var codes authapp.VerificationCodeStore
 	if cfg.Redis.URL != "" {
 		options, err := redis.ParseURL(cfg.Redis.URL)
 		if err != nil {
-			log.Error("Redis 配置无效，验证码退回内存存储", slog.String("error", err.Error()))
-			codes = authapp.NewMemoryVerificationCodeStore()
-		} else {
-			codes = authinfra.NewRedisVerificationCodeStore(redis.NewClient(options))
+			log.Error("Redis 配置无效", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
+		client := redis.NewClient(options)
+		if err := client.Ping(context.Background()).Err(); err != nil {
+			log.Error("Redis 连接失败", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		codes = authinfra.NewRedisVerificationCodeStore(client)
 	} else {
-		codes = authapp.NewMemoryVerificationCodeStore()
+		log.Error("缺少 Redis 连接配置", slog.String("env", "LUOTOPIA_REDIS_URL"))
+		os.Exit(1)
 	}
 
 	service := authapp.NewService(authapp.ServiceConfig{

@@ -73,19 +73,11 @@ func NewService(cfg ServiceConfig) *Service {
 	if sessionDuration <= 0 {
 		sessionDuration = 30 * 24 * time.Hour
 	}
-	sender := cfg.Sender
-	if sender == nil {
-		sender = NoopVerificationSender{}
-	}
-	hasher := cfg.Hasher
-	if hasher == nil {
-		hasher = PlainPasswordHasher{}
-	}
 	return &Service{
 		users:           cfg.Users,
 		codes:           cfg.Codes,
-		sender:          sender,
-		hasher:          hasher,
+		sender:          cfg.Sender,
+		hasher:          cfg.Hasher,
 		tokens:          cfg.Tokens,
 		now:             now,
 		sessionDuration: sessionDuration,
@@ -279,20 +271,4 @@ func hashToken(token string) string {
 
 func newID() string {
 	return randomToken(16)
-}
-
-type NoopVerificationSender struct{}
-
-func (NoopVerificationSender) Send(context.Context, domain.IdentityType, string, string, domain.VerificationPurpose) error {
-	return nil
-}
-
-type PlainPasswordHasher struct{}
-
-func (PlainPasswordHasher) Hash(password string) (string, error) {
-	return "plain:" + password, nil
-}
-
-func (PlainPasswordHasher) Verify(password string, encodedHash string) bool {
-	return encodedHash == "plain:"+password
 }

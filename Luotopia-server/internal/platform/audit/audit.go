@@ -16,9 +16,3 @@ type Event struct {
 type Recorder interface {
 	Record(ctx context.Context, event Event) error
 }
-
-type NoopRecorder struct{}
-
-func (NoopRecorder) Record(context.Context, Event) error {
-	return nil
-}

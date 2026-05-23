@@ -8,6 +8,22 @@ import (
 	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
 )
 
+type staticVerificationSender struct{}
+
+func (staticVerificationSender) Send(context.Context, domain.IdentityType, string, string, domain.VerificationPurpose) error {
+	return nil
+}
+
+type plainPasswordHasher struct{}
+
+func (plainPasswordHasher) Hash(password string) (string, error) {
+	return "plain:" + password, nil
+}
+
+func (plainPasswordHasher) Verify(password string, encodedHash string) bool {
+	return encodedHash == "plain:"+password
+}
+
 func TestVerificationCodeLoginCreatesAndReusesPhoneUser(t *testing.T) {
 	ctx := context.Background()
 	users := app.NewMemoryUserRepository()
@@ -17,6 +33,8 @@ func TestVerificationCodeLoginCreatesAndReusesPhoneUser(t *testing.T) {
 	service := app.NewService(app.ServiceConfig{
 		Users:  users,
 		Codes:  codes,
+		Sender: staticVerificationSender{},
+		Hasher: plainPasswordHasher{},
 		Tokens: tokens,
 	})
 
