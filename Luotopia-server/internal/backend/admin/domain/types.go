@@ -73,18 +73,19 @@ type CreateScriptRequest struct {
 }
 
 type PublishReleaseRequest struct {
-	FileKey      string `json:"file_key" binding:"required"`
+	FileKey      string `json:"file_key"`
+	Content      string `json:"content"`
 	Checksum     string `json:"checksum"`
 	ReleaseNotes string `json:"release_notes"`
 }
 
 type UserInfo struct {
-	ID          string    `json:"id"`
-	Status      string    `json:"status"`
-	Phone       string    `json:"phone,omitempty"`
-	Email       string    `json:"email,omitempty"`
-	SessionCnt  int64     `json:"session_cnt"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID         string    `json:"id"`
+	Status     string    `json:"status"`
+	Phone      string    `json:"phone,omitempty"`
+	Email      string    `json:"email,omitempty"`
+	SessionCnt int64     `json:"session_cnt"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type UserList struct {

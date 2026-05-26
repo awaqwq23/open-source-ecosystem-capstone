@@ -159,6 +159,10 @@ func (h Handler) publishRelease(c *gin.Context) {
 			writeError(c, http.StatusNotFound, "not_found", "脚本不存在")
 			return
 		}
+		if errors.Is(err, app.ErrInvalidArg) {
+			writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+			return
+		}
 		writeError(c, http.StatusInternalServerError, "internal_error", "发布版本失败")
 		return
 	}

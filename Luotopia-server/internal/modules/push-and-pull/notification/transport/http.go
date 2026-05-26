@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/domain"
+	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 )
 
 type Handler struct {
@@ -37,10 +37,10 @@ func (h Handler) listPublished(c *gin.Context) {
 		return
 	}
 	type item struct {
-		ID        string  `json:"id"`
-		Title     string  `json:"title"`
-		Priority  string  `json:"priority"`
-		CreatedAt string  `json:"created_at"`
+		ID        string `json:"id"`
+		Title     string `json:"title"`
+		Priority  string `json:"priority"`
+		CreatedAt string `json:"created_at"`
 	}
 	result := make([]item, len(items))
 	for i, n := range items {
@@ -50,9 +50,9 @@ func (h Handler) listPublished(c *gin.Context) {
 }
 
 func (h Handler) latest(c *gin.Context) {
-	info := h.service.GetLatestInfo(c.Request.Context())
+	info := h.service.GetLatestInfo(c.Request.Context(), strings.TrimSpace(c.Query("latest_id")))
 	if !info.HasNew {
-		c.JSON(http.StatusOK, gin.H{"latest_id": "", "has_new": false, "count": 0})
+		c.JSON(http.StatusOK, gin.H{"latest_id": info.LatestID, "has_new": false, "count": info.Count})
 		return
 	}
 	n, err := h.service.GetByID(c.Request.Context(), info.LatestID)
@@ -61,12 +61,12 @@ func (h Handler) latest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"latest_id": n.ID,
-		"has_new":   true,
-		"count":     info.Count,
-		"title":     n.Title,
-		"content":   n.Content,
-		"priority":  n.Priority,
+		"latest_id":  n.ID,
+		"has_new":    true,
+		"count":      info.Count,
+		"title":      n.Title,
+		"content":    n.Content,
+		"priority":   n.Priority,
 		"created_at": n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
 }

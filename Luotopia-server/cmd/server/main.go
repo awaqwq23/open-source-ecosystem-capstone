@@ -65,10 +65,11 @@ func main() {
 	// Graceful shutdown
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-
-	<-sigCtx.Done()
-	log.Info("正在关闭服务...")
-	cancel()
+	go func() {
+		<-sigCtx.Done()
+		log.Info("正在关闭服务...")
+		cancel()
+	}()
 
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("服务启动失败", slog.String("error", err.Error()))
@@ -153,7 +154,7 @@ func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
 	hotSvc := hotapp.NewService(hotRepo)
 
 	adminRepo := admininfra.NewGormRepository(db)
-	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc)
+	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc, "scripts")
 	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret, cfg.Admin.UserIDs).Register(server.AdminAPI())
 }
 
@@ -237,4 +238,8 @@ type syncCheckAdapter struct {
 
 func (a syncCheckAdapter) IsSyncEnabledForUser(ctx context.Context, userID string) (bool, error) {
 	return a.repo.IsSyncAllowed(ctx, userID)
+}
+
+func (a syncCheckAdapter) LatestSyncCursor(ctx context.Context, userID string) (int64, error) {
+	return a.repo.LatestChangeID(ctx, userID)
 }

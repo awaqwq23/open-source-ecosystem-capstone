@@ -2,16 +2,18 @@ package app
 
 import (
 	"context"
+	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
+	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 )
 
 type SyncChecker interface {
 	IsSyncEnabledForUser(ctx context.Context, userID string) (bool, error)
+	LatestSyncCursor(ctx context.Context, userID string) (int64, error)
 }
 
 type Service struct {
@@ -32,51 +34,73 @@ func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotU
 	}
 }
 
-func (s *Service) Pull(ctx context.Context, userID string) domain.PullResponse {
-	resp := domain.PullResponse{}
+func (s *Service) Pull(ctx context.Context, userID string, req domain.PullRequest) domain.PullResponse {
+	resp := domain.PullResponse{ServerTime: now()}
 
 	// Weather: return cached data or empty
-	if s.weatherSvc != nil {
+	if s.weatherSvc != nil && scopeEnabled(req.Scopes, "weather") {
 		if data, err := s.weatherSvc.GetCached(ctx); err == nil && data != nil {
 			ts := data.UpdatedAt.Unix()
+			changed := req.ClientState.WeatherCachedAt == nil || *req.ClientState.WeatherCachedAt != ts
 			resp.Weather = &domain.WeatherBlock{
-				Data:     data,
+				Changed:  changed,
+				Data:     valueIf(changed, data),
 				CachedAt: &ts,
 			}
 		}
 	}
 
 	// Notification: latest info
-	if s.notifcSvc != nil {
-		info := s.notifcSvc.GetLatestInfo(ctx)
+	if s.notifcSvc != nil && scopeEnabled(req.Scopes, "notification") {
+		info := s.notifcSvc.GetLatestInfo(ctx, req.ClientState.NotificationLatestID)
 		resp.Notification = &domain.NotificationBlock{
+			Changed:  info.HasNew,
 			LatestID: info.LatestID,
 			HasNew:   info.HasNew,
 			Count:    info.Count,
+			Title:    info.Title,
+			Priority: info.Priority,
+		}
+		if info.PublishedAt != nil {
+			resp.Notification.PublishedAt = info.PublishedAt.Format(time.RFC3339)
 		}
 	}
 
 	// Hot update: script versions
-	if s.hotUpdateSvc != nil {
+	if s.hotUpdateSvc != nil && scopeEnabled(req.Scopes, "hot_update") {
 		versions := s.hotUpdateSvc.GetScriptVersions(ctx)
 		scripts := make(map[string]domain.ScriptVersion, len(versions))
 		for name, info := range versions {
+			client := req.ClientState.HotUpdateScripts[name]
+			changed := client.Version != info.LatestVersion || client.Checksum != info.Checksum
+			if !changed && len(req.Scopes) > 0 {
+				continue
+			}
 			scripts[name] = domain.ScriptVersion{
+				Changed:       changed,
 				LatestVersion: info.LatestVersion,
 				Checksum:      info.Checksum,
+				DownloadURL:   "/api/v1/hot-update/scripts/" + name + "/content",
 			}
 		}
 		resp.HotUpdate = &domain.HotUpdateBlock{Scripts: scripts}
 	}
 
 	// Sync: capability
-	if s.syncChecker != nil && userID != "" {
+	if s.syncChecker != nil && userID != "" && scopeEnabled(req.Scopes, "sync") {
 		enabled, _ := s.syncChecker.IsSyncEnabledForUser(ctx, userID)
-		resp.Sync = &domain.SyncBlock{Enabled: enabled}
+		block := &domain.SyncBlock{Enabled: enabled}
+		if enabled {
+			if latest, err := s.syncChecker.LatestSyncCursor(ctx, userID); err == nil {
+				block.LatestCursor = &latest
+				block.HasChanges = latest > 0 && (req.ClientState.SyncCursor == nil || latest > *req.ClientState.SyncCursor)
+			}
+		}
+		resp.Sync = block
 	}
 
 	// Stats
-	if s.statsSvc != nil {
+	if s.statsSvc != nil && scopeEnabled(req.Scopes, "stats") {
 		stats := s.statsSvc.GetStats(ctx)
 		resp.Stats = &domain.StatsBlock{
 			TotalUsers:     stats.TotalUsers,
@@ -85,4 +109,25 @@ func (s *Service) Pull(ctx context.Context, userID string) domain.PullResponse {
 	}
 
 	return resp
+}
+
+var now = func() time.Time { return time.Now().UTC() }
+
+func scopeEnabled(scopes []string, target string) bool {
+	if len(scopes) == 0 {
+		return true
+	}
+	for _, scope := range scopes {
+		if scope == target {
+			return true
+		}
+	}
+	return false
+}
+
+func valueIf[T any](ok bool, value T) any {
+	if !ok {
+		return nil
+	}
+	return value
 }

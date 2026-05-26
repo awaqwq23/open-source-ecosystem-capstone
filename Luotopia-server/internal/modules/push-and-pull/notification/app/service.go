@@ -72,25 +72,34 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 }
 
 type LatestInfo struct {
-	LatestID string `json:"latest_id"`
-	HasNew   bool   `json:"has_new"`
-	Count    int    `json:"count"`
+	LatestID    string     `json:"latest_id"`
+	HasNew      bool       `json:"has_new"`
+	Count       int        `json:"count"`
+	Title       string     `json:"title"`
+	Priority    string     `json:"priority"`
+	PublishedAt *time.Time `json:"published_at,omitempty"`
 }
 
-func (s *Service) GetLatestInfo(ctx context.Context) LatestInfo {
+func (s *Service) GetLatestInfo(ctx context.Context, clientLatestID string) LatestInfo {
 	latest, err := s.repo.GetLatestPublished(ctx)
 	latestID := ""
 	hasNew := false
 	if err == nil {
 		latestID = latest.ID
-		hasNew = true
+		hasNew = latest.ID != clientLatestID
 	}
 	total, _ := s.repo.CountPublished(ctx)
-	return LatestInfo{
+	info := LatestInfo{
 		LatestID: latestID,
 		HasNew:   hasNew,
 		Count:    int(total),
 	}
+	if err == nil {
+		info.Title = latest.Title
+		info.Priority = string(latest.Priority)
+		info.PublishedAt = latest.PublishedAt
+	}
+	return info
 }
 
 func generateSuffix() string {

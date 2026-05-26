@@ -2,7 +2,13 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/backend/admin/domain"
@@ -22,15 +28,16 @@ type Repository interface {
 }
 
 type Service struct {
-	version    string
-	startedAt  time.Time
-	db         *gorm.DB
-	repo       Repository
-	notifcSvc  *notiapp.Service
+	version      string
+	startedAt    time.Time
+	db           *gorm.DB
+	repo         Repository
+	notifcSvc    *notiapp.Service
 	hotUpdateSvc *hotapp.Service
+	scriptDir    string
 }
 
-func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service) *Service {
+func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, scriptDir string) *Service {
 	return &Service{
 		version:      version,
 		startedAt:    time.Now(),
@@ -38,6 +45,7 @@ func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp
 		repo:         repo,
 		notifcSvc:    notifcSvc,
 		hotUpdateSvc: hotUpdateSvc,
+		scriptDir:    scriptDir,
 	}
 }
 
@@ -154,8 +162,37 @@ func (s *Service) ToggleScript(ctx context.Context, id string) (domain.HotUpdate
 }
 
 func (s *Service) PublishRelease(ctx context.Context, scriptID string, req domain.PublishReleaseRequest) error {
-	_, err := s.hotUpdateSvc.PublishRelease(ctx, scriptID, req.FileKey, req.Checksum, req.ReleaseNotes)
+	fileKey, checksum, err := s.resolveReleaseFile(scriptID, req)
+	if err != nil {
+		return err
+	}
+	_, err = s.hotUpdateSvc.PublishRelease(ctx, scriptID, fileKey, checksum, req.ReleaseNotes)
 	return err
+}
+
+func (s *Service) resolveReleaseFile(scriptID string, req domain.PublishReleaseRequest) (string, string, error) {
+	if strings.TrimSpace(req.Content) == "" {
+		fileKey := strings.TrimSpace(req.FileKey)
+		if fileKey == "" {
+			return "", "", ErrInvalidArg
+		}
+		return fileKey, strings.TrimSpace(req.Checksum), nil
+	}
+	sum := sha256.Sum256([]byte(req.Content))
+	checksum := hex.EncodeToString(sum[:])
+	dir := s.scriptDir
+	if strings.TrimSpace(dir) == "" {
+		dir = "scripts"
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", "", err
+	}
+	fileKey := fmt.Sprintf("%s-%d.js", scriptID, time.Now().UnixNano())
+	path := filepath.Join(dir, fileKey)
+	if err := os.WriteFile(path, []byte(req.Content), 0644); err != nil {
+		return "", "", err
+	}
+	return fileKey, checksum, nil
 }
 
 // User management
@@ -191,6 +228,6 @@ func (s *Service) RemoveAllowlist(ctx context.Context, userID string) error {
 
 // error helpers used by transport
 var (
-	ErrNotFound      = errors.New("admin: not found")
-	ErrInvalidArg    = errors.New("admin: invalid argument")
+	ErrNotFound   = errors.New("admin: not found")
+	ErrInvalidArg = errors.New("admin: invalid argument")
 )

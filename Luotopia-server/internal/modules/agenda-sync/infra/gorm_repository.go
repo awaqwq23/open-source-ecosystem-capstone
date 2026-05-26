@@ -34,6 +34,22 @@ func (r *GormRepository) IsSyncAllowed(ctx context.Context, userID string) (bool
 	return model.Enabled, nil
 }
 
+func (r *GormRepository) LatestChangeID(ctx context.Context, userID string) (int64, error) {
+	var latest sql.NullInt64
+	row := r.db.WithContext(ctx).
+		Table("sync_changes").
+		Select("MAX(id)").
+		Where("user_id = ?", userID).
+		Row()
+	if err := row.Scan(&latest); err != nil {
+		return 0, err
+	}
+	if !latest.Valid {
+		return 0, nil
+	}
+	return latest.Int64, nil
+}
+
 func (r *GormRepository) ListChanges(ctx context.Context, userID string, afterChangeID int64, limit int) ([]domain.SyncChange, error) {
 	var rows []syncChangeModel
 	err := r.db.WithContext(ctx).
