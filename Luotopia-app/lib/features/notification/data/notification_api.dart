@@ -12,4 +12,8 @@ class NotificationAPI {
   Future<Map<String, dynamic>> getList({int offset = 0, int limit = 20}) async {
     return _apiClient.get('/api/v1/notifications?offset=$offset&limit=$limit');
   }
+
+  Future<Map<String, dynamic>> getById(String id) async {
+    return _apiClient.get('/api/v1/notifications/$id');
+  }
 }

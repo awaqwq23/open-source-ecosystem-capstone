@@ -6,11 +6,14 @@ import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
+import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
+import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/home_widgets/data/home_widget_sync_service.dart';
 import 'package:luotopia/features/unified_pull/pull.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import 'package:luotopia/shared/data/sync/local_sync_store.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 
 class AppRuntimeInitializer extends ConsumerStatefulWidget {
@@ -48,8 +51,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
   void _handleForegroundResume() {
     final auth = ref.read(luotopiaAuthProvider);
     if (auth.status != LuotopiaAuthStatus.authenticated) return;
-    unawaited(ref.read(unifiedPullServiceProvider).pullSilent());
-    _syncAgendaDebounced();
+    unawaited(_performForegroundPull(auth));
   }
 
   Future<void> _setup() async {
@@ -99,32 +101,48 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
         }
       }),
     );
-    // 首次同步尝试（如果已认证）
-    _syncAgendaDebounced();
+    final auth = ref.read(luotopiaAuthProvider);
+    if (auth.status == LuotopiaAuthStatus.authenticated &&
+        auth.accessToken != null &&
+        auth.accessToken!.isNotEmpty &&
+        auth.user != null &&
+        auth.user!.id.isNotEmpty) {
+      _onAuthenticated(auth);
+    }
   }
 
   void _onAuthenticated(LuotopiaAuthState auth) {
-    final userId = auth.user!.id;
     // 统一拉取：一次请求获取所有信息
     unawaited(_performPull(auth));
-    // 同时保留同步触发（但能力检测会从 pull 结果获取）
-    ref.read(agendaSyncServiceProvider).syncDebounced(
-          accessToken: auth.accessToken!,
-          userId: userId,
-          delay: const Duration(milliseconds: 300),
-        );
   }
 
   Future<void> _performPull(LuotopiaAuthState auth) async {
     final result = await ref.read(unifiedPullServiceProvider).pullFull();
+    await _applyPullResult(auth, result);
+  }
+
+  Future<void> _performForegroundPull(LuotopiaAuthState auth) async {
+    final result = await ref.read(unifiedPullServiceProvider).pullSilent();
+    if (result != null) {
+      await _applyPullResult(auth, result);
+    }
+  }
+
+  Future<void> _applyPullResult(LuotopiaAuthState auth, PullResult result) async {
     if (result.isSuccess && result.response != null) {
       final data = result.response!;
+      ref.invalidate(weatherProvider);
+      ref.invalidate(notificationProvider);
       // 同步能力从拉取结果获取
       if (data.sync != null) {
         ref.read(agendaSyncServiceProvider).applyCapability(
               userId: auth.user!.id,
               enabled: data.sync!.enabled,
             );
+        final pending = await ref.read(localSyncStoreProvider).pendingChangeCount();
+        if (data.sync!.enabled && (data.sync!.hasChanges || pending > 0)) {
+          _syncAgendaDebounced();
+        }
       }
     }
   }

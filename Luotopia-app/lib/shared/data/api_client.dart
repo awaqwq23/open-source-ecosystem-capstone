@@ -32,6 +32,16 @@ class ApiClient {
     );
   }
 
+  Future<String> getText(String path) async {
+    final response = await _client
+        .get(Uri.parse('$baseUrl$path'), headers: _authHeaders)
+        .timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiClientException._(response.statusCode, _parseErrorMessage(response));
+    }
+    return response.body;
+  }
+
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? body,

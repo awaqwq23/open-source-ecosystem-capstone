@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -119,6 +121,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onSync: () => _syncNow(luotopiaAuth),
                   ),
                 _SettingsLinkTile(
+                  title: '热更新脚本',
+                  subtitle: '检查校园服务脚本版本',
+                  icon: Icons.code_outlined,
+                  onTap: () => unawaited(_checkHotUpdate()),
+                ),
+                _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
                   subtitle: l10n.settingsHomeEntrySubtitle,
                   icon: AppIcons.homeOutlined,
@@ -183,6 +191,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  Future<void> _checkHotUpdate() async {
+    final result = await ref.read(unifiedPullServiceProvider).pullScoped(
+      trigger: 'manual',
+      scopes: const ['hot_update'],
+    );
+    if (!mounted) {
+      return;
+    }
+    final scripts = result.response?.hotUpdate?.scripts.values;
+    final changed = scripts?.where((script) => script.changed).length ?? 0;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.isSuccess ? '已检查脚本更新：$changed 项有更新' : '脚本更新检查失败'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _syncNow(LuotopiaAuthState auth) async {
     final token = auth.accessToken;
     final userId = auth.user?.id;
@@ -199,6 +225,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _manualSyncMessage = null;
     });
     try {
+      final pullResult = await ref.read(unifiedPullServiceProvider).pullScoped(
+        trigger: 'manual',
+        scopes: const ['sync'],
+      );
+      final sync = pullResult.response?.sync;
+      if (sync != null) {
+        ref.read(agendaSyncServiceProvider).applyCapability(
+              userId: userId,
+              enabled: sync.enabled,
+            );
+      }
       await ref
           .read(agendaSyncServiceProvider)
           .sync(accessToken: token, userId: userId);
@@ -648,12 +685,6 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
   bool _refreshing = false;
 
   @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(notificationProvider.notifier).checkLatest());
-  }
-
-  @override
   Widget build(BuildContext context) {
     final state = ref.watch(notificationProvider);
     final theme = Theme.of(context);
@@ -676,7 +707,7 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: _refreshing ? null : _manualRefresh,
+                onTap: _refreshing ? null : () => unawaited(_manualRefresh()),
                 child: _refreshing
                     ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(Icons.refresh, size: 16, color: colors.onSurface.withValues(alpha: 0.5)),
@@ -694,21 +725,18 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
                   title: state.title ?? '新通知',
                   subtitle: '${state.count} 条未读',
                   icon: Icons.campaign_outlined,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(state.content ?? '暂无详情'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: () => unawaited(_showNotificationDetail(context)),
                 )
               else
                 _SettingsLinkTile(
                   title: '暂无新通知',
                   subtitle: '点击检查更新',
                   icon: Icons.check_circle_outline,
-                  onTap: _refreshing ? null : _manualRefresh,
+                  onTap: () {
+                    if (!_refreshing) {
+                      unawaited(_manualRefresh());
+                    }
+                  },
                 ),
             ],
           ),
@@ -719,8 +747,21 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
 
   Future<void> _manualRefresh() async {
     setState(() => _refreshing = true);
-    await ref.read(manualPullProvider)();
     await ref.read(notificationProvider.notifier).checkLatest();
     setState(() => _refreshing = false);
+  }
+
+  Future<void> _showNotificationDetail(BuildContext context) async {
+    await ref.read(notificationProvider.notifier).loadDetail();
+    if (!mounted) {
+      return;
+    }
+    final latest = ref.read(notificationProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(latest.content ?? '暂无详情'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

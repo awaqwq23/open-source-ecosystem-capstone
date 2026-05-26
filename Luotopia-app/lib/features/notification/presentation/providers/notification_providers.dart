@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/notification/data/notification_api.dart';
+import 'package:luotopia/features/unified_pull/data/pull_response.dart';
+import 'package:luotopia/features/unified_pull/data/pull_state_store.dart';
+import 'package:luotopia/features/unified_pull/domain/pull_service.dart';
 import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 
 class NotificationState {
@@ -26,31 +29,68 @@ final notificationApiProvider = Provider<NotificationAPI>((ref) {
 
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
   final api = ref.read(notificationApiProvider);
-  return NotificationNotifier(api);
+  final stateStore = ref.read(pullStateStoreProvider);
+  return NotificationNotifier(
+    api: api,
+    pullService: ref.read(unifiedPullServiceProvider),
+    stateStore: stateStore,
+  );
 });
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
-  NotificationNotifier(this._api) : super(const NotificationState());
+  NotificationNotifier({
+    required NotificationAPI api,
+    required UnifiedPullService pullService,
+    required PullStateStore stateStore,
+  })  : _api = api,
+        _pullService = pullService,
+        _stateStore = stateStore,
+        super(_stateFromBlock(stateStore.readNotification()));
 
   final NotificationAPI _api;
+  final UnifiedPullService _pullService;
+  final PullStateStore _stateStore;
 
   Future<void> checkLatest() async {
     try {
-      final data = await _api.getLatest();
-      final hasNew = data['has_new'] as bool? ?? false;
-      if (hasNew) {
-        state = NotificationState(
-          latestId: data['latest_id'] as String?,
-          title: data['title'] as String?,
-          content: data['content'] as String?,
-          hasNew: true,
-          count: data['count'] as int? ?? 0,
+      final result = await _pullService.pullScoped(
+        trigger: 'manual',
+        scopes: const ['notification'],
+      );
+      if (result.isSuccess) {
+        state = _stateFromBlock(
+          result.response?.notification ?? _stateStore.readNotification(),
         );
-      } else {
-        state = const NotificationState(hasNew: false);
       }
     } catch (_) {
       // Silently fail
     }
+  }
+
+  Future<void> loadDetail() async {
+    final id = state.latestId;
+    if (id == null || id.isEmpty || state.content != null) {
+      return;
+    }
+    final data = await _api.getById(id);
+    state = NotificationState(
+      latestId: id,
+      title: data['title'] as String? ?? state.title,
+      content: data['content'] as String? ?? '',
+      hasNew: state.hasNew,
+      count: state.count,
+    );
+  }
+
+  static NotificationState _stateFromBlock(NotificationBlock? block) {
+    if (block == null || block.latestId.isEmpty) {
+      return const NotificationState();
+    }
+    return NotificationState(
+      latestId: block.latestId,
+      title: block.title.isEmpty ? null : block.title,
+      hasNew: block.hasNew,
+      count: block.count,
+    );
   }
 }

@@ -1,13 +1,21 @@
 class PullResponse {
+  final DateTime? serverTime;
   final WeatherBlock? weather;
   final NotificationBlock? notification;
   final HotUpdateBlock? hotUpdate;
   final SyncBlock? sync;
 
-  const PullResponse({this.weather, this.notification, this.hotUpdate, this.sync});
+  const PullResponse({
+    this.serverTime,
+    this.weather,
+    this.notification,
+    this.hotUpdate,
+    this.sync,
+  });
 
   factory PullResponse.fromJson(Map<String, dynamic> json) {
     return PullResponse(
+      serverTime: DateTime.tryParse(json['server_time'] as String? ?? ''),
       weather: json['weather'] != null
           ? WeatherBlock.fromJson(json['weather'] as Map<String, dynamic>)
           : null,
@@ -25,13 +33,15 @@ class PullResponse {
 }
 
 class WeatherBlock {
+  final bool changed;
   final Map<String, dynamic>? data;
   final int? cachedAt;
 
-  const WeatherBlock({this.data, this.cachedAt});
+  const WeatherBlock({this.changed = false, this.data, this.cachedAt});
 
   factory WeatherBlock.fromJson(Map<String, dynamic> json) {
     return WeatherBlock(
+      changed: json['changed'] as bool? ?? false,
       data: json['data'] as Map<String, dynamic>?,
       cachedAt: json['cached_at'] as int?,
     );
@@ -39,22 +49,46 @@ class WeatherBlock {
 }
 
 class NotificationBlock {
+  final bool changed;
   final String latestId;
   final bool hasNew;
   final int count;
+  final String title;
+  final String priority;
+  final DateTime? publishedAt;
 
   const NotificationBlock({
+    this.changed = false,
     required this.latestId,
     required this.hasNew,
     required this.count,
+    this.title = '',
+    this.priority = '',
+    this.publishedAt,
   });
 
   factory NotificationBlock.fromJson(Map<String, dynamic> json) {
     return NotificationBlock(
+      changed: json['changed'] as bool? ?? false,
       latestId: json['latest_id'] as String? ?? '',
       hasNew: json['has_new'] as bool? ?? false,
       count: json['count'] as int? ?? 0,
+      title: json['title'] as String? ?? '',
+      priority: json['priority'] as String? ?? '',
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'changed': changed,
+      'latest_id': latestId,
+      'has_new': hasNew,
+      'count': count,
+      'title': title,
+      'priority': priority,
+      'published_at': publishedAt?.toIso8601String(),
+    };
   }
 }
 
@@ -76,25 +110,44 @@ class HotUpdateBlock {
 }
 
 class ScriptVersion {
+  final bool changed;
   final int latestVersion;
   final String checksum;
+  final String downloadUrl;
 
-  const ScriptVersion({required this.latestVersion, required this.checksum});
+  const ScriptVersion({
+    this.changed = false,
+    required this.latestVersion,
+    required this.checksum,
+    this.downloadUrl = '',
+  });
 
   factory ScriptVersion.fromJson(Map<String, dynamic> json) {
     return ScriptVersion(
+      changed: json['changed'] as bool? ?? false,
       latestVersion: json['latest_version'] as int? ?? 0,
       checksum: json['checksum'] as String? ?? '',
+      downloadUrl: json['download_url'] as String? ?? '',
     );
   }
 }
 
 class SyncBlock {
   final bool enabled;
+  final bool hasChanges;
+  final int? latestCursor;
 
-  const SyncBlock({required this.enabled});
+  const SyncBlock({
+    required this.enabled,
+    this.hasChanges = false,
+    this.latestCursor,
+  });
 
   factory SyncBlock.fromJson(Map<String, dynamic> json) {
-    return SyncBlock(enabled: json['enabled'] as bool? ?? false);
+    return SyncBlock(
+      enabled: json['enabled'] as bool? ?? false,
+      hasChanges: json['has_changes'] as bool? ?? false,
+      latestCursor: (json['latest_cursor'] as num?)?.toInt(),
+    );
   }
 }

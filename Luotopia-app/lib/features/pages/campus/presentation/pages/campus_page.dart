@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
@@ -55,7 +56,7 @@ class CampusPage extends StatelessWidget {
                         weather: weatherState.weather,
                         loading: weatherState.loading,
                         isMock: weatherState.isMock,
-                        onRefresh: () => ref.read(weatherProvider.notifier).refresh(),
+                        onRefresh: () => unawaited(ref.read(weatherProvider.notifier).refresh()),
                       );
                     }),
                   ),
