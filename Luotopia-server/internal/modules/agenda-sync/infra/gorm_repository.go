@@ -7,8 +7,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/sync/app"
-	"github.com/openwhu/luotopia/server/internal/modules/sync/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/agenda-sync/app"
+	"github.com/openwhu/luotopia/server/internal/modules/agenda-sync/domain"
 	"gorm.io/gorm"
 )
 

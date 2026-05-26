@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/auth/app"
-	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/app"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 	"gorm.io/gorm"
 )
 

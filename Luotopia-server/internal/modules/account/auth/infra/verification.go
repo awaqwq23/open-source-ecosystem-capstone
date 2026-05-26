@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/redis/go-redis/v9"
 	tcommon "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"

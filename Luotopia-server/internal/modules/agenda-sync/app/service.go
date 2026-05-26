@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/openwhu/luotopia/server/internal/modules/sync/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/agenda-sync/domain"
 )
 
 var (

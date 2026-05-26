@@ -3,21 +3,20 @@ package transport
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/openwhu/luotopia/server/internal/modules/auth/app"
-	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
-	"github.com/openwhu/luotopia/server/internal/modules/auth/infra"
+	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/app"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 )
 
 type Handler struct {
-	service     *app.Service
-	tokenSecret string
+	service      *app.Service
+	authMiddleware gin.HandlerFunc
 }
 
 func NewHandler(service *app.Service, tokenSecret string) Handler {
-	return Handler{service: service, tokenSecret: tokenSecret}
+	return Handler{service: service, authMiddleware: httpserver.AuthMiddleware(tokenSecret)}
 }
 
 func (h Handler) Register(router gin.IRouter) {
@@ -29,7 +28,8 @@ func (h Handler) Register(router gin.IRouter) {
 	auth.POST("/logout", h.logout)
 	auth.POST("/social/:provider", h.socialLogin)
 
-	protected := auth.Group("", h.requireAuth)
+	protected := auth.Group("")
+	protected.Use(h.authMiddleware)
 	protected.GET("/me", h.me)
 	protected.POST("/password", h.setPassword)
 	protected.POST("/identities/email", h.bindEmail)
@@ -192,25 +192,6 @@ func (h Handler) logoutAll(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (h Handler) requireAuth(c *gin.Context) {
-	header := c.GetHeader("Authorization")
-	token := strings.TrimPrefix(header, "Bearer ")
-	if token == header || token == "" {
-		writeError(c, http.StatusUnauthorized, "unauthenticated", "请先登录")
-		c.Abort()
-		return
-	}
-	userID, sessionID, err := infra.ParseAccessToken(h.tokenSecret, token)
-	if err != nil {
-		writeError(c, http.StatusUnauthorized, "unauthenticated", "登录凭证无效")
-		c.Abort()
-		return
-	}
-	c.Set("user_id", userID)
-	c.Set("session_id", sessionID)
-	c.Next()
 }
 
 func writeAuthResult(c *gin.Context, result app.AuthResult) {

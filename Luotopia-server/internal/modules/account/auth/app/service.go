@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 )
 
 type UserRepository interface {

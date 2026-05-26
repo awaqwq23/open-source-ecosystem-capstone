@@ -23,7 +23,7 @@ func New(cfg config.HTTPConfig, logger *slog.Logger) *Server {
 
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-	engine.Use(gin.Recovery())
+	engine.Use(gin.Recovery(), NewLoggerMiddleware(logger).Handler())
 
 	return &Server{
 		config: cfg,
@@ -49,6 +49,10 @@ func (s *Server) RegisterRouteGroups() {
 
 func (s *Server) ClientAPI() gin.IRouter {
 	return s.engine.Group("/api/v1")
+}
+
+func (s *Server) AdminAPI() gin.IRouter {
+	return s.engine.Group("/admin/api/v1")
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {

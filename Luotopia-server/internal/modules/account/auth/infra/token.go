@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/openwhu/luotopia/server/internal/modules/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 )
 
 type JWTIssuer struct {
