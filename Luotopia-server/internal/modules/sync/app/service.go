@@ -10,9 +10,11 @@ import (
 
 var (
 	ErrInvalidArgument = errors.New("sync: invalid argument")
+	ErrSyncDisabled    = errors.New("sync: disabled")
 )
 
 type Repository interface {
+	IsSyncAllowed(ctx context.Context, userID string) (bool, error)
 	ListChanges(ctx context.Context, userID string, afterChangeID int64, limit int) ([]domain.SyncChange, error)
 	ApplyChanges(ctx context.Context, userID string, deviceID string, changes []domain.SyncChangeInput) ([]domain.SyncAppliedChange, []domain.SyncRejectedChange, error)
 }
@@ -25,9 +27,23 @@ func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
 }
 
+func (s *Service) Capability(ctx context.Context, userID string) (domain.SyncCapability, error) {
+	if userID == "" {
+		return domain.SyncCapability{}, ErrInvalidArgument
+	}
+	enabled, err := s.repository.IsSyncAllowed(ctx, userID)
+	if err != nil {
+		return domain.SyncCapability{}, err
+	}
+	return domain.SyncCapability{Enabled: enabled}, nil
+}
+
 func (s *Service) PullChanges(ctx context.Context, userID string, cursor int64, limit int) (domain.SyncPullResult, error) {
 	if userID == "" || cursor < 0 {
 		return domain.SyncPullResult{}, ErrInvalidArgument
+	}
+	if err := s.requireAllowed(ctx, userID); err != nil {
+		return domain.SyncPullResult{}, err
 	}
 	limit = normalizeLimit(limit)
 	changes, err := s.repository.ListChanges(ctx, userID, cursor, limit+1)
@@ -53,6 +69,9 @@ func (s *Service) PullChanges(ctx context.Context, userID string, cursor int64, 
 func (s *Service) PushChanges(ctx context.Context, userID string, request domain.SyncPushRequest) (domain.SyncPushResponse, error) {
 	if userID == "" || request.BaseCursor < 0 || strings.TrimSpace(request.DeviceID) == "" {
 		return domain.SyncPushResponse{}, ErrInvalidArgument
+	}
+	if err := s.requireAllowed(ctx, userID); err != nil {
+		return domain.SyncPushResponse{}, err
 	}
 	if len(request.Changes) == 0 {
 		return s.emptyPushResponse(ctx, userID, request.BaseCursor)
@@ -106,6 +125,17 @@ func (s *Service) emptyPushResponse(ctx context.Context, userID string, cursor i
 		NextCursor:    result.NextCursor,
 		ServerChanges: result.Changes,
 	}, nil
+}
+
+func (s *Service) requireAllowed(ctx context.Context, userID string) error {
+	allowed, err := s.repository.IsSyncAllowed(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrSyncDisabled
+	}
+	return nil
 }
 
 func normalizeLimit(limit int) int {

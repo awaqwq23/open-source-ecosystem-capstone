@@ -2342,6 +2342,53 @@ class $SelectedCourseTimetableRowsTable extends SelectedCourseTimetableRows
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -2354,7 +2401,15 @@ class $SelectedCourseTimetableRowsTable extends SelectedCourseTimetableRows
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [timetableId, sortOrder, updatedAt];
+  List<GeneratedColumn> get $columns => [
+    timetableId,
+    sortOrder,
+    revision,
+    dirty,
+    deletedAt,
+    lastSyncedAt,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2382,6 +2437,33 @@ class $SelectedCourseTimetableRowsTable extends SelectedCourseTimetableRows
       context.handle(
         _sortOrderMeta,
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
       );
     }
     if (data.containsKey('updated_at')) {
@@ -2412,6 +2494,22 @@ class $SelectedCourseTimetableRowsTable extends SelectedCourseTimetableRows
         DriftSqlType.double,
         data['${effectivePrefix}sort_order'],
       )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -2429,10 +2527,18 @@ class SelectedCourseTimetableRow extends DataClass
     implements Insertable<SelectedCourseTimetableRow> {
   final String timetableId;
   final double sortOrder;
+  final int revision;
+  final bool dirty;
+  final DateTime? deletedAt;
+  final DateTime? lastSyncedAt;
   final DateTime updatedAt;
   const SelectedCourseTimetableRow({
     required this.timetableId,
     required this.sortOrder,
+    required this.revision,
+    required this.dirty,
+    this.deletedAt,
+    this.lastSyncedAt,
     required this.updatedAt,
   });
   @override
@@ -2440,6 +2546,14 @@ class SelectedCourseTimetableRow extends DataClass
     final map = <String, Expression>{};
     map['timetable_id'] = Variable<String>(timetableId);
     map['sort_order'] = Variable<double>(sortOrder);
+    map['revision'] = Variable<int>(revision);
+    map['dirty'] = Variable<bool>(dirty);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -2448,6 +2562,14 @@ class SelectedCourseTimetableRow extends DataClass
     return SelectedCourseTimetableRowsCompanion(
       timetableId: Value(timetableId),
       sortOrder: Value(sortOrder),
+      revision: Value(revision),
+      dirty: Value(dirty),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
       updatedAt: Value(updatedAt),
     );
   }
@@ -2460,6 +2582,10 @@ class SelectedCourseTimetableRow extends DataClass
     return SelectedCourseTimetableRow(
       timetableId: serializer.fromJson<String>(json['timetableId']),
       sortOrder: serializer.fromJson<double>(json['sortOrder']),
+      revision: serializer.fromJson<int>(json['revision']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -2469,6 +2595,10 @@ class SelectedCourseTimetableRow extends DataClass
     return <String, dynamic>{
       'timetableId': serializer.toJson<String>(timetableId),
       'sortOrder': serializer.toJson<double>(sortOrder),
+      'revision': serializer.toJson<int>(revision),
+      'dirty': serializer.toJson<bool>(dirty),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -2476,10 +2606,18 @@ class SelectedCourseTimetableRow extends DataClass
   SelectedCourseTimetableRow copyWith({
     String? timetableId,
     double? sortOrder,
+    int? revision,
+    bool? dirty,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    Value<DateTime?> lastSyncedAt = const Value.absent(),
     DateTime? updatedAt,
   }) => SelectedCourseTimetableRow(
     timetableId: timetableId ?? this.timetableId,
     sortOrder: sortOrder ?? this.sortOrder,
+    revision: revision ?? this.revision,
+    dirty: dirty ?? this.dirty,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   SelectedCourseTimetableRow copyWithCompanion(
@@ -2490,6 +2628,12 @@ class SelectedCourseTimetableRow extends DataClass
           ? data.timetableId.value
           : this.timetableId,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -2499,19 +2643,35 @@ class SelectedCourseTimetableRow extends DataClass
     return (StringBuffer('SelectedCourseTimetableRow(')
           ..write('timetableId: $timetableId, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('revision: $revision, ')
+          ..write('dirty: $dirty, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(timetableId, sortOrder, updatedAt);
+  int get hashCode => Object.hash(
+    timetableId,
+    sortOrder,
+    revision,
+    dirty,
+    deletedAt,
+    lastSyncedAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SelectedCourseTimetableRow &&
           other.timetableId == this.timetableId &&
           other.sortOrder == this.sortOrder &&
+          other.revision == this.revision &&
+          other.dirty == this.dirty &&
+          other.deletedAt == this.deletedAt &&
+          other.lastSyncedAt == this.lastSyncedAt &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -2519,17 +2679,29 @@ class SelectedCourseTimetableRowsCompanion
     extends UpdateCompanion<SelectedCourseTimetableRow> {
   final Value<String> timetableId;
   final Value<double> sortOrder;
+  final Value<int> revision;
+  final Value<bool> dirty;
+  final Value<DateTime?> deletedAt;
+  final Value<DateTime?> lastSyncedAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const SelectedCourseTimetableRowsCompanion({
     this.timetableId = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.dirty = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SelectedCourseTimetableRowsCompanion.insert({
     required String timetableId,
     this.sortOrder = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.dirty = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : timetableId = Value(timetableId),
@@ -2537,12 +2709,20 @@ class SelectedCourseTimetableRowsCompanion
   static Insertable<SelectedCourseTimetableRow> custom({
     Expression<String>? timetableId,
     Expression<double>? sortOrder,
+    Expression<int>? revision,
+    Expression<bool>? dirty,
+    Expression<DateTime>? deletedAt,
+    Expression<DateTime>? lastSyncedAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (timetableId != null) 'timetable_id': timetableId,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (revision != null) 'revision': revision,
+      if (dirty != null) 'dirty': dirty,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2551,12 +2731,20 @@ class SelectedCourseTimetableRowsCompanion
   SelectedCourseTimetableRowsCompanion copyWith({
     Value<String>? timetableId,
     Value<double>? sortOrder,
+    Value<int>? revision,
+    Value<bool>? dirty,
+    Value<DateTime?>? deletedAt,
+    Value<DateTime?>? lastSyncedAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return SelectedCourseTimetableRowsCompanion(
       timetableId: timetableId ?? this.timetableId,
       sortOrder: sortOrder ?? this.sortOrder,
+      revision: revision ?? this.revision,
+      dirty: dirty ?? this.dirty,
+      deletedAt: deletedAt ?? this.deletedAt,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2570,6 +2758,18 @@ class SelectedCourseTimetableRowsCompanion
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<double>(sortOrder.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -2585,6 +2785,10 @@ class SelectedCourseTimetableRowsCompanion
     return (StringBuffer('SelectedCourseTimetableRowsCompanion(')
           ..write('timetableId: $timetableId, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('revision: $revision, ')
+          ..write('dirty: $dirty, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4157,6 +4361,10 @@ typedef $$SelectedCourseTimetableRowsTableCreateCompanionBuilder =
     SelectedCourseTimetableRowsCompanion Function({
       required String timetableId,
       Value<double> sortOrder,
+      Value<int> revision,
+      Value<bool> dirty,
+      Value<DateTime?> deletedAt,
+      Value<DateTime?> lastSyncedAt,
       required DateTime updatedAt,
       Value<int> rowid,
     });
@@ -4164,6 +4372,10 @@ typedef $$SelectedCourseTimetableRowsTableUpdateCompanionBuilder =
     SelectedCourseTimetableRowsCompanion Function({
       Value<String> timetableId,
       Value<double> sortOrder,
+      Value<int> revision,
+      Value<bool> dirty,
+      Value<DateTime?> deletedAt,
+      Value<DateTime?> lastSyncedAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -4218,6 +4430,26 @@ class $$SelectedCourseTimetableRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
@@ -4258,6 +4490,26 @@ class $$SelectedCourseTimetableRowsTableOrderingComposer
   });
   ColumnOrderings<double> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4302,6 +4554,20 @@ class $$SelectedCourseTimetableRowsTableAnnotationComposer
   });
   GeneratedColumn<double> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -4375,11 +4641,19 @@ class $$SelectedCourseTimetableRowsTableTableManager
               ({
                 Value<String> timetableId = const Value.absent(),
                 Value<double> sortOrder = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SelectedCourseTimetableRowsCompanion(
                 timetableId: timetableId,
                 sortOrder: sortOrder,
+                revision: revision,
+                dirty: dirty,
+                deletedAt: deletedAt,
+                lastSyncedAt: lastSyncedAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -4387,11 +4661,19 @@ class $$SelectedCourseTimetableRowsTableTableManager
               ({
                 required String timetableId,
                 Value<double> sortOrder = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => SelectedCourseTimetableRowsCompanion.insert(
                 timetableId: timetableId,
                 sortOrder: sortOrder,
+                revision: revision,
+                dirty: dirty,
+                deletedAt: deletedAt,
+                lastSyncedAt: lastSyncedAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),

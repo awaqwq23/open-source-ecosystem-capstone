@@ -75,6 +75,10 @@ type SyncPushResponse struct {
 	ServerChanges []SyncChange         `json:"server_changes"`
 }
 
+type SyncCapability struct {
+	Enabled bool `json:"enabled"`
+}
+
 type AgendaItemPayload struct {
 	ID                       string     `json:"id"`
 	Type                     string     `json:"type"`

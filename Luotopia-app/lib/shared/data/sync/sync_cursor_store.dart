@@ -10,6 +10,7 @@ class SyncCursorStore {
   const SyncCursorStore(this._preferences);
 
   static const _key = 'sync.cursor';
+  static const _lastSyncedAtKey = 'sync.lastSyncedAt';
 
   final SharedPreferences? _preferences;
 
@@ -22,5 +23,17 @@ class SyncCursorStore {
       return;
     }
     await _preferences?.setInt(_key, cursor);
+  }
+
+  DateTime? readLastSyncedAt() {
+    final raw = _preferences?.getString(_lastSyncedAtKey);
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> writeLastSyncedAt(DateTime value) async {
+    await _preferences?.setString(_lastSyncedAtKey, value.toIso8601String());
   }
 }

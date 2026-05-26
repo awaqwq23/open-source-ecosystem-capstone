@@ -35,7 +35,34 @@ class AgendaSyncService {
   final LocalSyncStore _localStore;
   bool _syncing = false;
   bool _queued = false;
+  bool _capabilityChecked = false;
+  bool _enabled = false;
   Timer? _debounceTimer;
+
+  bool get isEnabled => _enabled;
+
+  Future<bool> ensureCapability(String accessToken) async {
+    if (accessToken.isEmpty) {
+      _enabled = false;
+      _capabilityChecked = false;
+      return false;
+    }
+    if (_capabilityChecked) {
+      return _enabled;
+    }
+    try {
+      _enabled = await _client.capability(accessToken: accessToken);
+    } catch (_) {
+      _enabled = false;
+    }
+    _capabilityChecked = true;
+    return _enabled;
+  }
+
+  void resetCapability() {
+    _enabled = false;
+    _capabilityChecked = false;
+  }
 
   void syncDebounced(String accessToken, {Duration delay = const Duration(seconds: 2)}) {
     _debounceTimer?.cancel();
@@ -48,6 +75,9 @@ class AgendaSyncService {
     if (accessToken.isEmpty) {
       return;
     }
+    if (!await ensureCapability(accessToken)) {
+      return;
+    }
     if (_syncing) {
       _queued = true;
       return;
@@ -56,6 +86,7 @@ class AgendaSyncService {
     try {
       await _pushDirtyChanges(accessToken);
       await _pullUntilCaughtUp(accessToken);
+      await _cursorStore.writeLastSyncedAt(DateTime.now());
     } finally {
       _syncing = false;
       if (_queued) {
@@ -70,6 +101,7 @@ class AgendaSyncService {
     final cursor = _cursorStore.read();
     final dirtyAgenda = await _localStore.dirtyAgendaItems();
     final dirtyTimetables = await _localStore.dirtyCourseTimetables();
+    final dirtySelectedTimetables = await _localStore.dirtySelectedTimetables();
     final tombstones = await _localStore.dirtyTombstones();
     final changes = <Map<String, dynamic>>[
       for (final row in dirtyAgenda)
@@ -88,6 +120,13 @@ class AgendaSyncService {
             'operation': 'upsert',
             'payload': SyncPayloadMapper.courseTimetablePayload(row),
           },
+      for (final row in dirtySelectedTimetables)
+        {
+          'entity_type': 'selected_course_timetable',
+          'entity_id': row.timetableId,
+          'operation': 'upsert',
+          'payload': SyncPayloadMapper.selectedTimetablePayload(row),
+        },
       for (final row in tombstones)
         {
           'entity_type': row.entityType,
@@ -163,6 +202,12 @@ class AgendaSyncService {
           syncedAt: syncedAt,
           remoteId: entityId,
         );
+      } else if (entityType == 'selected_course_timetable') {
+        await _localStore.markSelectedTimetableSynced(
+          timetableId: entityId,
+          revision: revision,
+          syncedAt: syncedAt,
+        );
       } else {
         await _localStore.markTombstoneSynced(
           entityType: entityType,
@@ -203,6 +248,12 @@ class AgendaSyncService {
         );
       } else if (entityType == 'course_timetable') {
         await _localStore.applyRemoteCourseTimetable(
+          payload: payload,
+          revision: revision,
+          syncedAt: _changeTime(raw),
+        );
+      } else if (entityType == 'selected_course_timetable') {
+        await _localStore.applyRemoteSelectedTimetable(
           payload: payload,
           revision: revision,
           syncedAt: _changeTime(raw),

@@ -23,10 +23,24 @@ class LocalSyncStore {
         .get();
   }
 
+  Future<List<SelectedCourseTimetableRow>> dirtySelectedTimetables() {
+    return (_db.select(_db.selectedCourseTimetableRows)
+          ..where((row) => row.dirty.equals(true) & row.deletedAt.isNull()))
+        .get();
+  }
+
   Future<List<SyncTombstoneRow>> dirtyTombstones() {
     return (_db.select(_db.syncTombstoneRows)
           ..where((row) => row.dirty.equals(true)))
         .get();
+  }
+
+  Future<int> pendingChangeCount() async {
+    final agenda = await dirtyAgendaItems();
+    final timetables = await dirtyCourseTimetables();
+    final selected = await dirtySelectedTimetables();
+    final tombstones = await dirtyTombstones();
+    return agenda.length + timetables.length + selected.length + tombstones.length;
   }
 
   Future<void> markAgendaItemSynced({
@@ -62,6 +76,22 @@ class LocalSyncStore {
     );
   }
 
+  Future<void> markSelectedTimetableSynced({
+    required String timetableId,
+    required int revision,
+    required DateTime syncedAt,
+  }) {
+    return (_db.update(_db.selectedCourseTimetableRows)
+          ..where((row) => row.timetableId.equals(timetableId)))
+        .write(
+      SelectedCourseTimetableRowsCompanion(
+        revision: Value(revision),
+        dirty: const Value(false),
+        lastSyncedAt: Value(syncedAt),
+      ),
+    );
+  }
+
   Future<void> markTombstoneSynced({
     required String entityType,
     required String entityId,
@@ -74,7 +104,7 @@ class LocalSyncStore {
       SyncTombstoneRowsCompanion(
         revision: Value(revision),
         dirty: const Value(false),
-        ),
+      ),
     );
   }
 
@@ -82,12 +112,15 @@ class LocalSyncStore {
     required Map<String, dynamic> payload,
     required int revision,
     required DateTime syncedAt,
-  }) {
+  }) async {
     final id = payload['id'] as String? ?? '';
     if (id.isEmpty) {
-      return Future<void>.value();
+      return;
     }
-    return _db.into(_db.agendaItemRows).insertOnConflictUpdate(
+    if (!await _shouldApplyAgendaItem(id, revision)) {
+      return;
+    }
+    await _db.into(_db.agendaItemRows).insertOnConflictUpdate(
           AgendaItemRowsCompanion.insert(
             id: id,
             type: payload['type'] as String? ?? 'task',
@@ -135,12 +168,15 @@ class LocalSyncStore {
     required Map<String, dynamic> payload,
     required int revision,
     required DateTime syncedAt,
-  }) {
+  }) async {
     final id = payload['id'] as String? ?? '';
     if (id.isEmpty) {
-      return Future<void>.value();
+      return;
     }
-    return _db.into(_db.courseTimetableRows).insertOnConflictUpdate(
+    if (!await _shouldApplyCourseTimetable(id, revision)) {
+      return;
+    }
+    await _db.into(_db.courseTimetableRows).insertOnConflictUpdate(
           CourseTimetableRowsCompanion.insert(
             id: id,
             name: payload['name'] as String? ?? '',
@@ -151,6 +187,28 @@ class LocalSyncStore {
             deletedAt: const Value(null),
             lastSyncedAt: Value(syncedAt),
             createdAt: _requiredDate(payload['created_at']),
+            updatedAt: _requiredDate(payload['updated_at']),
+          ),
+        );
+  }
+
+  Future<void> applyRemoteSelectedTimetable({
+    required Map<String, dynamic> payload,
+    required int revision,
+    required DateTime syncedAt,
+  }) async {
+    final timetableId = payload['timetable_id'] as String? ?? '';
+    if (timetableId.isEmpty || !await _shouldApplySelectedTimetable(timetableId, revision)) {
+      return;
+    }
+    await _db.into(_db.selectedCourseTimetableRows).insertOnConflictUpdate(
+          SelectedCourseTimetableRowsCompanion.insert(
+            timetableId: timetableId,
+            sortOrder: Value((payload['sort_order'] as num?)?.toDouble() ?? 0),
+            revision: Value(revision),
+            dirty: const Value(false),
+            deletedAt: const Value(null),
+            lastSyncedAt: Value(syncedAt),
             updatedAt: _requiredDate(payload['updated_at']),
           ),
         );
@@ -186,6 +244,18 @@ class LocalSyncStore {
           updatedAt: Value(deletedAt),
         ),
       );
+    } else if (entityType == 'selected_course_timetable') {
+      await (_db.update(_db.selectedCourseTimetableRows)
+            ..where((row) => row.timetableId.equals(entityId)))
+          .write(
+        SelectedCourseTimetableRowsCompanion(
+          revision: Value(revision),
+          dirty: const Value(false),
+          deletedAt: Value(deletedAt),
+          lastSyncedAt: Value(deletedAt),
+          updatedAt: Value(deletedAt),
+        ),
+      );
     }
     await _db.into(_db.syncTombstoneRows).insertOnConflictUpdate(
           SyncTombstoneRowsCompanion.insert(
@@ -210,5 +280,25 @@ class LocalSyncStore {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  Future<bool> _shouldApplyAgendaItem(String id, int revision) async {
+    final row = await (_db.select(_db.agendaItemRows)..where((table) => table.id.equals(id)))
+        .getSingleOrNull();
+    return row == null || row.revision <= revision;
+  }
+
+  Future<bool> _shouldApplyCourseTimetable(String id, int revision) async {
+    final row = await (_db.select(_db.courseTimetableRows)
+          ..where((table) => table.id.equals(id)))
+        .getSingleOrNull();
+    return row == null || row.revision <= revision;
+  }
+
+  Future<bool> _shouldApplySelectedTimetable(String timetableId, int revision) async {
+    final row = await (_db.select(_db.selectedCourseTimetableRows)
+          ..where((table) => table.timetableId.equals(timetableId)))
+        .getSingleOrNull();
+    return row == null || row.revision <= revision;
   }
 }

@@ -7,7 +7,10 @@ import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
+import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
+import 'package:luotopia/shared/data/sync/sync_service.dart';
+import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -31,6 +34,8 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final ScrollController _scrollController = ScrollController();
+  bool _manualSyncing = false;
+  String? _manualSyncMessage;
 
   @override
   void dispose() {
@@ -43,6 +48,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final l10n = context.l10n;
     final whuAuth = ref.watch(whuAuthProvider);
     final luotopiaAuth = ref.watch(luotopiaAuthProvider);
+    final syncEnabled = ref.watch(syncCapabilityProvider).valueOrNull == true;
+    final pendingSyncCount = ref.watch(pendingSyncChangeCountProvider).valueOrNull ?? 0;
+    final lastSyncedAt = ref.watch(lastSyncTimeProvider);
     return ui.Scaffold(
       floatingHeader: true,
       headers: [
@@ -98,6 +106,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   icon: AppIcons.settingsOutlined,
                   onTap: () => context.push(AppRoutePaths.settingsGeneral),
                 ),
+                if (syncEnabled)
+                  _SettingsSyncTile(
+                    pendingCount: pendingSyncCount,
+                    lastSyncedAt: lastSyncedAt,
+                    syncing: _manualSyncing,
+                    message: _manualSyncMessage,
+                    onSync: () => _syncNow(luotopiaAuth),
+                  ),
                 _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
                   subtitle: l10n.settingsHomeEntrySubtitle,
@@ -161,6 +177,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  Future<void> _syncNow(LuotopiaAuthState auth) async {
+    final token = auth.accessToken;
+    if (auth.status != LuotopiaAuthStatus.authenticated ||
+        token == null ||
+        token.isEmpty ||
+        _manualSyncing) {
+      return;
+    }
+    setState(() {
+      _manualSyncing = true;
+      _manualSyncMessage = null;
+    });
+    try {
+      await ref.read(agendaSyncServiceProvider).sync(token);
+      ref.invalidate(pendingSyncChangeCountProvider);
+      ref.invalidate(lastSyncTimeProvider);
+      if (mounted) {
+        setState(() => _manualSyncMessage = '同步完成');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _manualSyncMessage = '同步失败：$error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _manualSyncing = false);
+      }
+    }
   }
 }
 
@@ -495,5 +541,89 @@ class _SettingsLinkTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SettingsSyncTile extends StatelessWidget {
+  const _SettingsSyncTile({
+    required this.pendingCount,
+    required this.lastSyncedAt,
+    required this.syncing,
+    required this.onSync,
+    this.message,
+  });
+
+  final int pendingCount;
+  final DateTime? lastSyncedAt;
+  final bool syncing;
+  final String? message;
+  final VoidCallback onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final subtitle = message ??
+        (pendingCount > 0
+            ? '待推送 $pendingCount 项变更'
+            : lastSyncedAt == null
+                ? '尚未同步'
+                : '上次同步 ${_formatSyncTime(lastSyncedAt!)}');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 46,
+            child: Icon(
+              Icons.cloud_sync_outlined,
+              size: 28,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '数据同步',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ui.IconButton.ghost(
+            icon: syncing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync),
+            onPressed: syncing ? null : onSync,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatSyncTime(DateTime value) {
+    final local = value.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
   }
 }

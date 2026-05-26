@@ -1,17 +1,19 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/shared/data/database/app_database.dart';
-import 'package:luotopia/shared/data/id/app_id_generator.dart';
+import 'package:luotopia/shared/data/mutations/user_data_mutation_service.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/domain/repositories/course_timetable_repository.dart';
 
 class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     implements CourseTimetableRepository {
   late final AppDatabase _db;
+  late final UserDataMutationService _mutations;
 
   @override
   CourseTimetableStore build() {
     _db = ref.read(appDatabaseProvider);
+    _mutations = ref.read(userDataMutationServiceProvider);
     List<CourseTimetableRow> timetableRows = const [];
     List<SelectedCourseTimetableRow> selectedRows = const [];
 
@@ -39,6 +41,7 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       publish();
     });
     final selectedSub = (_db.select(_db.selectedCourseTimetableRows)
+          ..where((row) => row.deletedAt.isNull())
           ..orderBy([
             (row) => OrderingTerm(expression: row.sortOrder),
           ]))
@@ -73,131 +76,26 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     required CourseTimetableSource source,
     String termLabel = '',
   }) async {
-    final now = DateTime.now();
-    final timetable = CourseTimetable(
-      id: _createUniqueCourseTimetableId(),
-      name: name.trim().isEmpty ? '课程表 ${state.timetables.length + 1}' : name.trim(),
+    return _mutations.createTimetable(
+      name: name,
       source: source,
-      termLabel: termLabel.trim(),
-      createdAt: now,
-      updatedAt: now,
+      termLabel: termLabel,
     );
-    await _db.transaction(() async {
-      await _db.into(_db.courseTimetableRows).insert(_toCompanion(timetable));
-      await _db.into(_db.selectedCourseTimetableRows).insertOnConflictUpdate(
-            SelectedCourseTimetableRowsCompanion.insert(
-              timetableId: timetable.id,
-              sortOrder: Value(state.selectedTimetableIds.length.toDouble()),
-              updatedAt: now,
-            ),
-          );
-    });
-    return timetable;
   }
 
   @override
   Future<void> renameTimetable(String id, String newName) async {
-    final normalized = newName.trim();
-    if (normalized.isEmpty) {
-      return;
-    }
-    await (_db.update(_db.courseTimetableRows)..where((row) => row.id.equals(id)))
-        .write(
-      CourseTimetableRowsCompanion(
-        name: Value(normalized),
-        updatedAt: Value(DateTime.now()),
-        dirty: const Value(true),
-      ),
-    );
+    await _mutations.renameTimetable(id, newName);
   }
 
   @override
   Future<void> setSelectedTimetables(Set<String> ids) async {
-    final valid = ids.where((id) => findById(id) != null).toList(growable: false);
-    await _db.transaction(() async {
-      await _db.delete(_db.selectedCourseTimetableRows).go();
-      final now = DateTime.now();
-      for (var index = 0; index < valid.length; index++) {
-        await _db.into(_db.selectedCourseTimetableRows).insert(
-              SelectedCourseTimetableRowsCompanion.insert(
-                timetableId: valid[index],
-                sortOrder: Value(index.toDouble()),
-                updatedAt: now,
-              ),
-            );
-      }
-    });
+    await _mutations.setSelectedTimetables(ids);
   }
 
   @override
   Future<void> deleteTimetable(String id) async {
-    final now = DateTime.now();
-    await _db.transaction(() async {
-      final courseItems = await (_db.select(_db.agendaItemRows)
-            ..where((row) => row.courseTimetableId.equals(id)))
-          .get();
-      final courseItemIds = courseItems.map((item) => item.id).toList(growable: false);
-      await (_db.update(_db.courseTimetableRows)..where((row) => row.id.equals(id)))
-          .write(
-        CourseTimetableRowsCompanion(
-          deletedAt: Value(now),
-          updatedAt: Value(now),
-          dirty: const Value(true),
-        ),
-      );
-      await (_db.delete(_db.selectedCourseTimetableRows)
-            ..where((row) => row.timetableId.equals(id)))
-          .go();
-      await (_db.update(_db.agendaItemRows)
-            ..where((row) => row.courseTimetableId.equals(id)))
-          .write(
-        AgendaItemRowsCompanion(
-          deletedAt: Value(now),
-          updatedAt: Value(now),
-          dirty: const Value(true),
-        ),
-      );
-      for (final itemId in courseItemIds) {
-        await _db.into(_db.syncTombstoneRows).insertOnConflictUpdate(
-              SyncTombstoneRowsCompanion.insert(
-                entityType: 'agenda_item',
-                entityId: itemId,
-                deletedAt: now,
-                dirty: const Value(true),
-              ),
-            );
-      }
-      await _db.into(_db.syncTombstoneRows).insertOnConflictUpdate(
-            SyncTombstoneRowsCompanion.insert(
-              entityType: 'course_timetable',
-              entityId: id,
-              deletedAt: now,
-              dirty: const Value(true),
-            ),
-          );
-    });
-  }
-
-  String _createUniqueCourseTimetableId() {
-    final existingIds = state.timetables.map((timetable) => timetable.id).toSet();
-    final generator = ref.read(appIdGeneratorProvider);
-    var id = generator.newCourseTimetableId();
-    while (existingIds.contains(id)) {
-      id = generator.newCourseTimetableId();
-    }
-    return id;
-  }
-
-  CourseTimetableRowsCompanion _toCompanion(CourseTimetable timetable) {
-    return CourseTimetableRowsCompanion.insert(
-      id: timetable.id,
-      name: timetable.name,
-      source: timetable.source.name,
-      termLabel: Value(timetable.termLabel),
-      dirty: const Value(true),
-      createdAt: timetable.createdAt,
-      updatedAt: timetable.updatedAt ?? timetable.createdAt,
-    );
+    await _mutations.deleteTimetable(id);
   }
 
   CourseTimetable _fromRow(CourseTimetableRow row) {

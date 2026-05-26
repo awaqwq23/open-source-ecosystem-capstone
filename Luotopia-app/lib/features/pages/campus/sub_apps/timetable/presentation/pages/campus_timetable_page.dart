@@ -194,15 +194,6 @@ class _TimetableListView extends ConsumerWidget {
     );
     if (shouldDelete != true) return;
 
-    final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
-    final courseItemIds = [
-      for (final item in ref.read(agendaItemRepositoryProvider))
-        if (item.type == ItemType.course && item.courseDetails.timetableId == timetableId)
-          item.id,
-    ];
-    for (final itemId in courseItemIds) {
-      await agendaRepo.deleteItem(itemId);
-    }
     await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
   }
 }

@@ -23,8 +23,18 @@ func NewHandler(service *app.Service, tokenSecret string) Handler {
 
 func (h Handler) Register(router gin.IRouter) {
 	sync := router.Group("/sync", h.requireAuth)
+	sync.GET("/capability", h.capability)
 	sync.GET("/changes", h.pullChanges)
 	sync.POST("/changes", h.pushChanges)
+}
+
+func (h Handler) capability(c *gin.Context) {
+	result, err := h.service.Capability(c.Request.Context(), c.GetString("user_id"))
+	if err != nil {
+		writeSyncError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func (h Handler) pullChanges(c *gin.Context) {
@@ -99,6 +109,8 @@ func writeSyncError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, app.ErrInvalidArgument):
 		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+	case errors.Is(err, app.ErrSyncDisabled):
+		writeError(c, http.StatusForbidden, "sync_disabled", "当前账号未开通同步")
 	default:
 		writeError(c, http.StatusInternalServerError, "internal_error", "服务暂时不可用")
 	}

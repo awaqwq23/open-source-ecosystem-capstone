@@ -44,4 +44,12 @@ class SyncPayloadMapper {
       'updated_at': row.updatedAt.toIso8601String(),
     };
   }
+
+  static Map<String, dynamic> selectedTimetablePayload(SelectedCourseTimetableRow row) {
+    return {
+      'timetable_id': row.timetableId,
+      'sort_order': row.sortOrder,
+      'updated_at': row.updatedAt.toIso8601String(),
+    };
+  }
 }

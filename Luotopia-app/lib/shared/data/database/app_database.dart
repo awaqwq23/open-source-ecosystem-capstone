@@ -22,7 +22,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.revision);
+            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.dirty);
+            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.deletedAt);
+            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.lastSyncedAt);
+          }
+        },
+      );
 }
 
 QueryExecutor _openConnection() {
@@ -86,6 +98,10 @@ class CourseTimetableRows extends Table {
 class SelectedCourseTimetableRows extends Table {
   TextColumn get timetableId => text().references(CourseTimetableRows, #id)();
   RealColumn get sortOrder => real().withDefault(const Constant(0))();
+  IntColumn get revision => integer().withDefault(const Constant(0))();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override

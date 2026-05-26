@@ -22,6 +22,18 @@ func NewGormRepository(db *gorm.DB) *GormRepository {
 	return &GormRepository{db: db}
 }
 
+func (r *GormRepository) IsSyncAllowed(ctx context.Context, userID string) (bool, error) {
+	var model syncUserAllowlistModel
+	err := r.db.WithContext(ctx).First(&model, "user_id = ?", userID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return model.Enabled, nil
+}
+
 func (r *GormRepository) ListChanges(ctx context.Context, userID string, afterChangeID int64, limit int) ([]domain.SyncChange, error) {
 	var rows []syncChangeModel
 	err := r.db.WithContext(ctx).
@@ -443,6 +455,15 @@ type syncChangeModel struct {
 }
 
 func (syncChangeModel) TableName() string { return "sync_changes" }
+
+type syncUserAllowlistModel struct {
+	UserID    string `gorm:"primaryKey;column:user_id"`
+	Enabled   bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (syncUserAllowlistModel) TableName() string { return "sync_user_allowlist" }
 
 func (m syncChangeModel) toDomain() domain.SyncChange {
 	return domain.SyncChange{

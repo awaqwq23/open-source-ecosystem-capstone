@@ -52,28 +52,28 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
     _homeWidgetSyncService = service;
     await service.initialize();
     _subs.add(
-      ref.listenManual(agendaItemRepositoryProvider, (_, __) {
+      ref.listenManual(agendaItemRepositoryProvider, (_, _) {
         service.syncDebounced();
         _syncAgendaDebounced();
       }),
     );
     _subs.add(
-      ref.listenManual(courseTimetableRepositoryProvider, (_, __) {
+      ref.listenManual(courseTimetableRepositoryProvider, (_, _) {
         service.syncDebounced();
         _syncAgendaDebounced();
       }),
     );
     _subs.add(
-      ref.listenManual(appHomeSettingsProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(appHomeSettingsProvider, (_, _) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appWidgetSettingsProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(appWidgetSettingsProvider, (_, _) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appLocaleProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(appLocaleProvider, (_, _) => service.syncDebounced()),
     );
     _subs.add(
-      ref.listenManual(appThemeModeProvider, (_, __) => service.syncDebounced()),
+      ref.listenManual(appThemeModeProvider, (_, _) => service.syncDebounced()),
     );
     _subs.add(
       ref.listenManual(luotopiaAuthProvider, (_, next) {
@@ -84,6 +84,8 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
                 next.accessToken!,
                 delay: const Duration(milliseconds: 300),
               );
+        } else {
+          ref.read(agendaSyncServiceProvider).resetCapability();
         }
       }),
     );

@@ -9,6 +9,17 @@ class SyncClient {
   final http.Client _client;
   static const _requestTimeout = Duration(seconds: 15);
 
+  Future<bool> capability({required String accessToken}) async {
+    final response = await _client
+        .get(
+          Uri.parse('${LuotopiaAuthRepository.baseUrl}/api/v1/sync/capability'),
+          headers: _authHeaders(accessToken),
+        )
+        .timeout(_requestTimeout);
+    final data = _readJson(response);
+    return data['enabled'] == true;
+  }
+
   Future<Map<String, dynamic>> pullChanges({
     required String accessToken,
     required int cursor,
@@ -47,6 +58,9 @@ class SyncClient {
   }
 
   Map<String, dynamic> _readJson(http.Response response) {
+    if (response.statusCode == 403) {
+      throw const SyncDisabledException();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw SyncClientException('同步请求失败（${response.statusCode}）');
     }
@@ -56,6 +70,13 @@ class SyncClient {
     }
     throw const SyncClientException('同步响应格式异常');
   }
+}
+
+class SyncDisabledException implements Exception {
+  const SyncDisabledException();
+
+  @override
+  String toString() => '当前账号未开通同步';
 }
 
 class SyncClientException implements Exception {
