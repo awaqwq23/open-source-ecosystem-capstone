@@ -48,6 +48,10 @@ func (s *Service) List(ctx context.Context, status domain.Status, offset, limit 
 	return s.repo.List(ctx, status, offset, limit)
 }
 
+func (s *Service) GetByID(ctx context.Context, id string) (domain.Notification, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
 func (s *Service) Publish(ctx context.Context, id string) (domain.Notification, error) {
 	n, err := s.repo.GetByID(ctx, id)
 	if err != nil {

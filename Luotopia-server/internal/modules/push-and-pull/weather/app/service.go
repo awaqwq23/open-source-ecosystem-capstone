@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -15,12 +16,18 @@ type CacheStore interface {
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 }
 
-type Service struct {
-	cache CacheStore
+type WeatherAPI interface {
+	FetchWeather() (*domain.WeatherData, error)
 }
 
-func NewService(cache CacheStore) *Service {
-	return &Service{cache: cache}
+type Service struct {
+	cache CacheStore
+	api   WeatherAPI
+	ttl   time.Duration
+}
+
+func NewService(cache CacheStore, api WeatherAPI, ttl time.Duration) *Service {
+	return &Service{cache: cache, api: api, ttl: ttl}
 }
 
 func (s *Service) GetCached(ctx context.Context) (*domain.WeatherData, error) {
@@ -31,5 +38,21 @@ func (s *Service) GetCached(ctx context.Context) (*domain.WeatherData, error) {
 	if data == nil {
 		return nil, ErrNoCacheData
 	}
-	return nil, ErrNoCacheData
+	var weather domain.WeatherData
+	if err := json.Unmarshal(data, &weather); err != nil {
+		return nil, err
+	}
+	return &weather, nil
+}
+
+func (s *Service) FetchAndCache(ctx context.Context) error {
+	weather, err := s.api.FetchWeather()
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(weather)
+	if err != nil {
+		return err
+	}
+	return s.cache.Set(ctx, "weather:current", data, s.ttl)
 }

@@ -20,23 +20,27 @@ import (
 	synctransport "github.com/openwhu/luotopia/server/internal/modules/agenda-sync/transport"
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
 	hotinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/infra"
+	hottransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/transport"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	notiinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/infra"
+	notitransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/transport"
 	pullapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/app"
 	pulltransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/transport"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
+	weatherinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/infra"
 	weathercache "github.com/openwhu/luotopia/server/internal/platform/cache"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/openwhu/luotopia/server/internal/platform/database"
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/platform/logger"
+	"github.com/openwhu/luotopia/server/internal/platform/scheduler"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	cfg := config.Load()
 	log := logger.New(cfg.Environment)
@@ -52,6 +56,17 @@ func main() {
 	registerSync(server, cfg, db)
 	registerPull(server, cfg, db, rdb)
 	registerAdmin(server, cfg, db)
+	registerNotificationAPI(server, cfg, db)
+	registerHotUpdateAPI(server, cfg, db)
+	registerWeatherRefresh(ctx, cfg, rdb, log)
+
+	// Graceful shutdown
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	<-sigCtx.Done()
+	log.Info("正在关闭服务...")
+	cancel()
 
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("服务启动失败", slog.String("error", err.Error()))
@@ -147,8 +162,9 @@ func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb
 
 	// Weather
 	var weatherSvc *weatherapp.Service
-	if rdb != nil {
-		weatherSvc = weatherapp.NewService(weathercache.NewRedisStore(rdb))
+	if rdb != nil && cfg.Weather.APIKey != "" {
+		apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
+		weatherSvc = weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
 	}
 
 	// Notification
@@ -165,6 +181,48 @@ func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb
 	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker)
 	authMW := httpserver.AuthMiddleware(cfg.Auth.AccessTokenSecret)
 	pulltransport.NewHandler(svc, authMW).Register(server.ClientAPI())
+}
+
+func registerNotificationAPI(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	svc := notiapp.NewService(notiinfra.NewGormRepository(db))
+	notitransport.NewHandler(svc, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
+}
+
+func registerHotUpdateAPI(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	svc := hotapp.NewService(hotinfra.NewGormRepository(db))
+	hottransport.NewHandler(svc, cfg.Auth.AccessTokenSecret, "scripts").Register(server.ClientAPI())
+}
+
+func registerWeatherRefresh(ctx context.Context, cfg config.Config, rdb *redis.Client, log *slog.Logger) {
+	if rdb == nil || cfg.Weather.APIKey == "" {
+		log.Warn("天气功能未启用：缺少 Redis 或 API Key")
+		return
+	}
+	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
+	weatherSvc := weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
+
+	// Initial fetch
+	go func() {
+		if err := weatherSvc.FetchAndCache(ctx); err != nil {
+			log.Warn("天气首次刷新失败", slog.String("error", err.Error()))
+		}
+	}()
+
+	// Periodic refresh
+	sched := scheduler.NewTickerScheduler()
+	sched.RegisterWithInterval(weatherinfra.NewRefreshJob(weatherSvc), cfg.Weather.CacheTTL)
+	go func() {
+		if err := sched.Start(ctx); err != nil {
+			log.Error("天气调度器异常", slog.String("error", err.Error()))
+		}
+	}()
+	log.Info("天气定时刷新已启动", slog.Duration("interval", cfg.Weather.CacheTTL))
 }
 
 // syncCheckAdapter adapts syncinfra.GormRepository to pullapp.SyncChecker

@@ -8,6 +8,7 @@ import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
+import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
@@ -97,6 +98,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
+            // ── 服务通知 ──
+            const _NotificationSection(),
             const SizedBox(height: _settingsSectionSpacing),
             _SettingsLinkCard(
               children: [
@@ -630,5 +633,73 @@ class _SettingsSyncTile extends StatelessWidget {
     final local = value.toLocal();
     String two(int v) => v.toString().padLeft(2, '0');
     return '${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
+  }
+}
+
+class _NotificationSection extends ConsumerStatefulWidget {
+  const _NotificationSection();
+
+  @override
+  ConsumerState<_NotificationSection> createState() => _NotificationSectionState();
+}
+
+class _NotificationSectionState extends ConsumerState<_NotificationSection> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(notificationProvider.notifier).checkLatest());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(notificationProvider);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    if (!state.hasNew && state.title == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Row(
+            children: [
+              Icon(Icons.campaign_outlined, size: 16, color: colors.onSurface.withValues(alpha: 0.5)),
+              const SizedBox(width: 6),
+              Text(
+                '服务通知',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _SettingsLinkCard(
+            children: [
+              _SettingsLinkTile(
+                title: state.title ?? '新通知',
+                subtitle: state.hasNew ? '${state.count} 条未读' : '',
+                icon: Icons.campaign_outlined,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.content ?? '暂无详情'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

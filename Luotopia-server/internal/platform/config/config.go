@@ -18,8 +18,15 @@ type Config struct {
 	Storage     StorageConfig
 	Auth        AuthConfig
 	Admin       AdminConfig
+	Weather     WeatherConfig
 	SMS         SMSConfig
 	Email       EmailConfig
+}
+
+type WeatherConfig struct {
+	APIKey     string
+	Location   string
+	CacheTTL   time.Duration
 }
 
 type HTTPConfig struct {
@@ -92,6 +99,11 @@ func Load() Config {
 			RefreshTokenTTL:   requiredDurationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL"),
 		},
 		Admin: AdminConfig{UserIDs: parseCommaList(declaredEnv("LUOTOPIA_ADMIN_USER_IDS"))},
+		Weather: WeatherConfig{
+			APIKey:     declaredEnv("LUOTOPIA_WEATHER_API_KEY"),
+			Location:   declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
+			CacheTTL:   requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
+		},
 		SMS:   SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
