@@ -10,13 +10,18 @@ import 'package:luotopia/shared/data/sync/sync_service.dart';
 final syncCapabilityProvider = FutureProvider.autoDispose<bool>((ref) async {
   final auth = ref.watch(luotopiaAuthProvider);
   final token = auth.accessToken;
+  final userId = auth.user?.id;
   if (auth.status != LuotopiaAuthStatus.authenticated ||
       token == null ||
-      token.isEmpty) {
+      token.isEmpty ||
+      userId == null ||
+      userId.isEmpty) {
     ref.read(agendaSyncServiceProvider).resetCapability();
     return false;
   }
-  return ref.read(agendaSyncServiceProvider).ensureCapability(token);
+  return ref
+      .read(agendaSyncServiceProvider)
+      .ensureCapability(accessToken: token, userId: userId);
 });
 
 final pendingSyncChangeCountProvider = FutureProvider.autoDispose<int>((ref) {

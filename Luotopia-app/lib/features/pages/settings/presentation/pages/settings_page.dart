@@ -181,9 +181,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _syncNow(LuotopiaAuthState auth) async {
     final token = auth.accessToken;
+    final userId = auth.user?.id;
     if (auth.status != LuotopiaAuthStatus.authenticated ||
         token == null ||
         token.isEmpty ||
+        userId == null ||
+        userId.isEmpty ||
         _manualSyncing) {
       return;
     }
@@ -192,7 +195,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _manualSyncMessage = null;
     });
     try {
-      await ref.read(agendaSyncServiceProvider).sync(token);
+      await ref
+          .read(agendaSyncServiceProvider)
+          .sync(accessToken: token, userId: userId);
       ref.invalidate(pendingSyncChangeCountProvider);
       ref.invalidate(lastSyncTimeProvider);
       if (mounted) {

@@ -35,19 +35,24 @@ class AgendaSyncService {
   final LocalSyncStore _localStore;
   bool _syncing = false;
   bool _queued = false;
+  String? _queuedAccessToken;
+  String? _queuedUserId;
   bool _capabilityChecked = false;
+  String? _capabilityUserId;
   bool _enabled = false;
   Timer? _debounceTimer;
 
   bool get isEnabled => _enabled;
 
-  Future<bool> ensureCapability(String accessToken) async {
-    if (accessToken.isEmpty) {
-      _enabled = false;
-      _capabilityChecked = false;
+  Future<bool> ensureCapability({
+    required String accessToken,
+    required String userId,
+  }) async {
+    if (accessToken.isEmpty || userId.isEmpty) {
+      resetCapability();
       return false;
     }
-    if (_capabilityChecked) {
+    if (_capabilityChecked && _capabilityUserId == userId) {
       return _enabled;
     }
     try {
@@ -56,30 +61,46 @@ class AgendaSyncService {
       _enabled = false;
     }
     _capabilityChecked = true;
+    _capabilityUserId = userId;
     return _enabled;
   }
 
   void resetCapability() {
     _enabled = false;
     _capabilityChecked = false;
+    _capabilityUserId = null;
+    _queued = false;
+    _queuedAccessToken = null;
+    _queuedUserId = null;
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
   }
 
-  void syncDebounced(String accessToken, {Duration delay = const Duration(seconds: 2)}) {
+  void syncDebounced({
+    required String accessToken,
+    required String userId,
+    Duration delay = const Duration(seconds: 2),
+  }) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(delay, () {
-      unawaited(sync(accessToken));
+      unawaited(sync(accessToken: accessToken, userId: userId));
     });
   }
 
-  Future<void> sync(String accessToken) async {
-    if (accessToken.isEmpty) {
+  Future<void> sync({
+    required String accessToken,
+    required String userId,
+  }) async {
+    if (accessToken.isEmpty || userId.isEmpty) {
       return;
     }
-    if (!await ensureCapability(accessToken)) {
+    if (!await ensureCapability(accessToken: accessToken, userId: userId)) {
       return;
     }
     if (_syncing) {
       _queued = true;
+      _queuedAccessToken = accessToken;
+      _queuedUserId = userId;
       return;
     }
     _syncing = true;
@@ -90,8 +111,17 @@ class AgendaSyncService {
     } finally {
       _syncing = false;
       if (_queued) {
+        final queuedAccessToken = _queuedAccessToken;
+        final queuedUserId = _queuedUserId;
         _queued = false;
-        unawaited(sync(accessToken));
+        _queuedAccessToken = null;
+        _queuedUserId = null;
+        if (queuedAccessToken != null &&
+            queuedAccessToken.isNotEmpty &&
+            queuedUserId != null &&
+            queuedUserId.isNotEmpty) {
+          unawaited(sync(accessToken: queuedAccessToken, userId: queuedUserId));
+        }
       }
     }
   }

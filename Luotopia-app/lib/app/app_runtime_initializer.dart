@@ -79,9 +79,12 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
       ref.listenManual(luotopiaAuthProvider, (_, next) {
         if (next.status == LuotopiaAuthStatus.authenticated &&
             next.accessToken != null &&
-            next.accessToken!.isNotEmpty) {
+            next.accessToken!.isNotEmpty &&
+            next.user != null &&
+            next.user!.id.isNotEmpty) {
           ref.read(agendaSyncServiceProvider).syncDebounced(
-                next.accessToken!,
+                accessToken: next.accessToken!,
+                userId: next.user!.id,
                 delay: const Duration(milliseconds: 300),
               );
         } else {
@@ -95,12 +98,17 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
   void _syncAgendaDebounced() {
     final auth = ref.read(luotopiaAuthProvider);
     final token = auth.accessToken;
+    final userId = auth.user?.id;
     if (auth.status != LuotopiaAuthStatus.authenticated ||
         token == null ||
-        token.isEmpty) {
+        token.isEmpty ||
+        userId == null ||
+        userId.isEmpty) {
       return;
     }
-    ref.read(agendaSyncServiceProvider).syncDebounced(token);
+    ref
+        .read(agendaSyncServiceProvider)
+        .syncDebounced(accessToken: token, userId: userId);
   }
 
   @override
