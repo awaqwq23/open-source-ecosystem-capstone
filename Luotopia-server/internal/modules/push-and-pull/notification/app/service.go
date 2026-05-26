@@ -18,6 +18,8 @@ type Repository interface {
 	List(ctx context.Context, status domain.Status, offset, limit int) ([]domain.Notification, int64, error)
 	Update(ctx context.Context, notification domain.Notification) error
 	Delete(ctx context.Context, id string) error
+	GetLatestPublished(ctx context.Context) (domain.Notification, error)
+	CountPublished(ctx context.Context) (int64, error)
 }
 
 type Service struct {
@@ -63,6 +65,28 @@ func (s *Service) Publish(ctx context.Context, id string) (domain.Notification, 
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+type LatestInfo struct {
+	LatestID string `json:"latest_id"`
+	HasNew   bool   `json:"has_new"`
+	Count    int    `json:"count"`
+}
+
+func (s *Service) GetLatestInfo(ctx context.Context) LatestInfo {
+	latest, err := s.repo.GetLatestPublished(ctx)
+	latestID := ""
+	hasNew := false
+	if err == nil {
+		latestID = latest.ID
+		hasNew = true
+	}
+	total, _ := s.repo.CountPublished(ctx)
+	return LatestInfo{
+		LatestID: latestID,
+		HasNew:   hasNew,
+		Count:    int(total),
+	}
 }
 
 func generateSuffix() string {

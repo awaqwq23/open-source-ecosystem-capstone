@@ -49,6 +49,18 @@ func (r *GormRepository) ListScripts(ctx context.Context, channel domain.Channel
 	return result, nil
 }
 
+func (r *GormRepository) ListEnabledScripts(ctx context.Context) ([]domain.Script, error) {
+	var rows []scriptModel
+	if err := r.db.WithContext(ctx).Where("enabled = ?", true).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	result := make([]domain.Script, len(rows))
+	for i, row := range rows {
+		result[i] = row.toDomain()
+	}
+	return result, nil
+}
+
 func (r *GormRepository) UpdateScript(ctx context.Context, s domain.Script) error {
 	return r.db.WithContext(ctx).Save(scriptModelFromDomain(s)).Error
 }

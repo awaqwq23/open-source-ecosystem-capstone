@@ -44,6 +44,13 @@ class AgendaSyncService {
 
   bool get isEnabled => _enabled;
 
+  /// 由统一拉取推送器注入同步能力，避免额外的 API 调用。
+  void applyCapability({required String userId, required bool enabled}) {
+    _enabled = enabled;
+    _capabilityChecked = true;
+    _capabilityUserId = userId;
+  }
+
   Future<bool> ensureCapability({
     required String accessToken,
     required String userId,

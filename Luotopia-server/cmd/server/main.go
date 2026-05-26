@@ -22,6 +22,10 @@ import (
 	hotinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/infra"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	notiinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/infra"
+	pullapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/app"
+	pulltransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/transport"
+	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
+	weathercache "github.com/openwhu/luotopia/server/internal/platform/cache"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/openwhu/luotopia/server/internal/platform/database"
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
@@ -46,8 +50,8 @@ func main() {
 
 	registerAuth(server, cfg, log, db, rdb)
 	registerSync(server, cfg, db)
+	registerPull(server, cfg, db, rdb)
 	registerAdmin(server, cfg, db)
-	registerPushAndPull(server, cfg, db, rdb, log)
 
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("服务启动失败", slog.String("error", err.Error()))
@@ -136,12 +140,38 @@ func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
 	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret, cfg.Admin.UserIDs).Register(server.AdminAPI())
 }
 
-func registerPushAndPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb *redis.Client, log *slog.Logger) {
-	_ = log
-	_ = rdb
+func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb *redis.Client) {
 	if db == nil {
 		return
 	}
-	_ = notiinfra.NewGormRepository(db)
-	_ = hotinfra.NewGormRepository(db)
+
+	// Weather
+	var weatherSvc *weatherapp.Service
+	if rdb != nil {
+		weatherSvc = weatherapp.NewService(weathercache.NewRedisStore(rdb))
+	}
+
+	// Notification
+	notiSvc := notiapp.NewService(notiinfra.NewGormRepository(db))
+
+	// Hot update
+	hotSvc := hotapp.NewService(hotinfra.NewGormRepository(db))
+
+	// Sync checker (adapter from syncinfra)
+	syncRepo := syncinfra.NewGormRepository(db)
+	syncChecker := syncCheckAdapter{repo: syncRepo}
+
+	// Pull orchestrator
+	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker)
+	authMW := httpserver.AuthMiddleware(cfg.Auth.AccessTokenSecret)
+	pulltransport.NewHandler(svc, authMW).Register(server.ClientAPI())
+}
+
+// syncCheckAdapter adapts syncinfra.GormRepository to pullapp.SyncChecker
+type syncCheckAdapter struct {
+	repo *syncinfra.GormRepository
+}
+
+func (a syncCheckAdapter) IsSyncEnabledForUser(ctx context.Context, userID string) (bool, error) {
+	return a.repo.IsSyncAllowed(ctx, userID)
 }

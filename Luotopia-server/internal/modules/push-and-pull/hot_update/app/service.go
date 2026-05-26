@@ -18,6 +18,7 @@ type Repository interface {
 	GetScriptByID(ctx context.Context, id string) (domain.Script, error)
 	ListScripts(ctx context.Context, channel domain.Channel) ([]domain.Script, error)
 	UpdateScript(ctx context.Context, script domain.Script) error
+	ListEnabledScripts(ctx context.Context) ([]domain.Script, error)
 
 	CreateRelease(ctx context.Context, release domain.ScriptRelease) error
 	GetLatestRelease(ctx context.Context, scriptID string) (domain.ScriptRelease, error)
@@ -93,6 +94,30 @@ func (s *Service) GetCurrentVersion(ctx context.Context, scriptID string) (domai
 
 func (s *Service) ListReleases(ctx context.Context, scriptID string, offset, limit int) ([]domain.ScriptRelease, int64, error) {
 	return s.repo.ListReleases(ctx, scriptID, offset, limit)
+}
+
+type ScriptVersionInfo struct {
+	LatestVersion int    `json:"latest_version"`
+	Checksum      string `json:"checksum"`
+}
+
+func (s *Service) GetScriptVersions(ctx context.Context) map[string]ScriptVersionInfo {
+	scripts, err := s.repo.ListEnabledScripts(ctx)
+	if err != nil {
+		return nil
+	}
+	result := make(map[string]ScriptVersionInfo, len(scripts))
+	for _, sc := range scripts {
+		release, err := s.repo.GetLatestRelease(ctx, sc.ID)
+		if err != nil {
+			continue
+		}
+		result[sc.Name] = ScriptVersionInfo{
+			LatestVersion: release.Version,
+			Checksum:      release.Checksum,
+		}
+	}
+	return result
 }
 
 func generateSuffix() string {

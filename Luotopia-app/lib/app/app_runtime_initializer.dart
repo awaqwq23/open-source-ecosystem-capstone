@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
@@ -7,6 +9,7 @@ import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart'
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/components/home_widgets/data/home_widget_sync_service.dart';
+import 'package:luotopia/features/unified_pull/pull.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
@@ -82,17 +85,40 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> {
             next.accessToken!.isNotEmpty &&
             next.user != null &&
             next.user!.id.isNotEmpty) {
-          ref.read(agendaSyncServiceProvider).syncDebounced(
-                accessToken: next.accessToken!,
-                userId: next.user!.id,
-                delay: const Duration(milliseconds: 300),
-              );
+          _onAuthenticated(next);
         } else {
           ref.read(agendaSyncServiceProvider).resetCapability();
         }
       }),
     );
+    // 首次同步尝试（如果已认证）
     _syncAgendaDebounced();
+  }
+
+  void _onAuthenticated(LuotopiaAuthState auth) {
+    final userId = auth.user!.id;
+    // 统一拉取：一次请求获取所有信息
+    unawaited(_performPull(auth));
+    // 同时保留同步触发（但能力检测会从 pull 结果获取）
+    ref.read(agendaSyncServiceProvider).syncDebounced(
+          accessToken: auth.accessToken!,
+          userId: userId,
+          delay: const Duration(milliseconds: 300),
+        );
+  }
+
+  Future<void> _performPull(LuotopiaAuthState auth) async {
+    final result = await ref.read(unifiedPullServiceProvider).pullFull();
+    if (result.isSuccess && result.response != null) {
+      final data = result.response!;
+      // 同步能力从拉取结果获取
+      if (data.sync != null) {
+        ref.read(agendaSyncServiceProvider).applyCapability(
+              userId: auth.user!.id,
+              enabled: data.sync!.enabled,
+            );
+      }
+    }
   }
 
   void _syncAgendaDebounced() {

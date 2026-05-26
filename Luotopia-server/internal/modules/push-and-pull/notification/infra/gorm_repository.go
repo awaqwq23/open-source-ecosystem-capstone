@@ -64,6 +64,26 @@ func (r *GormRepository) Delete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Delete(&notificationModel{}, "id = ?", id).Error
 }
 
+func (r *GormRepository) GetLatestPublished(ctx context.Context) (domain.Notification, error) {
+	var m notificationModel
+	err := r.db.WithContext(ctx).
+		Where("status = ?", "published").
+		Order("created_at DESC").
+		First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.Notification{}, app.ErrNotFound
+	}
+	return m.toDomain(), err
+}
+
+func (r *GormRepository) CountPublished(ctx context.Context) (int64, error) {
+	var total int64
+	err := r.db.WithContext(ctx).Model(&notificationModel{}).
+		Where("status = ?", "published").
+		Count(&total).Error
+	return total, err
+}
+
 type notificationModel struct {
 	ID          string     `gorm:"primaryKey;column:id"`
 	Title       string     `gorm:"column:title"`
