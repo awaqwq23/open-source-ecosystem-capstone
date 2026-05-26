@@ -51,7 +51,12 @@ class CampusPage extends StatelessWidget {
                     sliver: SliverToBoxAdapter(
                     child: Consumer(builder: (context, ref, _) {
                       final weatherState = ref.watch(weatherProvider);
-                      return _WeatherCard(weather: weatherState.weather, loading: weatherState.loading);
+                      return _WeatherCard(
+                        weather: weatherState.weather,
+                        loading: weatherState.loading,
+                        isMock: weatherState.isMock,
+                        onRefresh: () => ref.read(weatherProvider.notifier).refresh(),
+                      );
                     }),
                   ),
                   ),
@@ -70,10 +75,12 @@ class CampusPage extends StatelessWidget {
 }
 
 class _WeatherCard extends StatelessWidget {
-  const _WeatherCard({required this.weather, required this.loading});
+  const _WeatherCard({required this.weather, required this.loading, this.isMock = false, this.onRefresh});
 
   final WeatherBlock? weather;
   final bool loading;
+  final bool isMock;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -95,12 +102,54 @@ class _WeatherCard extends StatelessWidget {
     final aqi = weather?.data?['aqi'] as int? ?? 0;
     final humidity = weather?.data?['humidity'] as int?;
     final windSpeed = weather?.data?['wind_speed'];
+    final updatedAt = weather?.cachedAt;
+    final updateTime = updatedAt != null
+        ? _formatTime(DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000))
+        : null;
 
     return _CampusGlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header row: location + update time + refresh ──
+          Row(
+            children: [
+              Text(
+                '武汉大学',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+              const Spacer(),
+              if (updateTime != null && !isMock)
+                Text(
+                  '更新于 $updateTime',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    color: colors.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              if (isMock)
+                Text(
+                  '模拟数据',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    color: Colors.orange.shade400,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              if (onRefresh != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onRefresh,
+                  child: Icon(Icons.refresh, size: 16, color: colors.onSurface.withValues(alpha: 0.4)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+
           // ── Main weather info: single row ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -125,13 +174,6 @@ class _WeatherCard extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: colors.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '武汉大学',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
                 ],
@@ -268,6 +310,14 @@ class _WeatherCard extends StatelessWidget {
     if (aqi <= 150) return '轻度';
     if (aqi <= 200) return '中度';
     return '重度';
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return '今天 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
 
