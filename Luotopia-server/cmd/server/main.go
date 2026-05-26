@@ -26,6 +26,8 @@ import (
 	notitransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/transport"
 	pullapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/app"
 	pulltransport "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/transport"
+	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
+	statsinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/infra"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 	weatherinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/infra"
 	weathercache "github.com/openwhu/luotopia/server/internal/platform/cache"
@@ -177,8 +179,11 @@ func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb
 	syncRepo := syncinfra.NewGormRepository(db)
 	syncChecker := syncCheckAdapter{repo: syncRepo}
 
+	// Stats
+	statsSvc := statsapp.NewService(statsinfra.NewGormRepository(db))
+
 	// Pull orchestrator
-	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker)
+	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker, statsSvc)
 	authMW := httpserver.AuthMiddleware(cfg.Auth.AccessTokenSecret)
 	pulltransport.NewHandler(svc, authMW).Register(server.ClientAPI())
 }

@@ -5,6 +5,12 @@ type PullResponse struct {
 	Notification *NotificationBlock `json:"notification,omitempty"`
 	HotUpdate    *HotUpdateBlock    `json:"hot_update,omitempty"`
 	Sync         *SyncBlock         `json:"sync,omitempty"`
+	Stats        *StatsBlock        `json:"stats,omitempty"`
+}
+
+type StatsBlock struct {
+	TotalUsers     int `json:"total_users"`
+	ActiveSessions int `json:"active_sessions"`
 }
 
 type WeatherBlock struct {

@@ -6,6 +6,7 @@ import (
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
+	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 )
 
@@ -18,14 +19,16 @@ type Service struct {
 	notifcSvc    *notiapp.Service
 	hotUpdateSvc *hotapp.Service
 	syncChecker  SyncChecker
+	statsSvc     *statsapp.Service
 }
 
-func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker) *Service {
+func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker, statsSvc *statsapp.Service) *Service {
 	return &Service{
 		weatherSvc:   weatherSvc,
 		notifcSvc:    notifcSvc,
 		hotUpdateSvc: hotUpdateSvc,
 		syncChecker:  syncChecker,
+		statsSvc:     statsSvc,
 	}
 }
 
@@ -70,6 +73,15 @@ func (s *Service) Pull(ctx context.Context, userID string) domain.PullResponse {
 	if s.syncChecker != nil && userID != "" {
 		enabled, _ := s.syncChecker.IsSyncEnabledForUser(ctx, userID)
 		resp.Sync = &domain.SyncBlock{Enabled: enabled}
+	}
+
+	// Stats
+	if s.statsSvc != nil {
+		stats := s.statsSvc.GetStats(ctx)
+		resp.Stats = &domain.StatsBlock{
+			TotalUsers:     stats.TotalUsers,
+			ActiveSessions: stats.ActiveSessions,
+		}
 	}
 
 	return resp

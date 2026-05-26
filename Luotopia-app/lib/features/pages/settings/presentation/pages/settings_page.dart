@@ -9,6 +9,7 @@ import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
+import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
@@ -644,6 +645,8 @@ class _NotificationSection extends ConsumerStatefulWidget {
 }
 
 class _NotificationSectionState extends ConsumerState<_NotificationSection> {
+  bool _refreshing = false;
+
   @override
   void initState() {
     super.initState();
@@ -655,10 +658,6 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
     final state = ref.watch(notificationProvider);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-
-    if (!state.hasNew && state.title == null) {
-      return const SizedBox.shrink();
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,6 +674,13 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
                   color: colors.onSurface.withValues(alpha: 0.5),
                 ),
               ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _refreshing ? null : _manualRefresh,
+                child: _refreshing
+                    ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(Icons.refresh, size: 16, color: colors.onSurface.withValues(alpha: 0.5)),
+              ),
             ],
           ),
         ),
@@ -683,23 +689,38 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _SettingsLinkCard(
             children: [
-              _SettingsLinkTile(
-                title: state.title ?? '新通知',
-                subtitle: state.hasNew ? '${state.count} 条未读' : '',
-                icon: Icons.campaign_outlined,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.content ?? '暂无详情'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
+              if (state.hasNew)
+                _SettingsLinkTile(
+                  title: state.title ?? '新通知',
+                  subtitle: '${state.count} 条未读',
+                  icon: Icons.campaign_outlined,
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.content ?? '暂无详情'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                )
+              else
+                _SettingsLinkTile(
+                  title: '暂无新通知',
+                  subtitle: '点击检查更新',
+                  icon: Icons.check_circle_outline,
+                  onTap: _refreshing ? null : _manualRefresh,
+                ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _manualRefresh() async {
+    setState(() => _refreshing = true);
+    await ref.read(manualPullProvider)();
+    await ref.read(notificationProvider.notifier).checkLatest();
+    setState(() => _refreshing = false);
   }
 }
