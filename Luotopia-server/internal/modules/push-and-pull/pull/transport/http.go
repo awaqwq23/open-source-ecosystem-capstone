@@ -24,6 +24,9 @@ func (h Handler) Register(router gin.IRouter) {
 	pull.Use(h.authMiddleware)
 	pull.GET("", h.pull)
 	pull.POST("", h.pullPost)
+
+	public := router.Group("/pull/public")
+	public.POST("", h.publicPullPost)
 }
 
 func (h Handler) pull(c *gin.Context) {
@@ -40,5 +43,20 @@ func (h Handler) pullPost(c *gin.Context) {
 	}
 	userID := c.GetString("user_id")
 	result := h.service.Pull(c.Request.Context(), userID, req)
+	c.JSON(http.StatusOK, result)
+}
+
+func (h Handler) publicPullPost(c *gin.Context) {
+	var req domain.PullRequest
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "invalid_argument", "message": "请求参数无效"}})
+		return
+	}
+	req.Scopes = []string{"notification"}
+	result := h.service.Pull(c.Request.Context(), "", req)
+	result.Weather = nil
+	result.HotUpdate = nil
+	result.Sync = nil
+	result.Stats = nil
 	c.JSON(http.StatusOK, result)
 }

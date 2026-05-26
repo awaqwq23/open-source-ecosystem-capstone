@@ -55,6 +55,10 @@ func (s *Server) AdminAPI() gin.IRouter {
 	return s.engine.Group("/admin/api/v1")
 }
 
+func (s *Server) AdminWeb() gin.IRouter {
+	return s.engine.Group("/admin")
+}
+
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	server := &http.Server{
 		Addr:         s.config.Address,

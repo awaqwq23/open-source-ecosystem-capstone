@@ -99,6 +99,9 @@ class _WeatherCard extends StatelessWidget {
     }
 
     final temp = weather?.data?['temperature'];
+    final feelsLike = weather?.data?['feels_like'];
+    final tempHigh = weather?.data?['temp_high'];
+    final tempLow = weather?.data?['temp_low'];
     final condition = weather?.data?['condition'] as String? ?? '--';
     final aqi = weather?.data?['aqi'] as int? ?? 0;
     final humidity = weather?.data?['humidity'] as int?;
@@ -175,6 +178,17 @@ class _WeatherCard extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                       color: colors.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
+                      if (tempLow != null && tempHigh != null)
+                        '${tempLow.toInt()}°/${tempHigh.toInt()}°',
+                    ].join(' · '),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],

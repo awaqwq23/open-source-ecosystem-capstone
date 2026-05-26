@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Luotopia 管理后台</title>
+    <link rel="stylesheet" href="/admin/assets/styles.css" />
+  </head>
+  <body>
+    <main id="login" class="login-shell">
+      <section class="login-panel">
+        <p class="eyebrow">Luotopia Admin</p>
+        <h1>管理后台</h1>
+        <p class="muted">使用 Luotopia 账号登录；只有管理员白名单用户可访问管理接口。</p>
+        <form id="login-form" class="form-grid">
+          <label>
+            账号
+            <input id="login-identifier" autocomplete="username" placeholder="手机号或邮箱" required />
+          </label>
+          <label>
+            密码
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="primary" type="submit">登录后台</button>
+        </form>
+      </section>
+    </main>
+
+    <main id="app" class="app-shell hidden">
+      <aside class="sidebar">
+        <div>
+          <p class="eyebrow">Luotopia</p>
+          <h1>管理后台</h1>
+        </div>
+        <nav id="nav">
+          <button data-view="dashboard" class="active">仪表盘</button>
+          <button data-view="notifications">通知</button>
+          <button data-view="weather">天气</button>
+          <button data-view="scripts">热更新脚本</button>
+          <button data-view="sync">同步白名单</button>
+          <button data-view="users">用户</button>
+        </nav>
+        <button id="logout" class="ghost">退出登录</button>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p id="view-kicker" class="eyebrow">Dashboard</p>
+            <h2 id="view-title">仪表盘</h2>
+          </div>
+          <button id="refresh" class="secondary">刷新</button>
+        </header>
+        <p id="message" class="message hidden"></p>
+        <section id="content"></section>
+      </section>
+    </main>
+
+    <script src="/admin/assets/app.js"></script>
+  </body>
+</html>

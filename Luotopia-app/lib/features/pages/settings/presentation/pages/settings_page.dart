@@ -723,7 +723,7 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
               if (state.hasNew)
                 _SettingsLinkTile(
                   title: state.title ?? '新通知',
-                  subtitle: '${state.count} 条未读',
+                  subtitle: '共 ${state.count} 条已发布公告',
                   icon: Icons.campaign_outlined,
                   onTap: () => unawaited(_showNotificationDetail(context)),
                 )
@@ -757,11 +757,29 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
       return;
     }
     final latest = ref.read(notificationProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(latest.content ?? '暂无详情'),
-        behavior: SnackBarBehavior.floating,
-      ),
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: Text(latest.title ?? '服务通知'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              child: Text(
+                latest.content?.isNotEmpty == true ? latest.content! : '暂无详情',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('关闭'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -12,6 +12,15 @@ class PullClient {
     return PullResponse.fromJson(json);
   }
 
+  Future<PullResponse> pullPublic(PullRequest request) async {
+    final json = await _apiClient.post(
+      '/api/v1/pull/public',
+      body: request.toJson(),
+      withAuth: false,
+    );
+    return PullResponse.fromJson(json);
+  }
+
   Future<String> downloadScript(String path) {
     return _apiClient.getText(path);
   }

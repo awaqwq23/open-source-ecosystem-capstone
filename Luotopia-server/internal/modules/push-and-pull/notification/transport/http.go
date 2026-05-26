@@ -8,21 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/domain"
-	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 )
 
 type Handler struct {
-	service        *app.Service
-	authMiddleware gin.HandlerFunc
+	service *app.Service
 }
 
 func NewHandler(service *app.Service, tokenSecret string) Handler {
-	return Handler{service: service, authMiddleware: httpserver.AuthMiddleware(tokenSecret)}
+	_ = tokenSecret
+	return Handler{service: service}
 }
 
 func (h Handler) Register(router gin.IRouter) {
 	notif := router.Group("/notifications")
-	notif.Use(h.authMiddleware)
 	notif.GET("", h.listPublished)
 	notif.GET("/latest", h.latest)
 	notif.GET("/:id", h.getByID)

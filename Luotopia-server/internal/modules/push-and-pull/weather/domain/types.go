@@ -19,8 +19,17 @@ type WeatherData struct {
 }
 
 type HourlyForecast struct {
-	Time     time.Time `json:"time"`
-	Temp     float64   `json:"temp"`
-	Condition string   `json:"condition"`
-	Icon     string    `json:"icon"`
+	Time      time.Time `json:"time"`
+	Temp      float64   `json:"temp"`
+	Condition string    `json:"condition"`
+	Icon      string    `json:"icon"`
+}
+
+type WeatherStatus struct {
+	Enabled       bool         `json:"enabled"`
+	CacheTTL      int64        `json:"cache_ttl"`
+	CachedAt      *time.Time   `json:"cached_at,omitempty"`
+	LastRefreshAt *time.Time   `json:"last_refresh_at,omitempty"`
+	LastError     string       `json:"last_error,omitempty"`
+	Data          *WeatherData `json:"data,omitempty"`
 }

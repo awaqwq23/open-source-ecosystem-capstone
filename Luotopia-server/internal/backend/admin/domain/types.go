@@ -4,6 +4,7 @@ import (
 	"time"
 
 	notidomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/domain"
+	weatherdomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/domain"
 )
 
 type Dashboard struct {
@@ -15,6 +16,8 @@ type HealthStatus struct {
 	Database bool `json:"database"`
 	Redis    bool `json:"redis"`
 }
+
+type WeatherStatus = weatherdomain.WeatherStatus
 
 type Notification struct {
 	ID          string     `json:"id"`

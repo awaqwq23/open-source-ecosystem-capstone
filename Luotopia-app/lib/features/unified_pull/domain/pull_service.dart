@@ -70,6 +70,24 @@ class UnifiedPullService {
     return _doPull(trigger: trigger, scopes: scopes);
   }
 
+  Future<PullResult> pullPublicNotification({String trigger = 'public'}) async {
+    try {
+      final response = await _pullClient.pullPublic(
+        PullRequest(
+          trigger: trigger,
+          scopes: const ['notification'],
+          clientState: PullClientState(
+            notificationLatestId: _stateStore.readNotificationLatestId(),
+          ),
+        ),
+      );
+      await _stateStore.apply(response);
+      return PullResult(response: response);
+    } catch (e) {
+      return PullResult(error: e);
+    }
+  }
+
   Future<PullResult> _doPull({
     required String trigger,
     List<String> scopes = const [],

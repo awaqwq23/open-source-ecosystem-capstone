@@ -53,10 +53,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   Future<void> checkLatest() async {
     try {
-      final result = await _pullService.pullScoped(
-        trigger: 'manual',
-        scopes: const ['notification'],
-      );
+      final result = await _pullService.pullPublicNotification(trigger: 'manual');
       if (result.isSuccess) {
         state = _stateFromBlock(
           result.response?.notification ?? _stateStore.readNotification(),

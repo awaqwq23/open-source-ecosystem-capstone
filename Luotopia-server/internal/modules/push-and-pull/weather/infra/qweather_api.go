@@ -25,8 +25,8 @@ func NewQWeatherClient(apiKey, location string) *QWeatherClient {
 }
 
 type qweatherNowResponse struct {
-	Code       string `json:"code"`
-	Now        struct {
+	Code string `json:"code"`
+	Now  struct {
 		Temp      string `json:"temp"`
 		FeelsLike string `json:"feelsLike"`
 		Icon      string `json:"icon"`
@@ -41,13 +41,22 @@ type qweatherNowResponse struct {
 }
 
 type qweather24HResponse struct {
-	Code      string `json:"code"`
-	Hourly    []struct {
+	Code   string `json:"code"`
+	Hourly []struct {
 		Time string `json:"fxTime"`
 		Temp string `json:"temp"`
 		Icon string `json:"icon"`
 		Text string `json:"text"`
 	} `json:"hourly"`
+}
+
+type qweather3DResponse struct {
+	Code  string `json:"code"`
+	Daily []struct {
+		Time    string `json:"fxDate"`
+		TempMax string `json:"tempMax"`
+		TempMin string `json:"tempMin"`
+	} `json:"daily"`
 }
 
 type qweatherAQIResponse struct {
@@ -82,6 +91,23 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	if err := json.Unmarshal(fcData, &fc); err != nil {
 		return nil, fmt.Errorf("qweather 24h parse: %w", err)
 	}
+	if fc.Code != "200" {
+		return nil, fmt.Errorf("qweather 24h api error: code=%s", fc.Code)
+	}
+
+	// Fetch 3d forecast for high/low temperature.
+	dailyUrl := fmt.Sprintf("https://devapi.qweather.com/v7/weather/3d?location=%s&key=%s", c.location, c.apiKey)
+	dailyData, err := c.fetchJSON(dailyUrl)
+	if err != nil {
+		return nil, fmt.Errorf("qweather 3d: %w", err)
+	}
+	var daily qweather3DResponse
+	if err := json.Unmarshal(dailyData, &daily); err != nil {
+		return nil, fmt.Errorf("qweather 3d parse: %w", err)
+	}
+	if daily.Code != "200" {
+		return nil, fmt.Errorf("qweather 3d api error: code=%s", daily.Code)
+	}
 
 	// Fetch AQI
 	aqiUrl := fmt.Sprintf("https://devapi.qweather.com/v7/air/now?location=%s&key=%s", c.location, c.apiKey)
@@ -97,6 +123,12 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	// Parse values
 	temp := parseFloat(now.Now.Temp)
 	feelsLike := parseFloat(now.Now.FeelsLike)
+	tempHigh := temp
+	tempLow := temp
+	if len(daily.Daily) > 0 {
+		tempHigh = parseFloat(daily.Daily[0].TempMax)
+		tempLow = parseFloat(daily.Daily[0].TempMin)
+	}
 
 	hourly := make([]domain.HourlyForecast, 0, len(fc.Hourly))
 	for _, h := range fc.Hourly {
@@ -112,10 +144,10 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	return &domain.WeatherData{
 		Temperature:    temp,
 		Condition:      now.Now.Text,
-		ConditionCode:  0,
+		ConditionCode:  parseInt(now.Now.Icon),
 		FeelsLike:      feelsLike,
-		TempHigh:       temp,
-		TempLow:        temp,
+		TempHigh:       tempHigh,
+		TempLow:        tempLow,
 		AQI:            aqi,
 		Humidity:       parseInt(now.Now.Humidity),
 		WindSpeed:      parseFloat(now.Now.WindSpeed),
@@ -132,6 +164,9 @@ func (c *QWeatherClient) fetchJSON(url string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("http status %d", resp.StatusCode)
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

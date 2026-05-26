@@ -50,7 +50,10 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
 
   void _handleForegroundResume() {
     final auth = ref.read(luotopiaAuthProvider);
-    if (auth.status != LuotopiaAuthStatus.authenticated) return;
+    if (auth.status != LuotopiaAuthStatus.authenticated) {
+      unawaited(_performPublicNotificationPull());
+      return;
+    }
     unawaited(_performForegroundPull(auth));
   }
 
@@ -98,6 +101,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
           _onAuthenticated(next);
         } else {
           ref.read(agendaSyncServiceProvider).resetCapability();
+          unawaited(_performPublicNotificationPull());
         }
       }),
     );
@@ -108,6 +112,8 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
         auth.user != null &&
         auth.user!.id.isNotEmpty) {
       _onAuthenticated(auth);
+    } else {
+      unawaited(_performPublicNotificationPull());
     }
   }
 
@@ -119,6 +125,15 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
   Future<void> _performPull(LuotopiaAuthState auth) async {
     final result = await ref.read(unifiedPullServiceProvider).pullFull();
     await _applyPullResult(auth, result);
+  }
+
+  Future<void> _performPublicNotificationPull() async {
+    final result = await ref
+        .read(unifiedPullServiceProvider)
+        .pullPublicNotification(trigger: 'cold_start');
+    if (result.isSuccess) {
+      ref.invalidate(notificationProvider);
+    }
   }
 
   Future<void> _performForegroundPull(LuotopiaAuthState auth) async {

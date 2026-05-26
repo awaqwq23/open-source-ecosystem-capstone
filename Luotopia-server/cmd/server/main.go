@@ -53,14 +53,15 @@ func main() {
 
 	db := openDB(cfg, log)
 	rdb := openRedis(cfg, log)
+	weatherSvc := newWeatherService(cfg, rdb)
 
 	registerAuth(server, cfg, log, db, rdb)
 	registerSync(server, cfg, db)
-	registerPull(server, cfg, db, rdb)
-	registerAdmin(server, cfg, db)
+	registerPull(server, cfg, db, weatherSvc)
+	registerAdmin(server, cfg, db, weatherSvc)
 	registerNotificationAPI(server, cfg, db)
 	registerHotUpdateAPI(server, cfg, db)
-	registerWeatherRefresh(ctx, cfg, rdb, log)
+	registerWeatherRefresh(ctx, cfg, weatherSvc, log)
 
 	// Graceful shutdown
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -143,7 +144,7 @@ func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger
 	authtransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
-func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
+func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service) {
 	if db == nil {
 		return
 	}
@@ -154,20 +155,14 @@ func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
 	hotSvc := hotapp.NewService(hotRepo)
 
 	adminRepo := admininfra.NewGormRepository(db)
-	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc, "scripts")
+	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc, weatherSvc, "scripts")
 	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret, cfg.Admin.UserIDs).Register(server.AdminAPI())
+	admintransport.NewWebHandler().Register(server.AdminWeb())
 }
 
-func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb *redis.Client) {
+func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service) {
 	if db == nil {
 		return
-	}
-
-	// Weather
-	var weatherSvc *weatherapp.Service
-	if rdb != nil && cfg.Weather.APIKey != "" {
-		apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
-		weatherSvc = weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
 	}
 
 	// Notification
@@ -205,13 +200,19 @@ func registerHotUpdateAPI(server *httpserver.Server, cfg config.Config, db *gorm
 	hottransport.NewHandler(svc, cfg.Auth.AccessTokenSecret, "scripts").Register(server.ClientAPI())
 }
 
-func registerWeatherRefresh(ctx context.Context, cfg config.Config, rdb *redis.Client, log *slog.Logger) {
+func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service {
 	if rdb == nil || cfg.Weather.APIKey == "" {
+		return nil
+	}
+	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
+	return weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
+}
+
+func registerWeatherRefresh(ctx context.Context, cfg config.Config, weatherSvc *weatherapp.Service, log *slog.Logger) {
+	if weatherSvc == nil {
 		log.Warn("天气功能未启用：缺少 Redis 或 API Key")
 		return
 	}
-	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
-	weatherSvc := weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
 
 	// Initial fetch
 	go func() {

@@ -16,6 +16,7 @@ import (
 	hotdomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/domain"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	notidomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/domain"
+	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 	"gorm.io/gorm"
 )
 
@@ -34,10 +35,11 @@ type Service struct {
 	repo         Repository
 	notifcSvc    *notiapp.Service
 	hotUpdateSvc *hotapp.Service
+	weatherSvc   *weatherapp.Service
 	scriptDir    string
 }
 
-func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, scriptDir string) *Service {
+func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string) *Service {
 	return &Service{
 		version:      version,
 		startedAt:    time.Now(),
@@ -45,6 +47,7 @@ func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp
 		repo:         repo,
 		notifcSvc:    notifcSvc,
 		hotUpdateSvc: hotUpdateSvc,
+		weatherSvc:   weatherSvc,
 		scriptDir:    scriptDir,
 	}
 }
@@ -224,6 +227,25 @@ func (s *Service) AddAllowlist(ctx context.Context, userID string) error {
 
 func (s *Service) RemoveAllowlist(ctx context.Context, userID string) error {
 	return s.repo.RemoveAllowlist(ctx, userID)
+}
+
+// Weather management
+
+func (s *Service) WeatherStatus(ctx context.Context) domain.WeatherStatus {
+	if s.weatherSvc == nil {
+		return domain.WeatherStatus{Enabled: false}
+	}
+	return s.weatherSvc.Status(ctx)
+}
+
+func (s *Service) RefreshWeather(ctx context.Context) (domain.WeatherStatus, error) {
+	if s.weatherSvc == nil {
+		return domain.WeatherStatus{Enabled: false}, ErrInvalidArg
+	}
+	if err := s.weatherSvc.FetchAndCache(ctx); err != nil {
+		return s.weatherSvc.Status(ctx), err
+	}
+	return s.weatherSvc.Status(ctx), nil
 }
 
 // error helpers used by transport

@@ -28,6 +28,10 @@ func (h Handler) Register(router gin.IRouter) {
 
 	protected.GET("/dashboard", h.dashboard)
 
+	weather := protected.Group("/weather")
+	weather.GET("/status", h.weatherStatus)
+	weather.POST("/refresh", h.refreshWeather)
+
 	notifications := protected.Group("/notifications")
 	notifications.GET("", h.listNotifications)
 	notifications.POST("", h.createNotification)
@@ -53,6 +57,22 @@ func (h Handler) Register(router gin.IRouter) {
 
 func (h Handler) dashboard(c *gin.Context) {
 	result := h.service.Dashboard(c.Request.Context())
+	c.JSON(http.StatusOK, result)
+}
+
+// Weather
+
+func (h Handler) weatherStatus(c *gin.Context) {
+	result := h.service.WeatherStatus(c.Request.Context())
+	c.JSON(http.StatusOK, result)
+}
+
+func (h Handler) refreshWeather(c *gin.Context) {
+	result, err := h.service.RefreshWeather(c.Request.Context())
+	if err != nil {
+		writeError(c, http.StatusBadGateway, "weather_refresh_failed", "天气刷新失败")
+		return
+	}
 	c.JSON(http.StatusOK, result)
 }
 
