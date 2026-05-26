@@ -1,19 +1,40 @@
 package httpserver
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
-// AdminAuthMiddleware 验证管理员身份的中间件。
-// 目前：基于 JWT 用户认证，管理员权限判定留待后续接入统一的角色系统。
-// TODO: 接入管理员角色/权限系统后，在此处添加角色校验逻辑。
-func AdminAuthMiddleware(secret string) gin.HandlerFunc {
+func AdminAuthMiddleware(secret string, adminUserIDs []string) gin.HandlerFunc {
+	adminSet := make(map[string]struct{}, len(adminUserIDs))
+	for _, id := range adminUserIDs {
+		adminSet[id] = struct{}{}
+	}
+
 	auth := AuthMiddleware(secret)
 	return func(c *gin.Context) {
 		auth(c)
 		if c.IsAborted() {
 			return
 		}
+
+		userID, _ := c.Get("user_id")
+		uid, ok := userID.(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": gin.H{"code": "forbidden", "message": "需要管理员权限"},
+			})
+			return
+		}
+
+		if _, isAdmin := adminSet[uid]; !isAdmin {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": gin.H{"code": "forbidden", "message": "需要管理员权限"},
+			})
+			return
+		}
+
 		c.Next()
 	}
 }

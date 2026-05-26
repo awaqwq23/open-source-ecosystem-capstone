@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	adminapp "github.com/openwhu/luotopia/server/internal/backend/admin/app"
+	admininfra "github.com/openwhu/luotopia/server/internal/backend/admin/infra"
 	admintransport "github.com/openwhu/luotopia/server/internal/backend/admin/transport"
 	authapp "github.com/openwhu/luotopia/server/internal/modules/account/auth/app"
 	authinfra "github.com/openwhu/luotopia/server/internal/modules/account/auth/infra"
@@ -17,11 +18,16 @@ import (
 	syncapp "github.com/openwhu/luotopia/server/internal/modules/agenda-sync/app"
 	syncinfra "github.com/openwhu/luotopia/server/internal/modules/agenda-sync/infra"
 	synctransport "github.com/openwhu/luotopia/server/internal/modules/agenda-sync/transport"
+	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
+	hotinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/infra"
+	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
+	notiinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/infra"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/openwhu/luotopia/server/internal/platform/database"
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/platform/logger"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -34,9 +40,14 @@ func main() {
 	server := httpserver.New(cfg.HTTP, log)
 	server.RegisterHealth()
 	server.RegisterRouteGroups()
-	registerAuth(server, cfg, log)
-	registerSync(server, cfg, log)
-	registerAdmin(server, cfg)
+
+	db := openDB(cfg, log)
+	rdb := openRedis(cfg, log)
+
+	registerAuth(server, cfg, log, db, rdb)
+	registerSync(server, cfg, db)
+	registerAdmin(server, cfg, db)
+	registerPushAndPull(server, cfg, db, rdb, log)
 
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("服务启动失败", slog.String("error", err.Error()))
@@ -44,7 +55,7 @@ func main() {
 	}
 }
 
-func registerSync(server *httpserver.Server, cfg config.Config, log *slog.Logger) {
+func openDB(cfg config.Config, log *slog.Logger) *gorm.DB {
 	if cfg.Database.URL == "" {
 		log.Error("缺少数据库连接配置", slog.String("env", "LUOTOPIA_DATABASE_URL"))
 		os.Exit(1)
@@ -60,52 +71,42 @@ func registerSync(server *httpserver.Server, cfg config.Config, log *slog.Logger
 		os.Exit(1)
 	}
 	if err := sqlDB.PingContext(context.Background()); err != nil {
-		log.Error("数据库连接失败", slog.String("error", err.Error()))
+		log.Error("数据库连接不可用", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	return db
+}
 
+func openRedis(cfg config.Config, log *slog.Logger) *redis.Client {
+	if cfg.Redis.URL == "" {
+		return nil
+	}
+	options, err := redis.ParseURL(cfg.Redis.URL)
+	if err != nil {
+		log.Warn("Redis 配置无效，缓存功能不可用", slog.String("error", err.Error()))
+		return nil
+	}
+	client := redis.NewClient(options)
+	if err := client.Ping(context.Background()).Err(); err != nil {
+		log.Warn("Redis 连接失败，缓存功能不可用", slog.String("error", err.Error()))
+		return nil
+	}
+	return client
+}
+
+func registerSync(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
 	service := syncapp.NewService(syncinfra.NewGormRepository(db))
 	synctransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
-func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger) {
-	var users authapp.UserRepository
-	if cfg.Database.URL != "" {
-		db, err := database.OpenPostgres(cfg.Database.URL)
-		if err != nil {
-			log.Error("数据库连接失败", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		sqlDB, err := db.DB()
-		if err != nil {
-			log.Error("数据库句柄获取失败", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		if err := sqlDB.PingContext(context.Background()); err != nil {
-			log.Error("数据库连接失败", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		users = authinfra.NewGormUserRepository(db)
-	} else {
-		log.Error("缺少数据库连接配置", slog.String("env", "LUOTOPIA_DATABASE_URL"))
-		os.Exit(1)
-	}
+func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger, db *gorm.DB, rdb *redis.Client) {
+	users := authinfra.NewGormUserRepository(db)
 
 	var codes authapp.VerificationCodeStore
-	if cfg.Redis.URL != "" {
-		options, err := redis.ParseURL(cfg.Redis.URL)
-		if err != nil {
-			log.Error("Redis 配置无效", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		client := redis.NewClient(options)
-		if err := client.Ping(context.Background()).Err(); err != nil {
-			log.Error("Redis 连接失败", slog.String("error", err.Error()))
-			os.Exit(1)
-		}
-		codes = authinfra.NewRedisVerificationCodeStore(client)
+	if rdb != nil {
+		codes = authinfra.NewRedisVerificationCodeStore(rdb)
 	} else {
-		log.Error("缺少 Redis 连接配置", slog.String("env", "LUOTOPIA_REDIS_URL"))
+		log.Error("缺少 Redis 连接，验证码功能不可用")
 		os.Exit(1)
 	}
 
@@ -120,7 +121,27 @@ func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger
 	authtransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
-func registerAdmin(server *httpserver.Server, cfg config.Config) {
-	service := adminapp.NewService("0.1.0")
-	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.AdminAPI())
+func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	notiRepo := notiinfra.NewGormRepository(db)
+	notiSvc := notiapp.NewService(notiRepo)
+
+	hotRepo := hotinfra.NewGormRepository(db)
+	hotSvc := hotapp.NewService(hotRepo)
+
+	adminRepo := admininfra.NewGormRepository(db)
+	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc)
+	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret, cfg.Admin.UserIDs).Register(server.AdminAPI())
+}
+
+func registerPushAndPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, rdb *redis.Client, log *slog.Logger) {
+	_ = log
+	_ = rdb
+	if db == nil {
+		return
+	}
+	_ = notiinfra.NewGormRepository(db)
+	_ = hotinfra.NewGormRepository(db)
 }

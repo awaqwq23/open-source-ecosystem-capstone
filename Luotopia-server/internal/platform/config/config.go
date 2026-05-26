@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -16,6 +17,7 @@ type Config struct {
 	Redis       RedisConfig
 	Storage     StorageConfig
 	Auth        AuthConfig
+	Admin       AdminConfig
 	SMS         SMSConfig
 	Email       EmailConfig
 }
@@ -44,6 +46,10 @@ type AuthConfig struct {
 	AccessTokenSecret string
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
+}
+
+type AdminConfig struct {
+	UserIDs []string
 }
 
 type SMSConfig struct {
@@ -85,7 +91,8 @@ func Load() Config {
 			AccessTokenTTL:    requiredDurationEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_TTL"),
 			RefreshTokenTTL:   requiredDurationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL"),
 		},
-		SMS: SMSConfig{
+		Admin: AdminConfig{UserIDs: parseCommaList(declaredEnv("LUOTOPIA_ADMIN_USER_IDS"))},
+		SMS:   SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
 			TencentRegion:     requiredEnv("LUOTOPIA_TENCENT_SMS_REGION"),
@@ -129,6 +136,20 @@ func requiredEnv(key string) string {
 		panic(fmt.Sprintf("环境变量 %s 不能为空", key))
 	}
 	return value
+}
+
+func parseCommaList(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 func requiredDurationEnv(key string) time.Duration {
