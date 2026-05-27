@@ -582,7 +582,7 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: SingleChildScrollView(
-              child: Text(
+              child: SelectableText(
                 detail?.content.isNotEmpty == true ? detail!.content : '暂无详情',
                 style: theme.textTheme.bodyMedium,
               ),
