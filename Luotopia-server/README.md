@@ -63,7 +63,7 @@ docker compose -f docker-compose.dev.yml down -v
 
 服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/config.example.env` 为 `configs/.env`，再按本机环境修改数据库、Redis、短信、SMTP 和令牌密钥配置。
 
-完整容器化联调使用 `configs/config.docker.env`，其中数据库和 Redis 地址指向 Compose 内部服务名。
+容器化联调同样使用 `configs/.env`，请确保其中数据库与 Redis 连接地址与当前运行方式一致（Compose 内通常使用服务名 `postgres`、`redis`）。
 
 # 服务端架构说明
 

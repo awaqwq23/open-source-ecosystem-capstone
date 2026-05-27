@@ -3,14 +3,14 @@ services:
     profiles:
       - app
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     env_file:
-      - ../configs/config.docker.env
+      - ./configs/.env
     volumes:
-      - ../configs/config.docker.env:/app/configs/.env:ro
+      - ./configs/.env:/app/configs/.env:ro
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -26,13 +26,13 @@ services:
     profiles:
       - app
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     command: ["/app/luotopia-migrate"]
     env_file:
-      - ../configs/config.docker.env
+      - ./configs/.env
     volumes:
-      - ../configs/config.docker.env:/app/configs/.env:ro
+      - ./configs/.env:/app/configs/.env:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
       POSTGRES_USER: luotopia
       POSTGRES_PASSWORD: luotopia
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - luotopia-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -56,7 +56,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
