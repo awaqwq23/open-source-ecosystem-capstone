@@ -129,7 +129,7 @@ async function renderNotifications() {
       </form>
     </section>
     <section class="table-panel">
-      ${table(["通知", "状态", "顺序", "发布时间", "操作"], data.items.map((item) => [
+      ${table(["通知", "状态", "顺序", "发布时间", "操作"], (data.items || []).map((item) => [
         `<form id="notification-${item.id}" class="compact-form">
           <label>标题<input name="title" required value="${escapeHtml(item.title)}" /></label>
           <label>图标<select name="icon">${notificationIconOptions(item.icon || "campaign")}</select></label>
@@ -251,7 +251,7 @@ async function renderScripts() {
       </form>
     </section>
     <section class="table-panel">
-      ${table(["名称", "频道", "状态", "版本", "操作"], data.items.map((item) => [
+      ${table(["名称", "频道", "状态", "版本", "操作"], (data.items || []).map((item) => [
         `<strong>${escapeHtml(item.name)}</strong><pre>${escapeHtml(item.description || item.id)}</pre>`,
         escapeHtml(item.channel || "stable"),
         badge(item.enabled ? "enabled" : "disabled"),
