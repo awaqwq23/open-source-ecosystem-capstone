@@ -20,7 +20,9 @@ class WeatherState {
   }
 }
 
-final weatherProvider = StateNotifierProvider<WeatherNotifier, WeatherState>((ref) {
+final weatherProvider = StateNotifierProvider<WeatherNotifier, WeatherState>((
+  ref,
+) {
   final pullService = ref.read(unifiedPullServiceProvider);
   final stateStore = ref.read(pullStateStoreProvider);
   return WeatherNotifier(pullService, stateStore);
@@ -28,7 +30,7 @@ final weatherProvider = StateNotifierProvider<WeatherNotifier, WeatherState>((re
 
 class WeatherNotifier extends StateNotifier<WeatherState> {
   WeatherNotifier(this._pullService, this._stateStore)
-      : super(_stateFromCache(_stateStore.readWeather()));
+    : super(_stateFromCache(_stateStore.readWeather()));
 
   final UnifiedPullService _pullService;
   final PullStateStore _stateStore;
@@ -70,30 +72,35 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
         'hourly_forecast': [
           {
             'time': '2026-05-27T09:00:00+08:00',
+            'time_text': '09:00',
             'temp': 28.0,
             'condition': '晴',
             'icon': '100',
           },
           {
             'time': '2026-05-27T10:00:00+08:00',
+            'time_text': '10:00',
             'temp': 29.0,
             'condition': '晴',
             'icon': '100',
           },
           {
             'time': '2026-05-27T11:00:00+08:00',
+            'time_text': '11:00',
             'temp': 30.0,
             'condition': '晴',
             'icon': '100',
           },
           {
             'time': '2026-05-27T12:00:00+08:00',
+            'time_text': '12:00',
             'temp': 31.0,
             'condition': '多云',
             'icon': '101',
           },
           {
             'time': '2026-05-27T13:00:00+08:00',
+            'time_text': '13:00',
             'temp': 30.0,
             'condition': '多云',
             'icon': '101',

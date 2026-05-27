@@ -20,6 +20,7 @@ type WeatherData struct {
 
 type HourlyForecast struct {
 	Time      time.Time `json:"time"`
+	TimeText  string    `json:"time_text,omitempty"`
 	Temp      float64   `json:"temp"`
 	Condition string    `json:"condition"`
 	Icon      string    `json:"icon"`

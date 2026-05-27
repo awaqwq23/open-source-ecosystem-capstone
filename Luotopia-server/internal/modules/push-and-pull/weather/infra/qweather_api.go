@@ -29,6 +29,7 @@ func NewQWeatherClient(apiKey, apiHost, location string) *QWeatherClient {
 type qweatherNowResponse struct {
 	Code string `json:"code"`
 	Now  struct {
+		ObsTime   string `json:"obsTime"`
 		Temp      string `json:"temp"`
 		FeelsLike string `json:"feelsLike"`
 		Icon      string `json:"icon"`
@@ -134,13 +135,22 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 
 	hourly := make([]domain.HourlyForecast, 0, len(fc.Hourly))
 	for _, h := range fc.Hourly {
-		t, _ := time.Parse(time.RFC3339, h.Time)
+		t, err := parseQWeatherTime(h.Time)
+		if err != nil {
+			t = time.Time{}
+		}
 		hourly = append(hourly, domain.HourlyForecast{
 			Time:      t,
+			TimeText:  formatHourText(t, h.Time),
 			Temp:      parseFloat(h.Temp),
 			Condition: h.Text,
 			Icon:      h.Icon,
 		})
+	}
+
+	updatedAt := time.Now()
+	if t, err := parseQWeatherTime(now.Now.ObsTime); err == nil {
+		updatedAt = t
 	}
 
 	return &domain.WeatherData{
@@ -156,7 +166,7 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 		WindDir:        now.Now.WindDir,
 		Icon:           now.Now.Icon,
 		HourlyForecast: hourly,
-		UpdatedAt:      time.Now(),
+		UpdatedAt:      updatedAt,
 	}, nil
 }
 
@@ -186,4 +196,24 @@ func parseInt(s string) int {
 	var v int
 	fmt.Sscanf(s, "%d", &v)
 	return v
+}
+
+func parseQWeatherTime(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty qweather time")
+	}
+	if t, err := time.Parse("2006-01-02T15:04-07:00", s); err == nil {
+		return t, nil
+	}
+	return time.Parse(time.RFC3339, s)
+}
+
+func formatHourText(t time.Time, raw string) string {
+	if !t.IsZero() {
+		return t.Format("15:04")
+	}
+	if len(raw) >= 16 {
+		return raw[11:16]
+	}
+	return ""
 }

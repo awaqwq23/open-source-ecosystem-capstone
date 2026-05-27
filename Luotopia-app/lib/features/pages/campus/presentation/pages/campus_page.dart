@@ -15,19 +15,71 @@ class CampusPage extends StatelessWidget {
   const CampusPage({super.key});
 
   static const _gridApps = <_CampusApp>[
-    _CampusApp(icon: Icons.table_chart_outlined, name: '课程表', colorAssoc: ItemColorOption.sky),
-    _CampusApp(icon: Icons.event_seat, name: '自习预约', colorAssoc: ItemColorOption.indigo),
-    _CampusApp(icon: Icons.local_library, name: '图书借阅', colorAssoc: ItemColorOption.amber),
-    _CampusApp(icon: Icons.sports_soccer, name: '运动场馆', colorAssoc: ItemColorOption.lime),
-    _CampusApp(icon: Icons.credit_card, name: '珞珈E卡', colorAssoc: ItemColorOption.sky),
-    _CampusApp(icon: Icons.qr_code, name: 'E卡付款码', colorAssoc: ItemColorOption.jade),
-    _CampusApp(icon: Icons.grading, name: '成绩', colorAssoc: ItemColorOption.coral),
-    _CampusApp(icon: Icons.meeting_room, name: '空闲教室', colorAssoc: ItemColorOption.teal),
-    _CampusApp(icon: Icons.school, name: '蹭课', colorAssoc: ItemColorOption.rose),
-    _CampusApp(icon: Icons.calendar_month, name: '全校课表', colorAssoc: ItemColorOption.violet),
-    _CampusApp(icon: Icons.assignment, name: '课程给分', colorAssoc: ItemColorOption.orchid),
-    _CampusApp(icon: Icons.rate_review, name: '课程评价', colorAssoc: ItemColorOption.crimson),
-    _CampusApp(icon: Icons.folder, name: '学习资料共享', colorAssoc: ItemColorOption.slate),
+    _CampusApp(
+      icon: Icons.table_chart_outlined,
+      name: '课程表',
+      colorAssoc: ItemColorOption.sky,
+    ),
+    _CampusApp(
+      icon: Icons.event_seat,
+      name: '自习预约',
+      colorAssoc: ItemColorOption.indigo,
+    ),
+    _CampusApp(
+      icon: Icons.local_library,
+      name: '图书借阅',
+      colorAssoc: ItemColorOption.amber,
+    ),
+    _CampusApp(
+      icon: Icons.sports_soccer,
+      name: '运动场馆',
+      colorAssoc: ItemColorOption.lime,
+    ),
+    _CampusApp(
+      icon: Icons.credit_card,
+      name: '珞珈E卡',
+      colorAssoc: ItemColorOption.sky,
+    ),
+    _CampusApp(
+      icon: Icons.qr_code,
+      name: 'E卡付款码',
+      colorAssoc: ItemColorOption.jade,
+    ),
+    _CampusApp(
+      icon: Icons.grading,
+      name: '成绩',
+      colorAssoc: ItemColorOption.coral,
+    ),
+    _CampusApp(
+      icon: Icons.meeting_room,
+      name: '空闲教室',
+      colorAssoc: ItemColorOption.teal,
+    ),
+    _CampusApp(
+      icon: Icons.school,
+      name: '蹭课',
+      colorAssoc: ItemColorOption.rose,
+    ),
+    _CampusApp(
+      icon: Icons.calendar_month,
+      name: '全校课表',
+      colorAssoc: ItemColorOption.violet,
+    ),
+    _CampusApp(
+      icon: Icons.assignment,
+      name: '课程给分',
+      colorAssoc: ItemColorOption.orchid,
+    ),
+    _CampusApp(
+      icon: Icons.rate_review,
+      name: '课程评价',
+      colorAssoc: ItemColorOption.crimson,
+    ),
+    _CampusApp(
+      icon: Icons.folder,
+      name: '学习资料共享',
+      colorAssoc: ItemColorOption.slate,
+    ),
   ];
 
   @override
@@ -50,16 +102,24 @@ class CampusPage extends StatelessWidget {
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                     sliver: SliverToBoxAdapter(
-                    child: Consumer(builder: (context, ref, _) {
-                      final weatherState = ref.watch(weatherProvider);
-                      return _WeatherCard(
-                        weather: weatherState.weather,
-                        loading: weatherState.loading,
-                        isMock: weatherState.isMock,
-                        onRefresh: () => unawaited(ref.read(weatherProvider.notifier).refresh()),
-                      );
-                    }),
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final weatherState = ref.watch(weatherProvider);
+                          return _WeatherCard(
+                            weather: weatherState.weather,
+                            loading: weatherState.loading,
+                            isMock: weatherState.isMock,
+                            onRefresh: () => unawaited(
+                              ref.read(weatherProvider.notifier).refresh(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
+                  const SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    sliver: SliverToBoxAdapter(child: _CampusNoticeCard()),
                   ),
                   const SliverPadding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -76,7 +136,12 @@ class CampusPage extends StatelessWidget {
 }
 
 class _WeatherCard extends StatelessWidget {
-  const _WeatherCard({required this.weather, required this.loading, this.isMock = false, this.onRefresh});
+  const _WeatherCard({
+    required this.weather,
+    required this.loading,
+    this.isMock = false,
+    this.onRefresh,
+  });
 
   final WeatherBlock? weather;
   final bool loading;
@@ -104,6 +169,7 @@ class _WeatherCard extends StatelessWidget {
     final tempLow = weather?.data?['temp_low'];
     final condition = weather?.data?['condition'] as String? ?? '--';
     final aqi = weather?.data?['aqi'] as int? ?? 0;
+    final iconCode = weather?.data?['icon'] as String?;
     final updatedAt = weather?.cachedAt;
     final updateTime = updatedAt != null
         ? _formatTime(DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000))
@@ -111,11 +177,11 @@ class _WeatherCard extends StatelessWidget {
     final conditionLine = [
       condition,
       if (tempLow != null && tempHigh != null)
-        '${tempLow.toInt()}°/${tempHigh.toInt()}°',
+        '${_formatTemp(tempLow)}/${_formatTemp(tempHigh)}',
     ].join(' · ');
     final metaLine = [
       '武汉大学',
-      if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
+      if (feelsLike != null) '体感 ${_formatTemp(feelsLike)}',
       if (isMock) '待更新' else if (updateTime != null) '更新于 $updateTime',
     ].join(' · ');
 
@@ -128,13 +194,24 @@ class _WeatherCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.wb_sunny, size: 48, color: Colors.orange.shade300),
+              Icon(
+                _weatherIcon(iconCode),
+                size: 48,
+                color: _weatherIconColor(iconCode),
+              ),
               const SizedBox(width: 14),
-              Text(
-                temp != null ? '${temp.toInt()}°' : '--°',
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: colors.onSurface,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 76),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _formatTemp(temp),
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colors.onSurface,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -188,7 +265,10 @@ class _WeatherCard extends StatelessWidget {
               // AQI compact card
               if (aqi > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.onSurface.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(14),
@@ -234,26 +314,35 @@ class _WeatherCard extends StatelessWidget {
                 itemCount: (weather!.data!['hourly_forecast'] as List).length,
                 separatorBuilder: (_, _) => const SizedBox(width: 2),
                 itemBuilder: (context, index) {
-                  final h = (weather!.data!['hourly_forecast'] as List)[index] as Map<String, dynamic>;
+                  final h =
+                      (weather!.data!['hourly_forecast'] as List)[index]
+                          as Map<String, dynamic>;
                   final hTemp = h['temp'];
+                  final hIconCode = h['icon'] as String?;
                   final isNow = index == 0;
                   return Container(
                     width: 58,
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     decoration: BoxDecoration(
-                      color: isNow ? colors.primary.withValues(alpha: 0.10) : null,
+                      color: isNow
+                          ? colors.primary.withValues(alpha: 0.10)
+                          : null,
                       borderRadius: BorderRadius.circular(10),
                       border: isNow
-                          ? Border.all(color: colors.primary.withValues(alpha: 0.2))
+                          ? Border.all(
+                              color: colors.primary.withValues(alpha: 0.2),
+                            )
                           : null,
                     ),
                     child: Column(
                       children: [
                         Text(
-                          isNow ? '现在' : _formatHour(h['time'] as String?),
+                          isNow ? '现在' : _formatHour(h),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isNow
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             fontSize: 11,
                             color: isNow
                                 ? colors.primary
@@ -261,10 +350,14 @@ class _WeatherCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Icon(Icons.wb_sunny, size: 20, color: Colors.orange.shade300),
+                        Icon(
+                          _weatherIcon(hIconCode),
+                          size: 20,
+                          color: _weatherIconColor(hIconCode),
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          hTemp != null ? '${hTemp.toInt()}°' : '--',
+                          _formatTemp(hTemp, fallback: '--'),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -278,36 +371,20 @@ class _WeatherCard extends StatelessWidget {
                 },
               ),
             ),
-
-          const SizedBox(height: 16),
-          _ReminderTile(
-            icon: Icons.school,
-            iconColor: Colors.indigo.shade300,
-            text: '下午没课，试试一节「古代汉语」？',
-            onTap: () => _showInteraction(context, '蹭课推荐'),
-          ),
-          const SizedBox(height: 8),
-          _ReminderTile(
-            icon: Icons.newspaper,
-            iconColor: Colors.blue.shade400,
-            text: '校园新闻：五一调休通知新鲜出炉',
-            onTap: () => _showInteraction(context, '校园新闻'),
-          ),
-          const SizedBox(height: 8),
-          _ReminderTile(
-            icon: Icons.local_library,
-            iconColor: Colors.teal.shade300,
-            text: '图书馆：《罪与罚》借阅将在三天后到期',
-            onTap: () => _showInteraction(context, '借阅详情'),
-          ),
         ],
       ),
     );
   }
 
-  String _formatHour(String? timeStr) {
-    if (timeStr == null || timeStr.length < 16) return '--';
-    return timeStr.substring(11, 16);
+  String _formatHour(Map<String, dynamic> hour) {
+    final timeText = hour['time_text'];
+    if (timeText is String && timeText.isNotEmpty) return timeText;
+    final timeStr = hour['time'] as String?;
+    if (timeStr == null || timeStr.isEmpty) return '--';
+    final parsed = DateTime.tryParse(timeStr);
+    if (parsed != null) return _formatClock(parsed.toLocal());
+    if (timeStr.length >= 16) return timeStr.substring(11, 16);
+    return '--';
   }
 
   Color _aqiColor(int aqi) {
@@ -333,6 +410,53 @@ class _WeatherCard extends StatelessWidget {
     }
     return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
+}
+
+class _CampusNoticeCard extends StatelessWidget {
+  const _CampusNoticeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    const notices = [
+      _NoticeItem(
+        icon: Icons.school,
+        iconColor: Colors.indigo,
+        text: '下午没课，试试一节「古代汉语」？',
+        action: '蹭课推荐',
+      ),
+      _NoticeItem(
+        icon: Icons.newspaper,
+        iconColor: Colors.blue,
+        text: '校园新闻：五一调休通知新鲜出炉',
+        action: '校园新闻',
+      ),
+      _NoticeItem(
+        icon: Icons.local_library,
+        iconColor: Colors.teal,
+        text: '图书馆：《罪与罚》借阅将在三天后到期',
+        action: '借阅详情',
+      ),
+    ];
+
+    if (notices.isEmpty) return const SizedBox.shrink();
+
+    return _CampusGlassCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          for (var i = 0; i < notices.length; i++) ...[
+            _ReminderTile(
+              icon: notices[i].icon,
+              iconColor: notices[i].iconColor,
+              text: notices[i].text,
+              onTap: () => _showInteraction(context, notices[i].action),
+            ),
+            if (i != notices.length - 1) const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
 
   void _showInteraction(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -343,6 +467,69 @@ class _WeatherCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NoticeItem {
+  const _NoticeItem({
+    required this.icon,
+    required this.iconColor,
+    required this.text,
+    required this.action,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String text;
+  final String action;
+}
+
+String _formatTemp(Object? value, {String fallback = '--º'}) {
+  final number = _asNum(value);
+  if (number == null) return fallback;
+  return '${number.round()}º';
+}
+
+num? _asNum(Object? value) {
+  if (value is num) return value;
+  if (value is String) return num.tryParse(value);
+  return null;
+}
+
+String _formatClock(DateTime dt) {
+  return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+}
+
+IconData _weatherIcon(String? code) {
+  final id = int.tryParse(code ?? '');
+  if (id == null) return Icons.wb_sunny;
+  if (id >= 200 && id < 300) return Icons.air;
+  if (id >= 300 && id < 400) return Icons.water_drop;
+  if (id >= 400 && id < 500) return Icons.ac_unit;
+  if (id >= 500 && id < 600) return Icons.blur_on;
+  if (id == 900) return Icons.local_fire_department;
+  if (id == 901) return Icons.ac_unit;
+  if (id == 100 || id == 150) return Icons.wb_sunny;
+  if (id == 104 || id == 154) return Icons.cloud;
+  if ((id >= 101 && id <= 103) || (id >= 151 && id <= 153)) {
+    return Icons.wb_cloudy;
+  }
+  return Icons.wb_sunny;
+}
+
+Color _weatherIconColor(String? code) {
+  final id = int.tryParse(code ?? '');
+  if (id == null) return Colors.orange.shade300;
+  if (id >= 200 && id < 300) return Colors.blueGrey.shade300;
+  if (id >= 300 && id < 400) return Colors.blue.shade400;
+  if (id >= 400 && id < 500) return Colors.lightBlue.shade200;
+  if (id >= 500 && id < 600) return Colors.grey.shade500;
+  if (id == 900) return Colors.deepOrange.shade300;
+  if (id == 901) return Colors.lightBlue.shade200;
+  if (id == 104 || id == 154) return Colors.blueGrey.shade300;
+  if ((id >= 101 && id <= 103) || (id >= 151 && id <= 153)) {
+    return Colors.amber.shade300;
+  }
+  return Colors.orange.shade300;
 }
 
 /// Compact single-line reminder tile
@@ -378,8 +565,8 @@ class _ReminderTile extends StatelessWidget {
                 child: Text(
                   text,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.75),
-                      ),
+                    color: colors.onSurface.withValues(alpha: 0.75),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -397,6 +584,7 @@ class _ReminderTile extends StatelessWidget {
     );
   }
 }
+
 class _AppGrid extends StatelessWidget {
   const _AppGrid({required this.apps});
 
@@ -432,11 +620,7 @@ class _AppGrid extends StatelessWidget {
                     color: accent.withValues(alpha: 0.13),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    app.icon,
-                    size: 26,
-                    color: accent,
-                  ),
+                  child: Icon(app.icon, size: 26, color: accent),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -485,10 +669,7 @@ class _AppGrid extends StatelessWidget {
 }
 
 class _CampusGlassCard extends StatelessWidget {
-  const _CampusGlassCard({
-    required this.child,
-    this.padding = EdgeInsets.zero,
-  });
+  const _CampusGlassCard({required this.child, this.padding = EdgeInsets.zero});
 
   static final _blurFilter = dart_ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10);
 
@@ -511,10 +692,7 @@ class _CampusGlassCard extends StatelessWidget {
           ),
           child: Material(
             type: MaterialType.transparency,
-            child: Padding(
-              padding: padding,
-              child: child,
-            ),
+            child: Padding(padding: padding, child: child),
           ),
         ),
       ),
