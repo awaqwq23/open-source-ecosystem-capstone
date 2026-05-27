@@ -18,9 +18,6 @@ type QWeatherClient struct {
 }
 
 func NewQWeatherClient(apiKey, apiHost, location string) *QWeatherClient {
-	if apiHost == "" {
-		apiHost = "devapi.qweather.com"
-	}
 	return &QWeatherClient{
 		apiKey:   apiKey,
 		apiHost:  apiHost,

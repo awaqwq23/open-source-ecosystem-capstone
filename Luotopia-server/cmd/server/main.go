@@ -201,7 +201,7 @@ func registerHotUpdateAPI(server *httpserver.Server, cfg config.Config, db *gorm
 }
 
 func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service {
-	if rdb == nil || cfg.Weather.APIKey == "" {
+	if rdb == nil || cfg.Weather.APIKey == "" || cfg.Weather.APIHost == "" {
 		return nil
 	}
 	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.APIHost, cfg.Weather.Location)
@@ -210,7 +210,7 @@ func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service
 
 func registerWeatherRefresh(ctx context.Context, cfg config.Config, weatherSvc *weatherapp.Service, log *slog.Logger) {
 	if weatherSvc == nil {
-		log.Warn("天气功能未启用：缺少 Redis 或 API Key")
+		log.Warn("天气功能未启用：缺少 Redis、API Key 或 API Host")
 		return
 	}
 
