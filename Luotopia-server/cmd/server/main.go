@@ -197,7 +197,7 @@ func registerHotUpdateAPI(server *httpserver.Server, cfg config.Config, db *gorm
 		return
 	}
 	svc := hotapp.NewService(hotinfra.NewGormRepository(db))
-	hottransport.NewHandler(svc, cfg.Auth.AccessTokenSecret, "scripts").Register(server.ClientAPI())
+	hottransport.NewHandler(svc, "scripts").Register(server.ClientAPI())
 }
 
 func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service {

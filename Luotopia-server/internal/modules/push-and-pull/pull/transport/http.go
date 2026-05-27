@@ -54,7 +54,6 @@ func (h Handler) publicPullPost(c *gin.Context) {
 	}
 	req.Scopes = publicScopes(req.Scopes)
 	result := h.service.Pull(c.Request.Context(), "", req)
-	result.HotUpdate = nil
 	result.Sync = nil
 	result.Stats = nil
 	c.JSON(http.StatusOK, result)
@@ -62,12 +61,12 @@ func (h Handler) publicPullPost(c *gin.Context) {
 
 func publicScopes(scopes []string) []string {
 	if len(scopes) == 0 {
-		return []string{"weather", "notification"}
+		return []string{"weather", "notification", "hot_update"}
 	}
 	allowed := make([]string, 0, len(scopes))
 	for _, scope := range scopes {
 		switch scope {
-		case "weather", "notification":
+		case "weather", "notification", "hot_update":
 			allowed = append(allowed, scope)
 		}
 	}

@@ -2,33 +2,25 @@ package transport
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
-	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 )
 
 type Handler struct {
-	service        *app.Service
-	authMiddleware gin.HandlerFunc
-	storageDir     string
+	service    *app.Service
+	storageDir string
 }
 
-func NewHandler(service *app.Service, tokenSecret string, storageDir string) Handler {
-	return Handler{
-		service:        service,
-		authMiddleware: httpserver.AuthMiddleware(tokenSecret),
-		storageDir:     storageDir,
-	}
+func NewHandler(service *app.Service, storageDir string) Handler {
+	return Handler{service: service, storageDir: storageDir}
 }
 
 func (h Handler) Register(router gin.IRouter) {
 	hu := router.Group("/hot-update/scripts")
-	hu.Use(h.authMiddleware)
 	hu.GET("", h.listScripts)
 	hu.GET("/:name/content", h.downloadContent)
 }
@@ -117,9 +109,3 @@ func itoa(n int) string {
 	return string(buf[i:])
 }
 
-func writeError(c *gin.Context, status int, code string, message string) {
-	c.JSON(status, gin.H{"error": gin.H{"code": code, "message": message}})
-}
-
-var _ = writeError
-var _ = io.Discard
