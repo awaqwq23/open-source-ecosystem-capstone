@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
@@ -109,9 +108,6 @@ class CampusPage extends StatelessWidget {
                             weather: weatherState.weather,
                             loading: weatherState.loading,
                             isMock: weatherState.isMock,
-                            onRefresh: () => unawaited(
-                              ref.read(weatherProvider.notifier).refresh(),
-                            ),
                           );
                         },
                       ),
@@ -140,13 +136,11 @@ class _WeatherCard extends StatelessWidget {
     required this.weather,
     required this.loading,
     this.isMock = false,
-    this.onRefresh,
   });
 
   final WeatherBlock? weather;
   final bool loading;
   final bool isMock;
-  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -170,20 +164,12 @@ class _WeatherCard extends StatelessWidget {
     final condition = weather?.data?['condition'] as String? ?? '--';
     final aqi = weather?.data?['aqi'] as int? ?? 0;
     final iconCode = weather?.data?['icon'] as String?;
-    final updatedAt = weather?.cachedAt;
-    final updateTime = updatedAt != null
-        ? _formatTime(DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000))
-        : null;
-    final conditionLine = [
-      condition,
-      if (tempLow != null && tempHigh != null)
-        '${_formatTemp(tempLow)}/${_formatTemp(tempHigh)}',
-    ].join(' · ');
+    final conditionLine = '武汉大学·$condition';
     final metaLine = [
-      '武汉大学',
-      if (feelsLike != null) '体感 ${_formatTemp(feelsLike)}',
-      if (isMock) '待更新' else if (updateTime != null) '更新于 $updateTime',
-    ].join(' · ');
+      '${_formatTemp(tempLow)}/${_formatTemp(tempHigh)}',
+      '体感${_formatTemp(feelsLike)}',
+      if (isMock) '待更新',
+    ].join('·');
 
     return _CampusGlassCard(
       padding: const EdgeInsets.all(20),
@@ -230,33 +216,16 @@ class _WeatherCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            metaLine,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: isMock
-                                  ? Colors.orange.shade400
-                                  : colors.onSurface.withValues(alpha: 0.55),
-                              fontWeight: isMock ? FontWeight.w600 : null,
-                            ),
-                          ),
-                        ),
-                        if (onRefresh != null) ...[
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: onRefresh,
-                            child: Icon(
-                              Icons.refresh,
-                              size: 15,
-                              color: colors.onSurface.withValues(alpha: 0.35),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      metaLine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isMock
+                            ? Colors.orange.shade400
+                            : colors.onSurface.withValues(alpha: 0.55),
+                        fontWeight: isMock ? FontWeight.w600 : null,
+                      ),
                     ),
                   ],
                 ),
@@ -278,7 +247,7 @@ class _WeatherCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.air, size: 16, color: _aqiColor(aqi)),
+                          Icon(_aqiIcon(aqi), size: 16, color: _aqiColor(aqi)),
                           const SizedBox(width: 4),
                           Text(
                             _aqiLabel(aqi),
@@ -319,34 +288,21 @@ class _WeatherCard extends StatelessWidget {
                           as Map<String, dynamic>;
                   final hTemp = h['temp'];
                   final hIconCode = h['icon'] as String?;
-                  final isNow = index == 0;
                   return Container(
                     width: 58,
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     decoration: BoxDecoration(
-                      color: isNow
-                          ? colors.primary.withValues(alpha: 0.10)
-                          : null,
                       borderRadius: BorderRadius.circular(10),
-                      border: isNow
-                          ? Border.all(
-                              color: colors.primary.withValues(alpha: 0.2),
-                            )
-                          : null,
                     ),
                     child: Column(
                       children: [
                         Text(
-                          isNow ? '现在' : _formatHour(h),
+                          _formatHour(h),
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: isNow
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                            fontWeight: FontWeight.w500,
                             fontSize: 11,
-                            color: isNow
-                                ? colors.primary
-                                : colors.onSurface.withValues(alpha: 0.7),
+                            color: colors.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -398,12 +354,12 @@ class _WeatherCard extends StatelessWidget {
     return '重度';
   }
 
-  String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-      return '今天 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    }
-    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  IconData _aqiIcon(int aqi) {
+    if (aqi <= 50) return Icons.eco;
+    if (aqi <= 100) return Icons.air;
+    if (aqi <= 150) return Icons.warning_amber;
+    if (aqi <= 200) return Icons.error_outline;
+    return Icons.dangerous_outlined;
   }
 }
 
