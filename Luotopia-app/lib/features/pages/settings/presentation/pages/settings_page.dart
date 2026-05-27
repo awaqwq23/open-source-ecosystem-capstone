@@ -526,6 +526,7 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: _settingsSectionSpacing),
         _SettingsLinkCard(
           children: state.loading && state.items.isEmpty
               ? const [
