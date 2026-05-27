@@ -204,7 +204,7 @@ func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service
 	if rdb == nil || cfg.Weather.APIKey == "" {
 		return nil
 	}
-	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.Location)
+	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.APIHost, cfg.Weather.Location)
 	return weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
 }
 

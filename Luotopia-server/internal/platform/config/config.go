@@ -25,6 +25,7 @@ type Config struct {
 
 type WeatherConfig struct {
 	APIKey     string
+	APIHost    string
 	Location   string
 	CacheTTL   time.Duration
 }
@@ -101,6 +102,7 @@ func Load() Config {
 		Admin: AdminConfig{UserIDs: parseCommaList(declaredEnv("LUOTOPIA_ADMIN_USER_IDS"))},
 		Weather: WeatherConfig{
 			APIKey:     declaredEnv("LUOTOPIA_WEATHER_API_KEY"),
+			APIHost:    declaredEnv("LUOTOPIA_WEATHER_API_HOST"),
 			Location:   declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
 			CacheTTL:   requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
 		},
@@ -123,15 +125,13 @@ func Load() Config {
 }
 
 func loadDotEnv() {
-	configErr := godotenv.Load("configs/.env")
-	if configErr == nil {
+	if err := godotenv.Load("configs/.env"); err == nil {
 		return
 	}
-	rootErr := godotenv.Load(".env")
-	if rootErr == nil {
+	if err := godotenv.Load(".env"); err == nil {
 		return
 	}
-	panic(fmt.Sprintf("无法加载 .env 配置：configs/.env: %v; .env: %v", configErr, rootErr))
+	panic("无法加载 .env 配置")
 }
 
 func declaredEnv(key string) string {

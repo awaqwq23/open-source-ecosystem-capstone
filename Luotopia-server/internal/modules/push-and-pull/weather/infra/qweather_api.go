@@ -12,13 +12,18 @@ import (
 
 type QWeatherClient struct {
 	apiKey   string
+	apiHost  string
 	location string
 	client   *http.Client
 }
 
-func NewQWeatherClient(apiKey, location string) *QWeatherClient {
+func NewQWeatherClient(apiKey, apiHost, location string) *QWeatherClient {
+	if apiHost == "" {
+		apiHost = "devapi.qweather.com"
+	}
 	return &QWeatherClient{
 		apiKey:   apiKey,
+		apiHost:  apiHost,
 		location: location,
 		client:   &http.Client{Timeout: 10 * time.Second},
 	}
@@ -68,7 +73,7 @@ type qweatherAQIResponse struct {
 
 func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	// Fetch current weather
-	nowUrl := fmt.Sprintf("https://devapi.qweather.com/v7/weather/now?location=%s&key=%s", c.location, c.apiKey)
+	nowUrl := fmt.Sprintf("https://%s/v7/weather/now?location=%s&key=%s", c.apiHost, c.location, c.apiKey)
 	nowData, err := c.fetchJSON(nowUrl)
 	if err != nil {
 		return nil, fmt.Errorf("qweather now: %w", err)
@@ -82,7 +87,7 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	}
 
 	// Fetch 24h forecast
-	fcUrl := fmt.Sprintf("https://devapi.qweather.com/v7/weather/24h?location=%s&key=%s", c.location, c.apiKey)
+	fcUrl := fmt.Sprintf("https://%s/v7/weather/24h?location=%s&key=%s", c.apiHost, c.location, c.apiKey)
 	fcData, err := c.fetchJSON(fcUrl)
 	if err != nil {
 		return nil, fmt.Errorf("qweather 24h: %w", err)
@@ -96,7 +101,7 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	}
 
 	// Fetch 3d forecast for high/low temperature.
-	dailyUrl := fmt.Sprintf("https://devapi.qweather.com/v7/weather/3d?location=%s&key=%s", c.location, c.apiKey)
+	dailyUrl := fmt.Sprintf("https://%s/v7/weather/3d?location=%s&key=%s", c.apiHost, c.location, c.apiKey)
 	dailyData, err := c.fetchJSON(dailyUrl)
 	if err != nil {
 		return nil, fmt.Errorf("qweather 3d: %w", err)
@@ -110,7 +115,7 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 	}
 
 	// Fetch AQI
-	aqiUrl := fmt.Sprintf("https://devapi.qweather.com/v7/air/now?location=%s&key=%s", c.location, c.apiKey)
+	aqiUrl := fmt.Sprintf("https://%s/v7/air/now?location=%s&key=%s", c.apiHost, c.location, c.apiKey)
 	aqiData, err := c.fetchJSON(aqiUrl)
 	aqi := 0
 	if err == nil {
