@@ -434,10 +434,10 @@ class _NoticeItem {
   final String action;
 }
 
-String _formatTemp(Object? value, {String fallback = '--º'}) {
+String _formatTemp(Object? value, {String fallback = '--°'}) {
   final number = _asNum(value);
   if (number == null) return fallback;
-  return '${number.round()}º';
+  return '${number.round()}°';
 }
 
 num? _asNum(Object? value) {
