@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/domain"
@@ -30,16 +31,17 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Create(ctx context.Context, title, content string, priority domain.Priority) (domain.Notification, error) {
+func (s *Service) Create(ctx context.Context, title, content, icon string, displayOrder int) (domain.Notification, error) {
 	now := time.Now()
 	n := domain.Notification{
-		ID:        now.Format("20060102150405") + generateSuffix(),
-		Title:     title,
-		Content:   content,
-		Priority:  priority,
-		Status:    domain.StatusDraft,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:           now.Format("20060102150405") + generateSuffix(),
+		Title:        title,
+		Content:      content,
+		Icon:         normalizeIcon(icon),
+		DisplayOrder: displayOrder,
+		Status:       domain.StatusDraft,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	return n, s.repo.Create(ctx, n)
 }
@@ -50,6 +52,19 @@ func (s *Service) List(ctx context.Context, status domain.Status, offset, limit 
 
 func (s *Service) GetByID(ctx context.Context, id string) (domain.Notification, error) {
 	return s.repo.GetByID(ctx, id)
+}
+
+func (s *Service) Update(ctx context.Context, id, title, content, icon string, displayOrder int) (domain.Notification, error) {
+	n, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return domain.Notification{}, err
+	}
+	n.Title = title
+	n.Content = content
+	n.Icon = normalizeIcon(icon)
+	n.DisplayOrder = displayOrder
+	n.UpdatedAt = time.Now()
+	return n, s.repo.Update(ctx, n)
 }
 
 func (s *Service) Publish(ctx context.Context, id string) (domain.Notification, error) {
@@ -76,7 +91,7 @@ type LatestInfo struct {
 	HasNew      bool       `json:"has_new"`
 	Count       int        `json:"count"`
 	Title       string     `json:"title"`
-	Priority    string     `json:"priority"`
+	Icon        string     `json:"icon"`
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 }
 
@@ -96,10 +111,18 @@ func (s *Service) GetLatestInfo(ctx context.Context, clientLatestID string) Late
 	}
 	if err == nil {
 		info.Title = latest.Title
-		info.Priority = string(latest.Priority)
+		info.Icon = latest.Icon
 		info.PublishedAt = latest.PublishedAt
 	}
 	return info
+}
+
+func normalizeIcon(icon string) string {
+	icon = strings.TrimSpace(icon)
+	if icon == "" {
+		return "campaign"
+	}
+	return icon
 }
 
 func generateSuffix() string {

@@ -49,21 +49,21 @@ class NotificationSummary {
   const NotificationSummary({
     required this.id,
     required this.title,
-    this.priority = '',
-    this.createdAt,
+    this.content = '',
+    this.icon = '',
   });
 
   final String id;
   final String title;
-  final String priority;
-  final DateTime? createdAt;
+  final String content;
+  final String icon;
 
   factory NotificationSummary.fromJson(Map<String, dynamic> json) {
     return NotificationSummary(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',
-      priority: json['priority'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      content: json['content'] as String? ?? '',
+      icon: json['icon'] as String? ?? '',
     );
   }
 }
@@ -72,25 +72,26 @@ final notificationApiProvider = Provider<NotificationAPI>((ref) {
   return NotificationAPI(apiClient: ref.read(apiClientProvider));
 });
 
-final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
-  final api = ref.read(notificationApiProvider);
-  final stateStore = ref.read(pullStateStoreProvider);
-  return NotificationNotifier(
-    api: api,
-    pullService: ref.read(unifiedPullServiceProvider),
-    stateStore: stateStore,
-  );
-});
+final notificationProvider =
+    StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
+      final api = ref.read(notificationApiProvider);
+      final stateStore = ref.read(pullStateStoreProvider);
+      return NotificationNotifier(
+        api: api,
+        pullService: ref.read(unifiedPullServiceProvider),
+        stateStore: stateStore,
+      );
+    });
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
   NotificationNotifier({
     required NotificationAPI api,
     required UnifiedPullService pullService,
     required PullStateStore stateStore,
-  })  : _api = api,
-        _pullService = pullService,
-        _stateStore = stateStore,
-        super(_stateFromBlock(stateStore.readNotification()));
+  }) : _api = api,
+       _pullService = pullService,
+       _stateStore = stateStore,
+       super(_stateFromBlock(stateStore.readNotification()));
 
   final NotificationAPI _api;
   final UnifiedPullService _pullService;
@@ -98,7 +99,9 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   Future<void> checkLatest() async {
     try {
-      final result = await _pullService.pullPublicNotification(trigger: 'manual');
+      final result = await _pullService.pullPublicNotification(
+        trigger: 'manual',
+      );
       if (result.isSuccess) {
         state = _stateFromBlock(
           result.response?.notification ?? _stateStore.readNotification(),
@@ -116,10 +119,10 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       final rawItems = data['items'];
       final items = rawItems is List
           ? rawItems
-              .whereType<Map<String, dynamic>>()
-              .map(NotificationSummary.fromJson)
-              .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
-              .toList(growable: false)
+                .whereType<Map<String, dynamic>>()
+                .map(NotificationSummary.fromJson)
+                .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
+                .toList(growable: false)
           : const <NotificationSummary>[];
       state = state.copyWith(
         loading: false,

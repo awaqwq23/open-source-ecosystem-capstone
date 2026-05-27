@@ -35,14 +35,21 @@ func (h Handler) listPublished(c *gin.Context) {
 		return
 	}
 	type item struct {
-		ID        string `json:"id"`
-		Title     string `json:"title"`
-		Priority  string `json:"priority"`
-		CreatedAt string `json:"created_at"`
+		ID           string `json:"id"`
+		Title        string `json:"title"`
+		Content      string `json:"content"`
+		Icon         string `json:"icon"`
+		DisplayOrder int    `json:"display_order"`
 	}
 	result := make([]item, len(items))
 	for i, n := range items {
-		result[i] = item{ID: n.ID, Title: n.Title, Priority: string(n.Priority), CreatedAt: n.CreatedAt.Format("2006-01-02T15:04:05Z07:00")}
+		result[i] = item{
+			ID:           n.ID,
+			Title:        n.Title,
+			Content:      n.Content,
+			Icon:         n.Icon,
+			DisplayOrder: n.DisplayOrder,
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"total": total, "items": result})
 }
@@ -59,13 +66,12 @@ func (h Handler) latest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"latest_id":  n.ID,
-		"has_new":    true,
-		"count":      info.Count,
-		"title":      n.Title,
-		"content":    n.Content,
-		"priority":   n.Priority,
-		"created_at": n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"latest_id": n.ID,
+		"has_new":   true,
+		"count":     info.Count,
+		"title":     n.Title,
+		"content":   n.Content,
+		"icon":      n.Icon,
 	})
 }
 
@@ -81,13 +87,14 @@ func (h Handler) getByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"id":         n.ID,
-		"title":      n.Title,
-		"content":    n.Content,
-		"priority":   n.Priority,
-		"status":     n.Status,
-		"created_at": n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		"updated_at": n.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"id":            n.ID,
+		"title":         n.Title,
+		"content":       n.Content,
+		"icon":          n.Icon,
+		"display_order": n.DisplayOrder,
+		"status":        n.Status,
+		"created_at":    n.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"updated_at":    n.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
 }
 

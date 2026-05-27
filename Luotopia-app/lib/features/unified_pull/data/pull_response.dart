@@ -20,7 +20,9 @@ class PullResponse {
           ? WeatherBlock.fromJson(json['weather'] as Map<String, dynamic>)
           : null,
       notification: json['notification'] != null
-          ? NotificationBlock.fromJson(json['notification'] as Map<String, dynamic>)
+          ? NotificationBlock.fromJson(
+              json['notification'] as Map<String, dynamic>,
+            )
           : null,
       hotUpdate: json['hot_update'] != null
           ? HotUpdateBlock.fromJson(json['hot_update'] as Map<String, dynamic>)
@@ -54,7 +56,7 @@ class NotificationBlock {
   final bool hasNew;
   final int count;
   final String title;
-  final String priority;
+  final String icon;
   final DateTime? publishedAt;
 
   const NotificationBlock({
@@ -63,7 +65,7 @@ class NotificationBlock {
     required this.hasNew,
     required this.count,
     this.title = '',
-    this.priority = '',
+    this.icon = '',
     this.publishedAt,
   });
 
@@ -74,7 +76,7 @@ class NotificationBlock {
       hasNew: json['has_new'] as bool? ?? false,
       count: json['count'] as int? ?? 0,
       title: json['title'] as String? ?? '',
-      priority: json['priority'] as String? ?? '',
+      icon: json['icon'] as String? ?? '',
       publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
     );
   }
@@ -86,7 +88,7 @@ class NotificationBlock {
       'has_new': hasNew,
       'count': count,
       'title': title,
-      'priority': priority,
+      'icon': icon,
       'published_at': publishedAt?.toIso8601String(),
     };
   }

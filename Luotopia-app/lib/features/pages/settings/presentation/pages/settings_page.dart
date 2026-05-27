@@ -76,14 +76,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     prominent: true,
                     showTrailing: true,
                     onTap: luotopiaAuth.isAuthenticated
-                        ? () => context.push(AppRoutePaths.settingsLuotopiaAccount)
-                        : () => context.push(AppRoutePaths.settingsLuotopiaLogin),
+                        ? () => context.push(
+                            AppRoutePaths.settingsLuotopiaAccount,
+                          )
+                        : () =>
+                              context.push(AppRoutePaths.settingsLuotopiaLogin),
                   ),
                   _AccountHubTile(
                     icon: AppIcons.web,
                     title: l10n.settingsAccountWhuTitle,
                     subtitle: whuAuth.isAuthenticated
-                        ? (whuAuth.account?.displayName ?? l10n.settingsAccountWhuLoggedIn)
+                        ? (whuAuth.account?.displayName ??
+                              l10n.settingsAccountWhuLoggedIn)
                         : l10n.settingsAccountWhuNotLoggedIn,
                     prominent: true,
                     showTrailing: true,
@@ -92,7 +96,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
-            // ── 服务通知 ──
             const _NotificationSection(),
             const SizedBox(height: _settingsSectionSpacing),
             _SettingsLinkCard(
@@ -173,7 +176,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
   }
-
 }
 
 class _SettingsFadingTopBar extends StatelessWidget {
@@ -197,10 +199,7 @@ class _SettingsFadingTopBar extends StatelessWidget {
             .clamp(0.0, 1.0)
             .toDouble();
         return IgnorePointer(
-          child: Opacity(
-            opacity: opacity,
-            child: child,
-          ),
+          child: Opacity(opacity: opacity, child: child),
         );
       },
       child: buildTabAppBar(title: title),
@@ -209,10 +208,7 @@ class _SettingsFadingTopBar extends StatelessWidget {
 }
 
 class _SettingsHero extends StatelessWidget {
-  const _SettingsHero({
-    required this.scrollController,
-    required this.child,
-  });
+  const _SettingsHero({required this.scrollController, required this.child});
 
   final ScrollController scrollController;
   final Widget child;
@@ -282,9 +278,7 @@ class _SettingsExpandableHeroImage extends StatelessWidget {
 }
 
 class _AccountHubCard extends StatelessWidget {
-  const _AccountHubCard({
-    required this.children,
-  });
+  const _AccountHubCard({required this.children});
 
   final List<Widget> children;
 
@@ -338,19 +332,17 @@ class _AccountHubTile extends StatelessWidget {
     final theme = Theme.of(context);
     final glyphSize = prominent ? 28.0 : 24.0;
     final verticalPadding = prominent ? 14.0 : 12.0;
-    final titleStyle = (prominent
-            ? theme.textTheme.titleMedium
-            : theme.textTheme.titleSmall)
-        ?.copyWith(
-      color: prominent ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
-      fontWeight: prominent ? FontWeight.w800 : FontWeight.w600,
-    );
-    final subtitleStyle = (prominent
-            ? theme.textTheme.bodyMedium
-            : theme.textTheme.bodySmall)
-        ?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
+    final titleStyle =
+        (prominent ? theme.textTheme.titleMedium : theme.textTheme.titleSmall)
+            ?.copyWith(
+              color: prominent
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant,
+              fontWeight: prominent ? FontWeight.w800 : FontWeight.w600,
+            );
+    final subtitleStyle =
+        (prominent ? theme.textTheme.bodyMedium : theme.textTheme.bodySmall)
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
     return InkWell(
       onTap: onTap,
@@ -403,9 +395,7 @@ class _AccountHubTile extends StatelessWidget {
 }
 
 class _SettingsLinkCard extends StatelessWidget {
-  const _SettingsLinkCard({
-    required this.children,
-  });
+  const _SettingsLinkCard({required this.children});
 
   final List<Widget> children;
 
@@ -514,7 +504,8 @@ class _NotificationSection extends ConsumerStatefulWidget {
   const _NotificationSection();
 
   @override
-  ConsumerState<_NotificationSection> createState() => _NotificationSectionState();
+  ConsumerState<_NotificationSection> createState() =>
+      _NotificationSectionState();
 }
 
 class _NotificationSectionState extends ConsumerState<_NotificationSection> {
@@ -527,8 +518,6 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(notificationProvider);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     if (state.items.isEmpty && !state.loading) {
       return const SizedBox.shrink();
@@ -537,50 +526,30 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-          child: Row(
-            children: [
-              Icon(Icons.campaign_outlined, size: 16, color: colors.onSurface.withValues(alpha: 0.5)),
-              const SizedBox(width: 6),
-              Text(
-                '服务通知',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _SettingsLinkCard(
-            children: state.loading && state.items.isEmpty
-                ? const [
-                    Padding(
-                      padding: EdgeInsets.all(18),
-                      child: Center(
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+        _SettingsLinkCard(
+          children: state.loading && state.items.isEmpty
+              ? const [
+                  Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                  ]
-                : [
-                    for (final item in state.items)
-                      _SettingsLinkTile(
-                        title: item.title,
-                        subtitle: _notificationSubtitle(item),
-                        icon: item.priority == 'important'
-                            ? Icons.priority_high_rounded
-                            : Icons.campaign_outlined,
-                        onTap: () => unawaited(_showNotificationDetail(context, item)),
-                      ),
-                  ],
-          ),
+                  ),
+                ]
+              : [
+                  for (final item in state.items)
+                    _SettingsLinkTile(
+                      title: item.title,
+                      subtitle: item.content,
+                      icon: _notificationIcon(item.icon),
+                      onTap: () =>
+                          unawaited(_showNotificationDetail(context, item)),
+                    ),
+                ],
         ),
       ],
     );
@@ -592,11 +561,13 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
   ) async {
     NotificationDetail? detail;
     try {
-      detail = await ref.read(notificationProvider.notifier).loadDetail(item.id);
+      detail = await ref
+          .read(notificationProvider.notifier)
+          .loadDetail(item.id);
     } catch (_) {
       detail = null;
     }
-    if (!mounted) {
+    if (!mounted || !context.mounted) {
       return;
     }
     await showDialog<void>(
@@ -604,7 +575,9 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
       builder: (context) {
         final theme = Theme.of(context);
         return AlertDialog(
-          title: Text(detail?.title.isNotEmpty == true ? detail!.title : item.title),
+          title: Text(
+            detail?.title.isNotEmpty == true ? detail!.title : item.title,
+          ),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: SingleChildScrollView(
@@ -625,20 +598,21 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
     );
   }
 
-  String _notificationSubtitle(NotificationSummary item) {
-    final parts = <String>[];
-    if (item.priority == 'important') {
-      parts.add('重要');
+  IconData _notificationIcon(String icon) {
+    switch (icon) {
+      case 'info':
+        return Icons.info_outline;
+      case 'event':
+        return Icons.event_note_outlined;
+      case 'school':
+        return Icons.school_outlined;
+      case 'warning':
+        return Icons.notification_important_outlined;
+      case 'update':
+        return Icons.system_update_alt_outlined;
+      case 'campaign':
+      default:
+        return Icons.campaign_outlined;
     }
-    if (item.createdAt != null) {
-      parts.add(_formatNotificationTime(item.createdAt!));
-    }
-    return parts.join(' · ');
-  }
-
-  String _formatNotificationTime(DateTime value) {
-    final local = value.toLocal();
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
   }
 }

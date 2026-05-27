@@ -15,7 +15,7 @@ func TestLatestInfoComparesClientLatestID(t *testing.T) {
 		ID:          "notice_2",
 		Title:       "新版通知",
 		Content:     "正文",
-		Priority:    domain.PriorityNormal,
+		Icon:        "campaign",
 		Status:      domain.StatusPublished,
 		PublishedAt: ptrTime(time.Date(2026, 5, 26, 10, 0, 0, 0, time.UTC)),
 		CreatedAt:   time.Date(2026, 5, 26, 9, 0, 0, 0, time.UTC),

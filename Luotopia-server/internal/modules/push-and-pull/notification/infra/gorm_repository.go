@@ -46,7 +46,13 @@ func (r *GormRepository) List(ctx context.Context, status domain.Status, offset,
 		return nil, 0, err
 	}
 	var rows []notificationModel
-	if err := query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+	if err := query.
+		Order("display_order ASC").
+		Order("published_at DESC NULLS LAST").
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	result := make([]domain.Notification, len(rows))
@@ -68,6 +74,7 @@ func (r *GormRepository) GetLatestPublished(ctx context.Context) (domain.Notific
 	var m notificationModel
 	err := r.db.WithContext(ctx).
 		Where("status = ?", "published").
+		Order("published_at DESC NULLS LAST").
 		Order("created_at DESC").
 		First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -85,40 +92,49 @@ func (r *GormRepository) CountPublished(ctx context.Context) (int64, error) {
 }
 
 type notificationModel struct {
-	ID          string     `gorm:"primaryKey;column:id"`
-	Title       string     `gorm:"column:title"`
-	Content     string     `gorm:"column:content"`
-	Priority    string     `gorm:"column:priority"`
-	Status      string     `gorm:"column:status"`
-	PublishedAt *time.Time `gorm:"column:published_at"`
-	CreatedAt   time.Time  `gorm:"column:created_at"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at"`
+	ID           string     `gorm:"primaryKey;column:id"`
+	Title        string     `gorm:"column:title"`
+	Content      string     `gorm:"column:content"`
+	Priority     string     `gorm:"column:priority"`
+	Icon         string     `gorm:"column:icon"`
+	DisplayOrder int        `gorm:"column:display_order"`
+	Status       string     `gorm:"column:status"`
+	PublishedAt  *time.Time `gorm:"column:published_at"`
+	CreatedAt    time.Time  `gorm:"column:created_at"`
+	UpdatedAt    time.Time  `gorm:"column:updated_at"`
 }
 
 func (notificationModel) TableName() string { return "push_notifications" }
 
 func notificationModelFromDomain(n domain.Notification) notificationModel {
 	return notificationModel{
-		ID:          n.ID,
-		Title:       n.Title,
-		Content:     n.Content,
-		Priority:    string(n.Priority),
-		Status:      string(n.Status),
-		PublishedAt: n.PublishedAt,
-		CreatedAt:   n.CreatedAt,
-		UpdatedAt:   n.UpdatedAt,
+		ID:           n.ID,
+		Title:        n.Title,
+		Content:      n.Content,
+		Priority:     "normal",
+		Icon:         n.Icon,
+		DisplayOrder: n.DisplayOrder,
+		Status:       string(n.Status),
+		PublishedAt:  n.PublishedAt,
+		CreatedAt:    n.CreatedAt,
+		UpdatedAt:    n.UpdatedAt,
 	}
 }
 
 func (m notificationModel) toDomain() domain.Notification {
+	icon := m.Icon
+	if icon == "" {
+		icon = "campaign"
+	}
 	return domain.Notification{
-		ID:          m.ID,
-		Title:       m.Title,
-		Content:     m.Content,
-		Priority:    domain.Priority(m.Priority),
-		Status:      domain.Status(m.Status),
-		PublishedAt: m.PublishedAt,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ID:           m.ID,
+		Title:        m.Title,
+		Content:      m.Content,
+		Icon:         icon,
+		DisplayOrder: m.DisplayOrder,
+		Status:       domain.Status(m.Status),
+		PublishedAt:  m.PublishedAt,
+		CreatedAt:    m.CreatedAt,
+		UpdatedAt:    m.UpdatedAt,
 	}
 }

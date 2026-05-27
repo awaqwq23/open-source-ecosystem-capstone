@@ -46,7 +46,7 @@ type NotificationBlock struct {
 	HasNew      bool   `json:"has_new"`
 	Count       int    `json:"count"`
 	Title       string `json:"title,omitempty"`
-	Priority    string `json:"priority,omitempty"`
+	Icon        string `json:"icon,omitempty"`
 	PublishedAt string `json:"published_at,omitempty"`
 }
 

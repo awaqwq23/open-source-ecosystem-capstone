@@ -121,19 +121,25 @@ async function renderNotifications() {
       <form id="notification-form" class="form-grid">
         <div class="form-inline">
           <label>标题<input name="title" required /></label>
-          <label>优先级<select name="priority"><option value="normal">普通</option><option value="important">重要</option></select></label>
+          <label>图标<select name="icon">${notificationIconOptions("campaign")}</select></label>
+          <label>显示顺序<input name="display_order" type="number" value="0" /></label>
         </div>
         <label>正文<textarea name="content"></textarea></label>
         <button class="primary" type="submit">创建草稿</button>
       </form>
     </section>
     <section class="table-panel">
-      ${table(["标题", "状态", "优先级", "发布时间", "操作"], data.items.map((item) => [
-        `<strong>${escapeHtml(item.title)}</strong><pre>${escapeHtml(item.content || "")}</pre>`,
+      ${table(["通知", "状态", "顺序", "发布时间", "操作"], data.items.map((item) => [
+        `<form id="notification-${item.id}" class="compact-form">
+          <label>标题<input name="title" required value="${escapeHtml(item.title)}" /></label>
+          <label>图标<select name="icon">${notificationIconOptions(item.icon || "campaign")}</select></label>
+          <label>正文<textarea name="content">${escapeHtml(item.content || "")}</textarea></label>
+        </form>`,
         badge(item.status),
-        escapeHtml(item.priority || "normal"),
+        `<input form="notification-${item.id}" name="display_order" type="number" value="${Number(item.display_order || 0)}" />`,
         item.published_at ? formatDate(item.published_at) : "未发布",
         actions([
+          button("保存", `updateNotification('${item.id}')`),
           item.status !== "published" ? button("发布", `publishNotification('${item.id}')`) : "",
           button("删除", `deleteNotification('${item.id}')`, "danger"),
         ]),
@@ -148,9 +154,20 @@ async function createNotification(event) {
   const form = new FormData(event.currentTarget);
   await api("/admin/api/v1/notifications", {
     method: "POST",
-    body: JSON.stringify(Object.fromEntries(form.entries())),
+    body: JSON.stringify(notificationPayload(form)),
   });
   showMessage("通知草稿已创建");
+  renderNotifications();
+}
+
+async function updateNotification(id) {
+  const form = document.getElementById(`notification-${id}`);
+  if (!form) return;
+  await api(`/admin/api/v1/notifications/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(notificationPayload(new FormData(form))),
+  });
+  showMessage("通知已保存");
   renderNotifications();
 }
 
@@ -164,6 +181,27 @@ async function deleteNotification(id) {
   await api(`/admin/api/v1/notifications/${id}`, {method: "DELETE"});
   showMessage("通知已删除");
   renderNotifications();
+}
+
+function notificationPayload(form) {
+  return {
+    title: String(form.get("title") || ""),
+    content: String(form.get("content") || ""),
+    icon: String(form.get("icon") || "campaign"),
+    display_order: Number(form.get("display_order") || 0),
+  };
+}
+
+function notificationIconOptions(selected) {
+  const icons = [
+    ["campaign", "公告"],
+    ["info", "信息"],
+    ["event", "日程"],
+    ["school", "校园"],
+    ["warning", "提醒"],
+    ["update", "更新"],
+  ];
+  return icons.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
 }
 
 async function renderWeather() {
@@ -371,6 +409,7 @@ $("login-form").addEventListener("submit", async (event) => {
 });
 
 Object.assign(window, {
+  updateNotification,
   publishNotification,
   deleteNotification,
   refreshWeather,

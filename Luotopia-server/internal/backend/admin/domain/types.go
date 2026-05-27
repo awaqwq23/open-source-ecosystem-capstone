@@ -20,14 +20,15 @@ type HealthStatus struct {
 type WeatherStatus = weatherdomain.WeatherStatus
 
 type Notification struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Content     string     `json:"content"`
-	Priority    string     `json:"priority"`
-	Status      string     `json:"status"`
-	PublishedAt *time.Time `json:"published_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID           string     `json:"id"`
+	Title        string     `json:"title"`
+	Content      string     `json:"content"`
+	Icon         string     `json:"icon"`
+	DisplayOrder int        `json:"display_order"`
+	Status       string     `json:"status"`
+	PublishedAt  *time.Time `json:"published_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type NotificationList struct {
@@ -36,21 +37,30 @@ type NotificationList struct {
 }
 
 type CreateNotificationRequest struct {
-	Title    string `json:"title" binding:"required"`
-	Content  string `json:"content"`
-	Priority string `json:"priority"`
+	Title        string `json:"title" binding:"required"`
+	Content      string `json:"content"`
+	Icon         string `json:"icon"`
+	DisplayOrder int    `json:"display_order"`
+}
+
+type UpdateNotificationRequest struct {
+	Title        string `json:"title" binding:"required"`
+	Content      string `json:"content"`
+	Icon         string `json:"icon"`
+	DisplayOrder int    `json:"display_order"`
 }
 
 func NewNotification(n notidomain.Notification) Notification {
 	return Notification{
-		ID:          n.ID,
-		Title:       n.Title,
-		Content:     n.Content,
-		Priority:    string(n.Priority),
-		Status:      string(n.Status),
-		PublishedAt: n.PublishedAt,
-		CreatedAt:   n.CreatedAt,
-		UpdatedAt:   n.UpdatedAt,
+		ID:           n.ID,
+		Title:        n.Title,
+		Content:      n.Content,
+		Icon:         n.Icon,
+		DisplayOrder: n.DisplayOrder,
+		Status:       string(n.Status),
+		PublishedAt:  n.PublishedAt,
+		CreatedAt:    n.CreatedAt,
+		UpdatedAt:    n.UpdatedAt,
 	}
 }
 

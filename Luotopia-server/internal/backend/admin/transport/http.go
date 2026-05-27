@@ -35,6 +35,7 @@ func (h Handler) Register(router gin.IRouter) {
 	notifications := protected.Group("/notifications")
 	notifications.GET("", h.listNotifications)
 	notifications.POST("", h.createNotification)
+	notifications.PUT("/:id", h.updateNotification)
 	notifications.PUT("/:id/publish", h.publishNotification)
 	notifications.DELETE("/:id", h.deleteNotification)
 
@@ -102,6 +103,25 @@ func (h Handler) createNotification(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, result)
+}
+
+func (h Handler) updateNotification(c *gin.Context) {
+	id := c.Param("id")
+	var req domain.UpdateNotificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+		return
+	}
+	result, err := h.service.UpdateNotification(c.Request.Context(), id, req)
+	if err != nil {
+		if errors.Is(err, app.ErrNotFound) {
+			writeError(c, http.StatusNotFound, "not_found", "通知不存在")
+			return
+		}
+		writeError(c, http.StatusInternalServerError, "internal_error", "更新通知失败")
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 func (h Handler) publishNotification(c *gin.Context) {

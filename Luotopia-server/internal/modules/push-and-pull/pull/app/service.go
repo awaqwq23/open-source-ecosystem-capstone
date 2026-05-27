@@ -59,7 +59,7 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 			HasNew:   info.HasNew,
 			Count:    info.Count,
 			Title:    info.Title,
-			Priority: info.Priority,
+			Icon:     info.Icon,
 		}
 		if info.PublishedAt != nil {
 			resp.Notification.PublishedAt = info.PublishedAt.Format(time.RFC3339)

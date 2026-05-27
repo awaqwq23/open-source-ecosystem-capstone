@@ -71,8 +71,19 @@ func (s *Service) Dashboard(ctx context.Context) domain.Dashboard {
 // Notification management
 
 func (s *Service) CreateNotification(ctx context.Context, req domain.CreateNotificationRequest) (domain.Notification, error) {
-	n, err := s.notifcSvc.Create(ctx, req.Title, req.Content, notidomain.Priority(req.Priority))
+	n, err := s.notifcSvc.Create(ctx, req.Title, req.Content, req.Icon, req.DisplayOrder)
 	if err != nil {
+		return domain.Notification{}, err
+	}
+	return domain.NewNotification(n), nil
+}
+
+func (s *Service) UpdateNotification(ctx context.Context, id string, req domain.UpdateNotificationRequest) (domain.Notification, error) {
+	n, err := s.notifcSvc.Update(ctx, id, req.Title, req.Content, req.Icon, req.DisplayOrder)
+	if err != nil {
+		if errors.Is(err, notiapp.ErrNotFound) {
+			return domain.Notification{}, ErrNotFound
+		}
 		return domain.Notification{}, err
 	}
 	return domain.NewNotification(n), nil
@@ -93,6 +104,9 @@ func (s *Service) ListNotifications(ctx context.Context, status string, offset, 
 func (s *Service) PublishNotification(ctx context.Context, id string) (domain.Notification, error) {
 	n, err := s.notifcSvc.Publish(ctx, id)
 	if err != nil {
+		if errors.Is(err, notiapp.ErrNotFound) {
+			return domain.Notification{}, ErrNotFound
+		}
 		return domain.Notification{}, err
 	}
 	return domain.NewNotification(n), nil
