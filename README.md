@@ -12,38 +12,38 @@
 ```powershell
 cd D:\Github\Luotopia\Luotopia\Luotopia-server
 
-# 日常开发：Docker 只启动依赖服务，本机运行迁移和 API
+# 日常开发：Docker 只启动依赖服务，本机运行迁移和 API；该命令会复用已有 Postgres 数据卷
 docker compose -f docker-compose.dev.yml up -d && go run ./cmd/migrate && go run ./cmd/server
 ```
 
-完整容器化联调：
+完整容器化联调或更新服务镜像：
 
 ```powershell
 cd D:\Github\Luotopia\Luotopia\Luotopia-server
-docker compose -f docker-compose.dev.yml --profile app up --build
+docker compose -f docker-compose.dev.yml --profile app up -d --build
 ```
 
 ```bash
-# 1) 关闭
-  cd /home/projects/Luotopia/Luotopia-server
-  docker compose -f docker-compose.dev.yml --profile app down -v --remove-orphans
-  docker compose -f docker-compose.dev.yml down --remove-orphans
+# 1) 停止服务但保留 Postgres 数据卷
+cd /home/projects/Luotopia/Luotopia-server
+docker compose -f docker-compose.dev.yml --profile app down --remove-orphans
 
-  # 2) 拉取并使用开发态运行（2个Docker + 2个Go服务）
-  cd /home/projects/Luotopia
-  git pull
+# 2) 拉取并使用开发态运行（2个 Docker 依赖 + 本机 Go 服务）
+cd /home/projects/Luotopia
+git pull
 
-  cd Luotopia-server
-  docker compose -f docker-compose.dev.yml up -d postgres redis &&  go run ./cmd/migrate &&  go run ./cmd/server
+cd Luotopia-server
+docker compose -f docker-compose.dev.yml up -d postgres redis && go run ./cmd/migrate && go run ./cmd/server
 
-  # 3) 拉取并使用打包部署态运行（强制关闭旧容器后重建）
-  cd /home/projects/Luotopia
-  git pull
+# 3) 拉取并使用打包部署态运行（重建服务镜像，保留数据库数据）
+cd /home/projects/Luotopia
+git pull
 
-  cd Luotopia-server
-  docker compose -f docker-compose.dev.yml --profile app down -v --remove-orphans
-  docker compose -f docker-compose.dev.yml --profile app up -d --build --force-recreate
+cd Luotopia-server
+docker compose -f docker-compose.dev.yml --profile app up -d --build --force-recreate
 ```
+
+更新服务时不要执行 `docker compose -f docker-compose.dev.yml down -v`、`docker volume rm` 或 `docker system prune --volumes`。Postgres 用户数据保存在 Compose 命名卷 `luotopia-postgres-data` 中，`up -d --build` 会重建应用镜像并保留该数据卷。
 
 ## 开发规约
 

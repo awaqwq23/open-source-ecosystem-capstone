@@ -29,6 +29,8 @@ go test ./...
 docker compose -f docker-compose.dev.yml up -d
 ```
 
+该命令会创建并复用 Compose 命名卷 `luotopia-postgres-data`，Postgres 用户数据会保留在这个数据卷中。
+
 默认启动内容：
 
 - Postgres
@@ -41,11 +43,13 @@ go run ./cmd/migrate
 go run ./cmd/server
 ```
 
-需要完整容器化联调时启用 `app` profile：
+需要完整容器化联调或更新服务镜像时启用 `app` profile：
 
 ```powershell
-docker compose -f docker-compose.dev.yml --profile app up --build
+docker compose -f docker-compose.dev.yml --profile app up -d --build
 ```
+
+这个更新方式会重建 `server` 和 `migrate` 镜像并复用已有 Postgres 数据卷，能够在更新服务端代码和执行迁移的同时保留账号、会话、同步数据等数据库内容。
 
 服务启动后访问：
 
@@ -53,11 +57,13 @@ docker compose -f docker-compose.dev.yml --profile app up --build
 http://localhost:8080/healthz
 ```
 
-如需清空本地开发数据库：
+危险操作：仅在明确要清空本地开发数据库时使用：
 
 ```powershell
 docker compose -f docker-compose.dev.yml down -v
 ```
+
+不要把 `down -v` 用作日常停止、重启或更新命令。`-v` 会删除 `luotopia-postgres-data`，其中包含 `auth_users`、`auth_identities`、`auth_sessions`、`sync_changes` 等用户数据表的实际数据。日常停止服务请使用 `docker compose -f docker-compose.dev.yml stop`，再次启动或更新请使用上面的 `up -d` 或 `up -d --build`。
 
 ## 本地配置
 
