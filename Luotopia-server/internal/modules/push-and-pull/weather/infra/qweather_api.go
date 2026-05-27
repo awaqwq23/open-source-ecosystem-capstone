@@ -135,13 +135,8 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 
 	hourly := make([]domain.HourlyForecast, 0, len(fc.Hourly))
 	for _, h := range fc.Hourly {
-		t, err := parseQWeatherTime(h.Time)
-		if err != nil {
-			t = time.Time{}
-		}
 		hourly = append(hourly, domain.HourlyForecast{
-			Time:      t,
-			TimeText:  formatHourText(t, h.Time),
+			FxTime:    h.Time,
 			Temp:      parseFloat(h.Temp),
 			Condition: h.Text,
 			Icon:      h.Icon,
@@ -206,14 +201,4 @@ func parseQWeatherTime(s string) (time.Time, error) {
 		return t, nil
 	}
 	return time.Parse(time.RFC3339, s)
-}
-
-func formatHourText(t time.Time, raw string) string {
-	if !t.IsZero() {
-		return t.Format("15:04")
-	}
-	if len(raw) >= 16 {
-		return raw[11:16]
-	}
-	return ""
 }

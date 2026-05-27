@@ -377,14 +377,9 @@ class _WeatherCard extends StatelessWidget {
   }
 
   String _formatHour(Map<String, dynamic> hour) {
-    final timeText = hour['time_text'];
-    if (timeText is String && timeText.isNotEmpty) return timeText;
-    final timeStr = hour['time'] as String?;
-    if (timeStr == null || timeStr.isEmpty) return '--';
-    final parsed = DateTime.tryParse(timeStr);
-    if (parsed != null) return _formatClock(parsed.toLocal());
-    if (timeStr.length >= 16) return timeStr.substring(11, 16);
-    return '--';
+    final fxTime = hour['fx_time'];
+    if (fxTime is! String || fxTime.isEmpty) return '--';
+    return _formatQWeatherHour(fxTime);
   }
 
   Color _aqiColor(int aqi) {
@@ -495,8 +490,9 @@ num? _asNum(Object? value) {
   return null;
 }
 
-String _formatClock(DateTime dt) {
-  return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+String _formatQWeatherHour(String value) {
+  if (value.length >= 16) return value.substring(11, 16);
+  return '--';
 }
 
 IconData _weatherIcon(String? code) {

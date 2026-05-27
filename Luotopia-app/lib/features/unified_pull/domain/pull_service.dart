@@ -15,10 +15,10 @@ class UnifiedPullService {
     required SyncCursorStore syncCursorStore,
     this.coldStartCooldown = const Duration(seconds: 30),
     this.foregroundCooldown = const Duration(seconds: 10),
-  })  : _pullClient = pullClient,
-        _stateStore = stateStore,
-        _hotUpdateCache = hotUpdateCache,
-        _syncCursorStore = syncCursorStore;
+  }) : _pullClient = pullClient,
+       _stateStore = stateStore,
+       _hotUpdateCache = hotUpdateCache,
+       _syncCursorStore = syncCursorStore;
 
   final PullClient _pullClient;
   final PullStateStore _stateStore;
@@ -80,7 +80,9 @@ class UnifiedPullService {
           trigger: trigger,
           scopes: scopes,
           clientState: PullClientState(
-            weatherCachedAt: _stateStore.readWeatherCachedAt(),
+            weatherCachedAt: trigger == 'manual' && scopes.contains('weather')
+                ? null
+                : _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
           ),
         ),
@@ -93,10 +95,7 @@ class UnifiedPullService {
   }
 
   Future<PullResult> pullPublicNotification({String trigger = 'public'}) async {
-    return pullPublicScoped(
-      trigger: trigger,
-      scopes: const ['notification'],
-    );
+    return pullPublicScoped(trigger: trigger, scopes: const ['notification']);
   }
 
   Future<PullResult> _doPull({
