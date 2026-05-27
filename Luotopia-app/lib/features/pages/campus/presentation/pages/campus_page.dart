@@ -104,49 +104,26 @@ class _WeatherCard extends StatelessWidget {
     final tempLow = weather?.data?['temp_low'];
     final condition = weather?.data?['condition'] as String? ?? '--';
     final aqi = weather?.data?['aqi'] as int? ?? 0;
-    final humidity = weather?.data?['humidity'] as int?;
-    final windSpeed = weather?.data?['wind_speed'];
     final updatedAt = weather?.cachedAt;
     final updateTime = updatedAt != null
         ? _formatTime(DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000))
         : null;
+    final conditionLine = [
+      condition,
+      if (tempLow != null && tempHigh != null)
+        '${tempLow.toInt()}°/${tempHigh.toInt()}°',
+    ].join(' · ');
+    final metaLine = [
+      '武汉大学',
+      if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
+      if (isMock) '待更新' else if (updateTime != null) '更新于 $updateTime',
+    ].join(' · ');
 
     return _CampusGlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header row: location + update time + refresh ──
-          Row(
-            children: [
-              Text(
-                '武汉大学',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.onSurface.withValues(alpha: 0.55),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                isMock ? '待更新' : (updateTime != null ? '更新于 $updateTime' : '待更新'),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: isMock
-                      ? Colors.orange.shade400
-                      : colors.onSurface.withValues(alpha: 0.4),
-                  fontWeight: isMock ? FontWeight.w600 : null,
-                ),
-              ),
-              if (onRefresh != null) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: onRefresh,
-                  child: Icon(Icons.refresh, size: 16, color: colors.onSurface.withValues(alpha: 0.4)),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 12),
-
           // ── Main weather info: single row ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -167,7 +144,7 @@ class _WeatherCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      condition,
+                      conditionLine,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -175,18 +152,34 @@ class _WeatherCard extends StatelessWidget {
                         color: colors.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
-                        if (tempLow != null && tempHigh != null)
-                          '${tempLow.toInt()}°/${tempHigh.toInt()}°',
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.5),
-                      ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            metaLine,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: isMock
+                                  ? Colors.orange.shade400
+                                  : colors.onSurface.withValues(alpha: 0.55),
+                              fontWeight: isMock ? FontWeight.w600 : null,
+                            ),
+                          ),
+                        ),
+                        if (onRefresh != null) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: onRefresh,
+                            child: Icon(
+                              Icons.refresh,
+                              size: 15,
+                              color: colors.onSurface.withValues(alpha: 0.35),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -286,23 +279,7 @@ class _WeatherCard extends StatelessWidget {
               ),
             ),
 
-          if (humidity != null || windSpeed != null) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (humidity != null)
-                  _MiniStat(label: '湿度', value: '$humidity%'),
-                if (humidity != null && windSpeed != null)
-                  const SizedBox(width: 24),
-                if (windSpeed != null)
-                  _MiniStat(label: '风速', value: '${windSpeed}km/h'),
-              ],
-            ),
-          ],
-
-          const SizedBox(height: 18),
-          Divider(height: 1, color: colors.onSurface.withValues(alpha: 0.08)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           _ReminderTile(
             icon: Icons.school,
             iconColor: Colors.indigo.shade300,
@@ -364,26 +341,6 @@ class _WeatherCard extends StatelessWidget {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: TextStyle(fontSize: 12, color: colors.onSurface.withValues(alpha: 0.5))),
-        const SizedBox(width: 4),
-        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.onSurface.withValues(alpha: 0.7))),
-      ],
     );
   }
 }
