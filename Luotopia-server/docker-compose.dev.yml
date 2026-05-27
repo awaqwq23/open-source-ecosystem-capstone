@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./configs/.env
+    environment:
+      LUOTOPIA_RUNTIME: container
     volumes:
       - ./configs/.env:/app/configs/.env:ro
     ports:
@@ -31,6 +33,8 @@ services:
     command: ["/app/luotopia-migrate"]
     env_file:
       - ./configs/.env
+    environment:
+      LUOTOPIA_RUNTIME: container
     volumes:
       - ./configs/.env:/app/configs/.env:ro
     depends_on:

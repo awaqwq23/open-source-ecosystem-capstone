@@ -24,10 +24,10 @@ type Config struct {
 }
 
 type WeatherConfig struct {
-	APIKey     string
-	APIHost    string
-	Location   string
-	CacheTTL   time.Duration
+	APIKey   string
+	APIHost  string
+	Location string
+	CacheTTL time.Duration
 }
 
 type HTTPConfig struct {
@@ -88,8 +88,8 @@ func Load() Config {
 			WriteTimeout:    requiredDurationEnv("LUOTOPIA_HTTP_WRITE_TIMEOUT"),
 			ShutdownTimeout: requiredDurationEnv("LUOTOPIA_HTTP_SHUTDOWN_TIMEOUT"),
 		},
-		Database: DatabaseConfig{URL: declaredEnv("LUOTOPIA_DATABASE_URL")},
-		Redis:    RedisConfig{URL: declaredEnv("LUOTOPIA_REDIS_URL")},
+		Database: DatabaseConfig{URL: runtimeEndpointEnv("LUOTOPIA_DATABASE_URL")},
+		Redis:    RedisConfig{URL: runtimeEndpointEnv("LUOTOPIA_REDIS_URL")},
 		Storage: StorageConfig{
 			Bucket: declaredEnv("LUOTOPIA_STORAGE_BUCKET"),
 			Region: declaredEnv("LUOTOPIA_STORAGE_REGION"),
@@ -101,12 +101,12 @@ func Load() Config {
 		},
 		Admin: AdminConfig{UserIDs: parseCommaList(declaredEnv("LUOTOPIA_ADMIN_USER_IDS"))},
 		Weather: WeatherConfig{
-			APIKey:     declaredEnv("LUOTOPIA_WEATHER_API_KEY"),
-			APIHost:    declaredEnv("LUOTOPIA_WEATHER_API_HOST"),
-			Location:   declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
-			CacheTTL:   requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
+			APIKey:   declaredEnv("LUOTOPIA_WEATHER_API_KEY"),
+			APIHost:  declaredEnv("LUOTOPIA_WEATHER_API_HOST"),
+			Location: declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
+			CacheTTL: requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
 		},
-		SMS:   SMSConfig{
+		SMS: SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
 			TencentRegion:     requiredEnv("LUOTOPIA_TENCENT_SMS_REGION"),
@@ -146,6 +146,18 @@ func requiredEnv(key string) string {
 	value := declaredEnv(key)
 	if value == "" {
 		panic(fmt.Sprintf("环境变量 %s 不能为空", key))
+	}
+	return value
+}
+
+func runtimeEndpointEnv(key string) string {
+	value := declaredEnv(key)
+	if os.Getenv("LUOTOPIA_RUNTIME") != "container" {
+		return value
+	}
+	containerKey := strings.Replace(key, "LUOTOPIA_", "LUOTOPIA_CONTAINER_", 1)
+	if containerValue := strings.TrimSpace(os.Getenv(containerKey)); containerValue != "" {
+		return containerValue
 	}
 	return value
 }
