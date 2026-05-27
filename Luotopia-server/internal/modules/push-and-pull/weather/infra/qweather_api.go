@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/domain"
@@ -63,10 +64,10 @@ type qweather3DResponse struct {
 }
 
 type qweatherAQIResponse struct {
-	Code string `json:"code"`
-	Now  struct {
-		AQI string `json:"aqi"`
-	} `json:"now"`
+	Indexes []struct {
+		Code string  `json:"code"`
+		AQI  float64 `json:"aqi"`
+	} `json:"indexes"`
 }
 
 func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
@@ -112,16 +113,7 @@ func (c *QWeatherClient) FetchWeather() (*domain.WeatherData, error) {
 		return nil, fmt.Errorf("qweather 3d api error: code=%s", daily.Code)
 	}
 
-	// Fetch AQI
-	aqiUrl := fmt.Sprintf("https://%s/v7/air/now?location=%s&key=%s", c.apiHost, c.location, c.apiKey)
-	aqiData, err := c.fetchJSON(aqiUrl)
-	aqi := 0
-	if err == nil {
-		var aqiResp qweatherAQIResponse
-		if json.Unmarshal(aqiData, &aqiResp) == nil && aqiResp.Code == "200" {
-			fmt.Sscanf(aqiResp.Now.AQI, "%d", &aqi)
-		}
-	}
+	aqi := c.fetchAQI()
 
 	// Parse values
 	temp := parseFloat(now.Now.Temp)
@@ -179,6 +171,65 @@ func (c *QWeatherClient) fetchJSON(url string) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+func (c *QWeatherClient) fetchAQI() int {
+	lat, lon, ok := parseLocationLatLon(c.location)
+	if !ok {
+		return 0
+	}
+	aqiUrl := fmt.Sprintf("https://%s/airquality/v1/current/%s/%s", c.apiHost, lat, lon)
+	aqiData, err := c.fetchAPIKeyJSON(aqiUrl)
+	if err != nil {
+		return 0
+	}
+	var aqiResp qweatherAQIResponse
+	if err := json.Unmarshal(aqiData, &aqiResp); err != nil {
+		return 0
+	}
+	for _, idx := range aqiResp.Indexes {
+		if idx.Code != "qaqi" && idx.AQI > 0 {
+			return int(idx.AQI + 0.5)
+		}
+	}
+	if len(aqiResp.Indexes) > 0 {
+		return int(aqiResp.Indexes[0].AQI + 0.5)
+	}
+	return 0
+}
+
+func (c *QWeatherClient) fetchAPIKeyJSON(url string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-QW-Api-Key", c.apiKey)
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("http status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func parseLocationLatLon(location string) (string, string, bool) {
+	parts := strings.Split(location, ",")
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	lon := strings.TrimSpace(parts[0])
+	lat := strings.TrimSpace(parts[1])
+	if lat == "" || lon == "" {
+		return "", "", false
+	}
+	return lat, lon, true
 }
 
 func parseFloat(s string) float64 {

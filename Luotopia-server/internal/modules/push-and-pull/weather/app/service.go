@@ -13,8 +13,8 @@ import (
 var ErrNoCacheData = errors.New("weather: no cached data")
 
 const (
-	currentWeatherCacheKey     = "weather:current"
-	lastSuccessWeatherCacheKey = "weather:last_success"
+	currentWeatherCacheKey     = "weather:v2:current"
+	lastSuccessWeatherCacheKey = "weather:v2:last_success"
 )
 
 type CacheStore interface {

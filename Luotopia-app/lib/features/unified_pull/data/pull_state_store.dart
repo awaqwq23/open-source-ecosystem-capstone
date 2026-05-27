@@ -25,11 +25,11 @@ class PullStateStore {
       return null;
     }
     try {
-      return WeatherBlock(
-        changed: false,
-        data: jsonDecode(raw) as Map<String, dynamic>,
-        cachedAt: cachedAt,
-      );
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (!_isCurrentWeatherData(data)) {
+        return null;
+      }
+      return WeatherBlock(changed: false, data: data, cachedAt: cachedAt);
     } catch (_) {
       return null;
     }
@@ -45,7 +45,9 @@ class PullStateStore {
       return null;
     }
     try {
-      return NotificationBlock.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      return NotificationBlock.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
     } catch (_) {
       return null;
     }
@@ -71,4 +73,14 @@ class PullStateStore {
       );
     }
   }
+}
+
+bool _isCurrentWeatherData(Map<String, dynamic> data) {
+  final hourly = data['hourly_forecast'];
+  if (hourly is! List || hourly.isEmpty) {
+    return true;
+  }
+  return hourly.every((item) {
+    return item is Map && item['fx_time'] is String;
+  });
 }
