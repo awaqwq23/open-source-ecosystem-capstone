@@ -13,7 +13,7 @@
 cd D:\Github\Luotopia\Luotopia\Luotopia-server
 
 # 日常开发：Docker 只启动依赖服务，本机运行迁移和 API
-docker compose -f deployments/docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 go run ./cmd/migrate
 go run ./cmd/server
 ```
@@ -22,7 +22,7 @@ go run ./cmd/server
 
 ```powershell
 cd D:\Github\Luotopia\Luotopia\Luotopia-server
-docker compose -f deployments/docker-compose.dev.yml --profile app up --build
+docker compose -f docker-compose.dev.yml --profile app up --build
 ```
 
 ## 开发规约
@@ -227,7 +227,8 @@ docker compose -f deployments/docker-compose.dev.yml --profile app up --build
 - 服务端代理天气接口，避免客户端暴露第三方天气 API Key。
 - 客户端展示实时天气、体感温度、最高/最低温、空气质量、逐小时预报。
 - 默认位置为武汉大学，可扩展用户当前位置。
-- 支持缓存最近一次成功数据，接口失败时展示缓存时间和重试入口。
+- 天气功能对所有用户开放，未登录状态也应通过公开统一拉取获取天气。
+- 支持缓存最近一次成功数据，接口失败时展示缓存时间和重试入口；首次无缓存时可显示 mock 数据，并在更新时间位置明确标注待更新。
 
 ### 设置页服务器头图
 

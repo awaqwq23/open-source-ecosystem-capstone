@@ -26,7 +26,7 @@ go test ./...
 后端开发环境默认只用 Docker Compose 启动状态服务，应用服务仍可直接在本机运行，便于调试和快速迭代。
 
 ```powershell
-docker compose -f deployments/docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 默认启动内容：
@@ -44,7 +44,7 @@ go run ./cmd/server
 需要完整容器化联调时启用 `app` profile：
 
 ```powershell
-docker compose -f deployments/docker-compose.dev.yml --profile app up --build
+docker compose -f docker-compose.dev.yml --profile app up --build
 ```
 
 服务启动后访问：
@@ -56,7 +56,7 @@ http://localhost:8080/healthz
 如需清空本地开发数据库：
 
 ```powershell
-docker compose -f deployments/docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml down -v
 ```
 
 ## 本地配置
