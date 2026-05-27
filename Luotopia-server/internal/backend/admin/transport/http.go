@@ -17,12 +17,14 @@ type Handler struct {
 	authMiddleware gin.HandlerFunc
 }
 
-func NewHandler(service *app.Service, tokenSecret string, adminUserIDs []string) Handler {
-	return Handler{service: service, authMiddleware: httpserver.AdminAuthMiddleware(tokenSecret, adminUserIDs)}
+func NewHandler(service *app.Service, tokenSecret string) Handler {
+	return Handler{service: service, authMiddleware: httpserver.AdminAuthMiddleware(tokenSecret)}
 }
 
 func (h Handler) Register(router gin.IRouter) {
 	admin := router.Group("")
+	admin.POST("/auth/login", h.login)
+
 	protected := admin.Group("")
 	protected.Use(h.authMiddleware)
 
@@ -52,6 +54,34 @@ func (h Handler) Register(router gin.IRouter) {
 	allowlist.GET("", h.listAllowlist)
 	allowlist.POST("", h.addAllowlist)
 	allowlist.DELETE("/:userId", h.removeAllowlist)
+}
+
+type loginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+func (h Handler) login(c *gin.Context) {
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+		return
+	}
+	result, err := h.service.Login(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		if errors.Is(err, app.ErrInvalidCredential) {
+			writeError(c, http.StatusUnauthorized, "invalid_credential", "账号或密码错误")
+			return
+		}
+		writeError(c, http.StatusInternalServerError, "internal_error", "登录失败")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"tokens": gin.H{
+			"access_token": result.AccessToken,
+			"expires_in":   result.ExpiresIn,
+		},
+	})
 }
 
 // Dashboard

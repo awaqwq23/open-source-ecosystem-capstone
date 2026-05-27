@@ -2,12 +2,16 @@ package infra
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/backend/admin/app"
 	"github.com/openwhu/luotopia/server/internal/backend/admin/domain"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var _ app.Repository = (*GormRepository)(nil)
@@ -20,12 +24,71 @@ func NewGormRepository(db *gorm.DB) *GormRepository {
 	return &GormRepository{db: db}
 }
 
+// Admin account auth
+
+type adminAccountModel struct {
+	ID           string     `gorm:"primaryKey;column:id"`
+	Username     string     `gorm:"column:username"`
+	PasswordHash string     `gorm:"column:password_hash"`
+	Status       string     `gorm:"column:status"`
+	CreatedAt    time.Time  `gorm:"column:created_at"`
+	UpdatedAt    time.Time  `gorm:"column:updated_at"`
+	LastLoginAt  *time.Time `gorm:"column:last_login_at"`
+}
+
+func (adminAccountModel) TableName() string { return "admin_accounts" }
+
+func (r *GormRepository) FindAdminByUsername(ctx context.Context, username string) (app.AdminAccount, error) {
+	var model adminAccountModel
+	err := r.db.WithContext(ctx).First(&model, "username = ?", normalizeAdminUsername(username)).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return app.AdminAccount{}, app.ErrInvalidCredential
+	}
+	if err != nil {
+		return app.AdminAccount{}, err
+	}
+	return app.AdminAccount{
+		ID:           model.ID,
+		Username:     model.Username,
+		PasswordHash: model.PasswordHash,
+		Status:       model.Status,
+		CreatedAt:    model.CreatedAt,
+		UpdatedAt:    model.UpdatedAt,
+		LastLoginAt:  model.LastLoginAt,
+	}, nil
+}
+
+func (r *GormRepository) SaveAdminAccount(ctx context.Context, account app.AdminAccount) error {
+	now := time.Now()
+	model := adminAccountModel{
+		ID:           appID(),
+		Username:     normalizeAdminUsername(account.Username),
+		PasswordHash: account.PasswordHash,
+		Status:       account.Status,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "username"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"password_hash": model.PasswordHash,
+			"status":        model.Status,
+			"updated_at":    model.UpdatedAt,
+		}),
+	}).Create(&model).Error
+}
+
+func (r *GormRepository) TouchAdminLogin(ctx context.Context, id string) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).Model(&adminAccountModel{}).Where("id = ?", id).Update("last_login_at", now).Error
+}
+
 // User queries
 
 type userModel struct {
-	ID        string     `gorm:"primaryKey;column:id"`
-	Status    string     `gorm:"column:status"`
-	CreatedAt time.Time  `gorm:"column:created_at"`
+	ID        string    `gorm:"primaryKey;column:id"`
+	Status    string    `gorm:"column:status"`
+	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
 func (userModel) TableName() string { return "auth_users" }
@@ -155,4 +218,16 @@ func (r *GormRepository) AddAllowlist(ctx context.Context, userID string) error 
 
 func (r *GormRepository) RemoveAllowlist(ctx context.Context, userID string) error {
 	return r.db.WithContext(ctx).Delete(&syncAllowlistModel{}, "user_id = ?", userID).Error
+}
+
+func normalizeAdminUsername(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func appID() string {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
+	}
+	return hex.EncodeToString(bytes)
 }

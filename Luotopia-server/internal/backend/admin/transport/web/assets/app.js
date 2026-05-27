@@ -45,11 +45,11 @@ async function api(path, options = {}) {
   return data;
 }
 
-async function login(identifier, password) {
-  const response = await fetch("/api/v1/auth/login/password", {
+async function login(username, password) {
+  const response = await fetch("/admin/api/v1/auth/login", {
     method: "POST",
     headers: {"Accept": "application/json", "Content-Type": "application/json"},
-    body: JSON.stringify({identifier, password, device_name: "Admin Web"}),
+    body: JSON.stringify({username, password}),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

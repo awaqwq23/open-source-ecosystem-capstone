@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/openwhu/luotopia/server/internal/backend/admin/domain"
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
 	hotdomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/domain"
@@ -21,11 +22,34 @@ import (
 )
 
 type Repository interface {
+	FindAdminByUsername(ctx context.Context, username string) (AdminAccount, error)
+	SaveAdminAccount(ctx context.Context, account AdminAccount) error
+	TouchAdminLogin(ctx context.Context, id string) error
 	ListUsers(ctx context.Context, offset, limit int) ([]domain.UserInfo, int64, error)
 	GetUser(ctx context.Context, id string) (domain.UserInfo, error)
 	ListAllowlist(ctx context.Context) ([]domain.SyncAllowlistEntry, error)
 	AddAllowlist(ctx context.Context, userID string) error
 	RemoveAllowlist(ctx context.Context, userID string) error
+}
+
+type PasswordHasher interface {
+	Hash(password string) (string, error)
+	Verify(password string, encodedHash string) bool
+}
+
+type AdminAccount struct {
+	ID           string
+	Username     string
+	PasswordHash string
+	Status       string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	LastLoginAt  *time.Time
+}
+
+type AdminLoginResult struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int64  `json:"expires_in"`
 }
 
 type Service struct {
@@ -37,9 +61,15 @@ type Service struct {
 	hotUpdateSvc *hotapp.Service
 	weatherSvc   *weatherapp.Service
 	scriptDir    string
+	hasher       PasswordHasher
+	tokenSecret  string
+	tokenTTL     time.Duration
 }
 
-func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string) *Service {
+func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string, hasher PasswordHasher, tokenSecret string, tokenTTL time.Duration) *Service {
+	if tokenTTL <= 0 {
+		tokenTTL = 2 * time.Hour
+	}
 	return &Service{
 		version:      version,
 		startedAt:    time.Now(),
@@ -49,7 +79,65 @@ func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp
 		hotUpdateSvc: hotUpdateSvc,
 		weatherSvc:   weatherSvc,
 		scriptDir:    scriptDir,
+		hasher:       hasher,
+		tokenSecret:  tokenSecret,
+		tokenTTL:     tokenTTL,
 	}
+}
+
+func (s *Service) EnsureConfiguredAdmin(ctx context.Context, username string, password string) error {
+	username = normalizeAdminUsername(username)
+	if username == "" || len(password) < 8 {
+		return ErrInvalidCredentialConfig
+	}
+	hash, err := s.hasher.Hash(password)
+	if err != nil {
+		return err
+	}
+	return s.repo.SaveAdminAccount(ctx, AdminAccount{
+		Username:     username,
+		PasswordHash: hash,
+		Status:       "active",
+	})
+}
+
+func (s *Service) Login(ctx context.Context, username string, password string) (AdminLoginResult, error) {
+	username = normalizeAdminUsername(username)
+	if username == "" || password == "" {
+		return AdminLoginResult{}, ErrInvalidCredential
+	}
+	account, err := s.repo.FindAdminByUsername(ctx, username)
+	if err != nil || account.Status != "active" || !s.hasher.Verify(password, account.PasswordHash) {
+		return AdminLoginResult{}, ErrInvalidCredential
+	}
+	if err := s.repo.TouchAdminLogin(ctx, account.ID); err != nil {
+		return AdminLoginResult{}, err
+	}
+	token, expiresIn, err := s.issueAdminToken(account)
+	if err != nil {
+		return AdminLoginResult{}, err
+	}
+	return AdminLoginResult{AccessToken: token, ExpiresIn: expiresIn}, nil
+}
+
+func (s *Service) issueAdminToken(account AdminAccount) (string, int64, error) {
+	now := time.Now()
+	expiresAt := now.Add(s.tokenTTL)
+	claims := jwt.MapClaims{
+		"sub": account.ID,
+		"typ": "admin",
+		"iat": now.Unix(),
+		"exp": expiresAt.Unix(),
+	}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.tokenSecret))
+	if err != nil {
+		return "", 0, err
+	}
+	return token, int64(s.tokenTTL.Seconds()), nil
+}
+
+func normalizeAdminUsername(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func (s *Service) Dashboard(ctx context.Context) domain.Dashboard {
@@ -264,6 +352,8 @@ func (s *Service) RefreshWeather(ctx context.Context) (domain.WeatherStatus, err
 
 // error helpers used by transport
 var (
-	ErrNotFound   = errors.New("admin: not found")
-	ErrInvalidArg = errors.New("admin: invalid argument")
+	ErrNotFound                = errors.New("admin: not found")
+	ErrInvalidArg              = errors.New("admin: invalid argument")
+	ErrInvalidCredential       = errors.New("admin: invalid credential")
+	ErrInvalidCredentialConfig = errors.New("admin: invalid credential config")
 )

@@ -155,8 +155,12 @@ func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB, we
 	hotSvc := hotapp.NewService(hotRepo)
 
 	adminRepo := admininfra.NewGormRepository(db)
-	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc, weatherSvc, "scripts")
-	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret, cfg.Admin.UserIDs).Register(server.AdminAPI())
+	service := adminapp.NewService("0.1.0", db, adminRepo, notiSvc, hotSvc, weatherSvc, "scripts", authinfra.Argon2idPasswordHasher{}, cfg.Auth.AccessTokenSecret, cfg.Admin.AccessTokenTTL)
+	if err := service.EnsureConfiguredAdmin(context.Background(), cfg.Admin.Username, cfg.Admin.Password); err != nil {
+		slog.Default().Error("初始化后台管理员账号失败", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.AdminAPI())
 	admintransport.NewWebHandler().Register(server.AdminWeb())
 }
 
