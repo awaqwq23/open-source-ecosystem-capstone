@@ -12,6 +12,11 @@ import (
 
 var ErrNoCacheData = errors.New("weather: no cached data")
 
+const (
+	currentWeatherCacheKey     = "weather:current"
+	lastSuccessWeatherCacheKey = "weather:last_success"
+)
+
 type CacheStore interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
@@ -35,12 +40,18 @@ func NewService(cache CacheStore, api WeatherAPI, ttl time.Duration) *Service {
 }
 
 func (s *Service) GetCached(ctx context.Context) (*domain.WeatherData, error) {
-	data, err := s.cache.Get(ctx, "weather:current")
+	data, err := s.cache.Get(ctx, currentWeatherCacheKey)
 	if err != nil {
 		return nil, err
 	}
 	if data == nil {
-		return nil, ErrNoCacheData
+		data, err = s.cache.Get(ctx, lastSuccessWeatherCacheKey)
+		if err != nil {
+			return nil, err
+		}
+		if data == nil {
+			return nil, ErrNoCacheData
+		}
 	}
 	var weather domain.WeatherData
 	if err := json.Unmarshal(data, &weather); err != nil {
@@ -60,7 +71,11 @@ func (s *Service) FetchAndCache(ctx context.Context) error {
 		s.recordRefresh(nil, err)
 		return err
 	}
-	if err := s.cache.Set(ctx, "weather:current", data, s.ttl); err != nil {
+	if err := s.cache.Set(ctx, currentWeatherCacheKey, data, s.ttl); err != nil {
+		s.recordRefresh(nil, err)
+		return err
+	}
+	if err := s.cache.Set(ctx, lastSuccessWeatherCacheKey, data, 0); err != nil {
 		s.recordRefresh(nil, err)
 		return err
 	}

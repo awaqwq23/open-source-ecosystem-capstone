@@ -126,23 +126,16 @@ class _WeatherCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (updateTime != null && !isMock)
-                Text(
-                  '更新于 $updateTime',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: colors.onSurface.withValues(alpha: 0.4),
-                  ),
+              Text(
+                isMock ? '待更新' : (updateTime != null ? '更新于 $updateTime' : '待更新'),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  color: isMock
+                      ? Colors.orange.shade400
+                      : colors.onSurface.withValues(alpha: 0.4),
+                  fontWeight: isMock ? FontWeight.w600 : null,
                 ),
-              if (isMock)
-                Text(
-                  '模拟数据',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: Colors.orange.shade400,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              ),
               if (onRefresh != null) ...[
                 const SizedBox(width: 8),
                 GestureDetector(
@@ -168,32 +161,37 @@ class _WeatherCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              // Middle: condition + feels-like + today's range
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    condition,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: colors.onSurface.withValues(alpha: 0.7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      condition,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: colors.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
-                      if (tempLow != null && tempHigh != null)
-                        '${tempLow.toInt()}°/${tempHigh.toInt()}°',
-                    ].join(' · '),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colors.onSurface.withValues(alpha: 0.5),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (feelsLike != null) '体感 ${feelsLike.toInt()}°',
+                        if (tempLow != null && tempHigh != null)
+                          '${tempLow.toInt()}°/${tempHigh.toInt()}°',
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               // AQI compact card
               if (aqi > 0)
                 Container(
@@ -301,6 +299,30 @@ class _WeatherCard extends StatelessWidget {
               ],
             ),
           ],
+
+          const SizedBox(height: 18),
+          Divider(height: 1, color: colors.onSurface.withValues(alpha: 0.08)),
+          const SizedBox(height: 14),
+          _ReminderTile(
+            icon: Icons.school,
+            iconColor: Colors.indigo.shade300,
+            text: '下午没课，试试一节「古代汉语」？',
+            onTap: () => _showInteraction(context, '蹭课推荐'),
+          ),
+          const SizedBox(height: 8),
+          _ReminderTile(
+            icon: Icons.newspaper,
+            iconColor: Colors.blue.shade400,
+            text: '校园新闻：五一调休通知新鲜出炉',
+            onTap: () => _showInteraction(context, '校园新闻'),
+          ),
+          const SizedBox(height: 8),
+          _ReminderTile(
+            icon: Icons.local_library,
+            iconColor: Colors.teal.shade300,
+            text: '图书馆：《罪与罚》借阅将在三天后到期',
+            onTap: () => _showInteraction(context, '借阅详情'),
+          ),
         ],
       ),
     );
@@ -333,6 +355,16 @@ class _WeatherCard extends StatelessWidget {
       return '今天 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
     return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _showInteraction(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }
 

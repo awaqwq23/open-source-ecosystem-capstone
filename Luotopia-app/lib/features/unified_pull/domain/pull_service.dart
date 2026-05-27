@@ -70,13 +70,17 @@ class UnifiedPullService {
     return _doPull(trigger: trigger, scopes: scopes);
   }
 
-  Future<PullResult> pullPublicNotification({String trigger = 'public'}) async {
+  Future<PullResult> pullPublicScoped({
+    required String trigger,
+    required List<String> scopes,
+  }) async {
     try {
       final response = await _pullClient.pullPublic(
         PullRequest(
           trigger: trigger,
-          scopes: const ['notification'],
+          scopes: scopes,
           clientState: PullClientState(
+            weatherCachedAt: _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
           ),
         ),
@@ -86,6 +90,13 @@ class UnifiedPullService {
     } catch (e) {
       return PullResult(error: e);
     }
+  }
+
+  Future<PullResult> pullPublicNotification({String trigger = 'public'}) async {
+    return pullPublicScoped(
+      trigger: trigger,
+      scopes: const ['notification'],
+    );
   }
 
   Future<PullResult> _doPull({

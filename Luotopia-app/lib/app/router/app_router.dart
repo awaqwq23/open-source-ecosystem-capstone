@@ -29,6 +29,7 @@ import 'package:luotopia/features/pages/item_editor/presentation/pages/repeat_se
 import 'package:luotopia/features/pages/list/presentation/pages/list_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_ai_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_course_grid_page.dart';
+import 'package:luotopia/features/pages/settings/presentation/pages/settings_data_updates_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_general_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_home_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_navigation_page.dart';
@@ -135,6 +136,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'navigation',
                     builder: (context, state) => const SettingsNavigationPage(),
+                  ),
+                  GoRoute(
+                    path: 'data-updates',
+                    builder: (context, state) => const SettingsDataUpdatesPage(),
                   ),
                   GoRoute(
                     path: 'home',

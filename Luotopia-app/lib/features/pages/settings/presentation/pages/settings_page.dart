@@ -9,12 +9,8 @@ import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
-import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
-import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
-import 'package:luotopia/shared/data/sync/sync_service.dart';
-import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -38,8 +34,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final ScrollController _scrollController = ScrollController();
-  bool _manualSyncing = false;
-  String? _manualSyncMessage;
 
   @override
   void dispose() {
@@ -52,9 +46,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final l10n = context.l10n;
     final whuAuth = ref.watch(whuAuthProvider);
     final luotopiaAuth = ref.watch(luotopiaAuthProvider);
-    final syncEnabled = ref.watch(syncCapabilityProvider).valueOrNull == true;
-    final pendingSyncCount = ref.watch(pendingSyncChangeCountProvider).valueOrNull ?? 0;
-    final lastSyncedAt = ref.watch(lastSyncTimeProvider);
     return ui.Scaffold(
       floatingHeader: true,
       headers: [
@@ -112,19 +103,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   icon: AppIcons.settingsOutlined,
                   onTap: () => context.push(AppRoutePaths.settingsGeneral),
                 ),
-                if (syncEnabled)
-                  _SettingsSyncTile(
-                    pendingCount: pendingSyncCount,
-                    lastSyncedAt: lastSyncedAt,
-                    syncing: _manualSyncing,
-                    message: _manualSyncMessage,
-                    onSync: () => _syncNow(luotopiaAuth),
-                  ),
                 _SettingsLinkTile(
-                  title: '热更新脚本',
-                  subtitle: '检查校园服务脚本版本',
-                  icon: Icons.code_outlined,
-                  onTap: () => unawaited(_checkHotUpdate()),
+                  title: '数据更新',
+                  subtitle: '天气、通知、脚本与同步',
+                  icon: Icons.sync_outlined,
+                  onTap: () => context.push(AppRoutePaths.settingsDataUpdates),
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
@@ -191,69 +174,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Future<void> _checkHotUpdate() async {
-    final result = await ref.read(unifiedPullServiceProvider).pullScoped(
-      trigger: 'manual',
-      scopes: const ['hot_update'],
-    );
-    if (!mounted) {
-      return;
-    }
-    final scripts = result.response?.hotUpdate?.scripts.values;
-    final changed = scripts?.where((script) => script.changed).length ?? 0;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.isSuccess ? '已检查脚本更新：$changed 项有更新' : '脚本更新检查失败'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Future<void> _syncNow(LuotopiaAuthState auth) async {
-    final token = auth.accessToken;
-    final userId = auth.user?.id;
-    if (auth.status != LuotopiaAuthStatus.authenticated ||
-        token == null ||
-        token.isEmpty ||
-        userId == null ||
-        userId.isEmpty ||
-        _manualSyncing) {
-      return;
-    }
-    setState(() {
-      _manualSyncing = true;
-      _manualSyncMessage = null;
-    });
-    try {
-      final pullResult = await ref.read(unifiedPullServiceProvider).pullScoped(
-        trigger: 'manual',
-        scopes: const ['sync'],
-      );
-      final sync = pullResult.response?.sync;
-      if (sync != null) {
-        ref.read(agendaSyncServiceProvider).applyCapability(
-              userId: userId,
-              enabled: sync.enabled,
-            );
-      }
-      await ref
-          .read(agendaSyncServiceProvider)
-          .sync(accessToken: token, userId: userId);
-      ref.invalidate(pendingSyncChangeCountProvider);
-      ref.invalidate(lastSyncTimeProvider);
-      if (mounted) {
-        setState(() => _manualSyncMessage = '同步完成');
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _manualSyncMessage = '同步失败：$error');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _manualSyncing = false);
-      }
-    }
-  }
 }
 
 class _SettingsFadingTopBar extends StatelessWidget {
@@ -590,90 +510,6 @@ class _SettingsLinkTile extends StatelessWidget {
   }
 }
 
-class _SettingsSyncTile extends StatelessWidget {
-  const _SettingsSyncTile({
-    required this.pendingCount,
-    required this.lastSyncedAt,
-    required this.syncing,
-    required this.onSync,
-    this.message,
-  });
-
-  final int pendingCount;
-  final DateTime? lastSyncedAt;
-  final bool syncing;
-  final String? message;
-  final VoidCallback onSync;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final subtitle = message ??
-        (pendingCount > 0
-            ? '待推送 $pendingCount 项变更'
-            : lastSyncedAt == null
-                ? '尚未同步'
-                : '上次同步 ${_formatSyncTime(lastSyncedAt!)}');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 46,
-            child: Icon(
-              Icons.cloud_sync_outlined,
-              size: 28,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '数据同步',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ui.IconButton.ghost(
-            icon: syncing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.sync),
-            onPressed: syncing ? null : onSync,
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatSyncTime(DateTime value) {
-    final local = value.toLocal();
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
-  }
-}
-
 class _NotificationSection extends ConsumerStatefulWidget {
   const _NotificationSection();
 
@@ -682,13 +518,21 @@ class _NotificationSection extends ConsumerStatefulWidget {
 }
 
 class _NotificationSectionState extends ConsumerState<_NotificationSection> {
-  bool _refreshing = false;
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(notificationProvider.notifier).loadList());
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(notificationProvider);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+
+    if (state.items.isEmpty && !state.loading) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,13 +549,6 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
                   color: colors.onSurface.withValues(alpha: 0.5),
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: _refreshing ? null : () => unawaited(_manualRefresh()),
-                child: _refreshing
-                    ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(Icons.refresh, size: 16, color: colors.onSurface.withValues(alpha: 0.5)),
-              ),
             ],
           ),
         ),
@@ -719,55 +556,60 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _SettingsLinkCard(
-            children: [
-              if (state.hasNew)
-                _SettingsLinkTile(
-                  title: state.title ?? '新通知',
-                  subtitle: '共 ${state.count} 条已发布公告',
-                  icon: Icons.campaign_outlined,
-                  onTap: () => unawaited(_showNotificationDetail(context)),
-                )
-              else
-                _SettingsLinkTile(
-                  title: '暂无新通知',
-                  subtitle: '点击检查更新',
-                  icon: Icons.check_circle_outline,
-                  onTap: () {
-                    if (!_refreshing) {
-                      unawaited(_manualRefresh());
-                    }
-                  },
-                ),
-            ],
+            children: state.loading && state.items.isEmpty
+                ? const [
+                    Padding(
+                      padding: EdgeInsets.all(18),
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                  ]
+                : [
+                    for (final item in state.items)
+                      _SettingsLinkTile(
+                        title: item.title,
+                        subtitle: _notificationSubtitle(item),
+                        icon: item.priority == 'important'
+                            ? Icons.priority_high_rounded
+                            : Icons.campaign_outlined,
+                        onTap: () => unawaited(_showNotificationDetail(context, item)),
+                      ),
+                  ],
           ),
         ),
       ],
     );
   }
 
-  Future<void> _manualRefresh() async {
-    setState(() => _refreshing = true);
-    await ref.read(notificationProvider.notifier).checkLatest();
-    setState(() => _refreshing = false);
-  }
-
-  Future<void> _showNotificationDetail(BuildContext context) async {
-    await ref.read(notificationProvider.notifier).loadDetail();
+  Future<void> _showNotificationDetail(
+    BuildContext context,
+    NotificationSummary item,
+  ) async {
+    NotificationDetail? detail;
+    try {
+      detail = await ref.read(notificationProvider.notifier).loadDetail(item.id);
+    } catch (_) {
+      detail = null;
+    }
     if (!mounted) {
       return;
     }
-    final latest = ref.read(notificationProvider);
     await showDialog<void>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
         return AlertDialog(
-          title: Text(latest.title ?? '服务通知'),
+          title: Text(detail?.title.isNotEmpty == true ? detail!.title : item.title),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: SingleChildScrollView(
               child: Text(
-                latest.content?.isNotEmpty == true ? latest.content! : '暂无详情',
+                detail?.content.isNotEmpty == true ? detail!.content : '暂无详情',
                 style: theme.textTheme.bodyMedium,
               ),
             ),
@@ -781,5 +623,22 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
         );
       },
     );
+  }
+
+  String _notificationSubtitle(NotificationSummary item) {
+    final parts = <String>[];
+    if (item.priority == 'important') {
+      parts.add('重要');
+    }
+    if (item.createdAt != null) {
+      parts.add(_formatNotificationTime(item.createdAt!));
+    }
+    return parts.join(' · ');
+  }
+
+  String _formatNotificationTime(DateTime value) {
+    final local = value.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
   }
 }

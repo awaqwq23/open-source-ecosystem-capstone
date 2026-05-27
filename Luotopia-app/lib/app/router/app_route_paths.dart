@@ -18,6 +18,7 @@ abstract final class AppRoutePaths {
   static const itemDetail = '/item-detail';
   static const settingsGeneral = '/settings/general';
   static const settingsNavigation = '/settings/navigation';
+  static const settingsDataUpdates = '/settings/data-updates';
   static const settingsHome = '/settings/home';
   static const settingsTimeGrid = '/settings/time-grid';
   static const settingsCourseGrid = '/settings/course-grid';

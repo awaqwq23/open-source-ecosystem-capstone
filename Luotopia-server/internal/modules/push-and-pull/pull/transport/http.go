@@ -52,11 +52,27 @@ func (h Handler) publicPullPost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "invalid_argument", "message": "请求参数无效"}})
 		return
 	}
-	req.Scopes = []string{"notification"}
+	req.Scopes = publicScopes(req.Scopes)
 	result := h.service.Pull(c.Request.Context(), "", req)
-	result.Weather = nil
 	result.HotUpdate = nil
 	result.Sync = nil
 	result.Stats = nil
 	c.JSON(http.StatusOK, result)
+}
+
+func publicScopes(scopes []string) []string {
+	if len(scopes) == 0 {
+		return []string{"weather", "notification"}
+	}
+	allowed := make([]string, 0, len(scopes))
+	for _, scope := range scopes {
+		switch scope {
+		case "weather", "notification":
+			allowed = append(allowed, scope)
+		}
+	}
+	if len(allowed) == 0 {
+		return []string{"__public_none"}
+	}
+	return allowed
 }

@@ -51,7 +51,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
   void _handleForegroundResume() {
     final auth = ref.read(luotopiaAuthProvider);
     if (auth.status != LuotopiaAuthStatus.authenticated) {
-      unawaited(_performPublicNotificationPull());
+      unawaited(_performPublicPull(trigger: 'foreground'));
       return;
     }
     unawaited(_performForegroundPull(auth));
@@ -101,7 +101,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
           _onAuthenticated(next);
         } else {
           ref.read(agendaSyncServiceProvider).resetCapability();
-          unawaited(_performPublicNotificationPull());
+          unawaited(_performPublicPull());
         }
       }),
     );
@@ -113,7 +113,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
         auth.user!.id.isNotEmpty) {
       _onAuthenticated(auth);
     } else {
-      unawaited(_performPublicNotificationPull());
+      unawaited(_performPublicPull());
     }
   }
 
@@ -127,11 +127,15 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
     await _applyPullResult(auth, result);
   }
 
-  Future<void> _performPublicNotificationPull() async {
+  Future<void> _performPublicPull({String trigger = 'cold_start'}) async {
     final result = await ref
         .read(unifiedPullServiceProvider)
-        .pullPublicNotification(trigger: 'cold_start');
+        .pullPublicScoped(
+          trigger: trigger,
+          scopes: const ['weather', 'notification'],
+        );
     if (result.isSuccess) {
+      ref.invalidate(weatherProvider);
       ref.invalidate(notificationProvider);
     }
   }

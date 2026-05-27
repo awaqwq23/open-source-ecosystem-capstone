@@ -12,6 +12,7 @@ class NotificationState {
   final bool hasNew;
   final int count;
   final bool loading;
+  final List<NotificationSummary> items;
 
   const NotificationState({
     this.latestId,
@@ -20,7 +21,51 @@ class NotificationState {
     this.hasNew = false,
     this.count = 0,
     this.loading = false,
+    this.items = const [],
   });
+
+  NotificationState copyWith({
+    String? latestId,
+    String? title,
+    String? content,
+    bool? hasNew,
+    int? count,
+    bool? loading,
+    List<NotificationSummary>? items,
+  }) {
+    return NotificationState(
+      latestId: latestId ?? this.latestId,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      hasNew: hasNew ?? this.hasNew,
+      count: count ?? this.count,
+      loading: loading ?? this.loading,
+      items: items ?? this.items,
+    );
+  }
+}
+
+class NotificationSummary {
+  const NotificationSummary({
+    required this.id,
+    required this.title,
+    this.priority = '',
+    this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final String priority;
+  final DateTime? createdAt;
+
+  factory NotificationSummary.fromJson(Map<String, dynamic> json) {
+    return NotificationSummary(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      priority: json['priority'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
 }
 
 final notificationApiProvider = Provider<NotificationAPI>((ref) {
@@ -57,25 +102,44 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       if (result.isSuccess) {
         state = _stateFromBlock(
           result.response?.notification ?? _stateStore.readNotification(),
-        );
+        ).copyWith(items: state.items);
       }
     } catch (_) {
       // Silently fail
     }
   }
 
-  Future<void> loadDetail() async {
-    final id = state.latestId;
-    if (id == null || id.isEmpty || state.content != null) {
-      return;
+  Future<void> loadList() async {
+    state = state.copyWith(loading: true);
+    try {
+      final data = await _api.getList();
+      final rawItems = data['items'];
+      final items = rawItems is List
+          ? rawItems
+              .whereType<Map<String, dynamic>>()
+              .map(NotificationSummary.fromJson)
+              .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
+              .toList(growable: false)
+          : const <NotificationSummary>[];
+      state = state.copyWith(
+        loading: false,
+        count: (data['total'] as num?)?.toInt() ?? items.length,
+        items: items,
+      );
+    } catch (_) {
+      state = state.copyWith(loading: false);
+    }
+  }
+
+  Future<NotificationDetail?> loadDetail(String id) async {
+    if (id.isEmpty) {
+      return null;
     }
     final data = await _api.getById(id);
-    state = NotificationState(
-      latestId: id,
-      title: data['title'] as String? ?? state.title,
+    return NotificationDetail(
+      id: id,
+      title: data['title'] as String? ?? '',
       content: data['content'] as String? ?? '',
-      hasNew: state.hasNew,
-      count: state.count,
     );
   }
 
@@ -90,4 +154,16 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       count: block.count,
     );
   }
+}
+
+class NotificationDetail {
+  const NotificationDetail({
+    required this.id,
+    required this.title,
+    required this.content,
+  });
+
+  final String id;
+  final String title;
+  final String content;
 }

@@ -28,21 +28,78 @@ final weatherProvider = StateNotifierProvider<WeatherNotifier, WeatherState>((re
 
 class WeatherNotifier extends StateNotifier<WeatherState> {
   WeatherNotifier(this._pullService, this._stateStore)
-      : super(WeatherState(weather: _stateStore.readWeather()));
+      : super(_stateFromCache(_stateStore.readWeather()));
 
   final UnifiedPullService _pullService;
   final PullStateStore _stateStore;
 
   Future<void> refresh() async {
-    state = WeatherState(weather: state.weather, loading: true);
-    final result = await _pullService.pullScoped(
+    state = state.copyWith(loading: true);
+    final result = await _pullService.pullPublicScoped(
       trigger: 'manual',
       scopes: const ['weather'],
     );
     if (result.isSuccess && result.response?.weather?.data != null) {
-      state = WeatherState(weather: result.response!.weather);
+      state = WeatherState(weather: result.response!.weather, loading: false);
     } else {
-      state = WeatherState(weather: _stateStore.readWeather(), loading: false);
+      state = _stateFromCache(_stateStore.readWeather());
     }
+  }
+
+  static WeatherState _stateFromCache(WeatherBlock? cached) {
+    if (cached != null && cached.data != null) {
+      return WeatherState(weather: cached);
+    }
+    return WeatherState(weather: _mockWeather(), isMock: true);
+  }
+
+  static WeatherBlock _mockWeather() {
+    return const WeatherBlock(
+      data: {
+        'temperature': 28.0,
+        'condition': '晴',
+        'condition_code': 100,
+        'feels_like': 29.0,
+        'temp_high': 30.0,
+        'temp_low': 18.0,
+        'aqi': 25,
+        'humidity': 58,
+        'wind_speed': 9.0,
+        'wind_dir': '东风',
+        'icon': '100',
+        'hourly_forecast': [
+          {
+            'time': '2026-05-27T09:00:00+08:00',
+            'temp': 28.0,
+            'condition': '晴',
+            'icon': '100',
+          },
+          {
+            'time': '2026-05-27T10:00:00+08:00',
+            'temp': 29.0,
+            'condition': '晴',
+            'icon': '100',
+          },
+          {
+            'time': '2026-05-27T11:00:00+08:00',
+            'temp': 30.0,
+            'condition': '晴',
+            'icon': '100',
+          },
+          {
+            'time': '2026-05-27T12:00:00+08:00',
+            'temp': 31.0,
+            'condition': '多云',
+            'icon': '101',
+          },
+          {
+            'time': '2026-05-27T13:00:00+08:00',
+            'temp': 30.0,
+            'condition': '多云',
+            'icon': '101',
+          },
+        ],
+      },
+    );
   }
 }
