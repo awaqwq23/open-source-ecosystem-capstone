@@ -13,9 +13,7 @@
 cd D:\Github\Luotopia\Luotopia\Luotopia-server
 
 # 日常开发：Docker 只启动依赖服务，本机运行迁移和 API
-docker compose -f docker-compose.dev.yml up -d
-go run ./cmd/migrate
-go run ./cmd/server
+docker compose -f docker-compose.dev.yml up -d && go run ./cmd/migrate && go run ./cmd/server
 ```
 
 完整容器化联调：
