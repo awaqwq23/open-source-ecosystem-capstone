@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
+import 'package:luotopia/features/weather/presentation/widgets/qweather_icon.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -104,7 +105,7 @@ class CampusPage extends StatelessWidget {
                       child: Consumer(
                         builder: (context, ref, _) {
                           final weatherState = ref.watch(weatherProvider);
-                          return _WeatherCard(
+                          return _CampusInfoCard(
                             weather: weatherState.weather,
                             loading: weatherState.loading,
                             isMock: weatherState.isMock,
@@ -112,10 +113,6 @@ class CampusPage extends StatelessWidget {
                         },
                       ),
                     ),
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    sliver: SliverToBoxAdapter(child: _CampusNoticeCard()),
                   ),
                   const SliverPadding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -131,8 +128,8 @@ class CampusPage extends StatelessWidget {
   }
 }
 
-class _WeatherCard extends StatelessWidget {
-  const _WeatherCard({
+class _CampusInfoCard extends StatelessWidget {
+  const _CampusInfoCard({
     required this.weather,
     required this.loading,
     this.isMock = false,
@@ -151,7 +148,7 @@ class _WeatherCard extends StatelessWidget {
       return _CampusGlassCard(
         padding: const EdgeInsets.all(20),
         child: SizedBox(
-          height: 200,
+          height: 286,
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       );
@@ -180,8 +177,8 @@ class _WeatherCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                _weatherIcon(iconCode),
+              QWeatherIcon(
+                code: iconCode,
                 size: 48,
                 color: _weatherIconColor(iconCode),
               ),
@@ -306,8 +303,8 @@ class _WeatherCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Icon(
-                          _weatherIcon(hIconCode),
+                        QWeatherIcon(
+                          code: hIconCode,
                           size: 20,
                           color: _weatherIconColor(hIconCode),
                         ),
@@ -327,6 +324,8 @@ class _WeatherCard extends StatelessWidget {
                 },
               ),
             ),
+          const SizedBox(height: 12),
+          const _CampusNoticeSection(),
         ],
       ),
     );
@@ -363,8 +362,8 @@ class _WeatherCard extends StatelessWidget {
   }
 }
 
-class _CampusNoticeCard extends StatelessWidget {
-  const _CampusNoticeCard();
+class _CampusNoticeSection extends StatelessWidget {
+  const _CampusNoticeSection();
 
   @override
   Widget build(BuildContext context) {
@@ -391,21 +390,18 @@ class _CampusNoticeCard extends StatelessWidget {
 
     if (notices.isEmpty) return const SizedBox.shrink();
 
-    return _CampusGlassCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          for (var i = 0; i < notices.length; i++) ...[
-            _ReminderTile(
-              icon: notices[i].icon,
-              iconColor: notices[i].iconColor,
-              text: notices[i].text,
-              onTap: () => _showInteraction(context, notices[i].action),
-            ),
-            if (i != notices.length - 1) const SizedBox(height: 8),
-          ],
+    return Column(
+      children: [
+        for (var i = 0; i < notices.length; i++) ...[
+          _ReminderTile(
+            icon: notices[i].icon,
+            iconColor: notices[i].iconColor,
+            text: notices[i].text,
+            onTap: () => _showInteraction(context, notices[i].action),
+          ),
+          if (i != notices.length - 1) const SizedBox(height: 8),
         ],
-      ),
+      ],
     );
   }
 
@@ -449,23 +445,6 @@ num? _asNum(Object? value) {
 String _formatQWeatherHour(String value) {
   if (value.length >= 16) return value.substring(11, 16);
   return '--';
-}
-
-IconData _weatherIcon(String? code) {
-  final id = int.tryParse(code ?? '');
-  if (id == null) return Icons.wb_sunny;
-  if (id >= 200 && id < 300) return Icons.air;
-  if (id >= 300 && id < 400) return Icons.water_drop;
-  if (id >= 400 && id < 500) return Icons.ac_unit;
-  if (id >= 500 && id < 600) return Icons.blur_on;
-  if (id == 900) return Icons.local_fire_department;
-  if (id == 901) return Icons.ac_unit;
-  if (id == 100 || id == 150) return Icons.wb_sunny;
-  if (id == 104 || id == 154) return Icons.cloud;
-  if ((id >= 101 && id <= 103) || (id >= 151 && id <= 153)) {
-    return Icons.wb_cloudy;
-  }
-  return Icons.wb_sunny;
 }
 
 Color _weatherIconColor(String? code) {

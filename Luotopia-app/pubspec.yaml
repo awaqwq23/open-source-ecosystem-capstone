@@ -63,6 +63,7 @@ dependencies:
   flutter_dotenv: ^6.0.1
   drift: 2.24.0
   drift_flutter: 0.2.4
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -88,3 +89,4 @@ flutter:
 
   assets:
     - .env
+    - assets/qweather_icons/icons/
