@@ -449,17 +449,20 @@ String _formatQWeatherHour(String value) {
 
 Color _weatherIconColor(String? code) {
   final id = int.tryParse(code ?? '');
-  if (id == null) return Colors.orange.shade300;
+  if (id == null || id == 999) return Colors.grey.shade400;
   if (id >= 200 && id < 300) return Colors.blueGrey.shade300;
   if (id >= 300 && id < 400) return Colors.blue.shade400;
   if (id >= 400 && id < 500) return Colors.lightBlue.shade200;
-  if (id >= 500 && id < 600) return Colors.grey.shade500;
+  if (id == 502 || (id >= 511 && id <= 513)) return Colors.grey.shade600;
+  if (id == 503 || id == 504 || id == 507 || id == 508) {
+    return Colors.amber.shade700;
+  }
+  if (id >= 500 && id < 600) return Colors.blueGrey.shade300;
   if (id == 900) return Colors.deepOrange.shade300;
   if (id == 901) return Colors.lightBlue.shade200;
+  if (id >= 150 && id <= 153) return Colors.indigo.shade200;
   if (id == 104 || id == 154) return Colors.blueGrey.shade300;
-  if ((id >= 101 && id <= 103) || (id >= 151 && id <= 153)) {
-    return Colors.amber.shade300;
-  }
+  if (id >= 101 && id <= 103) return Colors.amber.shade200;
   return Colors.orange.shade300;
 }
 
