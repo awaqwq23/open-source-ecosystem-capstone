@@ -215,14 +215,18 @@ func (s *Service) LogoutAll(ctx context.Context, userID string) error {
 }
 
 func (s *Service) issueSession(ctx context.Context, user domain.User, deviceName string) (AuthResult, error) {
-	refreshToken := id.NewRaw()
+	refreshToken, err := newRefreshToken()
+	if err != nil {
+		return AuthResult{}, err
+	}
+	now := s.now()
 	session := domain.Session{
 		ID:               id.New(id.TypeSession),
 		UserID:           user.ID,
 		RefreshTokenHash: hashToken(refreshToken),
 		DeviceName:       strings.TrimSpace(deviceName),
-		CreatedAt:        s.now(),
-		ExpiresAt:        s.now().Add(s.sessionDuration),
+		CreatedAt:        now,
+		ExpiresAt:        now.Add(s.sessionDuration),
 	}
 	if err := s.users.CreateSession(ctx, session); err != nil {
 		return AuthResult{}, err
@@ -255,6 +259,14 @@ func randomDigits(length int) string {
 		bytes[i] = '0' + bytes[i]%10
 	}
 	return string(bytes)
+}
+
+func newRefreshToken() (string, error) {
+	var bytes [32]byte
+	if _, err := rand.Read(bytes[:]); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes[:]), nil
 }
 
 func hashToken(token string) string {

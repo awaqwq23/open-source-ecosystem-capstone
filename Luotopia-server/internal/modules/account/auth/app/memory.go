@@ -50,7 +50,7 @@ func (r *MemoryUserRepository) CreateUserWithIdentity(_ context.Context, identit
 	user := domain.User{ID: id.New(id.TypeUser), Status: domain.UserStatusActive, CreatedAt: now}
 	r.users[user.ID] = user
 	r.identities[key] = domain.Identity{
-		ID:         id.New(id.TypeUser),
+		ID:         id.New(id.TypeIdentity),
 		UserID:     user.ID,
 		Type:       identityType,
 		Identifier: identifier,
