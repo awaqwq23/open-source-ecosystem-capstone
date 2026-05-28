@@ -186,6 +186,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'luotopia-auth/account',
                     builder: (context, state) => const LuotopiaAccountPage(),
+                    routes: [
+                      GoRoute(
+                        path: 'settings',
+                        builder: (context, state) =>
+                            const LuotopiaAccountSettingsPage(),
+                        routes: [
+                          GoRoute(
+                            path: 'username',
+                            builder: (context, state) =>
+                                const LuotopiaUsernamePage(),
+                          ),
+                          GoRoute(
+                            path: 'password',
+                            builder: (context, state) =>
+                                const LuotopiaPasswordPage(),
+                          ),
+                          GoRoute(
+                            path: 'phone',
+                            builder: (context, state) =>
+                                const LuotopiaPhonePage(),
+                          ),
+                          GoRoute(
+                            path: 'email',
+                            builder: (context, state) =>
+                                const LuotopiaEmailPage(),
+                          ),
+                          GoRoute(
+                            path: 'wechat',
+                            builder: (context, state) =>
+                                const LuotopiaSocialBindPage(
+                                  providerName: '微信',
+                                ),
+                          ),
+                          GoRoute(
+                            path: 'qq',
+                            builder: (context, state) =>
+                                const LuotopiaSocialBindPage(
+                                  providerName: 'QQ',
+                                ),
+                          ),
+                        ],
+                      ),
+                      GoRoute(
+                        path: 'devices',
+                        builder: (context, state) =>
+                            const LuotopiaDeviceManagementPage(),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'ai',

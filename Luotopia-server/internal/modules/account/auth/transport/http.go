@@ -5,13 +5,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/app"
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
+	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 )
 
 type Handler struct {
-	service      *app.Service
+	service        *app.Service
 	authMiddleware gin.HandlerFunc
 }
 
@@ -31,8 +31,12 @@ func (h Handler) Register(router gin.IRouter) {
 	protected := auth.Group("")
 	protected.Use(h.authMiddleware)
 	protected.GET("/me", h.me)
+	protected.POST("/profile/username", h.setUsername)
 	protected.POST("/password", h.setPassword)
+	protected.POST("/identities/phone", h.bindPhone)
 	protected.POST("/identities/email", h.bindEmail)
+	protected.GET("/sessions", h.sessions)
+	protected.DELETE("/sessions/:session_public_id", h.logoutSession)
 	protected.POST("/logout-all", h.logoutAll)
 }
 
@@ -147,8 +151,30 @@ func (h Handler) socialLogin(c *gin.Context) {
 }
 
 func (h Handler) me(c *gin.Context) {
-	userID := c.GetString("user_id")
-	c.JSON(http.StatusOK, gin.H{"user": gin.H{"id": userID}})
+	account, err := h.service.Me(c.Request.Context(), c.GetString("user_id"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": accountJSON(account)})
+}
+
+type setUsernameRequest struct {
+	Username string `json:"username" binding:"required"`
+}
+
+func (h Handler) setUsername(c *gin.Context) {
+	var req setUsernameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+		return
+	}
+	account, err := h.service.SetUsername(c.Request.Context(), c.GetString("user_id"), req.Username)
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": accountJSON(account)})
 }
 
 type setPasswordRequest struct {
@@ -173,6 +199,29 @@ type bindEmailRequest struct {
 	Code  string `json:"code" binding:"required"`
 }
 
+type bindPhoneRequest struct {
+	Phone string `json:"phone" binding:"required"`
+	Code  string `json:"code" binding:"required"`
+}
+
+func (h Handler) bindPhone(c *gin.Context) {
+	var req bindPhoneRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+		return
+	}
+	if err := h.service.BindPhone(c.Request.Context(), c.GetString("user_id"), req.Phone, req.Code); err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	account, err := h.service.Me(c.Request.Context(), c.GetString("user_id"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": accountJSON(account)})
+}
+
 func (h Handler) bindEmail(c *gin.Context) {
 	var req bindEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -180,6 +229,38 @@ func (h Handler) bindEmail(c *gin.Context) {
 		return
 	}
 	if err := h.service.BindEmail(c.Request.Context(), c.GetString("user_id"), req.Email, req.Code); err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	account, err := h.service.Me(c.Request.Context(), c.GetString("user_id"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": accountJSON(account)})
+}
+
+func (h Handler) sessions(c *gin.Context) {
+	sessions, err := h.service.ListSessions(c.Request.Context(), c.GetString("user_id"), c.GetString("session_id"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	items := make([]gin.H, len(sessions))
+	for i, session := range sessions {
+		items[i] = gin.H{
+			"id":          session.PublicID,
+			"device_name": session.DeviceName,
+			"current":     session.Current,
+			"created_at":  session.CreatedAt,
+			"expires_at":  session.ExpiresAt,
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"sessions": items})
+}
+
+func (h Handler) logoutSession(c *gin.Context) {
+	if err := h.service.LogoutSession(c.Request.Context(), c.GetString("user_id"), c.Param("session_public_id"), c.GetString("session_id")); err != nil {
 		writeDomainError(c, err)
 		return
 	}
@@ -196,13 +277,35 @@ func (h Handler) logoutAll(c *gin.Context) {
 
 func writeAuthResult(c *gin.Context, result app.AuthResult) {
 	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{"id": result.User.ID},
+		"user": accountJSON(result.Account),
 		"tokens": gin.H{
 			"access_token":  result.AccessToken,
 			"refresh_token": result.RefreshToken,
 			"expires_in":    result.ExpiresIn,
 		},
 	})
+}
+
+func accountJSON(account domain.AccountSummary) gin.H {
+	return gin.H{
+		"external_id":  account.ExternalID,
+		"username":     nullableString(account.Username),
+		"avatar_url":   nullableString(account.AvatarURL),
+		"has_password": account.HasPassword,
+		"identities": gin.H{
+			"phone":  nullableString(account.Identities.Phone),
+			"email":  nullableString(account.Identities.Email),
+			"wechat": nullableString(account.Identities.Wechat),
+			"qq":     nullableString(account.Identities.QQ),
+		},
+	}
+}
+
+func nullableString(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }
 
 func writeDomainError(c *gin.Context, err error) {
@@ -215,6 +318,10 @@ func writeDomainError(c *gin.Context, err error) {
 		writeError(c, http.StatusUnauthorized, "invalid_credential", "账号或密码错误")
 	case errors.Is(err, domain.ErrIdentityNotFound):
 		writeError(c, http.StatusNotFound, "identity_not_found", "登录身份不存在")
+	case errors.Is(err, domain.ErrIdentityAlreadyBound):
+		writeError(c, http.StatusConflict, "identity_already_bound", "该身份已被其他账户绑定")
+	case errors.Is(err, domain.ErrSessionNotFound):
+		writeError(c, http.StatusNotFound, "session_not_found", "设备会话不存在")
 	case errors.Is(err, domain.ErrSocialProviderDisabled):
 		writeError(c, http.StatusServiceUnavailable, "not_enabled", "能力暂未启用")
 	default:

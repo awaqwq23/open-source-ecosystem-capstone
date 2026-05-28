@@ -57,22 +57,49 @@ type Identity struct {
 }
 
 type PublicProfile struct {
-	UserID    string
-	PublicID  string
-	Nickname  string
-	AvatarURL string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	UserID     string
+	ExternalID string
+	Nickname   string
+	AvatarURL  string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type AccountIdentitySummary struct {
+	Phone  string
+	Email  string
+	Wechat string
+	QQ     string
+}
+
+type AccountSummary struct {
+	UserID      string
+	ExternalID  string
+	Username    string
+	AvatarURL   string
+	HasPassword bool
+	Identities  AccountIdentitySummary
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type Session struct {
 	ID               string
+	PublicID         string
 	UserID           string
 	RefreshTokenHash string
 	DeviceName       string
 	CreatedAt        time.Time
 	ExpiresAt        time.Time
 	RevokedAt        *time.Time
+}
+
+type DeviceSession struct {
+	PublicID   string
+	DeviceName string
+	Current    bool
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
 }
 
 type TokenPair struct {

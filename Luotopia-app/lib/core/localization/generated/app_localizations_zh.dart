@@ -635,7 +635,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAiSaveButton => '保存 AI 设置';
 
   @override
-  String get settingsAccountLocalTitle => '本地账户';
+  String get settingsAccountLocalTitle => 'Luotopia 账户';
 
   @override
   String get settingsAccountWhuTitle => '武大账户';

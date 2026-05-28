@@ -17,12 +17,16 @@ type UserRepository interface {
 	FindUserByIdentity(ctx context.Context, identityType domain.IdentityType, identifier string) (*domain.User, error)
 	CreateUserWithIdentity(ctx context.Context, identityType domain.IdentityType, identifier string) (*domain.User, error)
 	FindUserByLoginIdentifier(ctx context.Context, identifier string) (*domain.User, error)
+	FindAccountByUserID(ctx context.Context, userID string) (domain.AccountSummary, error)
+	UpdateUsername(ctx context.Context, userID string, username string) (domain.AccountSummary, error)
 	BindIdentity(ctx context.Context, userID string, identityType domain.IdentityType, identifier string) error
 	SetPassword(ctx context.Context, userID string, passwordHash string) error
 	PasswordHash(ctx context.Context, userID string) (string, error)
 	CreateSession(ctx context.Context, session domain.Session) error
+	FindSessionsByUserID(ctx context.Context, userID string) ([]domain.Session, error)
 	FindSessionByRefreshHash(ctx context.Context, refreshHash string) (*domain.Session, error)
 	RevokeSession(ctx context.Context, sessionID string) error
+	RevokeSessionByPublicID(ctx context.Context, userID string, publicID string) error
 	RevokeUserSessions(ctx context.Context, userID string) error
 	FindIdentitiesByUserID(ctx context.Context, userID string) ([]domain.Identity, error)
 }
@@ -112,6 +116,7 @@ type VerificationCodeLoginCommand struct {
 
 type AuthResult struct {
 	User         domain.User
+	Account      domain.AccountSummary
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int64
@@ -172,6 +177,20 @@ func (s *Service) SetPassword(ctx context.Context, userID string, password strin
 	return s.users.SetPassword(ctx, userID, hash)
 }
 
+func (s *Service) Me(ctx context.Context, userID string) (domain.AccountSummary, error) {
+	if userID == "" {
+		return domain.AccountSummary{}, domain.ErrInvalidArgument
+	}
+	return s.users.FindAccountByUserID(ctx, userID)
+}
+
+func (s *Service) SetUsername(ctx context.Context, userID string, username string) (domain.AccountSummary, error) {
+	if userID == "" || strings.TrimSpace(username) == "" {
+		return domain.AccountSummary{}, domain.ErrInvalidArgument
+	}
+	return s.users.UpdateUsername(ctx, userID, username)
+}
+
 func (s *Service) BindEmail(ctx context.Context, userID string, email string, code string) error {
 	normalized := normalizeIdentifier(domain.IdentityEmail, email)
 	if userID == "" || normalized == "" {
@@ -181,6 +200,17 @@ func (s *Service) BindEmail(ctx context.Context, userID string, email string, co
 		return domain.ErrVerificationFailed
 	}
 	return s.users.BindIdentity(ctx, userID, domain.IdentityEmail, normalized)
+}
+
+func (s *Service) BindPhone(ctx context.Context, userID string, phone string, code string) error {
+	normalized := normalizeIdentifier(domain.IdentityPhone, phone)
+	if userID == "" || normalized == "" {
+		return domain.ErrInvalidArgument
+	}
+	if err := s.codes.Verify(ctx, normalized, domain.VerificationPurposeBind, code); err != nil {
+		return domain.ErrVerificationFailed
+	}
+	return s.users.BindIdentity(ctx, userID, domain.IdentityPhone, normalized)
 }
 
 func (s *Service) Refresh(ctx context.Context, refreshToken string, deviceName string) (AuthResult, error) {
@@ -214,6 +244,37 @@ func (s *Service) LogoutAll(ctx context.Context, userID string) error {
 	return s.users.RevokeUserSessions(ctx, userID)
 }
 
+func (s *Service) ListSessions(ctx context.Context, userID string, currentSessionID string) ([]domain.DeviceSession, error) {
+	if userID == "" {
+		return nil, domain.ErrInvalidArgument
+	}
+	sessions, err := s.users.FindSessionsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]domain.DeviceSession, 0, len(sessions))
+	for _, session := range sessions {
+		if session.PublicID == "" {
+			continue
+		}
+		result = append(result, domain.DeviceSession{
+			PublicID:   session.PublicID,
+			DeviceName: session.DeviceName,
+			Current:    session.ID == currentSessionID,
+			CreatedAt:  session.CreatedAt,
+			ExpiresAt:  session.ExpiresAt,
+		})
+	}
+	return result, nil
+}
+
+func (s *Service) LogoutSession(ctx context.Context, userID string, publicSessionID string, currentSessionID string) error {
+	if userID == "" || publicSessionID == "" {
+		return domain.ErrInvalidArgument
+	}
+	return s.users.RevokeSessionByPublicID(ctx, userID, publicSessionID)
+}
+
 func (s *Service) issueSession(ctx context.Context, user domain.User, deviceName string) (AuthResult, error) {
 	refreshToken, err := newRefreshToken()
 	if err != nil {
@@ -222,6 +283,7 @@ func (s *Service) issueSession(ctx context.Context, user domain.User, deviceName
 	now := s.now()
 	session := domain.Session{
 		ID:               id.New(id.TypeSession),
+		PublicID:         newPublicID("dev"),
 		UserID:           user.ID,
 		RefreshTokenHash: hashToken(refreshToken),
 		DeviceName:       strings.TrimSpace(deviceName),
@@ -235,7 +297,11 @@ func (s *Service) issueSession(ctx context.Context, user domain.User, deviceName
 	if err != nil {
 		return AuthResult{}, err
 	}
-	return AuthResult{User: user, AccessToken: accessToken, RefreshToken: refreshToken, ExpiresIn: expiresIn}, nil
+	account, err := s.users.FindAccountByUserID(ctx, user.ID)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	return AuthResult{User: user, Account: account, AccessToken: accessToken, RefreshToken: refreshToken, ExpiresIn: expiresIn}, nil
 }
 
 func normalizeIdentifier(identityType domain.IdentityType, value string) string {
@@ -267,6 +333,14 @@ func newRefreshToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes[:]), nil
+}
+
+func newPublicID(prefix string) string {
+	var bytes [12]byte
+	if _, err := rand.Read(bytes[:]); err != nil {
+		return prefix + "_" + id.NewRaw()
+	}
+	return prefix + "_" + hex.EncodeToString(bytes[:])
 }
 
 func hashToken(token string) string {

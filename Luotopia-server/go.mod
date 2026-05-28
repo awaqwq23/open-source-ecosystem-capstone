@@ -41,6 +41,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/redis/go-redis/v9 v9.19.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.102 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.3.93 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

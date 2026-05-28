@@ -1313,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAccountLocalTitle.
   ///
   /// In en, this message translates to:
-  /// **'Local Account'**
+  /// **'Luotopia Account'**
   String get settingsAccountLocalTitle;
 
   /// No description provided for @settingsAccountWhuTitle.

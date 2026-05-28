@@ -240,7 +240,7 @@ class _LuotopiaLoginPageState extends ConsumerState<LuotopiaLoginPage> {
             width: double.infinity,
             child: FilledButton(
               onPressed: loading ? null : _login,
-              child: Text(loading ? '处理中...' : '登录'),
+              child: Text(loading ? '处理中...' : (isCodeMode ? '登录/注册' : '登录')),
             ),
           ),
           const SizedBox(height: 32),

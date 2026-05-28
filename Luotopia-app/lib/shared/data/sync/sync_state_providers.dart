@@ -10,7 +10,7 @@ import 'package:luotopia/shared/data/sync/sync_service.dart';
 final syncCapabilityProvider = FutureProvider.autoDispose<bool>((ref) async {
   final auth = ref.watch(luotopiaAuthProvider);
   final token = auth.accessToken;
-  final userId = auth.user?.id;
+  final userId = auth.user?.externalId;
   if (auth.status != LuotopiaAuthStatus.authenticated ||
       token == null ||
       token.isEmpty ||

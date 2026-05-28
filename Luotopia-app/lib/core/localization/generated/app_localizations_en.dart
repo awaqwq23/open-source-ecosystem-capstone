@@ -653,7 +653,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAiSaveButton => 'Save AI settings';
 
   @override
-  String get settingsAccountLocalTitle => 'Local Account';
+  String get settingsAccountLocalTitle => 'Luotopia Account';
 
   @override
   String get settingsAccountWhuTitle => 'WHU Account';

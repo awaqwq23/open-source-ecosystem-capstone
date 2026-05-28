@@ -8,8 +8,8 @@ final luotopiaAuthRepositoryProvider = Provider<LuotopiaAuthRepository>((ref) {
 
 final luotopiaAuthProvider =
     NotifierProvider<LuotopiaAuthNotifier, LuotopiaAuthState>(
-  LuotopiaAuthNotifier.new,
-);
+      LuotopiaAuthNotifier.new,
+    );
 
 class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
   late final LuotopiaAuthRepository _repository;
@@ -40,7 +40,10 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
     required String targetType,
     required String target,
   }) async {
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
       await _repository.sendVerificationCode(
         targetType: targetType,
@@ -64,7 +67,10 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
     required String target,
     required String code,
   }) async {
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
       final result = await _repository.loginWithVerificationCode(
         targetType: targetType,
@@ -84,7 +90,10 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
     required String identifier,
     required String password,
   }) async {
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
       final result = await _repository.loginWithPassword(
         identifier: identifier,
@@ -104,12 +113,47 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
     if (accessToken == null || accessToken.isEmpty) {
       return;
     }
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
-      await _repository.setPassword(accessToken: accessToken, password: password);
+      await _repository.setPassword(
+        accessToken: accessToken,
+        password: password,
+      );
+      final user = await _repository.getMe(accessToken);
       state = state.copyWith(
         status: LuotopiaAuthStatus.authenticated,
+        user: user,
         noticeMessage: '密码已更新',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Future<void> setUsername(String username) async {
+    final accessToken = state.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
+    try {
+      final user = await _repository.setUsername(
+        accessToken: accessToken,
+        username: username,
+      );
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        user: user,
+        noticeMessage: '用户名已更新',
       );
     } catch (error) {
       state = state.copyWith(
@@ -121,7 +165,10 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
 
   Future<void> sendEmailBindCode(String email) async {
     final wasAuthenticated = state.isAuthenticated;
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
       await _repository.sendVerificationCode(
         targetType: 'email',
@@ -142,21 +189,105 @@ class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
     }
   }
 
+  Future<void> sendPhoneBindCode(String phone) async {
+    final wasAuthenticated = state.isAuthenticated;
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
+    try {
+      await _repository.sendVerificationCode(
+        targetType: 'phone',
+        target: phone,
+        purpose: 'bind',
+      );
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        noticeMessage: '手机验证码已发送',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: wasAuthenticated
+            ? LuotopiaAuthStatus.authenticated
+            : LuotopiaAuthStatus.unauthenticated,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
   Future<void> bindEmail({required String email, required String code}) async {
     final accessToken = state.accessToken;
     if (accessToken == null || accessToken.isEmpty) {
       return;
     }
-    state = state.copyWith(status: LuotopiaAuthStatus.loading, clearMessages: true);
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
     try {
-      await _repository.bindEmail(
+      final user = await _repository.bindEmail(
         accessToken: accessToken,
         email: email,
         code: code,
       );
       state = state.copyWith(
         status: LuotopiaAuthStatus.authenticated,
+        user: user,
         noticeMessage: '邮箱已绑定',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Future<void> bindPhone({required String phone, required String code}) async {
+    final accessToken = state.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
+    try {
+      final user = await _repository.bindPhone(
+        accessToken: accessToken,
+        phone: phone,
+        code: code,
+      );
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        user: user,
+        noticeMessage: '手机号已绑定',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Future<void> logoutSession(String sessionId) async {
+    final accessToken = state.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      status: LuotopiaAuthStatus.loading,
+      clearMessages: true,
+    );
+    try {
+      await _repository.logoutSession(
+        accessToken: accessToken,
+        sessionId: sessionId,
+      );
+      state = state.copyWith(
+        status: LuotopiaAuthStatus.authenticated,
+        noticeMessage: '设备已退出',
       );
     } catch (error) {
       state = state.copyWith(

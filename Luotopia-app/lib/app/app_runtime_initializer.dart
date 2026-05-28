@@ -17,18 +17,17 @@ import 'package:luotopia/shared/data/sync/local_sync_store.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 
 class AppRuntimeInitializer extends ConsumerStatefulWidget {
-  const AppRuntimeInitializer({
-    required this.child,
-    super.key,
-  });
+  const AppRuntimeInitializer({required this.child, super.key});
 
   final Widget child;
 
   @override
-  ConsumerState<AppRuntimeInitializer> createState() => _AppRuntimeInitializerState();
+  ConsumerState<AppRuntimeInitializer> createState() =>
+      _AppRuntimeInitializerState();
 }
 
-class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> with WidgetsBindingObserver {
+class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer>
+    with WidgetsBindingObserver {
   final List<ProviderSubscription<dynamic>> _subs = [];
   HomeWidgetSyncService? _homeWidgetSyncService;
   bool _initialized = false;
@@ -80,10 +79,16 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
       }),
     );
     _subs.add(
-      ref.listenManual(appHomeSettingsProvider, (_, _) => service.syncDebounced()),
+      ref.listenManual(
+        appHomeSettingsProvider,
+        (_, _) => service.syncDebounced(),
+      ),
     );
     _subs.add(
-      ref.listenManual(appWidgetSettingsProvider, (_, _) => service.syncDebounced()),
+      ref.listenManual(
+        appWidgetSettingsProvider,
+        (_, _) => service.syncDebounced(),
+      ),
     );
     _subs.add(
       ref.listenManual(appLocaleProvider, (_, _) => service.syncDebounced()),
@@ -97,7 +102,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
             next.accessToken != null &&
             next.accessToken!.isNotEmpty &&
             next.user != null &&
-            next.user!.id.isNotEmpty) {
+            next.user!.externalId.isNotEmpty) {
           _onAuthenticated(next);
         } else {
           ref.read(agendaSyncServiceProvider).resetCapability();
@@ -110,7 +115,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
         auth.accessToken != null &&
         auth.accessToken!.isNotEmpty &&
         auth.user != null &&
-        auth.user!.id.isNotEmpty) {
+        auth.user!.externalId.isNotEmpty) {
       _onAuthenticated(auth);
     } else {
       unawaited(_performPublicPull());
@@ -147,18 +152,25 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
     }
   }
 
-  Future<void> _applyPullResult(LuotopiaAuthState auth, PullResult result) async {
+  Future<void> _applyPullResult(
+    LuotopiaAuthState auth,
+    PullResult result,
+  ) async {
     if (result.isSuccess && result.response != null) {
       final data = result.response!;
       ref.invalidate(weatherProvider);
       ref.invalidate(notificationProvider);
       // 同步能力从拉取结果获取
       if (data.sync != null) {
-        ref.read(agendaSyncServiceProvider).applyCapability(
-              userId: auth.user!.id,
+        ref
+            .read(agendaSyncServiceProvider)
+            .applyCapability(
+              userId: auth.user!.externalId,
               enabled: data.sync!.enabled,
             );
-        final pending = await ref.read(localSyncStoreProvider).pendingChangeCount();
+        final pending = await ref
+            .read(localSyncStoreProvider)
+            .pendingChangeCount();
         if (data.sync!.enabled && (data.sync!.hasChanges || pending > 0)) {
           _syncAgendaDebounced();
         }
@@ -169,7 +181,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer> w
   void _syncAgendaDebounced() {
     final auth = ref.read(luotopiaAuthProvider);
     final token = auth.accessToken;
-    final userId = auth.user?.id;
+    final userId = auth.user?.externalId;
     if (auth.status != LuotopiaAuthStatus.authenticated ||
         token == null ||
         token.isEmpty ||

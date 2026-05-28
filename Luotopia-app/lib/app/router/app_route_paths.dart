@@ -31,6 +31,22 @@ abstract final class AppRoutePaths {
   static const settingsAi = '/settings/ai';
   static const settingsLuotopiaLogin = '/settings/luotopia-auth/login';
   static const settingsLuotopiaAccount = '/settings/luotopia-auth/account';
+  static const settingsLuotopiaAccountSettings =
+      '/settings/luotopia-auth/account/settings';
+  static const settingsLuotopiaUsername =
+      '/settings/luotopia-auth/account/settings/username';
+  static const settingsLuotopiaPassword =
+      '/settings/luotopia-auth/account/settings/password';
+  static const settingsLuotopiaPhone =
+      '/settings/luotopia-auth/account/settings/phone';
+  static const settingsLuotopiaEmail =
+      '/settings/luotopia-auth/account/settings/email';
+  static const settingsLuotopiaWechat =
+      '/settings/luotopia-auth/account/settings/wechat';
+  static const settingsLuotopiaQQ =
+      '/settings/luotopia-auth/account/settings/qq';
+  static const settingsLuotopiaDevices =
+      '/settings/luotopia-auth/account/devices';
 
   // Modal (full-screen overlay flow)
   static const repeatSettings = '/item-editor/repeat-settings';

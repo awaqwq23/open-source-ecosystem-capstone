@@ -17,10 +17,12 @@ class SettingsDataUpdatesPage extends ConsumerStatefulWidget {
   const SettingsDataUpdatesPage({super.key});
 
   @override
-  ConsumerState<SettingsDataUpdatesPage> createState() => _SettingsDataUpdatesPageState();
+  ConsumerState<SettingsDataUpdatesPage> createState() =>
+      _SettingsDataUpdatesPageState();
 }
 
-class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPage> {
+class _SettingsDataUpdatesPageState
+    extends ConsumerState<SettingsDataUpdatesPage> {
   bool _weatherRefreshing = false;
   bool _notificationRefreshing = false;
   bool _hotUpdateChecking = false;
@@ -31,13 +33,12 @@ class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPag
   Widget build(BuildContext context) {
     final luotopiaAuth = ref.watch(luotopiaAuthProvider);
     final syncEnabled = ref.watch(syncCapabilityProvider).valueOrNull == true;
-    final pendingSyncCount = ref.watch(pendingSyncChangeCountProvider).valueOrNull ?? 0;
+    final pendingSyncCount =
+        ref.watch(pendingSyncChangeCountProvider).valueOrNull ?? 0;
     final lastSyncedAt = ref.watch(lastSyncTimeProvider);
 
     return ui.Scaffold(
-      headers: [
-        buildSecondaryAppBar(context, title: '数据更新'),
-      ],
+      headers: [buildSecondaryAppBar(context, title: '数据更新')],
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
         child: Column(
@@ -131,10 +132,9 @@ class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPag
       return;
     }
     setState(() => _hotUpdateChecking = true);
-    final result = await ref.read(unifiedPullServiceProvider).pullScoped(
-      trigger: 'manual',
-      scopes: const ['hot_update'],
-    );
+    final result = await ref
+        .read(unifiedPullServiceProvider)
+        .pullScoped(trigger: 'manual', scopes: const ['hot_update']);
     if (!mounted) {
       return;
     }
@@ -146,7 +146,7 @@ class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPag
 
   Future<void> _syncNow(LuotopiaAuthState auth) async {
     final token = auth.accessToken;
-    final userId = auth.user?.id;
+    final userId = auth.user?.externalId;
     if (auth.status != LuotopiaAuthStatus.authenticated ||
         token == null ||
         token.isEmpty ||
@@ -160,16 +160,14 @@ class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPag
       _syncMessage = null;
     });
     try {
-      final pullResult = await ref.read(unifiedPullServiceProvider).pullScoped(
-        trigger: 'manual',
-        scopes: const ['sync'],
-      );
+      final pullResult = await ref
+          .read(unifiedPullServiceProvider)
+          .pullScoped(trigger: 'manual', scopes: const ['sync']);
       final sync = pullResult.response?.sync;
       if (sync != null) {
-        ref.read(agendaSyncServiceProvider).applyCapability(
-              userId: userId,
-              enabled: sync.enabled,
-            );
+        ref
+            .read(agendaSyncServiceProvider)
+            .applyCapability(userId: userId, enabled: sync.enabled);
       }
       await ref
           .read(agendaSyncServiceProvider)
@@ -212,10 +210,7 @@ class _SettingsDataUpdatesPageState extends ConsumerState<SettingsDataUpdatesPag
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 }

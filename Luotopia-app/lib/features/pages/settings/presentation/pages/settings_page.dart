@@ -71,7 +71,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     icon: Icons.person_outline,
                     title: l10n.settingsAccountLocalTitle,
                     subtitle: luotopiaAuth.isAuthenticated
-                        ? '用户 ${luotopiaAuth.user!.shortId}'
+                        ? luotopiaAuth.user!.displayName
                         : '未登录',
                     prominent: true,
                     showTrailing: true,
