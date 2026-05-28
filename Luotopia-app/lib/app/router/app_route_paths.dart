@@ -11,6 +11,7 @@ abstract final class AppRoutePaths {
   static const campusSeatReservation = '/campus/seat-reservation';
   static const campusLuojiaEcard = '/campus/luojia-ecard';
   static const campusEcardPaymentCode = '/campus/ecard-payment-code';
+  static const campusEmptyClassroom = '/campus/empty-classroom';
   static const settings = '/settings';
 
   // Secondary (standard pages)

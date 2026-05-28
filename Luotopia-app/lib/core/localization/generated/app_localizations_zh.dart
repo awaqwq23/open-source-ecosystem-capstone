@@ -669,4 +669,100 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get placeholderOpenMenu => '打开菜单';
+
+  @override
+  String get emptyClassroomTitle => '空闲教室';
+
+  @override
+  String get emptyClassroomFilterTitle => '筛选条件';
+
+  @override
+  String get emptyClassroomFilterCampus => '校区';
+
+  @override
+  String get emptyClassroomFilterBuilding => '教学楼';
+
+  @override
+  String get emptyClassroomFilterWeek => '周次';
+
+  @override
+  String get emptyClassroomFilterWeekDay => '星期';
+
+  @override
+  String get emptyClassroomQueryButton => '查询空闲教室';
+
+  @override
+  String get emptyClassroomLoginPrompt => '请先登录武大统一认证';
+
+  @override
+  String get emptyClassroomGoLogin => '去登录';
+
+  @override
+  String get emptyClassroomRetry => '重试';
+
+  @override
+  String get emptyClassroomNoResults => '该教学楼当前没有空闲教室';
+
+  @override
+  String get emptyClassroomQueryHint => '已选择筛选条件，点击上方按钮查询空闲教室';
+
+  @override
+  String emptyClassroomFloorSeats(Object floor, int available, int total) {
+    return '$floor楼 · $available/$total 座';
+  }
+
+  @override
+  String get emptyClassroomSectionHint => '点击节次添加自习';
+
+  @override
+  String get emptyClassroomFABTitle => '教室节次管理';
+
+  @override
+  String emptyClassroomFABExpanded(int expanded, int total) {
+    return '已展开 $expanded / $total 个教室';
+  }
+
+  @override
+  String get emptyClassroomFABHint => '点击教室右侧箭头展开节次，点击节次方块即可添加到日程';
+
+  @override
+  String get emptyClassroomExpandAll => '展开全部';
+
+  @override
+  String get emptyClassroomCollapseAll => '收起全部';
+
+  @override
+  String get emptyClassroomConflictTitle => '时间冲突';
+
+  @override
+  String get emptyClassroomConflictSingle => '该时段已有安排，是否确认加课？';
+
+  @override
+  String emptyClassroomConflictMulti(Object sections) {
+    return '$sections 已有安排，是否确认加课？';
+  }
+
+  @override
+  String get emptyClassroomConflictCancel => '取消';
+
+  @override
+  String get emptyClassroomConflictConfirm => '确认加课';
+
+  @override
+  String get emptyClassroomUndo => '撤销';
+
+  @override
+  String emptyClassroomAddedSingle(Object classroom, int section) {
+    return '已添加$classroom第$section节课';
+  }
+
+  @override
+  String emptyClassroomSectionLabel(int section) {
+    return '第$section节';
+  }
+
+  @override
+  String emptyClassroomWeekLabel(Object week) {
+    return '第$week周';
+  }
 }

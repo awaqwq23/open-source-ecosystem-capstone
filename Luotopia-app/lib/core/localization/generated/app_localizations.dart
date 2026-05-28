@@ -1381,6 +1381,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open menu'**
   String get placeholderOpenMenu;
+
+  /// No description provided for @emptyClassroomTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty Classrooms'**
+  String get emptyClassroomTitle;
+
+  /// No description provided for @emptyClassroomFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get emptyClassroomFilterTitle;
+
+  /// No description provided for @emptyClassroomFilterCampus.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus'**
+  String get emptyClassroomFilterCampus;
+
+  /// No description provided for @emptyClassroomFilterBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Building'**
+  String get emptyClassroomFilterBuilding;
+
+  /// No description provided for @emptyClassroomFilterWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get emptyClassroomFilterWeek;
+
+  /// No description provided for @emptyClassroomFilterWeekDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get emptyClassroomFilterWeekDay;
+
+  /// No description provided for @emptyClassroomQueryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Classrooms'**
+  String get emptyClassroomQueryButton;
+
+  /// No description provided for @emptyClassroomLoginPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to WHU first'**
+  String get emptyClassroomLoginPrompt;
+
+  /// No description provided for @emptyClassroomGoLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get emptyClassroomGoLogin;
+
+  /// No description provided for @emptyClassroomRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get emptyClassroomRetry;
+
+  /// No description provided for @emptyClassroomNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No empty classrooms in this building'**
+  String get emptyClassroomNoResults;
+
+  /// No description provided for @emptyClassroomQueryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters set. Tap the button above to search'**
+  String get emptyClassroomQueryHint;
+
+  /// No description provided for @emptyClassroomFloorSeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor {floor} · {available}/{total} seats'**
+  String emptyClassroomFloorSeats(Object floor, int available, int total);
+
+  /// No description provided for @emptyClassroomSectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a period to add'**
+  String get emptyClassroomSectionHint;
+
+  /// No description provided for @emptyClassroomFABTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Classroom Periods'**
+  String get emptyClassroomFABTitle;
+
+  /// No description provided for @emptyClassroomFABExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'{expanded} / {total} expanded'**
+  String emptyClassroomFABExpanded(int expanded, int total);
+
+  /// No description provided for @emptyClassroomFABHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the arrow to expand periods, then tap a block to add to your schedule'**
+  String get emptyClassroomFABHint;
+
+  /// No description provided for @emptyClassroomExpandAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand All'**
+  String get emptyClassroomExpandAll;
+
+  /// No description provided for @emptyClassroomCollapseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse All'**
+  String get emptyClassroomCollapseAll;
+
+  /// No description provided for @emptyClassroomConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Conflict'**
+  String get emptyClassroomConflictTitle;
+
+  /// No description provided for @emptyClassroomConflictSingle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a schedule at this time. Confirm?'**
+  String get emptyClassroomConflictSingle;
+
+  /// No description provided for @emptyClassroomConflictMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'You have schedules at {sections}. Confirm?'**
+  String emptyClassroomConflictMulti(Object sections);
+
+  /// No description provided for @emptyClassroomConflictCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get emptyClassroomConflictCancel;
+
+  /// No description provided for @emptyClassroomConflictConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get emptyClassroomConflictConfirm;
+
+  /// No description provided for @emptyClassroomUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get emptyClassroomUndo;
+
+  /// No description provided for @emptyClassroomAddedSingle.
+  ///
+  /// In en, this message translates to:
+  /// **'Added period {section} at {classroom}'**
+  String emptyClassroomAddedSingle(Object classroom, int section);
+
+  /// No description provided for @emptyClassroomSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Period {section}'**
+  String emptyClassroomSectionLabel(int section);
+
+  /// No description provided for @emptyClassroomWeekLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}'**
+  String emptyClassroomWeekLabel(Object week);
 }
 
 class _AppLocalizationsDelegate

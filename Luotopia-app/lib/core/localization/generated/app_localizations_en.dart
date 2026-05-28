@@ -687,4 +687,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get placeholderOpenMenu => 'Open menu';
+
+  @override
+  String get emptyClassroomTitle => 'Empty Classrooms';
+
+  @override
+  String get emptyClassroomFilterTitle => 'Filters';
+
+  @override
+  String get emptyClassroomFilterCampus => 'Campus';
+
+  @override
+  String get emptyClassroomFilterBuilding => 'Building';
+
+  @override
+  String get emptyClassroomFilterWeek => 'Week';
+
+  @override
+  String get emptyClassroomFilterWeekDay => 'Day';
+
+  @override
+  String get emptyClassroomQueryButton => 'Search Classrooms';
+
+  @override
+  String get emptyClassroomLoginPrompt => 'Please log in to WHU first';
+
+  @override
+  String get emptyClassroomGoLogin => 'Log in';
+
+  @override
+  String get emptyClassroomRetry => 'Retry';
+
+  @override
+  String get emptyClassroomNoResults => 'No empty classrooms in this building';
+
+  @override
+  String get emptyClassroomQueryHint =>
+      'Filters set. Tap the button above to search';
+
+  @override
+  String emptyClassroomFloorSeats(Object floor, int available, int total) {
+    return 'Floor $floor · $available/$total seats';
+  }
+
+  @override
+  String get emptyClassroomSectionHint => 'Tap a period to add';
+
+  @override
+  String get emptyClassroomFABTitle => 'Classroom Periods';
+
+  @override
+  String emptyClassroomFABExpanded(int expanded, int total) {
+    return '$expanded / $total expanded';
+  }
+
+  @override
+  String get emptyClassroomFABHint =>
+      'Tap the arrow to expand periods, then tap a block to add to your schedule';
+
+  @override
+  String get emptyClassroomExpandAll => 'Expand All';
+
+  @override
+  String get emptyClassroomCollapseAll => 'Collapse All';
+
+  @override
+  String get emptyClassroomConflictTitle => 'Time Conflict';
+
+  @override
+  String get emptyClassroomConflictSingle =>
+      'You have a schedule at this time. Confirm?';
+
+  @override
+  String emptyClassroomConflictMulti(Object sections) {
+    return 'You have schedules at $sections. Confirm?';
+  }
+
+  @override
+  String get emptyClassroomConflictCancel => 'Cancel';
+
+  @override
+  String get emptyClassroomConflictConfirm => 'Confirm';
+
+  @override
+  String get emptyClassroomUndo => 'Undo';
+
+  @override
+  String emptyClassroomAddedSingle(Object classroom, int section) {
+    return 'Added period $section at $classroom';
+  }
+
+  @override
+  String emptyClassroomSectionLabel(int section) {
+    return 'Period $section';
+  }
+
+  @override
+  String emptyClassroomWeekLabel(Object week) {
+    return 'Week $week';
+  }
 }

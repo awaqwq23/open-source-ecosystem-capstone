@@ -591,6 +591,9 @@ class _AppGrid extends StatelessWidget {
       case 'E卡付款码':
         context.push(AppRoutePaths.campusEcardPaymentCode);
         return;
+      case '空闲教室':
+        context.push(AppRoutePaths.campusEmptyClassroom);
+        return;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

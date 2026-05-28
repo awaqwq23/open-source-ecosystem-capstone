@@ -12,6 +12,7 @@ import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_logi
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/pages/empty_classroom_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/presentation/pages/score_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/seat_reservation/presentation/pages/seat_reservation_page.dart';
@@ -119,6 +120,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                       entry: LuojiaEcardEntry.paymentCode,
                     ),
                   ),
+                  GoRoute(
+                    path: 'empty-classroom',
+                    builder: (context, state) => const EmptyClassroomPage(),
+                  ),
                 ],
               ),
             ],
@@ -139,7 +144,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'data-updates',
-                    builder: (context, state) => const SettingsDataUpdatesPage(),
+                    builder: (context, state) =>
+                        const SettingsDataUpdatesPage(),
                   ),
                   GoRoute(
                     path: 'home',
