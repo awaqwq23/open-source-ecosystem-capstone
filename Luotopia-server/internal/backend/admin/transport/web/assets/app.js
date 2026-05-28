@@ -1,6 +1,8 @@
 const tokenKey = "luotopia.admin.token";
+const refreshTokenKey = "luotopia.admin.refreshToken";
 const state = {
   token: localStorage.getItem(tokenKey) || "",
+  refreshToken: localStorage.getItem(refreshTokenKey) || "",
   view: "dashboard",
 };
 
@@ -27,7 +29,7 @@ function clearMessage() {
   $("message").classList.add("hidden");
 }
 
-async function api(path, options = {}) {
+async function api(path, options = {}, retry = true) {
   const response = await fetch(path, {
     ...options,
     headers: {
@@ -38,6 +40,10 @@ async function api(path, options = {}) {
     },
   });
   const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && retry && state.refreshToken) {
+    await refreshSession();
+    return api(path, options, false);
+  }
   if (!response.ok) {
     const message = data?.error?.message || `请求失败（${response.status}）`;
     throw new Error(message);
@@ -55,11 +61,46 @@ async function login(identifier, password) {
   if (!response.ok) {
     throw new Error(data?.error?.message || "登录失败");
   }
-  state.token = data?.tokens?.access_token || "";
-  if (!state.token) {
-    throw new Error("服务端未返回访问令牌");
+  const accessToken = data?.tokens?.access_token || "";
+  const refreshToken = data?.tokens?.refresh_token || "";
+  if (!accessToken || !refreshToken) {
+    throw new Error("服务端未返回登录令牌");
   }
-  localStorage.setItem(tokenKey, state.token);
+  saveTokens(accessToken, refreshToken);
+}
+
+async function refreshSession() {
+  const response = await fetch("/api/v1/auth/token/refresh", {
+    method: "POST",
+    headers: {"Accept": "application/json", "Content-Type": "application/json"},
+    body: JSON.stringify({refresh_token: state.refreshToken, device_name: "管理后台"}),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    clearTokens();
+    throw new Error(data?.error?.message || "登录已过期，请重新登录");
+  }
+  const accessToken = data?.tokens?.access_token || "";
+  const refreshToken = data?.tokens?.refresh_token || "";
+  if (!accessToken || !refreshToken) {
+    clearTokens();
+    throw new Error("服务端未返回登录令牌");
+  }
+  saveTokens(accessToken, refreshToken);
+}
+
+function saveTokens(accessToken, refreshToken) {
+  state.token = accessToken;
+  state.refreshToken = refreshToken;
+  localStorage.setItem(tokenKey, accessToken);
+  localStorage.setItem(refreshTokenKey, refreshToken);
+}
+
+function clearTokens() {
+  state.token = "";
+  state.refreshToken = "";
+  localStorage.removeItem(tokenKey);
+  localStorage.removeItem(refreshTokenKey);
 }
 
 function boot() {
@@ -91,7 +132,7 @@ async function render() {
   } catch (error) {
     showMessage(error.message, true);
     if (error.message.includes("登录") || error.message.includes("管理员")) {
-      localStorage.removeItem(tokenKey);
+      clearTokens();
     }
   }
 }
@@ -393,8 +434,7 @@ for (const button of document.querySelectorAll("#nav button")) {
 
 $("refresh").addEventListener("click", render);
 $("logout").addEventListener("click", () => {
-  localStorage.removeItem(tokenKey);
-  state.token = "";
+  clearTokens();
   boot();
 });
 

@@ -35,17 +35,17 @@ type Repository interface {
 }
 
 type Service struct {
-	version           string
-	startedAt         time.Time
-	db                *gorm.DB
-	repo              Repository
-	identityRepo      IdentityRepository
-	adminPhone        string
-	adminEmail        string
-	notifcSvc         *notiapp.Service
-	hotUpdateSvc      *hotapp.Service
-	weatherSvc        *weatherapp.Service
-	scriptDir         string
+	version      string
+	startedAt    time.Time
+	db           *gorm.DB
+	repo         Repository
+	identityRepo IdentityRepository
+	adminPhone   string
+	adminEmail   string
+	notifcSvc    *notiapp.Service
+	hotUpdateSvc *hotapp.Service
+	weatherSvc   *weatherapp.Service
+	scriptDir    string
 }
 
 func NewService(version string, db *gorm.DB, repo Repository, identityRepo IdentityRepository, adminPhone, adminEmail string, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string) *Service {
@@ -55,8 +55,8 @@ func NewService(version string, db *gorm.DB, repo Repository, identityRepo Ident
 		db:           db,
 		repo:         repo,
 		identityRepo: identityRepo,
-		adminPhone:   adminPhone,
-		adminEmail:   adminEmail,
+		adminPhone:   normalizeAdminIdentifier(authdomain.IdentityPhone, adminPhone),
+		adminEmail:   normalizeAdminIdentifier(authdomain.IdentityEmail, adminEmail),
 		notifcSvc:    notifcSvc,
 		hotUpdateSvc: hotUpdateSvc,
 		weatherSvc:   weatherSvc,
@@ -89,6 +89,14 @@ func (s *Service) IsAdmin(c *gin.Context) bool {
 		}
 	}
 	return false
+}
+
+func normalizeAdminIdentifier(identityType authdomain.IdentityType, value string) string {
+	value = strings.TrimSpace(value)
+	if identityType == authdomain.IdentityEmail {
+		return strings.ToLower(value)
+	}
+	return value
 }
 
 func (s *Service) Dashboard(ctx context.Context) domain.Dashboard {
