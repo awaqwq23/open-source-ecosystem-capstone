@@ -9,6 +9,9 @@ param(
 
     [string]$Branch = "main",
 
+    [ValidateSet("Go", "Docker")]
+    [string]$Mode = "Go",
+
     [int]$HealthTimeoutSeconds = 60,
 
     [switch]$SkipPush
@@ -90,8 +93,41 @@ git checkout "$Branch"
 git pull --ff-only origin "$Branch"
 
 cd "Luotopia-server"
-docker compose -f docker-compose.dev.yml --profile app up -d --build --force-recreate
-docker compose -f docker-compose.dev.yml --profile app ps
+
+case "$Mode" in
+  Go)
+    STATE_DIR="/tmp/luotopia-deploy"
+    PID_FILE="`$STATE_DIR/luotopia-server.pid"
+    LOG_FILE="`$STATE_DIR/luotopia-server.log"
+    SERVER_BIN="`$STATE_DIR/luotopia-server"
+
+    mkdir -p "`$STATE_DIR"
+    if [ -f "`$PID_FILE" ]; then
+      existing_pid="`$(cat "`$PID_FILE")"
+      if [ -n "`$existing_pid" ] && kill -0 "`$existing_pid" 2>/dev/null; then
+        kill "`$existing_pid"
+        for _ in `$(seq 1 10); do
+          if ! kill -0 "`$existing_pid" 2>/dev/null; then
+            break
+          fi
+          sleep 1
+        done
+      fi
+      rm -f "`$PID_FILE"
+    fi
+
+    docker compose -f docker-compose.dev.yml up -d postgres redis
+    go run ./cmd/migrate
+    go build -o "`$SERVER_BIN" ./cmd/server
+    nohup "`$SERVER_BIN" > "`$LOG_FILE" 2>&1 &
+    echo `$! > "`$PID_FILE"
+    docker compose -f docker-compose.dev.yml ps
+    ;;
+  Docker)
+    docker compose -f docker-compose.dev.yml --profile app up -d --build --force-recreate
+    docker compose -f docker-compose.dev.yml --profile app ps
+    ;;
+esac
 
 for _ in `$(seq 1 $HealthTimeoutSeconds); do
   if curl -fsS http://127.0.0.1:8080/healthz; then
@@ -102,11 +138,15 @@ for _ in `$(seq 1 $HealthTimeoutSeconds); do
   sleep 1
 done
 
-docker compose -f docker-compose.dev.yml --profile app logs --tail=120 server
+if [ "$Mode" = "Go" ]; then
+  tail -n 120 /tmp/luotopia-deploy/luotopia-server.log
+else
+  docker compose -f docker-compose.dev.yml --profile app logs --tail=120 server
+fi
 exit 1
 "@
 
-Write-Host "连接 $target 并部署 $Branch ..."
+Write-Host "连接 $target 并以 $Mode 模式部署 $Branch ..."
 $remoteScript | ssh $target "bash -s"
 if ($LASTEXITCODE -ne 0) {
     throw "远端部署失败，退出码：$LASTEXITCODE"
