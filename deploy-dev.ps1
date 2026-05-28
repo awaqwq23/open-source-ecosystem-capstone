@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$Server,
+    [string]$Server = "",
 
     [string]$User = "",
 
@@ -14,11 +13,89 @@ param(
 
     [int]$HealthTimeoutSeconds = 60,
 
-    [switch]$SkipPush
+    [switch]$SkipPush,
+
+    [switch]$Tui
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# ---- TUI 交互 ----
+function Show-Menu {
+    $choices = @(
+        [System.Management.Automation.Host.ChoiceDescription]::new("&Go", "用 Go 直接运行")
+        [System.Management.Automation.Host.ChoiceDescription]::new("&Docker", "用 Docker 部署")
+    )
+    return $host.UI.PromptForChoice("部署模式", "选择部署模式", $choices, 0)
+}
+
+function Prompt-Input {
+    param(
+        [string]$Title,
+        [string]$Prompt,
+        [string]$Default = ""
+    )
+    $defaultText = if ($Default) { "（默认：$Default）" } else { "" }
+    $input = Read-Host "${Prompt}${defaultText}"
+    if ([string]::IsNullOrWhiteSpace($input)) {
+        return $Default
+    }
+    return $input.Trim()
+}
+
+function Prompt-YesNo {
+    param([string]$Prompt)
+    $choices = @(
+        [System.Management.Automation.Host.ChoiceDescription]::new("&是", "")
+        [System.Management.Automation.Host.ChoiceDescription]::new("&否", "")
+    )
+    return $host.UI.PromptForChoice("", $Prompt, $choices, 0) -eq 0
+}
+
+# 当没有传 -Server 且没有 -Tui 时也进入 TUI
+if (-not $PSBoundParameters.ContainsKey("Server") -or $Tui) {
+    Write-Host "╔══════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║    Luotopia 开发部署工具             ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+
+    $Server = Prompt-Input -Title "服务器" -Prompt "服务器地址" -Default $Server
+    if ([string]::IsNullOrWhiteSpace($Server)) {
+        throw "服务器地址不能为空。"
+    }
+
+    $User = Prompt-Input -Title "用户名" -Prompt "SSH 用户名（可选）" -Default $User
+    $Branch = Prompt-Input -Title "分支" -Prompt "分支名" -Default $Branch
+    $RemotePath = Prompt-Input -Title "远端路径" -Prompt "远端仓库路径" -Default $RemotePath
+
+    $modeChoice = Show-Menu
+    $Mode = if ($modeChoice -eq 0) { "Go" } else { "Docker" }
+
+    $healthInput = Prompt-Input -Title "健康检查超时" -Prompt "健康检查超时（秒）" -Default $HealthTimeoutSeconds.ToString()
+    $HealthTimeoutSeconds = [int]::Parse($healthInput)
+
+    if (-not (Prompt-YesNo -Prompt "推送本地提交？")) {
+        $SkipPush = $true
+    }
+
+    Write-Host ""
+    Write-Host "────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "服务器：  $Server" -ForegroundColor Gray
+    Write-Host "用户名：  $(if ($User) { $User } else { '(无)' })" -ForegroundColor Gray
+    Write-Host "分支：    $Branch" -ForegroundColor Gray
+    Write-Host "远端路径：$RemotePath" -ForegroundColor Gray
+    Write-Host "模式：    $Mode" -ForegroundColor Gray
+    Write-Host "超时：    ${HealthTimeoutSeconds}s" -ForegroundColor Gray
+    Write-Host "推送：    $(if (-not $SkipPush) { '是' } else { '否' })" -ForegroundColor Gray
+    Write-Host "────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host ""
+
+    if (-not (Prompt-YesNo -Prompt "确认以上配置并开始部署？")) {
+        Write-Host "已取消。" -ForegroundColor Yellow
+        exit 0
+    }
+}
 
 function Invoke-Git {
     param(
@@ -150,4 +227,4 @@ if ($LASTEXITCODE -ne 0) {
     throw "远端部署失败，退出码：$LASTEXITCODE"
 }
 
-Write-Host "部署完成。"
+Write-Host "部署完成。" -ForegroundColor Green
