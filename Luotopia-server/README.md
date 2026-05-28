@@ -91,5 +91,8 @@ WHU 统一认证完全留在客户端本地。服务端不保存 Cookie、Token�
 
 - `/api/v1`：客户端 API。
 - `/admin/api/v1`：后台管理 API。
+- `/admin`：后台管理前端页面和静态资源。
 
-二者属于同一服务进程，不拆分为独立服务。
+以上路由属于同一服务进程，不拆分为独立服务。
+
+生产环境使用 nginx 反向代理时，至少需要把 `/healthz`、`/api/v1/`、`/admin/api/v1/`、`/admin` 和 `/admin/` 转发到服务端进程。参考配置见 `deployments/nginx.example.conf`。
