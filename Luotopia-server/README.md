@@ -67,7 +67,7 @@ docker compose -f docker-compose.dev.yml down -v
 
 ## 本地配置
 
-服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/config.example.env` 为 `configs/.env`，再按本机环境修改数据库、Redis、短信、SMTP 和令牌密钥配置。
+服务端启动时必须读取 `configs/.env` 或当前工作目录 `.env` 中声明的配置。首次运行先复制 `configs/.env.example` 为 `configs/.env`，再按本机环境修改数据库、Redis、天气、短信、SMTP 和令牌密钥配置。
 
 同一份 `configs/.env` 同时支持两种运行方式。`LUOTOPIA_DATABASE_URL` 与 `LUOTOPIA_REDIS_URL` 面向宿主机 Go 进程，默认使用 `127.0.0.1`；`LUOTOPIA_CONTAINER_DATABASE_URL` 与 `LUOTOPIA_CONTAINER_REDIS_URL` 面向 Compose 内的 `server` 和 `migrate` 容器，默认使用服务名 `postgres`、`redis`。Compose 会为应用容器设置 `LUOTOPIA_RUNTIME=container`，服务端配置加载器会自动选择容器地址。
 
