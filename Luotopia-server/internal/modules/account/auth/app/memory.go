@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/platform/id"
 )
 
 type MemoryUserRepository struct {
@@ -46,10 +47,10 @@ func (r *MemoryUserRepository) CreateUserWithIdentity(_ context.Context, identit
 		return nil, domain.ErrIdentityAlreadyBound
 	}
 	now := time.Now()
-	user := domain.User{ID: newID(), Status: domain.UserStatusActive, CreatedAt: now}
+	user := domain.User{ID: id.New(id.TypeUser), Status: domain.UserStatusActive, CreatedAt: now}
 	r.users[user.ID] = user
 	r.identities[key] = domain.Identity{
-		ID:         newID(),
+		ID:         id.New(id.TypeUser),
 		UserID:     user.ID,
 		Type:       identityType,
 		Identifier: identifier,
@@ -77,7 +78,7 @@ func (r *MemoryUserRepository) BindIdentity(_ context.Context, userID string, id
 		return domain.ErrIdentityAlreadyBound
 	}
 	now := time.Now()
-	r.identities[key] = domain.Identity{ID: newID(), UserID: userID, Type: identityType, Identifier: identifier, VerifiedAt: now, CreatedAt: now}
+	r.identities[key] = domain.Identity{ID: id.New(id.TypeIdentity), UserID: userID, Type: identityType, Identifier: identifier, VerifiedAt: now, CreatedAt: now}
 	return nil
 }
 
@@ -128,6 +129,18 @@ func (r *MemoryUserRepository) RevokeSession(_ context.Context, sessionID string
 	session.RevokedAt = &now
 	r.sessions[sessionID] = session
 	return nil
+}
+
+func (r *MemoryUserRepository) FindIdentitiesByUserID(_ context.Context, userID string) ([]domain.Identity, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var result []domain.Identity
+	for _, ident := range r.identities {
+		if ident.UserID == userID {
+			result = append(result, ident)
+		}
+	}
+	return result, nil
 }
 
 func (r *MemoryUserRepository) RevokeUserSessions(_ context.Context, userID string) error {

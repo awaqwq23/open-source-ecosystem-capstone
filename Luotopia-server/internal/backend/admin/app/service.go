@@ -11,8 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/backend/admin/domain"
+	authdomain "github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
 	hotdomain "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/domain"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
@@ -21,10 +22,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type IdentityRepository interface {
+	FindIdentitiesByUserID(ctx context.Context, userID string) ([]authdomain.Identity, error)
+}
+
 type Repository interface {
-	FindAdminByUsername(ctx context.Context, username string) (AdminAccount, error)
-	SaveAdminAccount(ctx context.Context, account AdminAccount) error
-	TouchAdminLogin(ctx context.Context, id string) error
 	ListUsers(ctx context.Context, offset, limit int) ([]domain.UserInfo, int64, error)
 	GetUser(ctx context.Context, id string) (domain.UserInfo, error)
 	ListAllowlist(ctx context.Context) ([]domain.SyncAllowlistEntry, error)
@@ -32,112 +34,61 @@ type Repository interface {
 	RemoveAllowlist(ctx context.Context, userID string) error
 }
 
-type PasswordHasher interface {
-	Hash(password string) (string, error)
-	Verify(password string, encodedHash string) bool
-}
-
-type AdminAccount struct {
-	ID           string
-	Username     string
-	PasswordHash string
-	Status       string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	LastLoginAt  *time.Time
-}
-
-type AdminLoginResult struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int64  `json:"expires_in"`
-}
-
 type Service struct {
-	version      string
-	startedAt    time.Time
-	db           *gorm.DB
-	repo         Repository
-	notifcSvc    *notiapp.Service
-	hotUpdateSvc *hotapp.Service
-	weatherSvc   *weatherapp.Service
-	scriptDir    string
-	hasher       PasswordHasher
-	tokenSecret  string
-	tokenTTL     time.Duration
+	version           string
+	startedAt         time.Time
+	db                *gorm.DB
+	repo              Repository
+	identityRepo      IdentityRepository
+	adminPhone        string
+	adminEmail        string
+	notifcSvc         *notiapp.Service
+	hotUpdateSvc      *hotapp.Service
+	weatherSvc        *weatherapp.Service
+	scriptDir         string
 }
 
-func NewService(version string, db *gorm.DB, repo Repository, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string, hasher PasswordHasher, tokenSecret string, tokenTTL time.Duration) *Service {
-	if tokenTTL <= 0 {
-		tokenTTL = 2 * time.Hour
-	}
+func NewService(version string, db *gorm.DB, repo Repository, identityRepo IdentityRepository, adminPhone, adminEmail string, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, weatherSvc *weatherapp.Service, scriptDir string) *Service {
 	return &Service{
 		version:      version,
 		startedAt:    time.Now(),
 		db:           db,
 		repo:         repo,
+		identityRepo: identityRepo,
+		adminPhone:   adminPhone,
+		adminEmail:   adminEmail,
 		notifcSvc:    notifcSvc,
 		hotUpdateSvc: hotUpdateSvc,
 		weatherSvc:   weatherSvc,
 		scriptDir:    scriptDir,
-		hasher:       hasher,
-		tokenSecret:  tokenSecret,
-		tokenTTL:     tokenTTL,
 	}
 }
 
-func (s *Service) EnsureConfiguredAdmin(ctx context.Context, username string, password string) error {
-	username = normalizeAdminUsername(username)
-	if username == "" || len(password) < 8 {
-		return ErrInvalidCredentialConfig
+func (s *Service) IsAdmin(c *gin.Context) bool {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		return false
 	}
-	hash, err := s.hasher.Hash(password)
+	uid, ok := userID.(string)
+	if !ok || uid == "" {
+		return false
+	}
+	if s.adminPhone == "" && s.adminEmail == "" {
+		return false
+	}
+	identities, err := s.identityRepo.FindIdentitiesByUserID(c.Request.Context(), uid)
 	if err != nil {
-		return err
+		return false
 	}
-	return s.repo.SaveAdminAccount(ctx, AdminAccount{
-		Username:     username,
-		PasswordHash: hash,
-		Status:       "active",
-	})
-}
-
-func (s *Service) Login(ctx context.Context, username string, password string) (AdminLoginResult, error) {
-	username = normalizeAdminUsername(username)
-	if username == "" || password == "" {
-		return AdminLoginResult{}, ErrInvalidCredential
+	for _, ident := range identities {
+		if s.adminPhone != "" && ident.Type == authdomain.IdentityPhone && ident.Identifier == s.adminPhone {
+			return true
+		}
+		if s.adminEmail != "" && ident.Type == authdomain.IdentityEmail && ident.Identifier == s.adminEmail {
+			return true
+		}
 	}
-	account, err := s.repo.FindAdminByUsername(ctx, username)
-	if err != nil || account.Status != "active" || !s.hasher.Verify(password, account.PasswordHash) {
-		return AdminLoginResult{}, ErrInvalidCredential
-	}
-	if err := s.repo.TouchAdminLogin(ctx, account.ID); err != nil {
-		return AdminLoginResult{}, err
-	}
-	token, expiresIn, err := s.issueAdminToken(account)
-	if err != nil {
-		return AdminLoginResult{}, err
-	}
-	return AdminLoginResult{AccessToken: token, ExpiresIn: expiresIn}, nil
-}
-
-func (s *Service) issueAdminToken(account AdminAccount) (string, int64, error) {
-	now := time.Now()
-	expiresAt := now.Add(s.tokenTTL)
-	claims := jwt.MapClaims{
-		"sub": account.ID,
-		"typ": "admin",
-		"iat": now.Unix(),
-		"exp": expiresAt.Unix(),
-	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.tokenSecret))
-	if err != nil {
-		return "", 0, err
-	}
-	return token, int64(s.tokenTTL.Seconds()), nil
-}
-
-func normalizeAdminUsername(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
+	return false
 }
 
 func (s *Service) Dashboard(ctx context.Context) domain.Dashboard {
@@ -352,8 +303,6 @@ func (s *Service) RefreshWeather(ctx context.Context) (domain.WeatherStatus, err
 
 // error helpers used by transport
 var (
-	ErrNotFound                = errors.New("admin: not found")
-	ErrInvalidArg              = errors.New("admin: invalid argument")
-	ErrInvalidCredential       = errors.New("admin: invalid credential")
-	ErrInvalidCredentialConfig = errors.New("admin: invalid credential config")
+	ErrNotFound   = errors.New("admin: not found")
+	ErrInvalidArg = errors.New("admin: invalid argument")
 )

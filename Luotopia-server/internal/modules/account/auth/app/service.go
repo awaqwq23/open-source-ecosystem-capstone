@@ -6,11 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/platform/id"
 )
 
 type UserRepository interface {
@@ -24,6 +24,7 @@ type UserRepository interface {
 	FindSessionByRefreshHash(ctx context.Context, refreshHash string) (*domain.Session, error)
 	RevokeSession(ctx context.Context, sessionID string) error
 	RevokeUserSessions(ctx context.Context, userID string) error
+	FindIdentitiesByUserID(ctx context.Context, userID string) ([]domain.Identity, error)
 }
 
 type VerificationCodeStore interface {
@@ -214,9 +215,9 @@ func (s *Service) LogoutAll(ctx context.Context, userID string) error {
 }
 
 func (s *Service) issueSession(ctx context.Context, user domain.User, deviceName string) (AuthResult, error) {
-	refreshToken := randomToken(32)
+	refreshToken := id.NewRaw()
 	session := domain.Session{
-		ID:               newID(),
+		ID:               id.New(id.TypeSession),
 		UserID:           user.ID,
 		RefreshTokenHash: hashToken(refreshToken),
 		DeviceName:       strings.TrimSpace(deviceName),
@@ -256,19 +257,7 @@ func randomDigits(length int) string {
 	return string(bytes)
 }
 
-func randomToken(length int) string {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
-	return hex.EncodeToString(bytes)
-}
-
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-func newID() string {
-	return randomToken(16)
 }

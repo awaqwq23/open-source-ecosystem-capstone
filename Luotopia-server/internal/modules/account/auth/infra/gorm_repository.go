@@ -2,14 +2,13 @@ package infra
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/app"
 	"github.com/openwhu/luotopia/server/internal/modules/account/auth/domain"
+	"github.com/openwhu/luotopia/server/internal/platform/id"
 	"gorm.io/gorm"
 )
 
@@ -24,9 +23,10 @@ func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
 }
 
 type userModel struct {
-	ID        string `gorm:"primaryKey;column:id"`
-	Status    string
-	CreatedAt time.Time
+	ID           string `gorm:"primaryKey;column:id"`
+	Status       string
+	PasswordHash *string
+	CreatedAt    time.Time
 }
 
 func (userModel) TableName() string { return "auth_users" }
@@ -41,14 +41,6 @@ type identityModel struct {
 }
 
 func (identityModel) TableName() string { return "auth_identities" }
-
-type passwordModel struct {
-	UserID       string `gorm:"primaryKey;column:user_id"`
-	PasswordHash string
-	UpdatedAt    time.Time
-}
-
-func (passwordModel) TableName() string { return "auth_password_credentials" }
 
 type sessionModel struct {
 	ID               string `gorm:"primaryKey;column:id"`
@@ -80,8 +72,8 @@ func (r *GormUserRepository) FindUserByIdentity(ctx context.Context, identityTyp
 
 func (r *GormUserRepository) CreateUserWithIdentity(ctx context.Context, identityType domain.IdentityType, identifier string) (*domain.User, error) {
 	now := time.Now()
-	user := userModel{ID: appID(), Status: string(domain.UserStatusActive), CreatedAt: now}
-	identity := identityModel{ID: appID(), UserID: user.ID, Type: string(identityType), Identifier: normalizeIdentifier(identityType, identifier), VerifiedAt: now, CreatedAt: now}
+	user := userModel{ID: id.New(id.TypeUser), Status: string(domain.UserStatusActive), CreatedAt: now}
+	identity := identityModel{ID: id.New(id.TypeIdentity), UserID: user.ID, Type: string(identityType), Identifier: normalizeIdentifier(identityType, identifier), VerifiedAt: now, CreatedAt: now}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&user).Error; err != nil {
 			return err
@@ -103,7 +95,7 @@ func (r *GormUserRepository) FindUserByLoginIdentifier(ctx context.Context, iden
 
 func (r *GormUserRepository) BindIdentity(ctx context.Context, userID string, identityType domain.IdentityType, identifier string) error {
 	now := time.Now()
-	identity := identityModel{ID: appID(), UserID: userID, Type: string(identityType), Identifier: normalizeIdentifier(identityType, identifier), VerifiedAt: now, CreatedAt: now}
+	identity := identityModel{ID: id.New(id.TypeIdentity), UserID: userID, Type: string(identityType), Identifier: normalizeIdentifier(identityType, identifier), VerifiedAt: now, CreatedAt: now}
 	if err := r.db.WithContext(ctx).Create(&identity).Error; err != nil {
 		return err
 	}
@@ -111,20 +103,22 @@ func (r *GormUserRepository) BindIdentity(ctx context.Context, userID string, id
 }
 
 func (r *GormUserRepository) SetPassword(ctx context.Context, userID string, passwordHash string) error {
-	model := passwordModel{UserID: userID, PasswordHash: passwordHash, UpdatedAt: time.Now()}
-	return r.db.WithContext(ctx).Save(&model).Error
+	return r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", userID).Update("password_hash", passwordHash).Error
 }
 
 func (r *GormUserRepository) PasswordHash(ctx context.Context, userID string) (string, error) {
-	var model passwordModel
-	err := r.db.WithContext(ctx).First(&model, "user_id = ?", userID).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return "", domain.ErrPasswordNotSet
-	}
+	var model userModel
+	err := r.db.WithContext(ctx).Select("password_hash").First(&model, "id = ?", userID).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domain.ErrPasswordNotSet
+		}
 		return "", err
 	}
-	return model.PasswordHash, nil
+	if model.PasswordHash == nil {
+		return "", domain.ErrPasswordNotSet
+	}
+	return *model.PasswordHash, nil
 }
 
 func (r *GormUserRepository) CreateSession(ctx context.Context, session domain.Session) error {
@@ -165,6 +159,25 @@ func toDomainUser(model userModel) *domain.User {
 	return &domain.User{ID: model.ID, Status: domain.UserStatus(model.Status), CreatedAt: model.CreatedAt}
 }
 
+func (r *GormUserRepository) FindIdentitiesByUserID(ctx context.Context, userID string) ([]domain.Identity, error) {
+	var models []identityModel
+	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&models).Error; err != nil {
+		return nil, err
+	}
+	result := make([]domain.Identity, len(models))
+	for i, m := range models {
+		result[i] = domain.Identity{
+			ID:         m.ID,
+			UserID:     m.UserID,
+			Type:       domain.IdentityType(m.Type),
+			Identifier: m.Identifier,
+			VerifiedAt: m.VerifiedAt,
+			CreatedAt:  m.CreatedAt,
+		}
+	}
+	return result, nil
+}
+
 func toDomainSession(model sessionModel) *domain.Session {
 	return &domain.Session{ID: model.ID, UserID: model.UserID, RefreshTokenHash: model.RefreshTokenHash, DeviceName: model.DeviceName, CreatedAt: model.CreatedAt, ExpiresAt: model.ExpiresAt, RevokedAt: model.RevokedAt}
 }
@@ -174,12 +187,4 @@ func normalizeIdentifier(identityType domain.IdentityType, value string) string 
 		return strings.ToLower(strings.TrimSpace(value))
 	}
 	return strings.TrimSpace(value)
-}
-
-func appID() string {
-	bytes := make([]byte, 16)
-	if _, err := rand.Read(bytes); err != nil {
-		return strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
-	}
-	return hex.EncodeToString(bytes)
 }

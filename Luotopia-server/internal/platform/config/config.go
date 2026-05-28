@@ -57,9 +57,8 @@ type AuthConfig struct {
 }
 
 type AdminConfig struct {
-	Username       string
-	Password       string
-	AccessTokenTTL time.Duration
+	Phone string
+	Email string
 }
 
 type SMSConfig struct {
@@ -102,9 +101,8 @@ func Load() Config {
 			RefreshTokenTTL:   requiredDurationEnv("LUOTOPIA_AUTH_REFRESH_TOKEN_TTL"),
 		},
 		Admin: AdminConfig{
-			Username:       requiredEnv("LUOTOPIA_ADMIN_USERNAME"),
-			Password:       requiredEnv("LUOTOPIA_ADMIN_PASSWORD"),
-			AccessTokenTTL: requiredDurationEnv("LUOTOPIA_ADMIN_ACCESS_TOKEN_TTL"),
+			Phone: os.Getenv("LUOTOPIA_ADMIN_PHONE"),
+			Email: os.Getenv("LUOTOPIA_ADMIN_EMAIL"),
 		},
 		Weather: WeatherConfig{
 			APIKey:   declaredEnv("LUOTOPIA_WEATHER_API_KEY"),

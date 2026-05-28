@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS auth_users (
   id TEXT PRIMARY KEY,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL
 );
 
@@ -12,12 +13,6 @@ CREATE TABLE IF NOT EXISTS auth_identities (
   verified_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL,
   UNIQUE (type, identifier)
-);
-
-CREATE TABLE IF NOT EXISTS auth_password_credentials (
-  user_id TEXT PRIMARY KEY REFERENCES auth_users(id) ON DELETE CASCADE,
-  password_hash TEXT NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS auth_sessions (
