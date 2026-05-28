@@ -99,7 +99,6 @@ case "$Mode" in
     STATE_DIR="/tmp/luotopia-deploy"
     PID_FILE="`$STATE_DIR/luotopia-server.pid"
     LOG_FILE="`$STATE_DIR/luotopia-server.log"
-    SERVER_BIN="`$STATE_DIR/luotopia-server"
 
     mkdir -p "`$STATE_DIR"
     if [ -f "`$PID_FILE" ]; then
@@ -118,8 +117,7 @@ case "$Mode" in
 
     docker compose -f docker-compose.dev.yml up -d postgres redis
     go run ./cmd/migrate
-    go build -o "`$SERVER_BIN" ./cmd/server
-    nohup "`$SERVER_BIN" > "`$LOG_FILE" 2>&1 &
+    nohup go run ./cmd/server > "`$LOG_FILE" 2>&1 &
     echo `$! > "`$PID_FILE"
     docker compose -f docker-compose.dev.yml ps
     ;;
