@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/item_editor/presentation/widgets/option_card.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -38,25 +39,14 @@ class ReminderSettingsPage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           itemBuilder: (context, index) {
             final reminder = options[index];
-            final selected = reminder == initialReminder;
-            return ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              tileColor: selected
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                  : Theme.of(context).colorScheme.surfaceContainerLowest,
-              title: Text(_label(l10n, reminder)),
-              trailing: selected
-                  ? Icon(
-                      AppIcons.selected,
-                      color: Theme.of(context).colorScheme.primary,
-                    )
-                  : const Icon(AppIcons.drillIn),
-              onTap: () => Navigator.of(context).pop(reminder),
+            return OptionCard<ReminderOption>(
+              value: reminder,
+              groupValue: initialReminder,
+              title: _label(l10n, reminder),
+              onChanged: (value) => Navigator.of(context).pop(value),
             );
           },
-          separatorBuilder: (_, index) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemCount: options.length,
         ),
       ),
