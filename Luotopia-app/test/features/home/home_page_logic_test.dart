@@ -9,6 +9,15 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final notifier = container.read(homeHeaderViewModelProvider.notifier);
+
+    // 固定到五月中旬，避免依赖 DateTime.now() 的边界问题
+    notifier.jumpToSelection(
+      HomePeriodSelection(
+        anchor: DateTime(2026, 5, 15),
+        scope: HomeDisplayScope.month,
+      ),
+    );
+
     final initialState = container.read(homeHeaderViewModelProvider);
     final initialWeekStart = DateUtils.dateOnly(
       initialState.anchor,
