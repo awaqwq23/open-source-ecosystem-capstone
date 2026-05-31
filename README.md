@@ -1,4 +1,4 @@
-# Luotopia/珞课王国 社区开发指南
+# Luotopia 社区开发指南
 
 本文档面向接下来参与 Luotopia 共同开发的贡献者，欢迎大家直接选择自己心怡的模块直接开始开发！
 
@@ -81,7 +81,7 @@ docker compose -f docker-compose.dev.yml --profile app up -d --build --force-rec
 
 待开发模块目录：
 
-- [Luotopia/珞课王国 社区开发指南](#luotopia珞课王国-社区开发指南)
+- [Luotopia 社区开发指南](#luotopia-社区开发指南)
   - [快速启动](#快速启动)
   - [开发规约](#开发规约)
     - [代码结构](#代码结构)
