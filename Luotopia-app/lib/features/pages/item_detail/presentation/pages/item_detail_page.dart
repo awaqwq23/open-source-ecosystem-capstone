@@ -813,19 +813,6 @@ String _formatTimeOnly(BuildContext context, DateTime start, DateTime end) {
   );
   return '$startTime ~ $endTime';
 }
-
-String _formatDuration(BuildContext context, Duration value) {
-  final hours = value.inHours;
-  final minutes = value.inMinutes.remainder(60);
-  if (hours > 0 && minutes > 0) {
-    return context.l10n.editorDurationHourMinute(hours, minutes);
-  }
-  if (hours > 0) {
-    return context.l10n.editorDurationHours(hours);
-  }
-  return context.l10n.editorDurationMinutes(value.inMinutes);
-}
-
 String _formatDateWithWeekday(BuildContext context, DateTime value) {
   final localeName = Localizations.localeOf(context).toLanguageTag();
   if (localeName.startsWith('zh')) {

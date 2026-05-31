@@ -29,7 +29,6 @@ class MiniTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
 
     // 过滤出有起止时间的事项
     final timed = citations.where((c) => c.startAt != null && c.endAt != null).toList();

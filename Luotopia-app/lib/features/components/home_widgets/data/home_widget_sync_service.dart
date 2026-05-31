@@ -444,10 +444,10 @@ String _clipWidgetText(String text, {required int maxChars}) {
 }
 
 String _toArgbHex(Color color) {
-  final a = color.alpha.toRadixString(16).padLeft(2, '0').toUpperCase();
-  final r = color.red.toRadixString(16).padLeft(2, '0').toUpperCase();
-  final g = color.green.toRadixString(16).padLeft(2, '0').toUpperCase();
-  final b = color.blue.toRadixString(16).padLeft(2, '0').toUpperCase();
+  final a = (color.a * 255.0).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
+  final r = (color.r * 255.0).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
+  final g = (color.g * 255.0).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
+  final b = (color.b * 255.0).round().clamp(0, 255).toRadixString(16).padLeft(2, '0').toUpperCase();
   return '#$a$r$g$b';
 }
 

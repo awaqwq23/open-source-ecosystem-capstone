@@ -20,8 +20,6 @@ class SeatReservationAuthService {
   static final Uri _seatConfigUri = Uri.parse(
     'https://seat.lib.whu.edu.cn/jsq/static/public/cg/getSysSet/MOBILE',
   );
-  static final Uri _seatRedirectUri = Uri.parse('https://seat.lib.whu.edu.cn/seat');
-
   Future<SeatReservationWebSession> createWebSession() async {
     final serviceRequest = await _loadSeatServiceRequest();
     await gateway.ensureCasSessionFresh();
@@ -141,11 +139,6 @@ class SeatReservationAuthService {
         'bodyKind=$bodyKind; '
         'bodyExcerpt=$excerpt';
   }
-
-  static String _diagnosticFromUri(Uri? uri) {
-    return '诊断：url=${_sanitizeUri(uri)}';
-  }
-
   static String _sanitizeUri(Uri? uri) {
     if (uri == null) {
       return 'unknown';

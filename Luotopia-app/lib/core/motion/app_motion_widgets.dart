@@ -138,7 +138,7 @@ class _AppSchemaTransitionState extends State<AppSchemaTransition> {
       fit: StackFit.passthrough,
       children: [
         ...previousChildren,
-        if (currentChild != null) currentChild,
+        ?currentChild,
       ],
     );
   }

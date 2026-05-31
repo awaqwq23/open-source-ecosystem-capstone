@@ -313,12 +313,6 @@ class _ConversationTimelineState extends State<_ConversationTimeline> {
       ),
     );
   }
-
-  String _text(BuildContext context, {required String zh, required String en}) {
-    return Localizations.localeOf(context).languageCode.startsWith('zh')
-        ? zh
-        : en;
-  }
 }
 
 class _StreamingMessage extends StatelessWidget {

@@ -219,7 +219,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
             final parts = key.split('-');
             final year = parts[0];
             final semester = int.parse(parts[1]);
-            final label = '${year}-${int.parse(year) + 1} 第${semester}学期';
+            final label = '$year-${int.parse(year) + 1} 第$semester学期';
             return DropdownMenuItem(value: key, child: Text(label));
           }).toList(),
           onChanged: (val) {

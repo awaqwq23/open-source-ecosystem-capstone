@@ -350,7 +350,7 @@ class _AppWebViewPageState extends State<AppWebViewPage> {
                     ? widget.preparingMessage
                     : widget.loadingMessage,
               ),
-            if (customOverlay != null) customOverlay,
+            ?customOverlay,
           ],
         ),
       ),

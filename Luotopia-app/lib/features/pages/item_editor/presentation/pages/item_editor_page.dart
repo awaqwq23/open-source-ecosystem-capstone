@@ -657,15 +657,18 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     ItemEditorPageState state,
   ) async {
     final initialDateTime = state.draft.deadline ?? state.draft.endAt;
-    final picked = state.draft.isAllDay
-        ? await AppDateTimePickers.pickDate(
-            context,
-            initialDate: initialDateTime,
-          )
-        : await AppDateTimePickers.pickDateTime(
-            context,
-            initialDateTime: initialDateTime,
-          );
+    final DateTime? picked;
+    if (state.draft.isAllDay) {
+      picked = await AppDateTimePickers.pickDate(
+        context,
+        initialDate: initialDateTime,
+      );
+    } else {
+      picked = await AppDateTimePickers.pickDateTime(
+        context,
+        initialDateTime: initialDateTime,
+      );
+    }
 
     if (picked != null && mounted) {
       final normalized = state.draft.isAllDay

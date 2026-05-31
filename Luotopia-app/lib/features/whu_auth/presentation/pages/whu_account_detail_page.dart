@@ -161,7 +161,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
     if (dateTime == null) {
       return '未记录';
     }
-    final pad = (int value) => value.toString().padLeft(2, '0');
+    String pad(int value) => value.toString().padLeft(2, '0');
     return '${dateTime.year}-${pad(dateTime.month)}-${pad(dateTime.day)} '
         '${pad(dateTime.hour)}:${pad(dateTime.minute)}';
   }

@@ -11,10 +11,10 @@ import 'package:luotopia/shared/data/api_client.dart';
 import 'package:luotopia/shared/data/sync/sync_cursor_store.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final tokenProvider = () {
+  String tokenProvider() {
     final auth = ref.read(luotopiaAuthProvider);
     return auth.accessToken ?? '';
-  };
+  }
   final client = ApiClient(
     baseUrl: dotenv.get('LUOTOPIA_API_BASE_URL'),
     tokenProvider: tokenProvider,

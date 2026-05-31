@@ -24,7 +24,7 @@ class _TermOption {
   String label(bool isZh) {
     final next = year + 1;
     if (isZh) {
-      return '$year-$next 学年第${semester}学期';
+      return '$year-$next 学年第$semester学期';
     }
     final sem = switch (semester) { 1 => 'Fall', 2 => 'Spring', _ => 'Summer' };
     return '$year-$next $sem';
@@ -210,7 +210,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
 
   String _formatNow() {
     final now = DateTime.now();
-    final pad = (int v) => v.toString().padLeft(2, '0');
+    String pad(int v) => v.toString().padLeft(2, '0');
     return '${now.year}-${pad(now.month)}-${pad(now.day)} ${pad(now.hour)}:${pad(now.minute)}';
   }
 
@@ -533,7 +533,7 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
                 ),
                 Expanded(
                   child: CupertinoPicker(
-                    key: ValueKey('sem_${_selectedYear}'),
+                    key: ValueKey('sem_$_selectedYear'),
                     itemExtent: 44,
                     onSelectedItemChanged: (i) {
                       setState(() => _selectedSem = availSems[i]);
@@ -542,7 +542,7 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
                       for (final s in availSems)
                         Center(
                           child: Text(
-                            isZh ? '第${s}学期' : 'Sem $s',
+                            isZh ? '第$s学期' : 'Sem $s',
                             style: theme.textTheme.titleMedium,
                           ),
                         ),
