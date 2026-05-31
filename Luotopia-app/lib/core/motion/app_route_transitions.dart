@@ -1,34 +1,14 @@
 import 'package:animations/animations.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/core/motion/app_motion.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 abstract final class AppRouteTransitions {
-  static CustomTransitionPage<T> fadeThrough<T>({
-    required LocalKey key,
-    required Widget child,
-    String? name,
-  }) {
-    return CustomTransitionPage<T>(
-      key: key,
-      name: name,
-      child: child,
-      transitionDuration: AppMotion.slow,
-      reverseTransitionDuration: AppMotion.fast,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeThroughTransition(
-          animation: animation,
-          secondaryAnimation: secondaryAnimation,
-          child: child,
-        );
-      },
-    );
-  }
-
   static CustomTransitionPage<T> sharedAxis<T>({
     required LocalKey key,
     required Widget child,
-    SharedAxisTransitionType type = SharedAxisTransitionType.scaled,
+    SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
     String? name,
   }) {
     return CustomTransitionPage<T>(
@@ -42,54 +22,13 @@ abstract final class AppRouteTransitions {
           animation: animation,
           secondaryAnimation: secondaryAnimation,
           transitionType: type,
-          fillColor: Colors.transparent,
+          // 必须使用不透明背景兜底：SharedAxisTransition 进出场是错峰
+          // 淡入淡出，过渡中段两页都接近全透明，若 fillColor 透明会穿透到
+          // 底层（留白处发黑）。这里填入 shadcn 的页面背景色。
+          fillColor: ui.Theme.of(context).colorScheme.background,
           child: child,
         );
       },
-    );
-  }
-
-  static CustomTransitionPage<T> fadeUpwards<T>({
-    required LocalKey key,
-    required Widget child,
-    String? name,
-  }) {
-    return CustomTransitionPage<T>(
-      key: key,
-      name: name,
-      child: child,
-      transitionDuration: AppMotion.medium,
-      reverseTransitionDuration: AppMotion.fast,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: AppMotion.enterCurve,
-          reverseCurve: AppMotion.exitCurve,
-        );
-
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: AppMotion.pageOffset,
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-
-  static CustomTransitionPage<T> fadeThroughPage<T>(
-    BuildContext context,
-    GoRouterState state,
-    Widget child,
-  ) {
-    return fadeThrough<T>(
-      key: state.pageKey,
-      name: state.name ?? state.fullPath,
-      child: child,
     );
   }
 
@@ -97,7 +36,7 @@ abstract final class AppRouteTransitions {
     BuildContext context,
     GoRouterState state,
     Widget child, {
-    SharedAxisTransitionType type = SharedAxisTransitionType.scaled,
+    SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
   }) {
     return sharedAxis<T>(
       key: state.pageKey,

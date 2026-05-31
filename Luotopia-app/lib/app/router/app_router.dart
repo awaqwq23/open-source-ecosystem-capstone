@@ -84,7 +84,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'sessions',
-                    builder: (context, state) => const AiSessionsPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const AiSessionsPage(),
+                        ),
                   ),
                 ],
               ),
@@ -98,48 +103,90 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'score',
-                    builder: (context, state) => const ScorePage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const ScorePage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'timetable',
-                    builder: (context, state) => const CampusTimetablePage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const CampusTimetablePage(),
+                        ),
                     routes: [
                       GoRoute(
                         path: 'manage',
-                        builder: (context, state) =>
-                            const CourseTimetablesPage(),
+                        pageBuilder: (context, state) =>
+                            AppRouteTransitions.sharedAxisPage<void>(
+                              context,
+                              state,
+                              const CourseTimetablesPage(),
+                            ),
                       ),
                       GoRoute(
                         path: 'import/whu',
-                        builder: (context, state) =>
-                            const CourseImportWhuPage(),
+                        pageBuilder: (context, state) =>
+                            AppRouteTransitions.sharedAxisPage<void>(
+                              context,
+                              state,
+                              const CourseImportWhuPage(),
+                            ),
                       ),
                       GoRoute(
                         path: 'import/wakeup',
-                        builder: (context, state) =>
-                            const CourseImportWakeupPage(),
+                        pageBuilder: (context, state) =>
+                            AppRouteTransitions.sharedAxisPage<void>(
+                              context,
+                              state,
+                              const CourseImportWakeupPage(),
+                            ),
                       ),
                     ],
                   ),
                   GoRoute(
                     path: 'seat-reservation',
-                    builder: (context, state) => const SeatReservationPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SeatReservationPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'luojia-ecard',
-                    builder: (context, state) => const LuojiaEcardWebViewPage(
-                      entry: LuojiaEcardEntry.card,
-                    ),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const LuojiaEcardWebViewPage(
+                            entry: LuojiaEcardEntry.card,
+                          ),
+                        ),
                   ),
                   GoRoute(
                     path: 'ecard-payment-code',
-                    builder: (context, state) => const LuojiaEcardWebViewPage(
-                      entry: LuojiaEcardEntry.paymentCode,
-                    ),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const LuojiaEcardWebViewPage(
+                            entry: LuojiaEcardEntry.paymentCode,
+                          ),
+                        ),
                   ),
                   GoRoute(
                     path: 'empty-classroom',
-                    builder: (context, state) => const EmptyClassroomPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const EmptyClassroomPage(),
+                        ),
                   ),
                 ],
               ),
@@ -153,32 +200,66 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'general',
-                    builder: (context, state) => const SettingsGeneralPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsGeneralPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'navigation',
-                    builder: (context, state) => const SettingsNavigationPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsNavigationPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'data-updates',
-                    builder: (context, state) =>
-                        const SettingsDataUpdatesPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsDataUpdatesPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'home',
-                    builder: (context, state) => const SettingsHomePage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsHomePage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'time-grid',
-                    builder: (context, state) => const SettingsTimeGridPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsTimeGridPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'course-grid',
-                    builder: (context, state) => const SettingsCourseGridPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsCourseGridPage(),
+                        ),
                   ),
                   GoRoute(
                     path: 'ai',
-                    builder: (context, state) => const SettingsAiPage(),
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SettingsAiPage(),
+                        ),
                   ),
                 ],
               ),
@@ -192,9 +273,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const WhuAccountDetailPage(),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              const WhuAccountDetailPage(),            ),
       ),
       GoRoute(
         path: AppRoutePaths.whuAccountLogin,
@@ -202,9 +281,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const WhuLoginWebViewPage(),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              const WhuLoginWebViewPage(),            ),
       ),
       GoRoute(
         path: AppRoutePaths.luotopiaLogin,
@@ -212,9 +289,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const LuotopiaLoginPage(),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              const LuotopiaLoginPage(),            ),
       ),
       GoRoute(
         path: AppRoutePaths.luotopiaAccount,
@@ -222,45 +297,81 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const LuotopiaAccountPage(),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              const LuotopiaAccountPage(),            ),
         routes: [
           GoRoute(
             path: 'settings',
-            builder: (context, state) => const LuotopiaAccountSettingsPage(),
+            pageBuilder: (context, state) =>
+                AppRouteTransitions.sharedAxisPage<void>(
+                  context,
+                  state,
+                  const LuotopiaAccountSettingsPage(),
+                ),
             routes: [
               GoRoute(
                 path: 'username',
-                builder: (context, state) => const LuotopiaUsernamePage(),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaUsernamePage(),
+                    ),
               ),
               GoRoute(
                 path: 'password',
-                builder: (context, state) => const LuotopiaPasswordPage(),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaPasswordPage(),
+                    ),
               ),
               GoRoute(
                 path: 'phone',
-                builder: (context, state) => const LuotopiaPhonePage(),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaPhonePage(),
+                    ),
               ),
               GoRoute(
                 path: 'email',
-                builder: (context, state) => const LuotopiaEmailPage(),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaEmailPage(),
+                    ),
               ),
               GoRoute(
                 path: 'wechat',
-                builder: (context, state) =>
-                    const LuotopiaSocialBindPage(providerName: '微信'),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaSocialBindPage(providerName: '微信'),
+                    ),
               ),
               GoRoute(
                 path: 'qq',
-                builder: (context, state) =>
-                    const LuotopiaSocialBindPage(providerName: 'QQ'),
+                pageBuilder: (context, state) =>
+                    AppRouteTransitions.sharedAxisPage<void>(
+                      context,
+                      state,
+                      const LuotopiaSocialBindPage(providerName: 'QQ'),
+                    ),
               ),
             ],
           ),
           GoRoute(
             path: 'devices',
-            builder: (context, state) => const LuotopiaDeviceManagementPage(),
+            pageBuilder: (context, state) =>
+                AppRouteTransitions.sharedAxisPage<void>(
+                  context,
+                  state,
+                  const LuotopiaDeviceManagementPage(),
+                ),
           ),
         ],
       ),
@@ -276,9 +387,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   args: _resolveItemEditorArgs(state),
                   autoPopOnSubmit: true,
                 ),
-              ),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              ),            ),
       ),
       GoRoute(
         path: AppRoutePaths.itemDetail,
@@ -304,9 +413,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 initialRule: state.extra is RepeatRule
                     ? state.extra! as RepeatRule
                     : RepeatRule.none,
-              ),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              ),            ),
       ),
       GoRoute(
         path: AppRoutePaths.reminderSettings,
@@ -318,9 +425,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 initialReminder: state.extra is ReminderOption
                     ? state.extra! as ReminderOption
                     : ReminderOption.none,
-              ),
-              type: SharedAxisTransitionType.horizontal,
-            ),
+              ),            ),
       ),
     ],
   );
