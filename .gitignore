@@ -45,7 +45,9 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android signing
+/Luotopia-app/android/keystore.jks
+/Luotopia-app/android/key.properties
 /Luotopia-app/android/app/debug
 /Luotopia-app/android/app/profile
 /Luotopia-app/android/app/release

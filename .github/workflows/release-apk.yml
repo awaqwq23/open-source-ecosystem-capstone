@@ -1,0 +1,108 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      build-name:
+        description: '版本名 (e.g. 1.0.0)'
+        required: true
+        type: string
+      build-number:
+        description: '版本号 (e.g. 1)'
+        required: false
+        default: '1'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: stable
+
+      - name: Set version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "BUILD_NAME=${{ inputs.build-name }}" >> $GITHUB_OUTPUT
+            echo "BUILD_NUMBER=${{ inputs.build-number }}" >> $GITHUB_OUTPUT
+          else
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            echo "BUILD_NAME=$VERSION" >> $GITHUB_OUTPUT
+            echo "BUILD_NUMBER=$(echo $VERSION | sed 's/\./0/g')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restore Android keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > Luotopia-app/android/keystore.jks
+          fi
+
+      - name: Create key.properties
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cat > Luotopia-app/android/key.properties << EOF
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          storeFile=keystore.jks
+          EOF
+
+      - name: Create .env file
+        run: |
+          cat > Luotopia-app/.env << 'EOF'
+          LUOTOPIA_API_BASE_URL=https://api.luotopia.cn
+          EOF
+
+      - name: Flutter pub get
+        working-directory: Luotopia-app
+        run: flutter pub get
+
+      - name: Build APK (release)
+        working-directory: Luotopia-app
+        run: |
+          flutter build apk --release \
+            --build-name=${{ steps.version.outputs.BUILD_NAME }} \
+            --build-number=${{ steps.version.outputs.BUILD_NUMBER }}
+
+      - name: Rename APK artifact
+        shell: bash
+        run: |
+          mkdir -p release-artifacts
+          cp Luotopia-app/build/app/outputs/flutter-apk/app-release.apk \
+             "release-artifacts/luotopia-v${{ steps.version.outputs.BUILD_NAME }}.apk"
+
+      - name: Create GitHub Release and upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.BUILD_NAME }}"
+          tag_name: ${{ github.ref_name }}
+          files: release-artifacts/luotopia-v${{ steps.version.outputs.BUILD_NAME }}.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
