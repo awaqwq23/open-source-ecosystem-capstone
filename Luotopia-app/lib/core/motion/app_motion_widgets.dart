@@ -167,8 +167,8 @@ class AppCollapsibleFieldGroup extends StatelessWidget {
     required this.visible,
     required this.child,
     super.key,
-    this.fadeDuration = const Duration(milliseconds: 120),
-    this.sizeDuration = const Duration(milliseconds: 180),
+    this.fadeDuration = AppMotion.micro,
+    this.sizeDuration = AppMotion.brisk,
   });
 
   final bool visible;

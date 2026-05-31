@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
@@ -930,7 +931,7 @@ class _TypeButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onPressed,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: AppMotion.brisk,
           curve: Curves.easeOut,
           constraints: const BoxConstraints(minHeight: 72),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

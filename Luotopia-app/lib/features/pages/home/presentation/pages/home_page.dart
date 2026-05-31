@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/home/presentation/layout/home_grid_metrics.dart';
@@ -653,7 +654,7 @@ class _TimelineLabel extends StatelessWidget {
                     : HomeGridMetrics.timelineHorizontalPadding,
               ),
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
+                duration: AppMotion.brisk,
                 transitionBuilder: (child, animation) {
                   return FadeTransition(opacity: animation, child: child);
                 },

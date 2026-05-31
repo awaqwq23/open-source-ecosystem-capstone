@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/core/theme/app_semantic_colors.dart';
 
@@ -32,8 +33,8 @@ class SettingsFlatSection extends StatelessWidget {
           ),
         ],
         AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOutCubic,
+          duration: AppMotion.fast,
+          curve: AppMotion.enterCurve,
           color: AppSemanticColors.settingsSectionBackground(theme),
           child: Column(
             children: [

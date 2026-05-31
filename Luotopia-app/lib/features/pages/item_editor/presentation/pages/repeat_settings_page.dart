@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/item_editor/presentation/widgets/option_card.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -34,8 +33,7 @@ class RepeatSettingsPage extends StatelessWidget {
           title: Text(l10n.editorRepeatPageTitle),
         ),
       ],
-      child: AppEntrance(
-        child: ListView.separated(
+      child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           itemBuilder: (context, index) {
             final rule = options[index];
@@ -51,7 +49,6 @@ class RepeatSettingsPage extends StatelessWidget {
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemCount: options.length,
         ),
-      ),
     );
   }
 

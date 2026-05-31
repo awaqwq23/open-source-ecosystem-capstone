@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/item_editor/presentation/widgets/option_card.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -34,21 +33,19 @@ class ReminderSettingsPage extends StatelessWidget {
           title: Text(l10n.editorReminderPageTitle),
         ),
       ],
-      child: AppEntrance(
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          itemBuilder: (context, index) {
-            final reminder = options[index];
-            return OptionCard<ReminderOption>(
-              value: reminder,
-              groupValue: initialReminder,
-              title: _label(l10n, reminder),
-              onChanged: (value) => Navigator.of(context).pop(value),
-            );
-          },
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemCount: options.length,
-        ),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        itemBuilder: (context, index) {
+          final reminder = options[index];
+          return OptionCard<ReminderOption>(
+            value: reminder,
+            groupValue: initialReminder,
+            title: _label(l10n, reminder),
+            onChanged: (value) => Navigator.of(context).pop(value),
+          );
+        },
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemCount: options.length,
       ),
     );
   }
