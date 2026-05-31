@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
@@ -18,7 +18,9 @@ class CampusTimetablePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final whuAuth = ref.watch(whuAuthProvider);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -34,7 +36,9 @@ class CampusTimetablePage extends ConsumerWidget {
               ? <Widget>[
                   ui.IconButton.ghost(
                     icon: const Icon(AppIcons.add),
-                    onPressed: () => context.push(AppRoutePaths.settingsCourseImportWhu),
+                    onPressed: () => context.openSecondary(
+                      AppRoutePaths.campusTimetableImportWhu,
+                    ),
                   ),
                 ]
               : <Widget>[],
@@ -51,7 +55,9 @@ class _UnauthenticatedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     return Center(
       child: Column(
@@ -74,7 +80,7 @@ class _UnauthenticatedView extends StatelessWidget {
   }
 
   Future<void> _login(BuildContext context) async {
-    await context.push(AppRoutePaths.settingsWhuAccount);
+    await context.openSecondary(AppRoutePaths.whuAccount);
   }
 }
 
@@ -83,7 +89,9 @@ class _TimetableListView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(courseTimetableRepositoryProvider);
     final agendaItems = ref.watch(agendaItemRepositoryProvider);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     final overlapMap = _buildOverlapMap(store.timetables, agendaItems);
     final selectedSet = store.selectedTimetableIds;
@@ -97,7 +105,9 @@ class _TimetableListView extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
               child: Center(
                 child: Text(
-                  isZh ? '还没有课程表，点右上角 + 从武大教务系统导入。' : 'No timetable yet. Tap + to import from WHU.',
+                  isZh
+                      ? '还没有课程表，点右上角 + 从武大教务系统导入。'
+                      : 'No timetable yet. Tap + to import from WHU.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -118,7 +128,9 @@ class _TimetableListView extends ConsumerWidget {
                   } else {
                     next.remove(timetable.id);
                   }
-                  ref.read(courseTimetableRepositoryProvider.notifier).setSelectedTimetables(next);
+                  ref
+                      .read(courseTimetableRepositoryProvider.notifier)
+                      .setSelectedTimetables(next);
                 },
                 onDelete: () => _deleteTimetable(context, ref, timetable.id),
               ),
@@ -137,7 +149,8 @@ class _TimetableListView extends ConsumerWidget {
     for (final t in timetables) {
       DateTime? first, last;
       for (final item in agendaItems) {
-        if (item.type == ItemType.course && item.courseDetails.timetableId == t.id) {
+        if (item.type == ItemType.course &&
+            item.courseDetails.timetableId == t.id) {
           final s = DateUtils.dateOnly(item.startAt);
           final e = DateUtils.dateOnly(item.endAt);
           if (first == null || s.isBefore(first)) first = s;
@@ -167,8 +180,14 @@ class _TimetableListView extends ConsumerWidget {
     return conflict;
   }
 
-  Future<void> _deleteTimetable(BuildContext context, WidgetRef ref, String timetableId) async {
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+  Future<void> _deleteTimetable(
+    BuildContext context,
+    WidgetRef ref,
+    String timetableId,
+  ) async {
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -194,7 +213,9 @@ class _TimetableListView extends ConsumerWidget {
     );
     if (shouldDelete != true) return;
 
-    await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
+    await ref
+        .read(courseTimetableRepositoryProvider.notifier)
+        .deleteTimetable(timetableId);
   }
 }
 
@@ -218,7 +239,9 @@ class _TimetableCheckTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     final hasActiveConflict = isSelected
         ? false
@@ -226,7 +249,8 @@ class _TimetableCheckTile extends StatelessWidget {
 
     final canToggle = !hasActiveConflict;
 
-    final timeStr = '${timetable.createdAt.year}-${timetable.createdAt.month.toString().padLeft(2, '0')}-${timetable.createdAt.day.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${timetable.createdAt.year}-${timetable.createdAt.month.toString().padLeft(2, '0')}-${timetable.createdAt.day.toString().padLeft(2, '0')}';
     final termPart = timetable.termLabel.trim();
     final subtitle = termPart.isEmpty
         ? (isZh ? '导入于 $timeStr' : 'Imported $timeStr')
@@ -241,58 +265,62 @@ class _TimetableCheckTile extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Checkbox(
-              value: isSelected,
-              onChanged: (v) {
-                if (v != null && canToggle) onToggle(v);
-              },
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    timetable.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    ),
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (v) {
+                    if (v != null && canToggle) onToggle(v);
+                  },
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        timetable.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                ),
+                if (hasActiveConflict)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
                       ),
                     ),
-                ],
-              ),
-            ),
-            if (hasActiveConflict)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                IconButton(
+                  icon: const Icon(AppIcons.delete, size: 20),
+                  tooltip: isZh ? '删除' : 'Delete',
+                  onPressed: onDelete,
                 ),
-              ),
-            IconButton(
-              icon: const Icon(AppIcons.delete, size: 20),
-              tooltip: isZh ? '删除' : 'Delete',
-              onPressed: onDelete,
+              ],
             ),
-          ],
+          ),
         ),
-        ),
-      ),
       ),
     );
   }

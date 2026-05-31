@@ -1,4 +1,4 @@
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +19,9 @@ class SettingsGeneralPage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final viewModel = ref.read(settingsViewModelProvider.notifier);
     final l10n = context.l10n;
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -51,7 +53,8 @@ class SettingsGeneralPage extends ConsumerWidget {
                   title: l10n.settingsNavigationEntryTitle,
                   subtitle: l10n.settingsNavigationEntrySubtitle,
                   leading: const Icon(Icons.explore_outlined),
-                  onTap: () => context.push(AppRoutePaths.settingsNavigation),
+                  onTap: () =>
+                      context.openSecondary(AppRoutePaths.settingsNavigation),
                 ),
               ],
             ),
@@ -144,10 +147,7 @@ class SettingsGeneralPage extends ConsumerWidget {
 }
 
 class _ThemeModeDropdown extends StatelessWidget {
-  const _ThemeModeDropdown({
-    required this.value,
-    required this.onChanged,
-  });
+  const _ThemeModeDropdown({required this.value, required this.onChanged});
 
   final ui.ThemeMode value;
   final ValueChanged<ui.ThemeMode> onChanged;
@@ -183,10 +183,7 @@ class _ThemeModeDropdown extends StatelessWidget {
 }
 
 class _LanguageDropdown extends StatelessWidget {
-  const _LanguageDropdown({
-    required this.value,
-    required this.onChanged,
-  });
+  const _LanguageDropdown({required this.value, required this.onChanged});
 
   final Locale value;
   final ValueChanged<Locale> onChanged;

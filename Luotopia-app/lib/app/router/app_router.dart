@@ -103,6 +103,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'timetable',
                     builder: (context, state) => const CampusTimetablePage(),
+                    routes: [
+                      GoRoute(
+                        path: 'manage',
+                        builder: (context, state) =>
+                            const CourseTimetablesPage(),
+                      ),
+                      GoRoute(
+                        path: 'import/whu',
+                        builder: (context, state) =>
+                            const CourseImportWhuPage(),
+                      ),
+                      GoRoute(
+                        path: 'import/wakeup',
+                        builder: (context, state) =>
+                            const CourseImportWakeupPage(),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'seat-reservation',
@@ -160,88 +177,90 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const SettingsCourseGridPage(),
                   ),
                   GoRoute(
-                    path: 'course-timetables',
-                    builder: (context, state) => const CourseTimetablesPage(),
-                  ),
-                  GoRoute(
-                    path: 'course-import-whu',
-                    builder: (context, state) => const CourseImportWhuPage(),
-                  ),
-                  GoRoute(
-                    path: 'whu-account',
-                    builder: (context, state) => const WhuAccountDetailPage(),
-                  ),
-                  GoRoute(
-                    path: 'whu-auth/login',
-                    builder: (context, state) => const WhuLoginWebViewPage(),
-                  ),
-                  GoRoute(
-                    path: 'course-import-wakeup',
-                    builder: (context, state) => const CourseImportWakeupPage(),
-                  ),
-                  GoRoute(
-                    path: 'luotopia-auth/login',
-                    builder: (context, state) => const LuotopiaLoginPage(),
-                  ),
-                  GoRoute(
-                    path: 'luotopia-auth/account',
-                    builder: (context, state) => const LuotopiaAccountPage(),
-                    routes: [
-                      GoRoute(
-                        path: 'settings',
-                        builder: (context, state) =>
-                            const LuotopiaAccountSettingsPage(),
-                        routes: [
-                          GoRoute(
-                            path: 'username',
-                            builder: (context, state) =>
-                                const LuotopiaUsernamePage(),
-                          ),
-                          GoRoute(
-                            path: 'password',
-                            builder: (context, state) =>
-                                const LuotopiaPasswordPage(),
-                          ),
-                          GoRoute(
-                            path: 'phone',
-                            builder: (context, state) =>
-                                const LuotopiaPhonePage(),
-                          ),
-                          GoRoute(
-                            path: 'email',
-                            builder: (context, state) =>
-                                const LuotopiaEmailPage(),
-                          ),
-                          GoRoute(
-                            path: 'wechat',
-                            builder: (context, state) =>
-                                const LuotopiaSocialBindPage(
-                                  providerName: '微信',
-                                ),
-                          ),
-                          GoRoute(
-                            path: 'qq',
-                            builder: (context, state) =>
-                                const LuotopiaSocialBindPage(
-                                  providerName: 'QQ',
-                                ),
-                          ),
-                        ],
-                      ),
-                      GoRoute(
-                        path: 'devices',
-                        builder: (context, state) =>
-                            const LuotopiaDeviceManagementPage(),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
                     path: 'ai',
                     builder: (context, state) => const SettingsAiPage(),
                   ),
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutePaths.whuAccount,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              const WhuAccountDetailPage(),
+              type: SharedAxisTransitionType.horizontal,
+            ),
+      ),
+      GoRoute(
+        path: AppRoutePaths.whuAccountLogin,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              const WhuLoginWebViewPage(),
+              type: SharedAxisTransitionType.horizontal,
+            ),
+      ),
+      GoRoute(
+        path: AppRoutePaths.luotopiaLogin,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              const LuotopiaLoginPage(),
+              type: SharedAxisTransitionType.horizontal,
+            ),
+      ),
+      GoRoute(
+        path: AppRoutePaths.luotopiaAccount,
+        pageBuilder: (context, state) =>
+            AppRouteTransitions.sharedAxisPage<void>(
+              context,
+              state,
+              const LuotopiaAccountPage(),
+              type: SharedAxisTransitionType.horizontal,
+            ),
+        routes: [
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const LuotopiaAccountSettingsPage(),
+            routes: [
+              GoRoute(
+                path: 'username',
+                builder: (context, state) => const LuotopiaUsernamePage(),
+              ),
+              GoRoute(
+                path: 'password',
+                builder: (context, state) => const LuotopiaPasswordPage(),
+              ),
+              GoRoute(
+                path: 'phone',
+                builder: (context, state) => const LuotopiaPhonePage(),
+              ),
+              GoRoute(
+                path: 'email',
+                builder: (context, state) => const LuotopiaEmailPage(),
+              ),
+              GoRoute(
+                path: 'wechat',
+                builder: (context, state) =>
+                    const LuotopiaSocialBindPage(providerName: '微信'),
+              ),
+              GoRoute(
+                path: 'qq',
+                builder: (context, state) =>
+                    const LuotopiaSocialBindPage(providerName: 'QQ'),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'devices',
+            builder: (context, state) => const LuotopiaDeviceManagementPage(),
           ),
         ],
       ),

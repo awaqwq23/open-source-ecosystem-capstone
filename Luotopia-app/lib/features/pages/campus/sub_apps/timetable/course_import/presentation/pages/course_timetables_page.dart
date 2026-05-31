@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -40,16 +40,23 @@ class CourseTimetablesPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(AppIcons.web),
             title: Text(isZh ? '武汉大学教务系统' : 'WHU Academic System'),
-            subtitle: Text(isZh ? '通过内嵌网页登录并导入课程' : 'Import courses via embedded web login'),
+            subtitle: Text(
+              isZh ? '通过内嵌网页登录并导入课程' : 'Import courses via embedded web login',
+            ),
             trailing: const Icon(AppIcons.drillIn),
-            onTap: () => context.push(AppRoutePaths.settingsCourseImportWhu),
+            onTap: () =>
+                context.openSecondary(AppRoutePaths.campusTimetableImportWhu),
           ),
           ListTile(
             leading: const Icon(AppIcons.import),
             title: Text(isZh ? 'Wakeup 分享口令/链接' : 'Wakeup Share Link/Code'),
-            subtitle: Text(isZh ? '从分享文本导入课程表' : 'Import timetable from shared text'),
+            subtitle: Text(
+              isZh ? '从分享文本导入课程表' : 'Import timetable from shared text',
+            ),
             trailing: const Icon(AppIcons.drillIn),
-            onTap: () => context.push(AppRoutePaths.settingsCourseImportWakeup),
+            onTap: () => context.openSecondary(
+              AppRoutePaths.campusTimetableImportWakeup,
+            ),
           ),
           const SizedBox(height: 12),
           _SectionTitle(text: isZh ? '课程表列表' : 'Timetables'),
@@ -57,7 +64,9 @@ class CourseTimetablesPage extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
               child: Text(
-                isZh ? '还没有课程表，先从上方导入或手动创建。' : 'No timetable yet. Import or create one first.',
+                isZh
+                    ? '还没有课程表，先从上方导入或手动创建。'
+                    : 'No timetable yet. Import or create one first.',
               ),
             )
           else
@@ -69,7 +78,9 @@ class CourseTimetablesPage extends ConsumerWidget {
                       : AppIcons.itemTypeCourse,
                 ),
                 title: Text(timetable.name),
-                subtitle: Text(_sourceLabel(context, timetable.source, timetable.termLabel)),
+                subtitle: Text(
+                  _sourceLabel(context, timetable.source, timetable.termLabel),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -78,12 +89,15 @@ class CourseTimetablesPage extends ConsumerWidget {
                       onPressed: store.isSelected(timetable.id)
                           ? null
                           : () => ref
-                              .read(courseTimetableRepositoryProvider.notifier)
-                              .setSelectedTimetables({timetable.id}),
+                                .read(
+                                  courseTimetableRepositoryProvider.notifier,
+                                )
+                                .setSelectedTimetables({timetable.id}),
                     ),
                     ui.IconButton.ghost(
                       icon: const Icon(AppIcons.delete),
-                      onPressed: () => _deleteTimetable(context, ref, timetable.id),
+                      onPressed: () =>
+                          _deleteTimetable(context, ref, timetable.id),
                     ),
                   ],
                 ),
@@ -93,7 +107,11 @@ class CourseTimetablesPage extends ConsumerWidget {
     );
   }
 
-  String _sourceLabel(BuildContext context, CourseTimetableSource source, String termLabel) {
+  String _sourceLabel(
+    BuildContext context,
+    CourseTimetableSource source,
+    String termLabel,
+  ) {
     final isZh = _isChinese(context);
     final sourceText = switch (source) {
       CourseTimetableSource.whuJw => isZh ? '来源：武大教务' : 'Source: WHU',
@@ -107,7 +125,10 @@ class CourseTimetablesPage extends ConsumerWidget {
     return '$sourceText · $termLabel';
   }
 
-  Future<void> _createEmptyTimetable(BuildContext context, WidgetRef ref) async {
+  Future<void> _createEmptyTimetable(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final isZh = _isChinese(context);
     final controller = TextEditingController();
     final result = await showDialog<String>(
@@ -127,7 +148,8 @@ class CourseTimetablesPage extends ConsumerWidget {
               child: Text(isZh ? '取消' : 'Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
               child: Text(isZh ? '创建' : 'Create'),
             ),
           ],
@@ -137,15 +159,19 @@ class CourseTimetablesPage extends ConsumerWidget {
     if (result == null) {
       return;
     }
-    await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
-          name: result,
-          source: CourseTimetableSource.manual,
-        );
+    await ref
+        .read(courseTimetableRepositoryProvider.notifier)
+        .createTimetable(name: result, source: CourseTimetableSource.manual);
   }
 
-  Future<void> _deleteTimetable(BuildContext context, WidgetRef ref, String timetableId) async {
+  Future<void> _deleteTimetable(
+    BuildContext context,
+    WidgetRef ref,
+    String timetableId,
+  ) async {
     final isZh = _isChinese(context);
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete =
+        await showDialog<bool>(
           context: context,
           builder: (dialogContext) {
             return AlertDialog(
@@ -172,11 +198,15 @@ class CourseTimetablesPage extends ConsumerWidget {
     if (!shouldDelete) {
       return;
     }
-    await ref.read(courseTimetableRepositoryProvider.notifier).deleteTimetable(timetableId);
+    await ref
+        .read(courseTimetableRepositoryProvider.notifier)
+        .deleteTimetable(timetableId);
   }
 
   bool _isChinese(BuildContext context) {
-    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    return Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
   }
 }
 
@@ -191,7 +221,9 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }

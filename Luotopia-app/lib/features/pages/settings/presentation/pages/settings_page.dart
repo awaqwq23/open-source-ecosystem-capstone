@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
@@ -76,11 +76,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     prominent: true,
                     showTrailing: true,
                     onTap: luotopiaAuth.isAuthenticated
-                        ? () => context.push(
-                            AppRoutePaths.settingsLuotopiaAccount,
+                        ? () => context.openSecondary(
+                            AppRoutePaths.luotopiaAccount,
                           )
-                        : () =>
-                              context.push(AppRoutePaths.settingsLuotopiaLogin),
+                        : () => context.openSecondary(
+                            AppRoutePaths.luotopiaLogin,
+                          ),
                   ),
                   _AccountHubTile(
                     icon: AppIcons.web,
@@ -91,7 +92,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         : l10n.settingsAccountWhuNotLoggedIn,
                     prominent: true,
                     showTrailing: true,
-                    onTap: () => context.push(AppRoutePaths.settingsWhuAccount),
+                    onTap: () =>
+                        context.openSecondary(AppRoutePaths.whuAccount),
                   ),
                 ],
               ),
@@ -104,25 +106,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   title: l10n.settingsGeneralEntryTitle,
                   subtitle: l10n.settingsGeneralEntrySubtitle,
                   icon: AppIcons.settingsOutlined,
-                  onTap: () => context.push(AppRoutePaths.settingsGeneral),
+                  onTap: () =>
+                      context.openSecondary(AppRoutePaths.settingsGeneral),
                 ),
                 _SettingsLinkTile(
                   title: '数据更新',
                   subtitle: '天气、通知、脚本与同步',
                   icon: Icons.sync_outlined,
-                  onTap: () => context.push(AppRoutePaths.settingsDataUpdates),
+                  onTap: () =>
+                      context.openSecondary(AppRoutePaths.settingsDataUpdates),
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsHomeSectionTitle,
                   subtitle: l10n.settingsHomeEntrySubtitle,
                   icon: AppIcons.homeOutlined,
-                  onTap: () => context.push(AppRoutePaths.settingsHome),
+                  onTap: () =>
+                      context.openSecondary(AppRoutePaths.settingsHome),
                 ),
                 _SettingsLinkTile(
                   title: l10n.settingsAiSectionTitle,
                   subtitle: '模型、密钥与系统提示词',
                   icon: AppIcons.aiOutlined,
-                  onTap: () => context.push(AppRoutePaths.settingsAi),
+                  onTap: () => context.openSecondary(AppRoutePaths.settingsAi),
                 ),
               ],
             ),

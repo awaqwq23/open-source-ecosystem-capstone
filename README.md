@@ -53,6 +53,14 @@ docker compose -f docker-compose.dev.yml --profile app up -d --build --force-rec
 
 就校园页子应用页面来说，其代码应放在 `lib/features/pages/campus/sub_apps/` 下。`sub_apps/` 的每个一级代码目录必须与某个实际子应用一一对应，辅助代码应放在所属子应用。具体规则见 [校园页子应用架构指南](docs/校园页子应用架构迁移指南.md)。
 
+### 页面层级与导航
+
+Flutter 客户端页面路由必须按业务归属建模，而不是按入口来源建模。校园页子应用应挂在 `/campus/...`，设置页只挂真正的设置项，共享账户和认证流程统一挂在 `/account/...`。例如校园子页面需要武大认证时，应打开 `/account/whu`，不要跳到 `/settings/...` 下的登录页。
+
+功能页面不要直接依赖 `go_router`，也不要直接调用 `context.push` 或 `context.go`。普通二级流程使用 `AppNavigatorX.openSecondary`，弹出式全屏流程使用 `AppNavigatorX.openModal`，主分支切换才使用 `AppNavigatorX.goPrimary`。返回页面或关闭 dialog、sheet、webview 时可以使用 `Navigator.of(context).pop/maybePop`。
+
+新增路由时应先在 `AppRoutePaths` 中定义常量，再在 `app_router.dart` 中挂到对应业务域。除非已明确做兼容迁移方案，否则不要为同一个页面保留新旧两套路由。
+
 ### 武汉大学教务认证
 
 涉及武汉大学教务系统的能力请使用 `whu_auth`模块提供的接口，无需自行实现令牌获取、持久化等功能，可以参考 [校园页教务认证开发指南](docs/校园页教务认证开发指南.md)
@@ -85,6 +93,7 @@ docker compose -f docker-compose.dev.yml --profile app up -d --build --force-rec
   - [快速启动](#快速启动)
   - [开发规约](#开发规约)
     - [代码结构](#代码结构)
+    - [页面层级与导航](#页面层级与导航)
     - [武汉大学教务认证](#武汉大学教务认证)
     - [Webview 的统一创建器](#webview-的统一创建器)
     - [UI 规范](#ui-规范)

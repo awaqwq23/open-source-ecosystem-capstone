@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -28,11 +27,7 @@ const double _kEditorErrorBottomPadding = 4;
 const _kValidateItemDraft = ValidateItemDraftUseCase();
 
 class ItemEditorPage extends ConsumerStatefulWidget {
-  const ItemEditorPage({
-    this.args,
-    this.autoPopOnSubmit = false,
-    super.key,
-  });
+  const ItemEditorPage({this.args, this.autoPopOnSubmit = false, super.key});
 
   final ItemEditorArgs? args;
   final bool autoPopOnSubmit;
@@ -58,7 +53,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _courseNatureController = TextEditingController();
     _courseInstructorController = TextEditingController();
     Future<void>.microtask(
-      () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
+      () => ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .initialize(widget.args),
     );
   }
 
@@ -68,7 +65,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     if (oldWidget.args != widget.args) {
       _typePickerShown = false;
       Future<void>.microtask(
-        () => ref.read(itemEditorPageControllerProvider.notifier).initialize(widget.args),
+        () => ref
+            .read(itemEditorPageControllerProvider.notifier)
+            .initialize(widget.args),
       );
     }
   }
@@ -87,22 +86,19 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   Widget build(BuildContext context) {
     final notifier = ref.read(itemEditorPageControllerProvider.notifier);
 
-    ref.listen<ItemEditorPageState>(
-      itemEditorPageControllerProvider,
-      (previous, next) {
-        _syncControllers(next);
-        if (next.submitSucceeded && mounted) {
-          notifier.clearSubmitSucceeded();
-          _showSnackBarIfPossible(
-            context,
-            context.l10n.editorSubmitSuccess,
-          );
-          if (widget.autoPopOnSubmit) {
-            context.pop(true);
-          }
+    ref.listen<ItemEditorPageState>(itemEditorPageControllerProvider, (
+      previous,
+      next,
+    ) {
+      _syncControllers(next);
+      if (next.submitSucceeded && mounted) {
+        notifier.clearSubmitSucceeded();
+        _showSnackBarIfPossible(context, context.l10n.editorSubmitSuccess);
+        if (widget.autoPopOnSubmit) {
+          Navigator.of(context).pop(true);
         }
-      },
-    );
+      }
+    });
 
     final state = ref.watch(itemEditorPageControllerProvider);
     _syncControllers(state);
@@ -118,14 +114,21 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
           title: Text(_createTitle(l10n, state)),
           trailing: [
             _SubmitActionButton(
-              onPressed: state.canSubmit ? () => _submit(context, ref, state) : null,
+              onPressed: state.canSubmit
+                  ? () => _submit(context, ref, state)
+                  : null,
               isSubmitting: state.isSubmitting,
             ),
           ],
         ),
       ],
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 32),
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          12,
+          horizontalPadding,
+          32,
+        ),
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -148,13 +151,17 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _RoundedInputField(
-                          containerKey: const ValueKey('item-editor-field-title'),
+                          containerKey: const ValueKey(
+                            'item-editor-field-title',
+                          ),
                           controller: _titleController,
                           hintText: _titleHint(l10n, state.draft.type),
                           errorText: state.errors.title,
                           onChanged: notifier.updateTitle,
                           trailing: _ColorTrigger(
-                            color: state.draft.color.resolve(Theme.of(context).brightness),
+                            color: state.draft.color.resolve(
+                              Theme.of(context).brightness,
+                            ),
                             onPressed: () => _showColorPicker(context, ref),
                           ),
                         ),
@@ -164,8 +171,11 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                             rowKey: const ValueKey('item-editor-row-reminder'),
                             label: l10n.editorSectionReminder,
                             value: _reminderLabel(l10n, state.draft.reminder),
-                            onTap: () =>
-                                _openReminderSettings(context, ref, state.draft.reminder),
+                            onTap: () => _openReminderSettings(
+                              context,
+                              ref,
+                              state.draft.reminder,
+                            ),
                           ),
                         ] else ...[
                           const Gap(12),
@@ -188,23 +198,42 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _PlainActionRow(
-                                  rowKey: const ValueKey('item-editor-row-start'),
-                                  labelKey: const ValueKey('item-editor-row-start-label'),
-                                  trailingGroupKey:
-                                      const ValueKey('item-editor-row-start-trailing-group'),
-                                  valueKey: const ValueKey('item-editor-row-start-value'),
-                                  trailingKey: const ValueKey('item-editor-row-start-chevron'),
+                                  rowKey: const ValueKey(
+                                    'item-editor-row-start',
+                                  ),
+                                  labelKey: const ValueKey(
+                                    'item-editor-row-start-label',
+                                  ),
+                                  trailingGroupKey: const ValueKey(
+                                    'item-editor-row-start-trailing-group',
+                                  ),
+                                  valueKey: const ValueKey(
+                                    'item-editor-row-start-value',
+                                  ),
+                                  trailingKey: const ValueKey(
+                                    'item-editor-row-start-chevron',
+                                  ),
                                   label: l10n.editorFieldStartTime,
-                                  value: _formatTime(context, state.draft.startAt),
-                                  onTap: () => _pickStartTime(context, ref, state),
+                                  value: _formatTime(
+                                    context,
+                                    state.draft.startAt,
+                                  ),
+                                  onTap: () =>
+                                      _pickStartTime(context, ref, state),
                                 ),
                                 if (state.draft.type == ItemType.schedule)
                                   _PlainActionRow(
-                                    rowKey: const ValueKey('item-editor-row-end-time'),
+                                    rowKey: const ValueKey(
+                                      'item-editor-row-end-time',
+                                    ),
                                     label: l10n.editorFieldEndTime,
-                                    value: _formatTime(context, state.draft.endAt),
+                                    value: _formatTime(
+                                      context,
+                                      state.draft.endAt,
+                                    ),
                                     errorText: state.errors.timeRange,
-                                    onTap: () => _pickEndTime(context, ref, state),
+                                    onTap: () =>
+                                        _pickEndTime(context, ref, state),
                                   )
                                 else
                                   _PlainActionRow(
@@ -214,14 +243,20 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                       state.draft.estimatedDuration,
                                     ),
                                     errorText: state.errors.estimatedDuration,
-                                    onTap: () => _pickEstimatedDuration(context, ref, state),
+                                    onTap: () => _pickEstimatedDuration(
+                                      context,
+                                      ref,
+                                      state,
+                                    ),
                                   ),
                               ],
                             ),
                           ),
                           if (state.draft.type == ItemType.task)
                             _PlainActionRow(
-                              rowKey: const ValueKey('item-editor-row-deadline'),
+                              rowKey: const ValueKey(
+                                'item-editor-row-deadline',
+                              ),
                               label: l10n.editorFieldDeadline,
                               value: state.draft.deadline == null
                                   ? l10n.editorDeadlineUnset
@@ -231,36 +266,49 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                       allDay: state.draft.isAllDay,
                                     ),
                               errorText: state.errors.deadline,
-                              onTap: () => _pickDeadlineDateTime(context, ref, state),
+                              onTap: () =>
+                                  _pickDeadlineDateTime(context, ref, state),
                             ),
                           if (state.draft.type != ItemType.course) ...[
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-repeat'),
                               label: l10n.editorSectionRepeat,
                               value: _repeatLabel(l10n, state.draft.repeatRule),
-                              onTap: () =>
-                                  _openRepeatSettings(context, ref, state.draft.repeatRule),
+                              onTap: () => _openRepeatSettings(
+                                context,
+                                ref,
+                                state.draft.repeatRule,
+                              ),
                             ),
                             _PlainActionRow(
-                              rowKey: const ValueKey('item-editor-row-reminder'),
+                              rowKey: const ValueKey(
+                                'item-editor-row-reminder',
+                              ),
                               label: l10n.editorSectionReminder,
                               value: _reminderLabel(l10n, state.draft.reminder),
-                              onTap: () =>
-                                  _openReminderSettings(context, ref, state.draft.reminder),
+                              onTap: () => _openReminderSettings(
+                                context,
+                                ref,
+                                state.draft.reminder,
+                              ),
                             ),
                           ],
                         ],
                         if (isCourse) ...[
                           const Gap(20),
                           _RoundedInputField(
-                            containerKey: const ValueKey('item-editor-field-course-nature'),
+                            containerKey: const ValueKey(
+                              'item-editor-field-course-nature',
+                            ),
                             controller: _courseNatureController,
                             hintText: _courseNatureHint(context),
                             onChanged: notifier.updateCourseNature,
                           ),
                           const Gap(12),
                           _RoundedInputField(
-                            containerKey: const ValueKey('item-editor-field-course-instructor'),
+                            containerKey: const ValueKey(
+                              'item-editor-field-course-instructor',
+                            ),
                             controller: _courseInstructorController,
                             hintText: _courseInstructorHint(context),
                             onChanged: notifier.updateCourseInstructor,
@@ -270,7 +318,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                           const Gap(12),
                         ],
                         _RoundedInputField(
-                          containerKey: const ValueKey('item-editor-field-location'),
+                          containerKey: const ValueKey(
+                            'item-editor-field-location',
+                          ),
                           controller: _locationController,
                           hintText: isCourse
                               ? _courseLocationHint(context)
@@ -280,7 +330,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         if (!isCourse) ...[
                           const Gap(12),
                           _RoundedInputField(
-                            containerKey: const ValueKey('item-editor-field-details'),
+                            containerKey: const ValueKey(
+                              'item-editor-field-details',
+                            ),
                             controller: _detailsController,
                             hintText: l10n.editorHintDetails,
                             onChanged: notifier.updateDetails,
@@ -299,8 +351,12 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     );
   }
 
-  void _tryShowTypePickerIfNeeded(BuildContext context, ItemEditorPageState state) {
-    final shouldShow = (widget.args?.showTypePickerOnLaunch ?? false) &&
+  void _tryShowTypePickerIfNeeded(
+    BuildContext context,
+    ItemEditorPageState state,
+  ) {
+    final shouldShow =
+        (widget.args?.showTypePickerOnLaunch ?? false) &&
         !state.isEditing &&
         !_typePickerShown;
     if (!shouldShow) {
@@ -319,8 +375,14 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     _syncTextController(_titleController, state.draft.title);
     _syncTextController(_detailsController, state.draft.notes);
     _syncTextController(_locationController, state.draft.location);
-    _syncTextController(_courseNatureController, state.draft.courseDetails.courseNature);
-    _syncTextController(_courseInstructorController, state.draft.courseDetails.instructor);
+    _syncTextController(
+      _courseNatureController,
+      state.draft.courseDetails.courseNature,
+    );
+    _syncTextController(
+      _courseInstructorController,
+      state.draft.courseDetails.instructor,
+    );
   }
 
   void _syncTextController(TextEditingController controller, String text) {
@@ -347,10 +409,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
         .submit(errors);
 
     if (!success && context.mounted) {
-      _showSnackBarIfPossible(
-        context,
-        l10n.editorSubmitInvalid,
-      );
+      _showSnackBarIfPossible(context, l10n.editorSubmitInvalid);
     }
   }
 
@@ -383,9 +442,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
               children: [
                 Text(
                   l10n.editorColorPickerTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -399,14 +458,17 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         selected: state.draft.color == color,
                         onPressed: () async {
                           ui.closeDrawer(sheetContext);
-                          final scope = await _resolveColorUpdateScope(context, ref, color);
+                          final scope = await _resolveColorUpdateScope(
+                            context,
+                            ref,
+                            color,
+                          );
                           if (scope == null || !mounted) {
                             return;
                           }
-                          ref.read(itemEditorPageControllerProvider.notifier).selectColor(
-                                color,
-                                courseScope: scope,
-                              );
+                          ref
+                              .read(itemEditorPageControllerProvider.notifier)
+                              .selectColor(color, courseScope: scope);
                         },
                       ),
                   ],
@@ -455,15 +517,15 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
               child: Text(isZh ? '取消' : 'Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(
-                CourseColorUpdateScope.singleItem,
-              ),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(CourseColorUpdateScope.singleItem),
               child: Text(isZh ? '只改这一项' : 'This item'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(
-                CourseColorUpdateScope.sameTitleCourses,
-              ),
+              onPressed: () => Navigator.of(
+                dialogContext,
+              ).pop(CourseColorUpdateScope.sameTitleCourses),
               child: Text(isZh ? '改这门课程' : 'All same-name courses'),
             ),
           ],
@@ -489,7 +551,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 if (value == null) {
                   return;
                 }
-                ref.read(itemEditorPageControllerProvider.notifier).selectType(value);
+                ref
+                    .read(itemEditorPageControllerProvider.notifier)
+                    .selectType(value);
                 ui.closeDrawer(sheetContext);
               },
               child: Column(
@@ -498,9 +562,8 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                 children: [
                   Text(
                     _isChinese(context) ? '选择事项类型' : 'Choose item type',
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 16),
                   RadioListTile<ItemType>(
@@ -534,7 +597,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       initialDate: state.draft.startAt,
     );
     if (picked != null && mounted) {
-      ref.read(itemEditorPageControllerProvider.notifier).updateStartDate(picked);
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateStartDate(picked);
     }
   }
 
@@ -580,7 +645,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       initialDuration: state.draft.estimatedDuration,
     );
     if (picked != null && mounted) {
-      ref.read(itemEditorPageControllerProvider.notifier).updateEstimatedDuration(picked);
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .updateEstimatedDuration(picked);
     }
   }
 
@@ -620,7 +687,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       extra: current,
     );
     if (result != null && mounted) {
-      ref.read(itemEditorPageControllerProvider.notifier).selectRepeatRule(result);
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .selectRepeatRule(result);
     }
   }
 
@@ -634,7 +703,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       extra: current,
     );
     if (result != null && mounted) {
-      ref.read(itemEditorPageControllerProvider.notifier).selectReminder(result);
+      ref
+          .read(itemEditorPageControllerProvider.notifier)
+          .selectReminder(result);
     }
   }
 
@@ -774,7 +845,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   }
 
   bool _isChinese(BuildContext context) {
-    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    return Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
   }
 }
 
@@ -844,7 +917,9 @@ class _TypeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+    final color = selected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
 
     return Material(
       color: Colors.transparent,
@@ -860,7 +935,9 @@ class _TypeButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             color: selected
                 ? theme.colorScheme.primaryContainer.withValues(alpha: 0.28)
-                : theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.18),
+                : theme.colorScheme.surfaceContainerHigh.withValues(
+                    alpha: 0.18,
+                  ),
           ),
           child: Column(
             children: [
@@ -882,10 +959,7 @@ class _TypeButton extends StatelessWidget {
 }
 
 class _ColorTrigger extends StatelessWidget {
-  const _ColorTrigger({
-    required this.color,
-    required this.onPressed,
-  });
+  const _ColorTrigger({required this.color, required this.onPressed});
 
   final Color color;
   final VoidCallback onPressed;
@@ -906,10 +980,7 @@ class _ColorTrigger extends StatelessWidget {
       icon: Container(
         width: 16,
         height: 16,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }
@@ -940,7 +1011,9 @@ class _ColorChoiceChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: selected ? color : Theme.of(context).colorScheme.outlineVariant,
+              color: selected
+                  ? color
+                  : Theme.of(context).colorScheme.outlineVariant,
               width: selected ? 2 : 1,
             ),
             color: color.withValues(alpha: selected ? 0.16 : 0.08),
@@ -951,10 +1024,7 @@ class _ColorChoiceChip extends StatelessWidget {
               Container(
                 width: 14,
                 height: 14,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const Gap(8),
               Text(label),
@@ -1024,9 +1094,12 @@ class _RoundedInputField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isSingleLine = maxLines == 1;
-    final minHeight =
-        isSingleLine ? _kEditorBaseRowHeight : _kEditorMultiLineMinHeight;
-    final maxHeight = isSingleLine ? _kEditorBaseRowHeight : _kEditorBaseRowHeight * maxLines;
+    final minHeight = isSingleLine
+        ? _kEditorBaseRowHeight
+        : _kEditorMultiLineMinHeight;
+    final maxHeight = isSingleLine
+        ? _kEditorBaseRowHeight
+        : _kEditorBaseRowHeight * maxLines;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1038,7 +1111,9 @@ class _RoundedInputField extends StatelessWidget {
             maxHeight: maxHeight,
           ),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.6,
+            ),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
@@ -1048,7 +1123,9 @@ class _RoundedInputField extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   onChanged: onChanged,
-                  textAlignVertical: isSingleLine ? TextAlignVertical.center : null,
+                  textAlignVertical: isSingleLine
+                      ? TextAlignVertical.center
+                      : null,
                   minLines: isSingleLine ? 1 : 4,
                   maxLines: maxLines,
                   decoration: InputDecoration(
@@ -1064,7 +1141,9 @@ class _RoundedInputField extends StatelessWidget {
               ),
               if (trailing != null) ...[
                 Padding(
-                  padding: const EdgeInsets.only(right: _kEditorTrailingPadding),
+                  padding: const EdgeInsets.only(
+                    right: _kEditorTrailingPadding,
+                  ),
                   child: trailing!,
                 ),
               ],
@@ -1107,10 +1186,7 @@ class _SwitchRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.titleMedium),
           ),
           Switch(
             value: value,

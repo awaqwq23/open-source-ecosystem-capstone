@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -10,7 +9,8 @@ class WhuLoginWebViewPage extends ConsumerStatefulWidget {
   const WhuLoginWebViewPage({super.key});
 
   @override
-  ConsumerState<WhuLoginWebViewPage> createState() => _WhuLoginWebViewPageState();
+  ConsumerState<WhuLoginWebViewPage> createState() =>
+      _WhuLoginWebViewPageState();
 }
 
 class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
@@ -108,7 +108,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
       if (!mounted) {
         return;
       }
-      context.pop();
+      Navigator.of(context).pop();
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -189,10 +189,7 @@ class _LoginStateOverlay extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
-                ui.PrimaryButton(
-                  onPressed: onRetry,
-                  child: const Text('重试'),
-                ),
+                ui.PrimaryButton(onPressed: onRetry, child: const Text('重试')),
               ],
             ),
           ),

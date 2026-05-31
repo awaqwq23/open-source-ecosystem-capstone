@@ -2,7 +2,6 @@ import 'dart:math' show pi;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -21,10 +20,7 @@ import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ItemDetailPage extends ConsumerWidget {
-  const ItemDetailPage({
-    this.args,
-    super.key,
-  });
+  const ItemDetailPage({this.args, super.key});
 
   final ItemDetailArgs? args;
 
@@ -41,7 +37,7 @@ class ItemDetailPage extends ConsumerWidget {
               tooltip: (context) => Text(context.l10n.commonBack),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.back),
-                onPressed: context.pop,
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ],
@@ -99,9 +95,7 @@ class ItemDetailPage extends ConsumerWidget {
 }
 
 class _ItemDetailContent extends ConsumerWidget {
-  const _ItemDetailContent({
-    required this.item,
-  });
+  const _ItemDetailContent({required this.item});
 
   final AgendaItem item;
 
@@ -125,11 +119,7 @@ class _ItemDetailContent extends ConsumerWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              _typeIcon(item.type),
-              size: 24,
-              color: color,
-            ),
+            Icon(_typeIcon(item.type), size: 24, color: color),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -143,10 +133,14 @@ class _ItemDetailContent extends ConsumerWidget {
             if (canToggle)
               ui.Tooltip(
                 tooltip: (context) => Text(
-                  isCompleted ? l10n.detailMarkIncomplete : l10n.detailMarkComplete,
+                  isCompleted
+                      ? l10n.detailMarkIncomplete
+                      : l10n.detailMarkComplete,
                 ),
                 child: ui.IconButton.ghost(
-                  icon: Icon(isCompleted ? AppIcons.incomplete : AppIcons.complete),
+                  icon: Icon(
+                    isCompleted ? AppIcons.incomplete : AppIcons.complete,
+                  ),
                   onPressed: () => repository.toggleCompleted(item.id),
                 ),
               ),
@@ -156,8 +150,8 @@ class _ItemDetailContent extends ConsumerWidget {
                 icon: Icon(AppIcons.delete, color: theme.colorScheme.error),
                 onPressed: () async {
                   await repository.deleteItem(item.id);
-                  if (context.mounted && context.canPop()) {
-                    context.pop();
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
                   }
                 },
               ),
@@ -210,10 +204,19 @@ class _ItemDetailContent extends ConsumerWidget {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));
     } else if (_isSameDay(item.startAt, item.endAt)) {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));
-      addRow(AppIcons.clock, _formatTimeOnly(context, item.startAt, item.endAt));
+      addRow(
+        AppIcons.clock,
+        _formatTimeOnly(context, item.startAt, item.endAt),
+      );
     } else {
-      addRow(AppIcons.calendar, '${_formatDateTime(context, item.startAt, allDay: false)} 至');
-      addRow(AppIcons.clock, _formatDateTime(context, item.endAt, allDay: false));
+      addRow(
+        AppIcons.calendar,
+        '${_formatDateTime(context, item.startAt, allDay: false)} 至',
+      );
+      addRow(
+        AppIcons.clock,
+        _formatDateTime(context, item.endAt, allDay: false),
+      );
     }
 
     // ── Deadline ──
@@ -222,11 +225,14 @@ class _ItemDetailContent extends ConsumerWidget {
       final color = deadline.isBefore(DateTime.now())
           ? theme.colorScheme.error
           : null;
-      rows.add(_InfoRow(
-        icon: AppIcons.clock,
-        text: '${l10n.detailDeadlineLabel} ${_formatDeadline(context, deadline)}',
-        textColor: color,
-      ));
+      rows.add(
+        _InfoRow(
+          icon: AppIcons.clock,
+          text:
+              '${l10n.detailDeadlineLabel} ${_formatDeadline(context, deadline)}',
+          textColor: color,
+        ),
+      );
     }
 
     // ── Location ──
@@ -305,11 +311,7 @@ class _ItemDetailContent extends ConsumerWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.text,
-    this.textColor,
-  });
+  const _InfoRow({required this.icon, required this.text, this.textColor});
 
   final IconData icon;
   final String text;
@@ -350,7 +352,11 @@ class _DetailsBlock extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(AppIcons.info, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          child: Icon(
+            AppIcons.info,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -365,9 +371,7 @@ class _DetailsBlock extends StatelessWidget {
 }
 
 class _EmptyDetailState extends StatelessWidget {
-  const _EmptyDetailState({
-    required this.message,
-  });
+  const _EmptyDetailState({required this.message});
 
   final String message;
 
@@ -491,8 +495,8 @@ class _ScoreRing extends StatelessWidget {
     final color = score >= 90
         ? theme.colorScheme.primary
         : score >= 80
-            ? theme.colorScheme.tertiary
-            : theme.colorScheme.error;
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.error;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -780,7 +784,11 @@ class _SectionHeader extends StatelessWidget {
 
 // ─── Date/time formatting helpers ─────────────────────────────────────────────
 
-String _formatDateTime(BuildContext context, DateTime value, {required bool allDay}) {
+String _formatDateTime(
+  BuildContext context,
+  DateTime value, {
+  required bool allDay,
+}) {
   final localizations = MaterialLocalizations.of(context);
   final date = localizations.formatMediumDate(value);
   if (allDay) {

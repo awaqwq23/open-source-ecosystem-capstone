@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
@@ -55,9 +55,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  authState.isAuthenticated
-                      ? '武大统一认证已连接'
-                      : '登录后可授权成绩、课程表等校园服务',
+                  authState.isAuthenticated ? '武大统一认证已连接' : '登录后可授权成绩、课程表等校园服务',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -85,9 +83,17 @@ class WhuAccountDetailPage extends ConsumerWidget {
                 const Divider(height: 1),
                 _detailRow(colors, '学院', account?.college ?? '未获取'),
                 const Divider(height: 1),
-                _detailRow(colors, '最近登录', _formatDateTime(authState.lastAuthenticatedAt)),
+                _detailRow(
+                  colors,
+                  '最近登录',
+                  _formatDateTime(authState.lastAuthenticatedAt),
+                ),
                 const Divider(height: 1),
-                _detailRow(colors, '最近验证', _formatDateTime(authState.lastVerifiedAt)),
+                _detailRow(
+                  colors,
+                  '最近验证',
+                  _formatDateTime(authState.lastVerifiedAt),
+                ),
               ],
             ),
           ),
@@ -102,7 +108,8 @@ class WhuAccountDetailPage extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: ui.PrimaryButton(
-              onPressed: () => context.push(AppRoutePaths.settingsWhuAuthLogin),
+              onPressed: () =>
+                  context.openSecondary(AppRoutePaths.whuAccountLogin),
               child: Text(authState.isAuthenticated ? '重新登录' : '登录武大统一认证'),
             ),
           ),
@@ -117,10 +124,7 @@ class WhuAccountDetailPage extends ConsumerWidget {
                     Navigator.of(context).maybePop();
                   }
                 },
-                child: Text(
-                  '退出登录',
-                  style: TextStyle(color: colors.error),
-                ),
+                child: Text('退出登录', style: TextStyle(color: colors.error)),
               ),
             ),
           ],

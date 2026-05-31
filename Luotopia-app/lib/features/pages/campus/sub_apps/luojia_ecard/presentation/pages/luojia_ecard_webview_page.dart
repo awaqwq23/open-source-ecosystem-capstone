@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
@@ -117,7 +117,7 @@ class _LuojiaEcardWebViewPageState
   }
 
   Future<void> _openLoginGuide(WebViewController controller) async {
-    await context.push(AppRoutePaths.settingsWhuAccount);
+    await context.openSecondary(AppRoutePaths.whuAccount);
     if (!mounted) {
       return;
     }

@@ -12,41 +12,33 @@ abstract final class AppRoutePaths {
   static const campusLuojiaEcard = '/campus/luojia-ecard';
   static const campusEcardPaymentCode = '/campus/ecard-payment-code';
   static const campusEmptyClassroom = '/campus/empty-classroom';
+  static const campusTimetableManage = '/campus/timetable/manage';
+  static const campusTimetableImportWhu = '/campus/timetable/import/whu';
+  static const campusTimetableImportWakeup = '/campus/timetable/import/wakeup';
   static const settings = '/settings';
 
   // Secondary (standard pages)
   static const itemEditorFlow = '/item-editor/flow';
   static const itemDetail = '/item-detail';
+  static const whuAccount = '/account/whu';
+  static const whuAccountLogin = '/account/whu/login';
+  static const luotopiaLogin = '/account/luotopia/login';
+  static const luotopiaAccount = '/account/luotopia';
+  static const luotopiaAccountSettings = '/account/luotopia/settings';
+  static const luotopiaUsername = '/account/luotopia/settings/username';
+  static const luotopiaPassword = '/account/luotopia/settings/password';
+  static const luotopiaPhone = '/account/luotopia/settings/phone';
+  static const luotopiaEmail = '/account/luotopia/settings/email';
+  static const luotopiaWechat = '/account/luotopia/settings/wechat';
+  static const luotopiaQQ = '/account/luotopia/settings/qq';
+  static const luotopiaDevices = '/account/luotopia/devices';
   static const settingsGeneral = '/settings/general';
   static const settingsNavigation = '/settings/navigation';
   static const settingsDataUpdates = '/settings/data-updates';
   static const settingsHome = '/settings/home';
   static const settingsTimeGrid = '/settings/time-grid';
   static const settingsCourseGrid = '/settings/course-grid';
-  static const settingsCourseTimetables = '/settings/course-timetables';
-  static const settingsCourseImportWhu = '/settings/course-import-whu';
-  static const settingsWhuAuthLogin = '/settings/whu-auth/login';
-  static const settingsWhuAccount = '/settings/whu-account';
-  static const settingsCourseImportWakeup = '/settings/course-import-wakeup';
   static const settingsAi = '/settings/ai';
-  static const settingsLuotopiaLogin = '/settings/luotopia-auth/login';
-  static const settingsLuotopiaAccount = '/settings/luotopia-auth/account';
-  static const settingsLuotopiaAccountSettings =
-      '/settings/luotopia-auth/account/settings';
-  static const settingsLuotopiaUsername =
-      '/settings/luotopia-auth/account/settings/username';
-  static const settingsLuotopiaPassword =
-      '/settings/luotopia-auth/account/settings/password';
-  static const settingsLuotopiaPhone =
-      '/settings/luotopia-auth/account/settings/phone';
-  static const settingsLuotopiaEmail =
-      '/settings/luotopia-auth/account/settings/email';
-  static const settingsLuotopiaWechat =
-      '/settings/luotopia-auth/account/settings/wechat';
-  static const settingsLuotopiaQQ =
-      '/settings/luotopia-auth/account/settings/qq';
-  static const settingsLuotopiaDevices =
-      '/settings/luotopia-auth/account/devices';
 
   // Modal (full-screen overlay flow)
   static const repeatSettings = '/item-editor/repeat-settings';

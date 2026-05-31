@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:characters/characters.dart' as characters;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/luotopia_auth/data/luotopia_auth_repository.dart';
@@ -34,8 +34,8 @@ class LuotopiaAccountPage extends ConsumerWidget {
                     SettingsFlatTile(
                       title: '账户设置',
                       leading: const Icon(Icons.manage_accounts_outlined),
-                      onTap: () => context.push(
-                        AppRoutePaths.settingsLuotopiaAccountSettings,
+                      onTap: () => context.openSecondary(
+                        AppRoutePaths.luotopiaAccountSettings,
                       ),
                     ),
                     SettingsFlatTile(
@@ -52,7 +52,7 @@ class LuotopiaAccountPage extends ConsumerWidget {
                       title: '设备管理',
                       leading: const Icon(Icons.devices_outlined),
                       onTap: () =>
-                          context.push(AppRoutePaths.settingsLuotopiaDevices),
+                          context.openSecondary(AppRoutePaths.luotopiaDevices),
                     ),
                   ],
                 ),
@@ -108,38 +108,39 @@ class LuotopiaAccountSettingsPage extends ConsumerWidget {
                 subtitle: user.hasUsername ? user.username : '去设置',
                 leading: const Icon(Icons.badge_outlined),
                 onTap: () =>
-                    context.push(AppRoutePaths.settingsLuotopiaUsername),
+                    context.openSecondary(AppRoutePaths.luotopiaUsername),
               ),
               SettingsFlatTile(
                 title: '密码',
                 subtitle: user.hasPassword ? '已设置' : '去设置',
                 leading: const Icon(Icons.lock_outline),
                 onTap: () =>
-                    context.push(AppRoutePaths.settingsLuotopiaPassword),
+                    context.openSecondary(AppRoutePaths.luotopiaPassword),
               ),
               SettingsFlatTile(
                 title: '手机号',
                 subtitle: user.identities.phone ?? '去绑定',
                 leading: const Icon(Icons.phone_android_outlined),
-                onTap: () => context.push(AppRoutePaths.settingsLuotopiaPhone),
+                onTap: () => context.openSecondary(AppRoutePaths.luotopiaPhone),
               ),
               SettingsFlatTile(
                 title: '邮箱',
                 subtitle: user.identities.email ?? '去绑定',
                 leading: const Icon(Icons.mail_outline),
-                onTap: () => context.push(AppRoutePaths.settingsLuotopiaEmail),
+                onTap: () => context.openSecondary(AppRoutePaths.luotopiaEmail),
               ),
               SettingsFlatTile(
                 title: '微信',
                 subtitle: user.identities.wechat ?? '去绑定',
                 leading: const Icon(Icons.wechat),
-                onTap: () => context.push(AppRoutePaths.settingsLuotopiaWechat),
+                onTap: () =>
+                    context.openSecondary(AppRoutePaths.luotopiaWechat),
               ),
               SettingsFlatTile(
                 title: 'QQ',
                 subtitle: user.identities.qq ?? '去绑定',
                 leading: const Icon(Icons.chat_bubble_outline),
-                onTap: () => context.push(AppRoutePaths.settingsLuotopiaQQ),
+                onTap: () => context.openSecondary(AppRoutePaths.luotopiaQQ),
               ),
             ],
           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
@@ -67,7 +67,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
   }
 
   void _openLogin() {
-    context.push(AppRoutePaths.settingsWhuAccount);
+    context.openSecondary(AppRoutePaths.whuAccount);
   }
 
   void _toggleExpanded(String key) {

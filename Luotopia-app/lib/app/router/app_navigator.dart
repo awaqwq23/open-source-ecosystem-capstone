@@ -3,18 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 
 extension AppNavigatorX on BuildContext {
-  Future<T?> openSecondary<T>(
-    String path, {
-    Object? extra,
-  }) {
+  Future<T?> openSecondary<T>(String path, {Object? extra}) {
     return push<T>(path, extra: extra);
   }
 
-  Future<T?> openModal<T>(
-    String path, {
-    Object? extra,
-  }) {
+  Future<T?> openModal<T>(String path, {Object? extra}) {
     return push<T>(path, extra: extra);
+  }
+
+  void goPrimary(String path) {
+    go(path);
   }
 
   Future<T?> openItemEditorFlow<T>({
@@ -24,7 +22,8 @@ extension AppNavigatorX on BuildContext {
   }) {
     final query = <String, String>{
       if (showTypePickerOnLaunch) 'showTypePicker': '1',
-      if (presetType != null && presetType.trim().isNotEmpty) 'presetType': presetType.trim(),
+      if (presetType != null && presetType.trim().isNotEmpty)
+        'presetType': presetType.trim(),
     };
     final uri = Uri(
       path: AppRoutePaths.itemEditorFlow,

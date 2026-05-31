@@ -2,10 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
-import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/home/presentation/layout/home_grid_metrics.dart';
@@ -29,16 +27,15 @@ class HomePage extends ConsumerWidget {
     final localeTag = Localizations.localeOf(context).toLanguageTag();
     final viewModel = ref.read(homeHeaderViewModelProvider.notifier);
     final width = MediaQuery.sizeOf(context).width;
-    final allowMonthLayout = _HomeGridLayoutSpec.canFitMonthLayout(width) &&
+    final allowMonthLayout =
+        _HomeGridLayoutSpec.canFitMonthLayout(width) &&
         ResponsiveBreakpoints.of(context).largerThan(TABLET);
     final homeSettings = ref.watch(appHomeSettingsProvider);
     final query = HomeViewQuery(
       localeTag: localeTag,
       allowMonthLayout: allowMonthLayout,
     );
-    final viewData = ref.watch(
-      homeViewDataProvider(query),
-    );
+    final viewData = ref.watch(homeViewDataProvider(query));
     final theme = Theme.of(context);
 
     return ui.Scaffold(
@@ -76,12 +73,15 @@ class HomePage extends ConsumerWidget {
                                 : Icons.view_agenda,
                           ),
                           onPressed: () {
-                            ref.read(settingsViewModelProvider.notifier).saveHomeSettings(
+                            ref
+                                .read(settingsViewModelProvider.notifier)
+                                .saveHomeSettings(
                                   homeSettings.copyWith(
                                     gridMode:
-                                        homeSettings.gridMode == HomeGridMode.courseGrid
-                                            ? HomeGridMode.timeGrid
-                                            : HomeGridMode.courseGrid,
+                                        homeSettings.gridMode ==
+                                            HomeGridMode.courseGrid
+                                        ? HomeGridMode.timeGrid
+                                        : HomeGridMode.courseGrid,
                                   ),
                                 );
                           },
@@ -94,7 +94,10 @@ class HomePage extends ConsumerWidget {
                   child: TextButton(
                     onPressed: () => _openTimePicker(context, ref, viewData),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                       ),
@@ -137,7 +140,8 @@ class HomePage extends ConsumerWidget {
                         ),
                         child: ui.IconButton.ghost(
                           icon: const Icon(AppIcons.backToCurrentPeriod),
-                          onPressed: () => viewModel.showCurrentPeriod(viewData.scope),
+                          onPressed: () =>
+                              viewModel.showCurrentPeriod(viewData.scope),
                         ),
                       ),
                       ui.IconButton.ghost(
@@ -172,12 +176,14 @@ class HomePage extends ConsumerWidget {
                 Expanded(
                   child: _HomeGrid(
                     viewData: viewData,
-                    itemOpacityFactor: homeSettings.itemOpacityPercent.clamp(0, 100) / 100,
+                    itemOpacityFactor:
+                        homeSettings.itemOpacityPercent.clamp(0, 100) / 100,
                     onPrevious: () => viewModel.showPrevious(viewData.scope),
                     onNext: () => viewModel.showNext(viewData.scope),
-                    onSelectCell: (date, slotIndex) => viewModel.selectCell(date, slotIndex),
+                    onSelectCell: (date, slotIndex) =>
+                        viewModel.selectCell(date, slotIndex),
                     onOpenItem: (itemId) {
-                      context.push(
+                      context.openSecondary(
                         AppRoutePaths.itemDetail,
                         extra: ItemDetailArgs(itemId: itemId),
                       );
@@ -235,7 +241,9 @@ class HomePage extends ConsumerWidget {
   }
 
   bool _isChinese(BuildContext context) {
-    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    return Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
   }
 
   Future<void> _openTimePicker(
@@ -250,11 +258,10 @@ class HomePage extends ConsumerWidget {
     if (picked == null || !context.mounted) {
       return;
     }
-    ref.read(homeHeaderViewModelProvider.notifier).jumpToSelection(
-          HomePeriodSelection(
-            anchor: picked,
-            scope: viewData.scope,
-          ),
+    ref
+        .read(homeHeaderViewModelProvider.notifier)
+        .jumpToSelection(
+          HomePeriodSelection(anchor: picked, scope: viewData.scope),
         );
   }
 }
@@ -329,10 +336,8 @@ class _HomeGridState extends State<_HomeGrid> {
                 }
               },
               onTapUp: (details) => _handleTap(details.localPosition, layout),
-              onLongPressStart: (details) => _handleLongPress(
-                details.localPosition,
-                layout,
-              ),
+              onLongPressStart: (details) =>
+                  _handleLongPress(details.localPosition, layout),
               child: SingleChildScrollView(
                 controller: _scrollController,
                 padding: EdgeInsets.fromLTRB(
@@ -350,9 +355,11 @@ class _HomeGridState extends State<_HomeGrid> {
                         width: layout.timelineLabelWidth,
                         height: layout.headerCellHeight,
                       ),
-                      for (var columnIndex = 0;
-                          columnIndex < widget.viewData.columns.length;
-                          columnIndex++)
+                      for (
+                        var columnIndex = 0;
+                        columnIndex < widget.viewData.columns.length;
+                        columnIndex++
+                      )
                         _HeaderCell(
                           column: widget.viewData.columns[columnIndex],
                           left: layout.columnLeft(columnIndex),
@@ -365,21 +372,26 @@ class _HomeGridState extends State<_HomeGrid> {
                           top: layout.rowTop(slot.index),
                           width: layout.timelineLabelWidth,
                           height: layout.cellSize,
-                          showPeriodNumber: widget.viewData.isCourseGrid && _showPeriodNumber,
+                          showPeriodNumber:
+                              widget.viewData.isCourseGrid && _showPeriodNumber,
                         ),
-                      for (var columnIndex = 0;
-                          columnIndex < widget.viewData.columns.length;
-                          columnIndex++)
+                      for (
+                        var columnIndex = 0;
+                        columnIndex < widget.viewData.columns.length;
+                        columnIndex++
+                      )
                         for (final slot in widget.viewData.timeSlots)
                           _GridSlot(
                             left: layout.columnLeft(columnIndex),
                             top: layout.rowTop(slot.index),
                             size: layout.cellSize,
-                            highlight: DateUtils.isSameDay(
+                            highlight:
+                                DateUtils.isSameDay(
                                   widget.viewData.selectedCell?.date,
                                   widget.viewData.columns[columnIndex].date,
                                 ) &&
-                                widget.viewData.selectedCell?.slot.index == slot.index,
+                                widget.viewData.selectedCell?.slot.index ==
+                                    slot.index,
                           ),
                       for (final item in widget.viewData.items)
                         _AgendaBlock(
@@ -440,7 +452,11 @@ class _HomeGridState extends State<_HomeGrid> {
     }
   }
 
-  _GridHit? _resolveHit(Offset position, _HomeGridLayout layout, {Offset? contentPosition}) {
+  _GridHit? _resolveHit(
+    Offset position,
+    _HomeGridLayout layout, {
+    Offset? contentPosition,
+  }) {
     contentPosition ??= layout.contentOffsetFromViewport(
       position,
       scrollOffset: _scrollController.hasClients ? _scrollController.offset : 0,
@@ -507,18 +523,21 @@ class _HeaderCell extends StatelessWidget {
       height: height,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < _HomeGridLayoutSpec.headerCompactWidth;
+          final compact =
+              constraints.maxWidth < _HomeGridLayoutSpec.headerCompactWidth;
           final textColor = column.isToday
               ? theme.colorScheme.onSecondaryContainer
               : column.emphasize
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurfaceVariant;
+              ? theme.colorScheme.onSurface
+              : theme.colorScheme.onSurfaceVariant;
           return DecoratedBox(
             decoration: BoxDecoration(
               color: column.isToday
                   ? theme.colorScheme.secondaryContainer
                   : theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.headerCellRadius),
+              borderRadius: BorderRadius.circular(
+                _HomeGridLayoutSpec.headerCellRadius,
+              ),
             ),
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -562,10 +581,7 @@ class _HeaderCell extends StatelessWidget {
 }
 
 class _TimelineHeaderCell extends StatelessWidget {
-  const _TimelineHeaderCell({
-    required this.width,
-    required this.height,
-  });
+  const _TimelineHeaderCell({required this.width, required this.height});
 
   final double width;
   final double height;
@@ -581,7 +597,9 @@ class _TimelineHeaderCell extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.headerCellRadius),
+          borderRadius: BorderRadius.circular(
+            _HomeGridLayoutSpec.headerCellRadius,
+          ),
         ),
       ),
     );
@@ -617,11 +635,14 @@ class _TimelineLabel extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
+          borderRadius: BorderRadius.circular(
+            _HomeGridLayoutSpec.gridCellRadius,
+          ),
         ),
         child: LayoutBuilder(
-        builder: (context, constraints) {
-            final compact = constraints.maxHeight < HomeGridMetrics.timelineCompactHeight;
+          builder: (context, constraints) {
+            final compact =
+                constraints.maxHeight < HomeGridMetrics.timelineCompactHeight;
             return Padding(
               padding: EdgeInsets.only(
                 left: compact
@@ -634,10 +655,7 @@ class _TimelineLabel extends StatelessWidget {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
+                  return FadeTransition(opacity: animation, child: child);
                 },
                 child: compact
                     ? Align(
@@ -685,7 +703,11 @@ class _TimelineLabel extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(
-                                  height: _HomeGridLayoutSpec.timelineDividerMargin * 2 + 1,
+                                  height:
+                                      _HomeGridLayoutSpec
+                                              .timelineDividerMargin *
+                                          2 +
+                                      1,
                                 ),
                                 Text(
                                   slot.label.split('~').last,
@@ -706,7 +728,6 @@ class _TimelineLabel extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _HomeGridLayout {
@@ -752,7 +773,9 @@ class _HomeGridLayout {
       columnGap: columnGap,
       minimumColumnWidth: _HomeGridLayoutSpec.minimumColumnWidth,
     );
-    final timelineWidth = HomeGridMetrics.computeTimelineWidth(cellWidth: columnWidth);
+    final timelineWidth = HomeGridMetrics.computeTimelineWidth(
+      cellWidth: columnWidth,
+    );
     final cellSize = columnWidth;
     final rowCount = timeSlots.length;
     final safeRowCount = math.max(0, rowCount);
@@ -760,7 +783,9 @@ class _HomeGridLayout {
         ? 0.0
         : safeRowCount * cellSize + (safeRowCount - 1) * rowGap;
     final contentWidth =
-        timelineWidth + safeColumnCount * columnWidth + safeColumnCount * columnGap;
+        timelineWidth +
+        safeColumnCount * columnWidth +
+        safeColumnCount * columnGap;
 
     return _HomeGridLayout(
       timelineWidth: timelineWidth,
@@ -799,7 +824,10 @@ class _HomeGridLayout {
 
   double get timelineLabelWidth => timelineWidth;
 
-  Offset contentOffsetFromViewport(Offset viewportPosition, {required double scrollOffset}) {
+  Offset contentOffsetFromViewport(
+    Offset viewportPosition, {
+    required double scrollOffset,
+  }) {
     return Offset(
       viewportPosition.dx - horizontalPadding,
       viewportPosition.dy + scrollOffset - topPadding,
@@ -902,7 +930,9 @@ class _GridSlot extends StatelessWidget {
           color: highlight
               ? theme.colorScheme.primary.withValues(alpha: 0.18)
               : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.gridCellRadius),
+          borderRadius: BorderRadius.circular(
+            _HomeGridLayoutSpec.gridCellRadius,
+          ),
           border: Border.all(
             color: highlight
                 ? theme.colorScheme.primary.withValues(alpha: 0.5)
@@ -937,7 +967,9 @@ class _AgendaBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = item.item.color.resolve(theme.brightness);
     final effectiveOpacity = opacityFactor.clamp(0.0, 1.0);
-    final textBaseColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+    final textBaseColor = theme.brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black;
 
     return Positioned(
       left: left,
@@ -949,20 +981,19 @@ class _AgendaBlock extends StatelessWidget {
           decoration: BoxDecoration(
             color: accent.withValues(alpha: effectiveOpacity),
             borderRadius: BorderRadius.circular(_HomeGridLayoutSpec.itemRadius),
-            border: Border.all(
-              color: accent,
-            ),
+            border: Border.all(color: accent),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compactHeight =
                   constraints.maxHeight < _HomeGridLayoutSpec.itemCompactHeight;
               final ultraCompactHeight =
-                  constraints.maxHeight < _HomeGridLayoutSpec.itemUltraCompactHeight;
+                  constraints.maxHeight <
+                  _HomeGridLayoutSpec.itemUltraCompactHeight;
               final horizontalPadding =
                   constraints.maxWidth < _HomeGridLayoutSpec.itemCompactWidth
-                      ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
-                      : _HomeGridLayoutSpec.itemHorizontalPadding;
+                  ? _HomeGridLayoutSpec.itemCompactHorizontalPadding
+                  : _HomeGridLayoutSpec.itemHorizontalPadding;
               final verticalPadding = compactHeight
                   ? _HomeGridLayoutSpec.itemCompactVerticalPadding
                   : _HomeGridLayoutSpec.itemVerticalPadding;
@@ -975,22 +1006,33 @@ class _AgendaBlock extends StatelessWidget {
               final ultraCompactText = isCourseItem
                   ? _buildUltraCompactCourseText()
                   : item.item.title;
-              final courseInstructor = item.item.courseDetails.instructor.trim();
+              final courseInstructor = item.item.courseDetails.instructor
+                  .trim();
               final courseLocation = _resolveCourseLocation();
               final showDetails = isCourseItem
-                  ? contentHeight >= _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
+                  ? contentHeight >=
+                        _HomeGridLayoutSpec.itemCourseDetailsMinContentHeight
                   : detailsText.isNotEmpty &&
-                      contentHeight >= _HomeGridLayoutSpec.itemDetailsMinContentHeight;
-              final detailsMaxLines = contentHeight >=
+                        contentHeight >=
+                            _HomeGridLayoutSpec.itemDetailsMinContentHeight;
+              final detailsMaxLines =
+                  contentHeight >=
                       _HomeGridLayoutSpec.itemDetailsTwoLineContentHeight
                   ? 2
                   : 1;
-              final effectiveDetailsMaxLines = isCourseItem ? 2 : detailsMaxLines;
-              final detailsSpacing = isCourseItem ? 1.0 : _HomeGridLayoutSpec.itemDetailsSpacing;
+              final effectiveDetailsMaxLines = isCourseItem
+                  ? 2
+                  : detailsMaxLines;
+              final detailsSpacing = isCourseItem
+                  ? 1.0
+                  : _HomeGridLayoutSpec.itemDetailsSpacing;
               final titleMaxLines = switch (contentHeight) {
                 < _HomeGridLayoutSpec.itemTitleSingleLineContentHeight => 1,
-                _ when isCourseItem &&
-                    contentHeight < _HomeGridLayoutSpec.itemCourseTitleTwoLineMinContentHeight =>
+                _
+                    when isCourseItem &&
+                        contentHeight <
+                            _HomeGridLayoutSpec
+                                .itemCourseTitleTwoLineMinContentHeight =>
                   1,
                 < _HomeGridLayoutSpec.itemTitleTwoLineContentHeight => 2,
                 _ when showDetails => 2,
@@ -1008,7 +1050,11 @@ class _AgendaBlock extends StatelessWidget {
                   style: theme.textTheme.bodySmall!.copyWith(
                     color: textBaseColor,
                     fontWeight: FontWeight.normal,
-                    height: ultraCompactHeight ? 0.94 : compactHeight ? 1 : 1.12,
+                    height: ultraCompactHeight
+                        ? 0.94
+                        : compactHeight
+                        ? 1
+                        : 1.12,
                   ),
                   child: ultraCompactHeight
                       ? Align(
@@ -1033,7 +1079,9 @@ class _AgendaBlock extends StatelessWidget {
                                 item.item.title,
                                 maxLines: titleMaxLines,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             if (showDetails) ...[
@@ -1043,28 +1091,37 @@ class _AgendaBlock extends StatelessWidget {
                                 child: isCourseItem
                                     ? Column(
                                         mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            courseInstructor.isEmpty ? '-' : courseInstructor,
+                                            courseInstructor.isEmpty
+                                                ? '-'
+                                                : courseInstructor,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: textBaseColor.withValues(alpha: 0.9),
-                                              height: 1.0,
-                                              fontWeight: FontWeight.normal,
-                                            ),
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: textBaseColor
+                                                      .withValues(alpha: 0.9),
+                                                  height: 1.0,
+                                                  fontWeight: FontWeight.normal,
+                                                ),
                                           ),
                                           Text(
-                                            courseLocation.isEmpty ? '-' : courseLocation,
+                                            courseLocation.isEmpty
+                                                ? '-'
+                                                : courseLocation,
                                             maxLines: 2,
                                             softWrap: true,
                                             overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              color: textBaseColor.withValues(alpha: 0.9),
-                                              height: 1.0,
-                                              fontWeight: FontWeight.normal,
-                                            ),
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: textBaseColor
+                                                      .withValues(alpha: 0.9),
+                                                  height: 1.0,
+                                                  fontWeight: FontWeight.normal,
+                                                ),
                                           ),
                                         ],
                                       )
@@ -1072,17 +1129,17 @@ class _AgendaBlock extends StatelessWidget {
                                         detailsText,
                                         maxLines: effectiveDetailsMaxLines,
                                         overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: textBaseColor.withValues(
-                                            alpha: 0.9,
-                                          ),
-                                          height: isCourseItem ? 1.0 : null,
-                                          fontWeight: FontWeight.normal,
-                                        ),
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color: textBaseColor.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                              height: isCourseItem ? 1.0 : null,
+                                              fontWeight: FontWeight.normal,
+                                            ),
                                       ),
-
                               ),
-                            ]
+                            ],
                           ],
                         ),
                 ),

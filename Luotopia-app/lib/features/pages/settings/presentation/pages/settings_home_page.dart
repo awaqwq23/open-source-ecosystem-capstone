@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
@@ -20,7 +20,10 @@ class SettingsHomePage extends ConsumerWidget {
 
     return ui.Scaffold(
       headers: [
-        buildSecondaryAppBar(context, title: context.l10n.settingsHomeSectionTitle),
+        buildSecondaryAppBar(
+          context,
+          title: context.l10n.settingsHomeSectionTitle,
+        ),
       ],
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
@@ -28,22 +31,24 @@ class SettingsHomePage extends ConsumerWidget {
           children: [
             _OpacityStepperTile(
               title: context.l10n.settingsHomeItemOpacity,
-              value: context.l10n.settingsPercentValue(settings.itemOpacityPercent),
+              value: context.l10n.settingsPercentValue(
+                settings.itemOpacityPercent,
+              ),
               onDecrease: settings.itemOpacityPercent > 0
                   ? () => _saveHomeSettings(
-                        ref,
-                        settings.copyWith(
-                          itemOpacityPercent: settings.itemOpacityPercent - 5,
-                        ),
-                      )
+                      ref,
+                      settings.copyWith(
+                        itemOpacityPercent: settings.itemOpacityPercent - 5,
+                      ),
+                    )
                   : null,
               onIncrease: settings.itemOpacityPercent < 100
                   ? () => _saveHomeSettings(
-                        ref,
-                        settings.copyWith(
-                          itemOpacityPercent: settings.itemOpacityPercent + 5,
-                        ),
-                      )
+                      ref,
+                      settings.copyWith(
+                        itemOpacityPercent: settings.itemOpacityPercent + 5,
+                      ),
+                    )
                   : null,
             ),
             SettingsFlatTile(
@@ -102,12 +107,13 @@ class SettingsHomePage extends ConsumerWidget {
             ),
             SettingsFlatTile(
               title: context.l10n.settingsHomeDayStart,
-              subtitle: MaterialLocalizations.of(context).formatTimeOfDay(
-                settings.dayStartTime,
-              ),
+              subtitle: MaterialLocalizations.of(
+                context,
+              ).formatTimeOfDay(settings.dayStartTime),
               leading: const Icon(AppIcons.clock),
               trailing: const Icon(AppIcons.drillIn, size: 20),
-              onTap: () => context.push(AppRoutePaths.settingsTimeGrid),
+              onTap: () =>
+                  context.openSecondary(AppRoutePaths.settingsTimeGrid),
             ),
           ],
         ),
@@ -116,7 +122,9 @@ class SettingsHomePage extends ConsumerWidget {
   }
 
   Future<void> _saveHomeSettings(WidgetRef ref, HomeSettings settings) {
-    return ref.read(settingsViewModelProvider.notifier).saveHomeSettings(settings);
+    return ref
+        .read(settingsViewModelProvider.notifier)
+        .saveHomeSettings(settings);
   }
 }
 

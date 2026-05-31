@@ -4,7 +4,6 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -81,8 +80,10 @@ class ListPage extends ConsumerWidget {
                     completedItems: section.completedItems,
                     isCompletedExpanded: state.isCompletedExpanded,
                   );
-                  final availableHeight =
-                      math.max(0.0, constraints.maxHeight - topPadding - bottomPadding);
+                  final availableHeight = math.max(
+                    0.0,
+                    constraints.maxHeight - topPadding - bottomPadding,
+                  );
                   final emptyRowCount = _calculateEmptyRowCount(
                     existingRowCount: _rowCount(rows),
                     availableHeight: availableHeight,
@@ -103,43 +104,63 @@ class ListPage extends ConsumerWidget {
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: 920,
-                          minHeight: math.max(0.0, constraints.maxHeight - topPadding),
+                          minHeight: math.max(
+                            0.0,
+                            constraints.maxHeight - topPadding,
+                          ),
                         ),
                         child: AppEntrance(
                           child: Column(
                             children: [
                               for (final row in rows)
                                 switch (row) {
-                                  _PendingTaskRows(:final items) => _PendingTaskRowList(
-                                    items: items,
-                                    state: state,
-                                  ),
+                                  _PendingTaskRows(:final items) =>
+                                    _PendingTaskRowList(
+                                      items: items,
+                                      state: state,
+                                    ),
                                   _StaticItemRow(:final item) => _ListItemRow(
                                     key: ValueKey(item.id),
                                     item: item,
                                     dragIndex: null,
                                     onToggleComplete: () => ref
-                                        .read(listHeaderViewModelProvider.notifier)
+                                        .read(
+                                          listHeaderViewModelProvider.notifier,
+                                        )
                                         .toggleCompleted(item.id),
-                                    onOpenDetail: () => _openDetail(context, item),
-                                    onEdit: () => _openEditor(context, item: item),
+                                    onOpenDetail: () =>
+                                        _openDetail(context, item),
+                                    onEdit: () =>
+                                        _openEditor(context, item: item),
                                     onDelete: () => ref
-                                        .read(listHeaderViewModelProvider.notifier)
+                                        .read(
+                                          listHeaderViewModelProvider.notifier,
+                                        )
                                         .deleteItem(item.id),
                                   ),
-                                  _CompletedHeaderRow(:final count) => _CompletedToggleRow(
-                                    title: l10n.listCompletedSection(count),
-                                    isExpanded: state.isCompletedExpanded,
-                                    onToggle: () => ref
-                                        .read(listHeaderViewModelProvider.notifier)
-                                        .toggleCompletedExpanded(),
-                                  ),
+                                  _CompletedHeaderRow(:final count) =>
+                                    _CompletedToggleRow(
+                                      title: l10n.listCompletedSection(count),
+                                      isExpanded: state.isCompletedExpanded,
+                                      onToggle: () => ref
+                                          .read(
+                                            listHeaderViewModelProvider
+                                                .notifier,
+                                          )
+                                          .toggleCompletedExpanded(),
+                                    ),
                                 },
-                              for (var index = 0; index < emptyRowCount; index++)
+                              for (
+                                var index = 0;
+                                index < emptyRowCount;
+                                index++
+                              )
                                 _EmptyRow(
-                                  showTopDivider: hasCompletedSection || index > 0,
+                                  showTopDivider:
+                                      hasCompletedSection || index > 0,
                                 ),
-                              if (emptyRowCount > 0) const _EmptyRowsBottomLine(),
+                              if (emptyRowCount > 0)
+                                const _EmptyRowsBottomLine(),
                             ],
                           ),
                         ),
@@ -210,7 +231,8 @@ class ListPage extends ConsumerWidget {
     if (occupiedHeight >= availableHeight) {
       return 0;
     }
-    return ((availableHeight - occupiedHeight) / _ListRowMetrics.rowHeight).ceil();
+    return ((availableHeight - occupiedHeight) / _ListRowMetrics.rowHeight)
+        .ceil();
   }
 
   int _rowCount(List<_ListVisualRow> rows) {
@@ -275,9 +297,8 @@ class ListPage extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.listMenuTitle,
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 16),
                   ...ListHeaderTab.values.map(
@@ -312,9 +333,9 @@ class ListPage extends ConsumerWidget {
               children: [
                 Text(
                   l10n.listSettingsMenuTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -331,7 +352,9 @@ class ListPage extends ConsumerWidget {
                   title: Text(l10n.listSettingsReorder),
                   value: state.isReorderEnabled,
                   onChanged: (value) {
-                    ref.read(listHeaderViewModelProvider.notifier).setReorderEnabled(value);
+                    ref
+                        .read(listHeaderViewModelProvider.notifier)
+                        .setReorderEnabled(value);
                   },
                 ),
                 ListTile(
@@ -339,7 +362,7 @@ class ListPage extends ConsumerWidget {
                   title: Text(l10n.listSettingsMore),
                   onTap: () {
                     ui.closeDrawer(sheetContext);
-                    context.go(AppRoutePaths.settings);
+                    context.goPrimary(AppRoutePaths.settings);
                   },
                 ),
               ],
@@ -362,12 +385,16 @@ class ListPage extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: RadioGroup<ListSortMode>(
-              groupValue: state.isReorderEnabled ? ListSortMode.manual : state.sortMode,
+              groupValue: state.isReorderEnabled
+                  ? ListSortMode.manual
+                  : state.sortMode,
               onChanged: (value) {
                 if (value == null) {
                   return;
                 }
-                ref.read(listHeaderViewModelProvider.notifier).selectSortMode(value);
+                ref
+                    .read(listHeaderViewModelProvider.notifier)
+                    .selectSortMode(value);
                 ui.closeDrawer(sheetContext);
               },
               child: Column(
@@ -376,9 +403,8 @@ class ListPage extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.listSettingsSort,
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                    style: Theme.of(sheetContext).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 16),
                   for (final mode in ListSortMode.values)
@@ -396,7 +422,7 @@ class ListPage extends ConsumerWidget {
   }
 
   void _openDetail(BuildContext context, AgendaItem item) {
-    context.push(
+    context.openSecondary(
       AppRoutePaths.itemDetail,
       extra: ItemDetailArgs(itemId: item.id),
     );
@@ -432,18 +458,17 @@ class ListPage extends ConsumerWidget {
 }
 
 class _PendingTaskRowList extends ConsumerWidget {
-  const _PendingTaskRowList({
-    required this.items,
-    required this.state,
-  });
+  const _PendingTaskRowList({required this.items, required this.state});
 
   final List<AgendaItem> items;
   final ListHeaderState state;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canReorder = state.isReorderEnabled &&
-        (state.currentTab == ListHeaderTab.tasks || state.currentTab == ListHeaderTab.allItems) &&
+    final canReorder =
+        state.isReorderEnabled &&
+        (state.currentTab == ListHeaderTab.tasks ||
+            state.currentTab == ListHeaderTab.allItems) &&
         items.length > 1;
 
     if (!canReorder) {
@@ -500,16 +525,13 @@ class _PendingTaskRowList extends ConsumerWidget {
   }
 
   void _openDetail(BuildContext context, AgendaItem item) {
-    context.push(
+    context.openSecondary(
       AppRoutePaths.itemDetail,
       extra: ItemDetailArgs(itemId: item.id),
     );
   }
 
-  void _openEditor(
-    BuildContext context, {
-    AgendaItem? item,
-  }) {
+  void _openEditor(BuildContext context, {AgendaItem? item}) {
     if (item == null) {
       return;
     }
@@ -558,7 +580,8 @@ class _ListItemRow extends StatefulWidget {
   State<_ListItemRow> createState() => _ListItemRowState();
 }
 
-class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderStateMixin {
+class _ListItemRowState extends State<_ListItemRow>
+    with SingleTickerProviderStateMixin {
   static const _reboundDuration = Duration(milliseconds: 160);
 
   late final SlidableController _slidableController;
@@ -610,7 +633,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
     final accent = item.color.resolve(theme.brightness);
     final isEffectivelyCompleted = item.isEffectivelyCompleted(DateTime.now());
     final editSwipeBackground = Color.alphaBlend(
-      accent.withValues(alpha: theme.brightness == Brightness.dark ? 0.34 : 0.18),
+      accent.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.34 : 0.18,
+      ),
       theme.colorScheme.surfaceContainerHighest,
     );
     final cardColor = Color.alphaBlend(
@@ -633,7 +658,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
             backgroundColor: editSwipeBackground,
             actionColor: accent,
             committedIconColor: AppSemanticColors.onAgendaAccent(accent),
-            icon: isEffectivelyCompleted ? AppIcons.incomplete : AppIcons.complete,
+            icon: isEffectivelyCompleted
+                ? AppIcons.incomplete
+                : AppIcons.complete,
             alignment: Alignment.centerLeft,
           ),
           children: const [SizedBox.expand()],
@@ -664,7 +691,9 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
               child: Ink(
                 decoration: BoxDecoration(
                   color: cardColor,
-                  borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
+                  borderRadius: BorderRadius.circular(
+                    _ListRowMetrics.cardRadius,
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -673,11 +702,7 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(
-                        _typeIcon(item.type),
-                        size: 22,
-                        color: accent,
-                      ),
+                      Icon(_typeIcon(item.type), size: 22, color: accent),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(
@@ -687,13 +712,13 @@ class _ListItemRowState extends State<_ListItemRow> with SingleTickerProviderSta
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
-                                  decoration: isEffectivelyCompleted
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  height: 1,
-                                ),
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                              decoration: isEffectivelyCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              height: 1,
+                            ),
                           ),
                         ),
                       ),
@@ -773,7 +798,9 @@ class _CompletedToggleRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(
-                      isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                      isExpanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_right,
                       size: 18,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -786,10 +813,10 @@ class _CompletedToggleRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodyLarge?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                height: 1,
-                              ),
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            height: 1,
+                          ),
                         ),
                       ),
                     ),
@@ -805,9 +832,7 @@ class _CompletedToggleRow extends StatelessWidget {
 }
 
 class _EmptyRow extends StatelessWidget {
-  const _EmptyRow({
-    this.showTopDivider = true,
-  });
+  const _EmptyRow({this.showTopDivider = true});
 
   final bool showTopDivider;
 
@@ -825,10 +850,7 @@ class _EmptyRow extends StatelessWidget {
       child: Align(
         alignment: Alignment.topCenter,
         child: showTopDivider
-            ? Container(
-                height: 1,
-                color: dividerColor,
-              )
+            ? Container(height: 1, color: dividerColor)
             : null,
       ),
     );
@@ -846,11 +868,7 @@ class _EmptyRowsBottomLine extends StatelessWidget {
       theme.colorScheme.surface,
     );
 
-    return Container(
-      height: 1,
-      width: double.infinity,
-      color: dividerColor,
-    );
+    return Container(height: 1, width: double.infinity, color: dividerColor);
   }
 }
 
@@ -884,18 +902,15 @@ class _PhasedSwipeMotion extends StatelessWidget {
           0,
           _SwipeStageMetrics.coverThreshold,
         );
-        final iconBubbleSize = lerpDouble(
+        final iconBubbleSize =
+            lerpDouble(
               _SwipeStageMetrics.minBubbleSize,
               _SwipeStageMetrics.maxBubbleSize,
               Curves.easeOut.transform(iconProgress),
             ) ??
             _SwipeStageMetrics.maxBubbleSize;
-        final iconScale = lerpDouble(
-              0.92,
-              1,
-              Curves.easeOut.transform(iconProgress),
-            ) ??
-            1;
+        final iconScale =
+            lerpDouble(0.92, 1, Curves.easeOut.transform(iconProgress)) ?? 1;
         final showCircle = progress >= _SwipeStageMetrics.commitThreshold;
         final theme = Theme.of(context);
         final iconColor = showCircle
@@ -910,7 +925,10 @@ class _PhasedSwipeMotion extends StatelessWidget {
             borderRadius: BorderRadius.circular(_ListRowMetrics.cardRadius),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final paneSize = Size(constraints.maxWidth, constraints.maxHeight);
+                final paneSize = Size(
+                  constraints.maxWidth,
+                  constraints.maxHeight,
+                );
                 final revealWidth = paneSize.width * progress;
                 final contentGap = _SwipeStageMetrics.contentGap;
                 final iconRadius = iconBubbleSize / 2;
@@ -931,17 +949,17 @@ class _PhasedSwipeMotion extends StatelessWidget {
                 );
                 final circleRadius = showCircle
                     ? lerpDouble(
-                          iconRadius,
-                          coverRadius,
-                          Curves.easeOut.transform(
-                            _progressBetween(
-                              progress,
-                              _SwipeStageMetrics.commitThreshold,
-                              _SwipeStageMetrics.coverThreshold,
+                            iconRadius,
+                            coverRadius,
+                            Curves.easeOut.transform(
+                              _progressBetween(
+                                progress,
+                                _SwipeStageMetrics.commitThreshold,
+                                _SwipeStageMetrics.coverThreshold,
+                              ),
                             ),
-                          ),
-                        ) ??
-                        coverRadius
+                          ) ??
+                          coverRadius
                     : 0.0;
 
                 return Stack(
@@ -953,7 +971,8 @@ class _PhasedSwipeMotion extends StatelessWidget {
                         isFromStart: _isFromStart,
                         backgroundColor: backgroundColor,
                         actionColor: actionColor,
-                        showSolidAction: progress >= _SwipeStageMetrics.coverThreshold,
+                        showSolidAction:
+                            progress >= _SwipeStageMetrics.coverThreshold,
                         circleCenter: iconCenter,
                         circleRadius: circleRadius,
                       ),
@@ -966,11 +985,7 @@ class _PhasedSwipeMotion extends StatelessWidget {
                         child: SizedBox(
                           width: iconBubbleSize,
                           height: iconBubbleSize,
-                          child: Icon(
-                            icon,
-                            size: 18,
-                            color: iconColor,
-                          ),
+                          child: Icon(icon, size: 18, color: iconColor),
                         ),
                       ),
                     ),
@@ -1135,4 +1150,3 @@ abstract final class _SwipeStageMetrics {
   static const minBubbleSize = 24.0;
   static const maxBubbleSize = 30.0;
 }
-

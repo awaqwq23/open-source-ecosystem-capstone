@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -82,7 +81,8 @@ class _AiPageState extends ConsumerState<AiPage> {
                   Text(_text(context, zh: '对话列表', en: 'Conversations')),
               child: ui.IconButton.ghost(
                 icon: const Icon(AppIcons.openTimePicker),
-                onPressed: () => context.push(AppRoutePaths.aiSessions),
+                onPressed: () =>
+                    context.openSecondary(AppRoutePaths.aiSessions),
               ),
             ),
             ui.Tooltip(
@@ -108,7 +108,8 @@ class _AiPageState extends ConsumerState<AiPage> {
                     state.composerDisabledReason ??
                     state.lastError ??
                     _text(context, zh: 'AI 服务异常', en: 'AI service error'),
-                onOpenSettings: () => context.go(AppRoutePaths.settingsAi),
+                onOpenSettings: () =>
+                    context.goPrimary(AppRoutePaths.settingsAi),
                 onRetry: ref
                     .read(aiHeaderViewModelProvider.notifier)
                     .retryEnableComposer,
@@ -634,7 +635,7 @@ class _AiSessionsPageState extends ConsumerState<AiSessionsPage> {
                       .read(aiHeaderViewModelProvider.notifier)
                       .createSession();
                   if (context.mounted) {
-                    context.pop();
+                    Navigator.of(context).pop();
                   }
                 },
               ),
@@ -711,7 +712,7 @@ class _AiSessionsPageState extends ConsumerState<AiSessionsPage> {
                     .read(aiHeaderViewModelProvider.notifier)
                     .selectSession(session.id);
                 if (context.mounted) {
-                  context.pop();
+                  Navigator.of(context).pop();
                 }
               },
             );

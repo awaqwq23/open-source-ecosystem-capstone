@@ -2,7 +2,7 @@ import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
@@ -577,22 +577,22 @@ class _AppGrid extends StatelessWidget {
   void _openApp(BuildContext context, String name) {
     switch (name) {
       case '课程表':
-        context.push(AppRoutePaths.campusTimetable);
+        context.openSecondary(AppRoutePaths.campusTimetable);
         return;
       case '成绩':
-        context.push(AppRoutePaths.campusScore);
+        context.openSecondary(AppRoutePaths.campusScore);
         return;
       case '自习预约':
-        context.push(AppRoutePaths.campusSeatReservation);
+        context.openSecondary(AppRoutePaths.campusSeatReservation);
         return;
       case '珞珈E卡':
-        context.push(AppRoutePaths.campusLuojiaEcard);
+        context.openSecondary(AppRoutePaths.campusLuojiaEcard);
         return;
       case 'E卡付款码':
-        context.push(AppRoutePaths.campusEcardPaymentCode);
+        context.openSecondary(AppRoutePaths.campusEcardPaymentCode);
         return;
       case '空闲教室':
-        context.push(AppRoutePaths.campusEmptyClassroom);
+        context.openSecondary(AppRoutePaths.campusEmptyClassroom);
         return;
       default:
         ScaffoldMessenger.of(context).showSnackBar(

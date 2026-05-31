@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/seat_reservation/data/seat_reservation_auth_service.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
@@ -23,7 +23,8 @@ class SeatReservationPage extends ConsumerStatefulWidget {
   const SeatReservationPage({super.key});
 
   @override
-  ConsumerState<SeatReservationPage> createState() => _SeatReservationPageState();
+  ConsumerState<SeatReservationPage> createState() =>
+      _SeatReservationPageState();
 }
 
 class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
@@ -33,7 +34,9 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   String? _lastHandledSourceId;
   final Map<String, _SeatReservationTimeContext> _timeContexts = {};
 
-  Future<AppWebViewRequest?> _loadSeatSession(WebViewController controller) async {
+  Future<AppWebViewRequest?> _loadSeatSession(
+    WebViewController controller,
+  ) async {
     final authState = ref.read(whuAuthProvider);
     if (!authState.isAuthenticated) {
       return null;
@@ -160,7 +163,9 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
     final url = '${payload?['url'] ?? ''}';
     final status = '${payload?['status'] ?? 'unknown'}';
     if (source == 'installed') {
-      debugPrint('[SeatReservationSync] bridge installed at ${_sanitizeSeatUrl(url)}');
+      debugPrint(
+        '[SeatReservationSync] bridge installed at ${_sanitizeSeatUrl(url)}',
+      );
       return;
     }
     debugPrint(
@@ -183,7 +188,9 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       return;
     }
     if (_lastHandledSourceId == candidate.sourceId || _showingSyncDialog) {
-      debugPrint('[SeatReservationSync] ignored duplicate or dialog-active: ${candidate.sourceId}');
+      debugPrint(
+        '[SeatReservationSync] ignored duplicate or dialog-active: ${candidate.sourceId}',
+      );
       return;
     }
     _lastHandledSourceId = candidate.sourceId;
@@ -200,10 +207,12 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       return;
     }
 
-    await ref.read(agendaItemRepositoryProvider.notifier).createItem(
-          candidate.toDraft(),
-        );
-    debugPrint('[SeatReservationSync] created agenda item: ${candidate.sourceId}');
+    await ref
+        .read(agendaItemRepositoryProvider.notifier)
+        .createItem(candidate.toDraft());
+    debugPrint(
+      '[SeatReservationSync] created agenda item: ${candidate.sourceId}',
+    );
     if (!mounted) {
       return;
     }
@@ -225,16 +234,21 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
 
   _SeatReservationTimeContext? _timeContextFor(String seatId, String dateText) {
     final normalizedDate = _normalizeSeatDateText(dateText);
-    return _timeContexts[_SeatReservationTimeContext.keyFor(seatId, normalizedDate)] ??
+    return _timeContexts[_SeatReservationTimeContext.keyFor(
+          seatId,
+          normalizedDate,
+        )] ??
         _timeContexts[_SeatReservationTimeContext.dateKeyFor(normalizedDate)];
   }
 
   bool _hasSynced(String sourceId) {
     return ref
         .read(agendaItemRepositoryProvider)
-        .any((item) =>
-            item.sourceKind == AgendaItemSourceKind.seatReservation &&
-            item.sourceRef == sourceId);
+        .any(
+          (item) =>
+              item.sourceKind == AgendaItemSourceKind.seatReservation &&
+              item.sourceRef == sourceId,
+        );
   }
 
   Future<bool?> _confirmSync(_SeatReservationCandidate candidate) {
@@ -264,10 +278,7 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -280,12 +291,14 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
   Widget _buildBody(WhuAuthState authState) {
     if (!authState.isAuthenticated) {
       return ui.Scaffold(
-        child: _LoginRequiredView(onLogin: () async {
-          await context.push(AppRoutePaths.settingsWhuAccount);
-          if (mounted) {
-            setState(() {});
-          }
-        }),
+        child: _LoginRequiredView(
+          onLogin: () async {
+            await context.openSecondary(AppRoutePaths.whuAccount);
+            if (mounted) {
+              setState(() {});
+            }
+          },
+        ),
       );
     }
 
@@ -301,7 +314,9 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
         debugPrint('[SeatReservationWebView] started ${_sanitizeSeatUrl(url)}');
       },
       onPageFinished: (url, _) async {
-        debugPrint('[SeatReservationWebView] finished ${_sanitizeSeatUrl(url)}');
+        debugPrint(
+          '[SeatReservationWebView] finished ${_sanitizeSeatUrl(url)}',
+        );
         await _injectReservationBridge();
       },
       onRefresh: (_, loadInitialRequest) => loadInitialRequest(),
@@ -347,10 +362,7 @@ class _LoginRequiredView extends StatelessWidget {
           children: [
             Icon(Icons.lock_outline, size: 48, color: colors.onSurfaceVariant),
             const SizedBox(height: 16),
-            Text(
-              '请先登录武大教务账户',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            Text('请先登录武大教务账户', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             ui.OutlineButton(
               onPressed: () {
@@ -366,10 +378,7 @@ class _LoginRequiredView extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorView({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -391,10 +400,7 @@ class _ErrorView extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            ui.OutlineButton(
-              onPressed: onRetry,
-              child: const Text('重试'),
-            ),
+            ui.OutlineButton(onPressed: onRetry, child: const Text('重试')),
           ],
         ),
       ),
@@ -421,7 +427,8 @@ class _SeatReservationCandidate {
 
   static _SeatReservationCandidate? tryParse(
     String rawMessage, {
-    _SeatReservationTimeContext? Function(String seatId, String dateText)? timeContextFor,
+    _SeatReservationTimeContext? Function(String seatId, String dateText)?
+    timeContextFor,
   }) {
     final payload = decodePayload(rawMessage);
     if (payload == null) {
@@ -430,16 +437,19 @@ class _SeatReservationCandidate {
     final response = _decodeMap('${payload['responseText'] ?? ''}');
     final remoteSucceeded = _isRemoteSuccess(response);
     final url = '${payload['url'] ?? ''}';
-    final parsed = _parseBookUrl(url, timeContextFor: timeContextFor) ??
+    final parsed =
+        _parseBookUrl(url, timeContextFor: timeContextFor) ??
         _parseFromResponse(response);
     if (parsed == null) {
       return null;
     }
-    final location = _extractLocation(response) ??
+    final location =
+        _extractLocation(response) ??
         _extractLocationFromPageText('${payload['pageText'] ?? ''}') ??
         '武汉大学图书馆';
     return _SeatReservationCandidate(
-      sourceId: 'seat:${parsed.seatId}:${parsed.dateText}:${parsed.startMinute}:${parsed.endMinute}',
+      sourceId:
+          'seat:${parsed.seatId}:${parsed.dateText}:${parsed.startMinute}:${parsed.endMinute}',
       remoteSucceeded: remoteSucceeded,
       startAt: parsed.startAt,
       endAt: parsed.endAt,
@@ -454,7 +464,8 @@ class _SeatReservationCandidate {
     return ItemDraft(
       type: ItemType.schedule,
       title: '图书馆座位预约',
-      notes: '来源：武汉大学图书馆座位预约系统\n'
+      notes:
+          '来源：武汉大学图书馆座位预约系统\n'
           '座位 ID：$seatId',
       location: location,
       color: ItemColorOption.indigo,
@@ -505,7 +516,8 @@ class _SeatReservationCandidate {
 
   static _ParsedFreeBook? _parseBookUrl(
     String rawUrl, {
-    _SeatReservationTimeContext? Function(String seatId, String dateText)? timeContextFor,
+    _SeatReservationTimeContext? Function(String seatId, String dateText)?
+    timeContextFor,
   }) {
     final uri = Uri.tryParse(rawUrl);
     if (uri == null) {
@@ -557,7 +569,9 @@ class _SeatReservationCandidate {
         year: year,
         month: month,
         day: day,
-        startMinute: timeContextFor?.call(seatId, '$year-$month-$day')?.beginMinute,
+        startMinute: timeContextFor
+            ?.call(seatId, '$year-$month-$day')
+            ?.beginMinute,
         endMinute: int.tryParse(dateAndTime[4]),
       );
     } else {
@@ -576,7 +590,11 @@ class _SeatReservationCandidate {
     if (startMinute == null || endMinute == null) {
       return null;
     }
-    final start = DateTime(year, month, day).add(Duration(minutes: startMinute));
+    final start = DateTime(
+      year,
+      month,
+      day,
+    ).add(Duration(minutes: startMinute));
     final end = DateTime(year, month, day).add(Duration(minutes: endMinute));
     if (!end.isAfter(start)) {
       return null;
@@ -638,10 +656,16 @@ class _SeatReservationCandidate {
         seatId.trim().isEmpty) {
       return null;
     }
-    final start = DateTime(dateParts.year, dateParts.month, dateParts.day)
-        .add(Duration(minutes: startMinute));
-    final end = DateTime(dateParts.year, dateParts.month, dateParts.day)
-        .add(Duration(minutes: endMinute));
+    final start = DateTime(
+      dateParts.year,
+      dateParts.month,
+      dateParts.day,
+    ).add(Duration(minutes: startMinute));
+    final end = DateTime(
+      dateParts.year,
+      dateParts.month,
+      dateParts.day,
+    ).add(Duration(minutes: endMinute));
     if (!end.isAfter(start)) {
       return null;
     }
@@ -742,7 +766,8 @@ class _SeatReservationCandidate {
           return raw.toInt();
         }
         if (raw is String) {
-          final parsed = int.tryParse(raw.trim()) ?? _parseTimeMinute(raw.trim());
+          final parsed =
+              int.tryParse(raw.trim()) ?? _parseTimeMinute(raw.trim());
           if (parsed != null) {
             return parsed;
           }
@@ -783,7 +808,9 @@ class _SeatReservationCandidate {
     if (value == null) {
       return null;
     }
-    final match = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(value);
+    final match = RegExp(
+      r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
+    ).firstMatch(value);
     if (match == null) {
       return null;
     }
@@ -858,10 +885,9 @@ class _SeatReservationTimeContext {
       return _fromParts(
         seatOrRoomId: segments[freeSeatIndex + 1],
         dateText: segments[freeSeatIndex + 2],
-        beginMinute: _SeatReservationCandidate._findInt(
-          requestBody,
-          const ['beginMinute'],
-        ),
+        beginMinute: _SeatReservationCandidate._findInt(requestBody, const [
+          'beginMinute',
+        ]),
       );
     }
 
@@ -870,10 +896,9 @@ class _SeatReservationTimeContext {
       return _fromParts(
         seatOrRoomId: segments[findRoomIndex + 1],
         dateText: segments[findRoomIndex + 2],
-        beginMinute: _SeatReservationCandidate._findInt(
-          requestBody,
-          const ['beginMinute'],
-        ),
+        beginMinute: _SeatReservationCandidate._findInt(requestBody, const [
+          'beginMinute',
+        ]),
       );
     }
 
@@ -950,13 +975,14 @@ String _sanitizeSeatUrl(String rawUrl) {
   if (uri == null) {
     return '<invalid-url>';
   }
-  final queryKeys = uri.queryParameters.keys
-      .where((key) {
-        final lower = key.toLowerCase();
-        return lower != 'token' && lower != 'ticket';
-      })
-      .toList(growable: false)
-    ..sort();
+  final queryKeys =
+      uri.queryParameters.keys
+          .where((key) {
+            final lower = key.toLowerCase();
+            return lower != 'token' && lower != 'ticket';
+          })
+          .toList(growable: false)
+        ..sort();
   final queryText = queryKeys.isEmpty ? '' : '?${queryKeys.join(',')}';
   final fragmentText = uri.fragment.isEmpty ? '' : '#<fragment>';
   return '${uri.scheme}://${uri.host}${uri.path}$queryText$fragmentText';
