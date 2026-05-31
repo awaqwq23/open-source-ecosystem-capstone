@@ -1,8 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:animations/animations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/app/shell/app_shell.dart';
+import 'package:luotopia/core/motion/app_motion.dart';
 import 'package:luotopia/core/motion/app_route_transitions.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/presentation/pages/course_import_wakeup_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/presentation/pages/course_import_whu_page.dart';
@@ -44,7 +46,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutePaths.home,
     routes: [
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
+        navigatorContainerBuilder: (context, navigationShell, children) {
+          return AnimatedSwitcher(
+            duration: AppMotion.slow,
+            switchInCurve: AppMotion.enterCurve,
+            switchOutCurve: AppMotion.exitCurve,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: children[navigationShell.currentIndex],
+          );
+        },
         builder: (context, state, navigationShell) {
           return AppShell(navigationShell: navigationShell);
         },
