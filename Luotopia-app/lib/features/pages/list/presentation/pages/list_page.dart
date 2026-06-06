@@ -640,6 +640,7 @@ class _ListItemRowState extends State<_ListItemRow>
       theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.62),
       theme.colorScheme.surface,
     );
+    final titleFontSize = theme.textTheme.titleMedium?.fontSize ?? 16;
 
     return SizedBox(
       height: _ListRowMetrics.rowHeight,
@@ -719,6 +720,16 @@ class _ListItemRowState extends State<_ListItemRow>
                                     item.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
+                                    strutStyle: StrutStyle(
+                                      fontSize: titleFontSize,
+                                      height: 1,
+                                      forceStrutHeight: true,
+                                    ),
+                                    textHeightBehavior:
+                                        const TextHeightBehavior(
+                                          applyHeightToFirstAscent: false,
+                                          applyHeightToLastDescent: false,
+                                        ),
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(
                                           fontWeight: FontWeight.w600,
@@ -1181,10 +1192,14 @@ class _ActionIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 28,
-      height: 28,
+      width: _ListRowMetrics.visualControlSize,
+      height: _ListRowMetrics.visualControlSize,
       child: IconButton(
         onPressed: onPressed,
+        constraints: const BoxConstraints.tightFor(
+          width: _ListRowMetrics.visualControlSize,
+          height: _ListRowMetrics.visualControlSize,
+        ),
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
         iconSize: 22,
