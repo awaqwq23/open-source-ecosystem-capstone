@@ -782,22 +782,27 @@ class _TaskCountdownChip extends StatelessWidget {
     final theme = Theme.of(context);
     final shadTheme = ui.Theme.of(context);
     final taskTitleStyle = theme.textTheme.titleMedium;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          _label(),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: shadTheme.typography.sans.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontSize: taskTitleStyle?.fontSize,
-            fontWeight: FontWeight.w900,
-            height: 1,
+    return SizedBox(
+      height: 22,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Center(
+            child: Text(
+              _label(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: shadTheme.typography.sans.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontSize: taskTitleStyle?.fontSize,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
           ),
         ),
       ),
