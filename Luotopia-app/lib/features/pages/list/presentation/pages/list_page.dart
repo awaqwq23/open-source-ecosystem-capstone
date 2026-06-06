@@ -710,19 +710,24 @@ class _ListItemRowState extends State<_ListItemRow>
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
-                                child: Text(
-                                  item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onSurface,
-                                    decoration: isEffectivelyCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    height: 1,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    item.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.colorScheme.onSurface,
+                                          decoration: isEffectivelyCompleted
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          height: 1,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -741,10 +746,16 @@ class _ListItemRowState extends State<_ListItemRow>
                         const SizedBox(width: 8),
                         ReorderableDragStartListener(
                           index: widget.dragIndex!,
-                          child: Icon(
-                            AppIcons.drag,
-                            size: 20,
-                            color: theme.colorScheme.onSurfaceVariant,
+                          child: SizedBox(
+                            width: _ListRowMetrics.visualControlSize,
+                            height: _ListRowMetrics.visualControlSize,
+                            child: Center(
+                              child: Icon(
+                                AppIcons.drag,
+                                size: 20,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -789,7 +800,7 @@ class _TaskCountdownChip extends StatelessWidget {
     final fontSize =
         taskTitleStyle?.fontSize ?? shadTheme.typography.sans.fontSize ?? 16;
     return Container(
-      height: _ListRowMetrics.leadingIconSize,
+      height: _ListRowMetrics.visualControlSize,
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -1211,7 +1222,8 @@ abstract final class _ListRowMetrics {
   static const cardHorizontalPadding = 8.0;
   static const cardVerticalInset = 3.0;
   static const cardRadius = 4.0;
-  static const leadingIconSize = 22.0;
+  static const leadingIconSize = visualControlSize;
+  static const visualControlSize = 24.0;
 }
 
 abstract final class _SwipeStageMetrics {
