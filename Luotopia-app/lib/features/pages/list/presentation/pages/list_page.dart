@@ -700,7 +700,11 @@ class _ListItemRowState extends State<_ListItemRow>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(_typeIcon(item.type), size: 22, color: accent),
+                      Icon(
+                        _typeIcon(item.type),
+                        size: _ListRowMetrics.leadingIconSize,
+                        color: accent,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(
@@ -782,28 +786,34 @@ class _TaskCountdownChip extends StatelessWidget {
     final theme = Theme.of(context);
     final shadTheme = ui.Theme.of(context);
     final taskTitleStyle = theme.textTheme.titleMedium;
-    return SizedBox(
-      height: 22,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(8),
+    final fontSize =
+        taskTitleStyle?.fontSize ?? shadTheme.typography.sans.fontSize ?? 16;
+    return Container(
+      height: _ListRowMetrics.leadingIconSize,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        _label(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        strutStyle: StrutStyle(
+          fontSize: fontSize,
+          height: 1,
+          forceStrutHeight: true,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Center(
-            child: Text(
-              _label(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: shadTheme.typography.sans.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontSize: taskTitleStyle?.fontSize,
-                fontWeight: FontWeight.w800,
-                height: 1,
-              ),
-            ),
-          ),
+        textHeightBehavior: const TextHeightBehavior(
+          applyHeightToFirstAscent: false,
+          applyHeightToLastDescent: false,
+        ),
+        style: shadTheme.typography.sans.copyWith(
+          color: theme.colorScheme.onSurface,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+          height: 1,
         ),
       ),
     );
@@ -1201,6 +1211,7 @@ abstract final class _ListRowMetrics {
   static const cardHorizontalPadding = 8.0;
   static const cardVerticalInset = 3.0;
   static const cardRadius = 4.0;
+  static const leadingIconSize = 22.0;
 }
 
 abstract final class _SwipeStageMetrics {
