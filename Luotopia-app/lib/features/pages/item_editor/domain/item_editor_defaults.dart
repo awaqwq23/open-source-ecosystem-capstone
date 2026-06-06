@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_prefill.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -22,25 +22,36 @@ class ItemEditorDefaults {
       now.hour,
       now.minute >= 30 ? 30 : 0,
     );
+    final type = prefill?.type ?? ItemType.schedule;
     final start = prefill?.startAt ?? roundedStart;
     final end = prefill?.endAt ?? start.add(const Duration(hours: 1));
+    final details = switch (type) {
+      ItemType.schedule => ScheduleItemDetails(
+          startAt: start,
+          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+          isAllDay: prefill?.isAllDay ?? false,
+        ),
+      ItemType.task => TaskItemDetails(
+          deadlineAt: prefill?.deadlineAt ?? end,
+        ),
+      ItemType.memo => const MemoItemDetails(),
+      ItemType.course => CourseAgendaItemDetails(
+          startAt: start,
+          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+          isAllDay: prefill?.isAllDay ?? false,
+          course: prefill?.courseDetails ?? const ItemCourseDetails(),
+        ),
+    };
 
     return ItemDraft(
-      type: prefill?.type ?? ItemType.schedule,
+      type: type,
       title: prefill?.title ?? '',
       notes: prefill?.notes ?? '',
       location: prefill?.location ?? '',
       color: prefill?.color ?? _randomColor(),
       reminder: prefill?.reminder ?? ReminderOption.none,
       repeatRule: prefill?.repeatRule ?? RepeatRule.none,
-      startAt: start,
-      endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-      isAllDay: prefill?.isAllDay ?? false,
-      taskDetails: ItemTaskDetails(
-        deadline: prefill?.deadline,
-        estimatedDuration: prefill?.estimatedDuration ?? Duration.zero,
-      ),
-      courseDetails: prefill?.courseDetails ?? const ItemCourseDetails(),
+      details: details,
       sourceKind: prefill?.sourceKind ?? AgendaItemSourceKind.manual,
       sourceRef: prefill?.sourceRef ?? '',
     );
@@ -56,14 +67,31 @@ class ItemEditorDefaults {
       return draft;
     }
 
+    final start = draft.timelineStartAt ?? DateTime.now();
+    final end = draft.timelineEndAt ?? start.add(const Duration(hours: 1));
+    final details = switch (type) {
+      ItemType.schedule => ScheduleItemDetails(
+          startAt: start,
+          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+          isAllDay: draft.timelineIsAllDay,
+        ),
+      ItemType.task => TaskItemDetails(
+          deadlineAt: draft.deadlineAt ?? end,
+        ),
+      ItemType.memo => const MemoItemDetails(),
+      ItemType.course => CourseAgendaItemDetails(
+          startAt: start,
+          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+          isAllDay: draft.timelineIsAllDay,
+          course: draft.courseDetails,
+        ),
+    };
+
     return draft.copyWith(
       type: type,
-      isAllDay: type == ItemType.memo ? false : draft.isAllDay,
       reminder: type == ItemType.course ? ReminderOption.none : draft.reminder,
       repeatRule: type == ItemType.course ? RepeatRule.none : draft.repeatRule,
-      clearDeadline: type != ItemType.task,
-      deadline: type == ItemType.task ? (draft.deadline ?? draft.endAt) : null,
-      estimatedDuration: draft.estimatedDuration,
+      details: details,
     );
   }
 }

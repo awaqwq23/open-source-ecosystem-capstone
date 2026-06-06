@@ -13,6 +13,9 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 @DriftDatabase(
   tables: [
     AgendaItemRows,
+    ScheduleItemDetailRows,
+    TaskItemDetailRows,
+    CourseItemDetailRows,
     CourseTimetableRows,
     SelectedCourseTimetableRows,
     SyncTombstoneRows,
@@ -22,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -32,6 +35,54 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.dirty);
             await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.deletedAt);
             await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.lastSyncedAt);
+          }
+          if (from < 3) {
+            await customStatement('ALTER TABLE agenda_item_rows RENAME TO agenda_item_rows_old');
+            await m.createTable(agendaItemRows);
+            await m.createTable(scheduleItemDetailRows);
+            await m.createTable(taskItemDetailRows);
+            await m.createTable(courseItemDetailRows);
+            await customStatement('''
+              INSERT INTO agenda_item_rows (
+                id, type, title, notes, location, color, reminder, repeat_rule,
+                is_completed, completed_at, sort_order, source_kind, source_ref,
+                remote_id, revision, dirty, deleted_at, last_synced_at,
+                created_at, updated_at
+              )
+              SELECT
+                id, type, title, notes, location, color, reminder, repeat_rule,
+                is_completed, completed_at, sort_order, source_kind, source_ref,
+                remote_id, revision, dirty, deleted_at, last_synced_at,
+                created_at, updated_at
+              FROM agenda_item_rows_old
+            ''');
+            await customStatement('''
+              INSERT INTO schedule_item_detail_rows (
+                item_id, start_at, end_at, is_all_day, auto_completed_once_at
+              )
+              SELECT id, start_at, end_at, is_all_day, NULL
+              FROM agenda_item_rows_old
+              WHERE type = 'schedule'
+            ''');
+            await customStatement('''
+              INSERT INTO task_item_detail_rows (item_id, deadline_at)
+              SELECT id, COALESCE(deadline, end_at)
+              FROM agenda_item_rows_old
+              WHERE type = 'task'
+            ''');
+            await customStatement('''
+              INSERT INTO course_item_detail_rows (
+                item_id, start_at, end_at, is_all_day, timetable_id,
+                source_kind, source_course_id, course_nature, instructor, week_meta
+              )
+              SELECT
+                id, start_at, end_at, is_all_day, course_timetable_id,
+                course_source_kind, course_source_course_id, course_nature,
+                instructor, week_meta
+              FROM agenda_item_rows_old
+              WHERE type = 'course'
+            ''');
+            await customStatement('DROP TABLE agenda_item_rows_old');
           }
         },
       );
@@ -50,22 +101,11 @@ class AgendaItemRows extends Table {
   TextColumn get color => text()();
   TextColumn get reminder => text()();
   TextColumn get repeatRule => text()();
-  DateTimeColumn get startAt => dateTime()();
-  DateTimeColumn get endAt => dateTime()();
-  BoolColumn get isAllDay => boolean().withDefault(const Constant(false))();
-  DateTimeColumn get deadline => dateTime().nullable()();
-  IntColumn get estimatedDurationMinutes => integer().withDefault(const Constant(0))();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get completedAt => dateTime().nullable()();
   RealColumn get sortOrder => real().withDefault(const Constant(0))();
   TextColumn get sourceKind => text().withDefault(const Constant('manual'))();
   TextColumn get sourceRef => text().withDefault(const Constant(''))();
-  TextColumn get courseTimetableId => text().withDefault(const Constant(''))();
-  TextColumn get courseSourceKind => text().withDefault(const Constant('manual'))();
-  TextColumn get courseSourceCourseId => text().withDefault(const Constant(''))();
-  TextColumn get courseNature => text().withDefault(const Constant(''))();
-  TextColumn get instructor => text().withDefault(const Constant(''))();
-  TextColumn get weekMeta => text().withDefault(const Constant(''))();
   TextColumn get remoteId => text().nullable()();
   IntColumn get revision => integer().withDefault(const Constant(0))();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
@@ -76,6 +116,41 @@ class AgendaItemRows extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+}
+
+class ScheduleItemDetailRows extends Table {
+  TextColumn get itemId => text().references(AgendaItemRows, #id)();
+  DateTimeColumn get startAt => dateTime()();
+  DateTimeColumn get endAt => dateTime()();
+  BoolColumn get isAllDay => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get autoCompletedOnceAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {itemId};
+}
+
+class TaskItemDetailRows extends Table {
+  TextColumn get itemId => text().references(AgendaItemRows, #id)();
+  DateTimeColumn get deadlineAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {itemId};
+}
+
+class CourseItemDetailRows extends Table {
+  TextColumn get itemId => text().references(AgendaItemRows, #id)();
+  DateTimeColumn get startAt => dateTime()();
+  DateTimeColumn get endAt => dateTime()();
+  BoolColumn get isAllDay => boolean().withDefault(const Constant(false))();
+  TextColumn get timetableId => text().withDefault(const Constant(''))();
+  TextColumn get sourceKind => text().withDefault(const Constant('manual'))();
+  TextColumn get sourceCourseId => text().withDefault(const Constant(''))();
+  TextColumn get courseNature => text().withDefault(const Constant(''))();
+  TextColumn get instructor => text().withDefault(const Constant(''))();
+  TextColumn get weekMeta => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {itemId};
 }
 
 class CourseTimetableRows extends Table {

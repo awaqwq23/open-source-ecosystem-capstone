@@ -5,8 +5,8 @@ import 'package:luotopia/shared/data/mutations/user_data_mutation_service.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/repositories/agenda_item_repository.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -26,11 +26,13 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
           ..where((row) => row.deletedAt.isNull())
           ..orderBy([
             (row) => OrderingTerm(expression: row.sortOrder),
-            (row) => OrderingTerm(expression: row.startAt),
+            (row) => OrderingTerm(expression: row.createdAt),
           ]))
         .watch()
-        .listen((rows) {
-      state = rows.map(_fromRow).toList(growable: false);
+        .asyncMap((rows) async {
+      return Future.wait(rows.map(_fromRow));
+    }).listen((items) {
+      state = items;
     });
     ref.onDispose(subscription.cancel);
     return const [];
@@ -77,6 +79,10 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     return _mutations.toggleCompleted(id);
   }
 
+  Future<void> autoCompleteDueSchedules(DateTime now) {
+    return _mutations.autoCompleteDueSchedules(now);
+  }
+
   @override
   Future<void> reorderItems(List<String> orderedIds) async {
     await _mutations.reorderItems(orderedIds);
@@ -92,11 +98,14 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {
     return switch (item.type) {
       ItemType.memo => true,
-      _ => item.endAt.isAfter(range.start) && item.startAt.isBefore(range.end),
+      _ => item.timelineEndAt != null &&
+          item.timelineStartAt != null &&
+          item.timelineEndAt!.isAfter(range.start) &&
+          item.timelineStartAt!.isBefore(range.end),
     };
   }
 
-  AgendaItem _fromRow(AgendaItemRow row) {
+  Future<AgendaItem> _fromRow(AgendaItemRow row) async {
     return AgendaItem(
       id: row.id,
       type: _enumByName(ItemType.values, row.type) ?? ItemType.task,
@@ -108,22 +117,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
           ReminderOption.none,
       repeatRule:
           _enumByName(RepeatRule.values, row.repeatRule) ?? RepeatRule.none,
-      startAt: row.startAt,
-      endAt: row.endAt,
-      isAllDay: row.isAllDay,
-      taskDetails: ItemTaskDetails(
-        deadline: row.deadline,
-        estimatedDuration: Duration(minutes: row.estimatedDurationMinutes),
-      ),
-      courseDetails: ItemCourseDetails(
-        timetableId: row.courseTimetableId,
-        sourceKind: _enumByName(CourseItemSourceKind.values, row.courseSourceKind) ??
-            CourseItemSourceKind.manual,
-        sourceCourseId: row.courseSourceCourseId,
-        courseNature: row.courseNature,
-        instructor: row.instructor,
-        weekMeta: row.weekMeta,
-      ),
+      details: await _detailsForRow(row),
       isCompleted: row.isCompleted,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -132,6 +126,55 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       sourceKind: _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
           AgendaItemSourceKind.manual,
       sourceRef: row.sourceRef,
+    );
+  }
+
+  Future<AgendaItemDetails> _detailsForRow(AgendaItemRow row) async {
+    final type = _enumByName(ItemType.values, row.type) ?? ItemType.task;
+    return switch (type) {
+      ItemType.schedule => await _scheduleDetails(row.id),
+      ItemType.task => await _taskDetails(row.id),
+      ItemType.memo => const MemoItemDetails(),
+      ItemType.course => await _courseDetails(row.id),
+    };
+  }
+
+  Future<ScheduleItemDetails> _scheduleDetails(String itemId) async {
+    final row = await (_db.select(_db.scheduleItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return ScheduleItemDetails(
+      startAt: row.startAt,
+      endAt: row.endAt,
+      isAllDay: row.isAllDay,
+      autoCompletedOnceAt: row.autoCompletedOnceAt,
+    );
+  }
+
+  Future<TaskItemDetails> _taskDetails(String itemId) async {
+    final row = await (_db.select(_db.taskItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return TaskItemDetails(deadlineAt: row.deadlineAt);
+  }
+
+  Future<CourseAgendaItemDetails> _courseDetails(String itemId) async {
+    final row = await (_db.select(_db.courseItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return CourseAgendaItemDetails(
+      startAt: row.startAt,
+      endAt: row.endAt,
+      isAllDay: row.isAllDay,
+      course: ItemCourseDetails(
+        timetableId: row.timetableId,
+        sourceKind: _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
+            CourseItemSourceKind.manual,
+        sourceCourseId: row.sourceCourseId,
+        courseNature: row.courseNature,
+        instructor: row.instructor,
+        weekMeta: row.weekMeta,
+      ),
     );
   }
 

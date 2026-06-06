@@ -80,32 +80,22 @@ type SyncCapability struct {
 }
 
 type AgendaItemPayload struct {
-	ID                       string     `json:"id"`
-	Type                     string     `json:"type"`
-	Title                    string     `json:"title"`
-	Notes                    string     `json:"notes"`
-	Location                 string     `json:"location"`
-	Color                    string     `json:"color"`
-	Reminder                 string     `json:"reminder"`
-	RepeatRule               string     `json:"repeat_rule"`
-	StartAt                  time.Time  `json:"start_at"`
-	EndAt                    time.Time  `json:"end_at"`
-	IsAllDay                 bool       `json:"is_all_day"`
-	Deadline                 *time.Time `json:"deadline,omitempty"`
-	EstimatedDurationMinutes int        `json:"estimated_duration_minutes"`
-	IsCompleted              bool       `json:"is_completed"`
-	CompletedAt              *time.Time `json:"completed_at,omitempty"`
-	SortOrder                float64    `json:"sort_order"`
-	SourceKind               string     `json:"source_kind"`
-	SourceRef                string     `json:"source_ref"`
-	CourseTimetableID        string     `json:"course_timetable_id"`
-	CourseSourceKind         string     `json:"course_source_kind"`
-	CourseSourceCourseID     string     `json:"course_source_course_id"`
-	CourseNature             string     `json:"course_nature"`
-	Instructor               string     `json:"instructor"`
-	WeekMeta                 string     `json:"week_meta"`
-	CreatedAt                time.Time  `json:"created_at"`
-	UpdatedAt                time.Time  `json:"updated_at"`
+	ID          string         `json:"id"`
+	Type        string         `json:"type"`
+	Title       string         `json:"title"`
+	Notes       string         `json:"notes"`
+	Location    string         `json:"location"`
+	Color       string         `json:"color"`
+	Reminder    string         `json:"reminder"`
+	RepeatRule  string         `json:"repeat_rule"`
+	Details     map[string]any `json:"details"`
+	IsCompleted bool           `json:"is_completed"`
+	CompletedAt *time.Time     `json:"completed_at,omitempty"`
+	SortOrder   float64        `json:"sort_order"`
+	SourceKind  string         `json:"source_kind"`
+	SourceRef   string         `json:"source_ref"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 type CourseTimetablePayload struct {

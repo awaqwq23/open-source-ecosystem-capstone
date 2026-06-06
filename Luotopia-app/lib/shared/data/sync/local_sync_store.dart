@@ -120,48 +120,79 @@ class LocalSyncStore {
     if (!await _shouldApplyAgendaItem(id, revision)) {
       return;
     }
-    await _db.into(_db.agendaItemRows).insertOnConflictUpdate(
-          AgendaItemRowsCompanion.insert(
-            id: id,
-            type: payload['type'] as String? ?? 'task',
-            title: payload['title'] as String? ?? '',
-            notes: Value(payload['notes'] as String? ?? ''),
-            location: Value(payload['location'] as String? ?? ''),
-            color: payload['color'] as String? ?? 'sky',
-            reminder: payload['reminder'] as String? ?? 'none',
-            repeatRule: payload['repeat_rule'] as String? ?? 'none',
-            startAt: _requiredDate(payload['start_at']),
-            endAt: _requiredDate(payload['end_at']),
-            isAllDay: Value(payload['is_all_day'] as bool? ?? false),
-            deadline: Value(_optionalDate(payload['deadline'])),
-            estimatedDurationMinutes: Value(
-              (payload['estimated_duration_minutes'] as num?)?.toInt() ?? 0,
+    final type = payload['type'] as String? ?? 'task';
+    final details = payload['details'] as Map<String, dynamic>? ?? const {};
+    await _db.transaction(() async {
+      await _db.into(_db.agendaItemRows).insertOnConflictUpdate(
+            AgendaItemRowsCompanion.insert(
+              id: id,
+              type: type,
+              title: payload['title'] as String? ?? '',
+              notes: Value(payload['notes'] as String? ?? ''),
+              location: Value(payload['location'] as String? ?? ''),
+              color: payload['color'] as String? ?? 'sky',
+              reminder: payload['reminder'] as String? ?? 'none',
+              repeatRule: payload['repeat_rule'] as String? ?? 'none',
+              isCompleted: Value(payload['is_completed'] as bool? ?? false),
+              completedAt: Value(_optionalDate(payload['completed_at'])),
+              sortOrder: Value((payload['sort_order'] as num?)?.toDouble() ?? 0),
+              sourceKind: Value(payload['source_kind'] as String? ?? 'manual'),
+              sourceRef: Value(payload['source_ref'] as String? ?? ''),
+              revision: Value(revision),
+              dirty: const Value(false),
+              deletedAt: const Value(null),
+              lastSyncedAt: Value(syncedAt),
+              createdAt: _requiredDate(payload['created_at']),
+              updatedAt: _requiredDate(payload['updated_at']),
             ),
-            isCompleted: Value(payload['is_completed'] as bool? ?? false),
-            completedAt: Value(_optionalDate(payload['completed_at'])),
-            sortOrder: Value((payload['sort_order'] as num?)?.toDouble() ?? 0),
-            sourceKind: Value(payload['source_kind'] as String? ?? 'manual'),
-            sourceRef: Value(payload['source_ref'] as String? ?? ''),
-            courseTimetableId: Value(
-              payload['course_timetable_id'] as String? ?? '',
-            ),
-            courseSourceKind: Value(
-              payload['course_source_kind'] as String? ?? 'manual',
-            ),
-            courseSourceCourseId: Value(
-              payload['course_source_course_id'] as String? ?? '',
-            ),
-            courseNature: Value(payload['course_nature'] as String? ?? ''),
-            instructor: Value(payload['instructor'] as String? ?? ''),
-            weekMeta: Value(payload['week_meta'] as String? ?? ''),
-            revision: Value(revision),
-            dirty: const Value(false),
-            deletedAt: const Value(null),
-            lastSyncedAt: Value(syncedAt),
-            createdAt: _requiredDate(payload['created_at']),
-            updatedAt: _requiredDate(payload['updated_at']),
-          ),
-        );
+          );
+      await (_db.delete(_db.scheduleItemDetailRows)
+            ..where((row) => row.itemId.equals(id)))
+          .go();
+      await (_db.delete(_db.taskItemDetailRows)
+            ..where((row) => row.itemId.equals(id)))
+          .go();
+      await (_db.delete(_db.courseItemDetailRows)
+            ..where((row) => row.itemId.equals(id)))
+          .go();
+      switch (type) {
+        case 'schedule':
+          await _db.into(_db.scheduleItemDetailRows).insert(
+                ScheduleItemDetailRowsCompanion.insert(
+                  itemId: id,
+                  startAt: _requiredDate(details['start_at']),
+                  endAt: _requiredDate(details['end_at']),
+                  isAllDay: Value(details['is_all_day'] as bool? ?? false),
+                  autoCompletedOnceAt: Value(
+                    _optionalDate(details['auto_completed_once_at']),
+                  ),
+                ),
+              );
+        case 'task':
+          await _db.into(_db.taskItemDetailRows).insert(
+                TaskItemDetailRowsCompanion.insert(
+                  itemId: id,
+                  deadlineAt: _requiredDate(details['deadline_at']),
+                ),
+              );
+        case 'course':
+          await _db.into(_db.courseItemDetailRows).insert(
+                CourseItemDetailRowsCompanion.insert(
+                  itemId: id,
+                  startAt: _requiredDate(details['start_at']),
+                  endAt: _requiredDate(details['end_at']),
+                  isAllDay: Value(details['is_all_day'] as bool? ?? false),
+                  timetableId: Value(details['timetable_id'] as String? ?? ''),
+                  sourceKind: Value(details['source_kind'] as String? ?? 'manual'),
+                  sourceCourseId:
+                      Value(details['source_course_id'] as String? ?? ''),
+                  courseNature: Value(details['course_nature'] as String? ?? ''),
+                  instructor: Value(details['instructor'] as String? ?? ''),
+                  weekMeta: Value(details['week_meta'] as String? ?? ''),
+                ),
+              );
+      }
+    });
   }
 
   Future<void> applyRemoteCourseTimetable({

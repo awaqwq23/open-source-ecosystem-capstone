@@ -17,8 +17,7 @@ class ItemEditorPrefill {
     this.repeatRule,
     this.startAt,
     this.endAt,
-    this.deadline,
-    this.estimatedDuration,
+    this.deadlineAt,
     this.courseDetails,
     this.sourceKind,
     this.sourceRef,
@@ -34,8 +33,7 @@ class ItemEditorPrefill {
   final RepeatRule? repeatRule;
   final DateTime? startAt;
   final DateTime? endAt;
-  final DateTime? deadline;
-  final Duration? estimatedDuration;
+  final DateTime? deadlineAt;
   final ItemCourseDetails? courseDetails;
   final AgendaItemSourceKind? sourceKind;
   final String? sourceRef;

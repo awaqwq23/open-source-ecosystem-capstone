@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/item_editor/domain/item_editor_defaults.dart';
+import 'package:luotopia/features/pages/item_editor/domain/item_editor_validator.dart';
 import 'package:luotopia/features/pages/item_editor/domain/models/item_editor_args.dart';
 import 'package:luotopia/features/pages/item_editor/domain/repositories/item_editor_repository_provider.dart';
 import 'package:luotopia/features/pages/item_editor/domain/use_cases/build_item_editor_draft.dart';
 import 'package:luotopia/features/pages/item_editor/domain/use_cases/save_item_draft.dart';
-import 'package:luotopia/features/pages/item_editor/domain/item_editor_validator.dart';
-import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
+import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
@@ -56,7 +57,8 @@ class ItemEditorPageState {
 class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> {
   static const _buildDraft = BuildItemEditorDraftUseCase();
   ItemEditorArgs? _args;
-  CourseColorUpdateScope _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
+  CourseColorUpdateScope _courseColorUpdateScope =
+      CourseColorUpdateScope.singleItem;
 
   @override
   ItemEditorPageState build() {
@@ -70,14 +72,11 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     if (_args == args && args != null) {
       return;
     }
-
     _args = args;
     _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
-    final prefill = args?.prefill;
-    var draft = _buildDraft(prefill);
     state = ItemEditorPageState(
       itemId: args?.itemId,
-      draft: _normalizeDraft(draft),
+      draft: _normalizeDraft(_buildDraft(args?.prefill)),
     );
   }
 
@@ -88,17 +87,12 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(ItemEditorDefaults.applyType(state.draft, type));
   }
 
-  void updateTitle(String value) {
-    _updateDraft(state.draft.copyWith(title: value));
-  }
+  void updateTitle(String value) => _updateDraft(state.draft.copyWith(title: value));
 
-  void updateDetails(String value) {
-    _updateDraft(state.draft.copyWith(notes: value));
-  }
+  void updateDetails(String value) => _updateDraft(state.draft.copyWith(notes: value));
 
-  void updateLocation(String value) {
-    _updateDraft(state.draft.copyWith(location: value));
-  }
+  void updateLocation(String value) =>
+      _updateDraft(state.draft.copyWith(location: value));
 
   void updateCourseNature(String value) {
     _updateDraft(
@@ -125,132 +119,34 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void toggleAllDay(bool value) {
-    if (state.draft.type == ItemType.memo) {
+    if (state.draft.type == ItemType.task || state.draft.type == ItemType.memo) {
       return;
     }
-
-    if (_shouldDeriveEndFromDuration(state.draft)) {
-      if (value) {
-        final normalizedStart = DateTime(
-          state.draft.startAt.year,
-          state.draft.startAt.month,
-          state.draft.startAt.day,
-        );
-        final normalizedDeadline = state.draft.deadline == null
-            ? null
-            : DateTime(
-                state.draft.deadline!.year,
-                state.draft.deadline!.month,
-                state.draft.deadline!.day,
-                23,
-                59,
-              );
-        _updateDraft(
-          state.draft.copyWith(
-            isAllDay: true,
-            startAt: normalizedStart,
-            deadline: normalizedDeadline,
-          ),
-        );
-        return;
-      }
-
-      final start = DateTime(
-        state.draft.startAt.year,
-        state.draft.startAt.month,
-        state.draft.startAt.day,
-        9,
-      );
-      final deadline = state.draft.deadline == null
-          ? null
-          : DateTime(
-              state.draft.deadline!.year,
-              state.draft.deadline!.month,
-              state.draft.deadline!.day,
-              18,
-            );
-      _updateDraft(
-        state.draft.copyWith(
-          isAllDay: false,
-          startAt: start,
-          deadline: deadline,
-        ),
-      );
-      return;
-    }
-
+    final currentStart = _rangeStart();
+    final currentEnd = _rangeEnd(currentStart);
     if (value) {
-      final normalizedStart = DateTime(
-        state.draft.startAt.year,
-        state.draft.startAt.month,
-        state.draft.startAt.day,
-      );
-      final normalizedEnd = DateTime(
-        state.draft.endAt.year,
-        state.draft.endAt.month,
-        state.draft.endAt.day,
-        23,
-        59,
-      );
-      final normalizedDeadline = state.draft.deadline == null
-          ? null
-          : DateTime(
-              state.draft.deadline!.year,
-              state.draft.deadline!.month,
-              state.draft.deadline!.day,
-              23,
-              59,
-            );
-
+      final start = DateTime(currentStart.year, currentStart.month, currentStart.day);
+      final end = DateTime(currentEnd.year, currentEnd.month, currentEnd.day, 23, 59);
       _updateDraft(
         state.draft.copyWith(
-          isAllDay: true,
-          startAt: normalizedStart,
-          endAt: normalizedEnd.isBefore(normalizedStart)
-              ? DateTime(
-                  normalizedStart.year,
-                  normalizedStart.month,
-                  normalizedStart.day,
-                  23,
-                  59,
-                )
-              : normalizedEnd,
-          deadline: normalizedDeadline,
+          scheduleIsAllDay: true,
+          scheduleStartAt: start,
+          scheduleEndAt: end.isBefore(start)
+              ? DateTime(start.year, start.month, start.day, 23, 59)
+              : end,
         ),
       );
       return;
     }
-
-    final start = DateTime(
-      state.draft.startAt.year,
-      state.draft.startAt.month,
-      state.draft.startAt.day,
-      9,
-    );
-    final hasSameDayRange = DateUtils.isSameDay(state.draft.startAt, state.draft.endAt);
-    final end = hasSameDayRange
+    final start = DateTime(currentStart.year, currentStart.month, currentStart.day, 9);
+    final end = DateUtils.isSameDay(currentStart, currentEnd)
         ? start.add(const Duration(hours: 1))
-        : DateTime(
-            state.draft.endAt.year,
-            state.draft.endAt.month,
-            state.draft.endAt.day,
-            10,
-          );
-    final deadline = state.draft.deadline == null
-        ? null
-        : DateTime(
-            state.draft.deadline!.year,
-            state.draft.deadline!.month,
-            state.draft.deadline!.day,
-            18,
-          );
-
+        : DateTime(currentEnd.year, currentEnd.month, currentEnd.day, 10);
     _updateDraft(
       state.draft.copyWith(
-        isAllDay: false,
-        startAt: start,
-        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-        deadline: deadline,
+        scheduleIsAllDay: false,
+        scheduleStartAt: start,
+        scheduleEndAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
       ),
     );
   }
@@ -264,121 +160,124 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void updateStartDate(DateTime date) {
+    final currentStart = _rangeStart();
+    final currentEnd = _rangeEnd(currentStart);
     final start = DateTime(
       date.year,
       date.month,
       date.day,
-      state.draft.startAt.hour,
-      state.draft.startAt.minute,
+      currentStart.hour,
+      currentStart.minute,
     );
-    final end = state.draft.type == ItemType.schedule
-        ? DateTime(
-            date.year,
-            date.month,
-            date.day,
-            state.draft.endAt.hour,
-            state.draft.endAt.minute,
-          )
-        : (state.draft.endAt.isBefore(start) ? start : state.draft.endAt);
+    final end = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      currentEnd.hour,
+      currentEnd.minute,
+    );
     _updateDraft(
       state.draft.copyWith(
-        startAt: start,
-        endAt: end.isBefore(start) ? start : end,
+        scheduleStartAt: start,
+        scheduleEndAt: end.isBefore(start) ? start : end,
       ),
     );
   }
 
   void updateStartDateTime(DateTime dateTime) {
-    final end = state.draft.endAt.isBefore(dateTime) ? dateTime : state.draft.endAt;
+    final end = _rangeEnd(dateTime);
     _updateDraft(
       state.draft.copyWith(
-        startAt: dateTime,
-        endAt: end,
+        scheduleStartAt: dateTime,
+        scheduleEndAt: end.isBefore(dateTime) ? dateTime : end,
       ),
     );
   }
 
   void updateStartTime(int hour, int minute) {
+    final currentStart = _rangeStart();
     final start = DateTime(
-      state.draft.startAt.year,
-      state.draft.startAt.month,
-      state.draft.startAt.day,
+      currentStart.year,
+      currentStart.month,
+      currentStart.day,
       hour,
       minute,
     );
-    final end = state.draft.endAt.isBefore(start) ? start : state.draft.endAt;
-    _updateDraft(state.draft.copyWith(startAt: start, endAt: end));
+    final end = _rangeEnd(start);
+    _updateDraft(
+      state.draft.copyWith(
+        scheduleStartAt: start,
+        scheduleEndAt: end.isBefore(start) ? start : end,
+      ),
+    );
   }
 
   void updateEndDate(DateTime date) {
-    if (_shouldDeriveEndFromDuration(state.draft)) {
-      return;
-    }
-    final end = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      state.draft.endAt.hour,
-      state.draft.endAt.minute,
+    final currentEnd = _rangeEnd(_rangeStart());
+    _updateDraft(
+      state.draft.copyWith(
+        scheduleEndAt: DateTime(
+          date.year,
+          date.month,
+          date.day,
+          currentEnd.hour,
+          currentEnd.minute,
+        ),
+      ),
     );
-    _updateDraft(state.draft.copyWith(endAt: end));
   }
 
   void updateEndTime(int hour, int minute) {
-    if (_shouldDeriveEndFromDuration(state.draft)) {
-      return;
-    }
-    final end = DateTime(
-      state.draft.endAt.year,
-      state.draft.endAt.month,
-      state.draft.endAt.day,
-      hour,
-      minute,
+    final currentEnd = _rangeEnd(_rangeStart());
+    _updateDraft(
+      state.draft.copyWith(
+        scheduleEndAt: DateTime(
+          currentEnd.year,
+          currentEnd.month,
+          currentEnd.day,
+          hour,
+          minute,
+        ),
+      ),
     );
-    _updateDraft(state.draft.copyWith(endAt: end));
   }
 
   void updateEndDateTime(DateTime dateTime) {
-    if (_shouldDeriveEndFromDuration(state.draft)) {
-      return;
-    }
-    _updateDraft(state.draft.copyWith(endAt: dateTime));
+    _updateDraft(state.draft.copyWith(scheduleEndAt: dateTime));
   }
 
   void updateDeadlineDate(DateTime date) {
-    final currentDeadline = state.draft.deadline ?? state.draft.endAt;
-    final deadline = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      currentDeadline.hour,
-      currentDeadline.minute,
+    final current = state.draft.deadlineAt ?? DateTime.now();
+    _updateDraft(
+      state.draft.copyWith(
+        taskDeadlineAt: DateTime(
+          date.year,
+          date.month,
+          date.day,
+          current.hour,
+          current.minute,
+        ),
+      ),
     );
-    _updateDraft(state.draft.copyWith(deadline: deadline));
   }
 
   void updateDeadlineTime(int hour, int minute) {
-    final currentDeadline = state.draft.deadline ?? state.draft.endAt;
-    final deadline = DateTime(
-      currentDeadline.year,
-      currentDeadline.month,
-      currentDeadline.day,
-      hour,
-      minute,
+    final current = state.draft.deadlineAt ?? DateTime.now();
+    _updateDraft(
+      state.draft.copyWith(
+        taskDeadlineAt: DateTime(
+          current.year,
+          current.month,
+          current.day,
+          hour,
+          minute,
+        ),
+      ),
     );
-    _updateDraft(state.draft.copyWith(deadline: deadline));
   }
 
   void updateDeadlineDateTime(DateTime dateTime) {
-    _updateDraft(state.draft.copyWith(deadline: dateTime));
-  }
-
-  void clearDeadline() {
-    _updateDraft(state.draft.copyWith(clearDeadline: true));
-  }
-
-  void updateEstimatedDuration(Duration duration) {
-    _updateDraft(state.draft.copyWith(estimatedDuration: duration));
+    _updateDraft(state.draft.copyWith(taskDeadlineAt: dateTime));
   }
 
   Future<bool> submit(ItemEditorValidationErrors errors) async {
@@ -424,41 +323,41 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void _updateDraft(ItemDraft draft) {
-    final normalizedDraft = _normalizeDraft(draft);
     state = state.copyWith(
-      draft: normalizedDraft,
+      draft: _normalizeDraft(draft),
       errors: const ItemEditorValidationErrors(),
       submitSucceeded: false,
     );
   }
 
   ItemDraft _normalizeDraft(ItemDraft draft) {
-    if (!_shouldDeriveEndFromDuration(draft)) {
-      return draft;
+    if (draft.type == ItemType.task && draft.details is! TaskItemDetails) {
+      return draft.copyWith(
+        details: TaskItemDetails(
+          deadlineAt: draft.timelineEndAt ?? DateTime.now().add(const Duration(hours: 1)),
+        ),
+      );
     }
-    final duration = _effectiveEstimatedDuration(draft.estimatedDuration);
-    final derivedEndAt = draft.startAt.add(duration);
-    return draft.copyWith(
-      endAt: derivedEndAt,
-    );
+    return draft;
   }
 
   ItemDraft _normalizeDraftForSave(ItemDraft draft) {
-    if (draft.type != ItemType.task) {
-      return draft;
+    if (draft.type == ItemType.task && draft.deadlineAt == null) {
+      return draft.copyWith(
+        details: TaskItemDetails(
+          deadlineAt: DateTime.now().add(const Duration(hours: 1)),
+        ),
+      );
     }
-    if (draft.estimatedDuration > Duration.zero) {
-      return draft;
-    }
-    return draft.copyWith(estimatedDuration: const Duration(hours: 1));
+    return draft;
   }
 
-  Duration _effectiveEstimatedDuration(Duration duration) {
-    return duration > Duration.zero ? duration : const Duration(hours: 1);
+  DateTime _rangeStart() {
+    return state.draft.timelineStartAt ?? DateTime.now();
   }
 
-  bool _shouldDeriveEndFromDuration(ItemDraft draft) {
-    return draft.type == ItemType.task;
+  DateTime _rangeEnd(DateTime fallbackStart) {
+    return state.draft.timelineEndAt ?? fallbackStart.add(const Duration(hours: 1));
   }
 }
 
@@ -466,4 +365,3 @@ final itemEditorPageControllerProvider =
     NotifierProvider.autoDispose<ItemEditorPageController, ItemEditorPageState>(
   ItemEditorPageController.new,
 );
-

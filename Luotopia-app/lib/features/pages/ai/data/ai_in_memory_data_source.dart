@@ -13,7 +13,7 @@ import 'package:luotopia/features/pages/settings/domain/models/ai_settings.dart'
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -625,9 +625,9 @@ class OpenAiCompatibleAiService implements AiService {
                 'title': item.title,
                 'notes': item.notes,
                 'location': item.location,
-                'startAt': item.startAt.toIso8601String(),
-                'endAt': item.endAt.toIso8601String(),
-                'deadline': item.deadline?.toIso8601String(),
+                'startAt': item.timelineStartAt?.toIso8601String(),
+                'endAt': item.timelineEndAt?.toIso8601String(),
+                'deadline': item.deadlineAt?.toIso8601String(),
               },
           ]);
 
@@ -731,6 +731,20 @@ ${basePrompt.trim()}
         )
         ? (endAt ?? normalizedStart.add(const Duration(hours: 1)))
         : normalizedStart.add(const Duration(hours: 1));
+    final details = switch (type) {
+      ItemType.task => TaskItemDetails(deadlineAt: deadline ?? normalizedEnd),
+      ItemType.memo => const MemoItemDetails(),
+      ItemType.course => CourseAgendaItemDetails(
+          startAt: normalizedStart,
+          endAt: normalizedEnd,
+          isAllDay: false,
+        ),
+      ItemType.schedule => ScheduleItemDetails(
+          startAt: normalizedStart,
+          endAt: normalizedEnd,
+          isAllDay: false,
+        ),
+    };
     final draft = ItemDraft(
       type: type,
       title: title,
@@ -739,13 +753,7 @@ ${basePrompt.trim()}
       color: ItemColorOption.sky,
       reminder: ReminderOption.none,
       repeatRule: RepeatRule.none,
-      startAt: normalizedStart,
-      endAt: normalizedEnd,
-      isAllDay: false,
-      taskDetails: ItemTaskDetails(
-        deadline: deadline,
-        estimatedDuration: normalizedEnd.difference(normalizedStart),
-      ),
+      details: details,
       sourceKind: AgendaItemSourceKind.aiGenerated,
     );
 
@@ -773,19 +781,27 @@ ${basePrompt.trim()}
     if (draft.type == ItemType.memo) {
       return const [];
     }
-    final start = draft.startAt;
-    final end = draft.endAt;
+    final start = draft.timelineStartAt;
+    final end = draft.timelineEndAt;
+    if (start == null || end == null) {
+      return const [];
+    }
     if (!end.isAfter(start)) {
       return const [];
     }
     return [
       for (final item in items)
-        if (item.endAt.isAfter(start) && item.startAt.isBefore(end))
+        if (item.timelineEndAt != null &&
+            item.timelineStartAt != null &&
+            item.timelineEndAt!.isAfter(start) &&
+            item.timelineStartAt!.isBefore(end))
           AiDraftConflict(
             itemId: item.id,
             title: item.title,
-            overlapStart: item.startAt.isAfter(start) ? item.startAt : start,
-            overlapEnd: item.endAt.isBefore(end) ? item.endAt : end,
+            overlapStart:
+                item.timelineStartAt!.isAfter(start) ? item.timelineStartAt! : start,
+            overlapEnd:
+                item.timelineEndAt!.isBefore(end) ? item.timelineEndAt! : end,
           ),
     ];
   }
@@ -817,8 +833,8 @@ ${basePrompt.trim()}
           itemId: matched.id,
           title: matched.title,
           type: matched.type,
-          startAt: matched.startAt,
-          endAt: matched.endAt,
+          startAt: matched.timelineStartAt,
+          endAt: matched.timelineEndAt,
           reason: (row['reason'] as String?)?.trim(),
         ),
       );

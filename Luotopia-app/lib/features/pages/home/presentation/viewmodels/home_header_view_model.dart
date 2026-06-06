@@ -266,7 +266,11 @@ String? _buildSemesterWeekLabel({
     if (item.courseDetails.timetableId != targetTimetableId) {
       continue;
     }
-    final startDate = DateUtils.dateOnly(item.startAt);
+    final start = item.timelineStartAt;
+    if (start == null) {
+      continue;
+    }
+    final startDate = DateUtils.dateOnly(start);
     if (semesterFirstDay == null || startDate.isBefore(semesterFirstDay)) {
       semesterFirstDay = startDate;
     }

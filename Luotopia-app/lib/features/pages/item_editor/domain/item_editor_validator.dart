@@ -7,19 +7,16 @@ class ItemEditorValidationErrors {
     this.title,
     this.timeRange,
     this.deadline,
-    this.estimatedDuration,
   });
 
   final String? title;
   final String? timeRange;
   final String? deadline;
-  final String? estimatedDuration;
 
   bool get hasErrors {
     return title != null ||
         timeRange != null ||
-        deadline != null ||
-        estimatedDuration != null;
+        deadline != null;
   }
 }
 
@@ -33,20 +30,21 @@ class ItemEditorValidator {
     String? titleError;
     String? timeRangeError;
     String? deadlineError;
-    String? estimatedDurationError;
 
     if (draft.title.trim().isEmpty) {
       titleError = l10n.editorErrorTitleRequired;
     }
 
+    final start = draft.timelineStartAt;
+    final end = draft.timelineEndAt;
     if ((draft.type == ItemType.course || draft.type == ItemType.schedule) &&
-        draft.endAt.isBefore(draft.startAt)) {
+        start != null &&
+        end != null &&
+        end.isBefore(start)) {
       timeRangeError = l10n.editorErrorEndBeforeStart;
     }
 
-    if (draft.type == ItemType.task &&
-        draft.deadline != null &&
-        draft.deadline!.isBefore(draft.startAt)) {
+    if (draft.type == ItemType.task && draft.deadlineAt == null) {
       deadlineError = l10n.editorErrorDeadlineBeforeStart;
     }
 
@@ -54,7 +52,6 @@ class ItemEditorValidator {
       title: titleError,
       timeRange: timeRangeError,
       deadline: deadlineError,
-      estimatedDuration: estimatedDurationError,
     );
   }
 }

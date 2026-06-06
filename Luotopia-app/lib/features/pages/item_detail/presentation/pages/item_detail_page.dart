@@ -78,13 +78,12 @@ class ItemDetailPage extends ConsumerWidget {
           notes: item.notes,
           location: item.location,
           color: item.color,
-          isAllDay: item.isAllDay,
+          isAllDay: item.timelineIsAllDay,
           reminder: item.reminder,
           repeatRule: item.repeatRule,
-          startAt: item.startAt,
-          endAt: item.endAt,
-          deadline: item.deadline,
-          estimatedDuration: item.estimatedDuration,
+          startAt: item.timelineStartAt,
+          endAt: item.timelineEndAt,
+          deadlineAt: item.deadlineAt,
           courseDetails: item.courseDetails,
           sourceKind: item.sourceKind,
           sourceRef: item.sourceRef,
@@ -200,28 +199,30 @@ class _ItemDetailContent extends ConsumerWidget {
     }
 
     // ── Time ──
-    if (item.isAllDay) {
-      addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));
-    } else if (_isSameDay(item.startAt, item.endAt)) {
-      addRow(AppIcons.calendar, _formatDateWithWeekday(context, item.startAt));
+    final startAt = item.timelineStartAt;
+    final endAt = item.timelineEndAt;
+    if (startAt != null && endAt != null && item.timelineIsAllDay) {
+      addRow(AppIcons.calendar, _formatDateWithWeekday(context, startAt));
+    } else if (startAt != null && endAt != null && _isSameDay(startAt, endAt)) {
+      addRow(AppIcons.calendar, _formatDateWithWeekday(context, startAt));
       addRow(
         AppIcons.clock,
-        _formatTimeOnly(context, item.startAt, item.endAt),
+        _formatTimeOnly(context, startAt, endAt),
       );
-    } else {
+    } else if (startAt != null && endAt != null) {
       addRow(
         AppIcons.calendar,
-        '${_formatDateTime(context, item.startAt, allDay: false)} 至',
+        '${_formatDateTime(context, startAt, allDay: false)} 至',
       );
       addRow(
         AppIcons.clock,
-        _formatDateTime(context, item.endAt, allDay: false),
+        _formatDateTime(context, endAt, allDay: false),
       );
     }
 
     // ── Deadline ──
-    if (item.deadline != null && !isCourse) {
-      final deadline = item.deadline!;
+    if (item.deadlineAt != null && !isCourse) {
+      final deadline = item.deadlineAt!;
       final color = deadline.isBefore(DateTime.now())
           ? theme.colorScheme.error
           : null;

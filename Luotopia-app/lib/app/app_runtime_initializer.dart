@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/core/time/now_ticker_provider.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
@@ -70,6 +71,19 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer>
       ref.listenManual(agendaItemRepositoryProvider, (_, _) {
         service.syncDebounced();
         _syncAgendaDebounced();
+      }),
+    );
+    _subs.add(
+      ref.listenManual(nowTickerProvider, (_, next) {
+        final now = next.value;
+        if (now == null) {
+          return;
+        }
+        unawaited(
+          ref
+              .read(agendaItemRepositoryProvider.notifier)
+              .autoCompleteDueSchedules(now),
+        );
       }),
     );
     _subs.add(

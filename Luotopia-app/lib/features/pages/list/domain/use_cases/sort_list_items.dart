@@ -72,18 +72,18 @@ class SortListItemsUseCase {
   DateTime _primaryDateOf(AgendaItem item) {
     return switch (item.type) {
       ItemType.memo => item.createdAt,
-      ItemType.task => item.deadline ?? item.startAt,
-      ItemType.schedule => item.startAt,
-      ItemType.course => item.startAt,
+      ItemType.task => item.deadlineAt!,
+      ItemType.schedule => item.timelineStartAt!,
+      ItemType.course => item.timelineStartAt!,
     };
   }
 
   DateTime? _dueDateOf(AgendaItem item) {
     return switch (item.type) {
       ItemType.memo => null,
-      ItemType.task => item.deadline ?? item.endAt,
-      ItemType.schedule => item.startAt,
-      ItemType.course => item.startAt,
+      ItemType.task => item.deadlineAt,
+      ItemType.schedule => item.timelineStartAt,
+      ItemType.course => item.timelineStartAt,
     };
   }
 

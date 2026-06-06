@@ -15,7 +15,6 @@ import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
-import 'package:luotopia/shared/presentation/widgets/app_duration_picker.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -169,6 +168,51 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                         if (state.draft.type == ItemType.memo) ...[
                           const Gap(12),
                           _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-repeat'),
+                            label: l10n.editorSectionRepeat,
+                            value: _repeatLabel(l10n, state.draft.repeatRule),
+                            onTap: () => _openRepeatSettings(
+                              context,
+                              ref,
+                              state.draft.repeatRule,
+                            ),
+                          ),
+                          const Gap(12),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-reminder'),
+                            label: l10n.editorSectionReminder,
+                            value: _reminderLabel(l10n, state.draft.reminder),
+                            onTap: () => _openReminderSettings(
+                              context,
+                              ref,
+                              state.draft.reminder,
+                            ),
+                          ),
+                        ] else if (state.draft.type == ItemType.task) ...[
+                          const Gap(12),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-deadline'),
+                            label: l10n.editorFieldDeadline,
+                            value: _formatDateTimeSummary(
+                              context,
+                              state.draft.deadlineAt!,
+                              allDay: false,
+                            ),
+                            errorText: state.errors.deadline,
+                            onTap: () =>
+                                _pickDeadlineDateTime(context, ref, state),
+                          ),
+                          _PlainActionRow(
+                            rowKey: const ValueKey('item-editor-row-repeat'),
+                            label: l10n.editorSectionRepeat,
+                            value: _repeatLabel(l10n, state.draft.repeatRule),
+                            onTap: () => _openRepeatSettings(
+                              context,
+                              ref,
+                              state.draft.repeatRule,
+                            ),
+                          ),
+                          _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-reminder'),
                             label: l10n.editorSectionReminder,
                             value: _reminderLabel(l10n, state.draft.reminder),
@@ -183,18 +227,18 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-date'),
                             label: l10n.editorFieldDate,
-                            value: _formatDate(context, state.draft.startAt),
+                            value: _formatDate(context, state.draft.timelineStartAt!),
                             onTap: () => _pickStartDate(context, ref, state),
                           ),
                           if (!isCourse)
                             _SwitchRow(
                               rowKey: const ValueKey('item-editor-row-all-day'),
                               label: _allDayLabel(context, state.draft.type),
-                              value: state.draft.isAllDay,
+                              value: state.draft.timelineIsAllDay,
                               onChanged: notifier.toggleAllDay,
                             ),
                           AppCollapsibleFieldGroup(
-                            visible: !state.draft.isAllDay,
+                            visible: !state.draft.timelineIsAllDay,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -217,7 +261,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                   label: l10n.editorFieldStartTime,
                                   value: _formatTime(
                                     context,
-                                    state.draft.startAt,
+                                    state.draft.timelineStartAt!,
                                   ),
                                   onTap: () =>
                                       _pickStartTime(context, ref, state),
@@ -227,49 +271,18 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                     rowKey: const ValueKey(
                                       'item-editor-row-end-time',
                                     ),
-                                    label: l10n.editorFieldEndTime,
-                                    value: _formatTime(
-                                      context,
-                                      state.draft.endAt,
-                                    ),
+                                  label: l10n.editorFieldEndTime,
+                                  value: _formatTime(
+                                    context,
+                                    state.draft.timelineEndAt!,
+                                  ),
                                     errorText: state.errors.timeRange,
                                     onTap: () =>
                                         _pickEndTime(context, ref, state),
                                   )
-                                else
-                                  _PlainActionRow(
-                                    label: l10n.editorFieldEstimatedDuration,
-                                    value: _formatDuration(
-                                      context,
-                                      state.draft.estimatedDuration,
-                                    ),
-                                    errorText: state.errors.estimatedDuration,
-                                    onTap: () => _pickEstimatedDuration(
-                                      context,
-                                      ref,
-                                      state,
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
-                          if (state.draft.type == ItemType.task)
-                            _PlainActionRow(
-                              rowKey: const ValueKey(
-                                'item-editor-row-deadline',
-                              ),
-                              label: l10n.editorFieldDeadline,
-                              value: state.draft.deadline == null
-                                  ? l10n.editorDeadlineUnset
-                                  : _formatDateTimeSummary(
-                                      context,
-                                      state.draft.deadline!,
-                                      allDay: state.draft.isAllDay,
-                                    ),
-                              errorText: state.errors.deadline,
-                              onTap: () =>
-                                  _pickDeadlineDateTime(context, ref, state),
-                            ),
                           if (state.draft.type != ItemType.course) ...[
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-repeat'),
@@ -595,7 +608,7 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   ) async {
     final picked = await AppDateTimePickers.pickDate(
       context,
-      initialDate: state.draft.startAt,
+      initialDate: state.draft.timelineStartAt ?? DateTime.now(),
     );
     if (picked != null && mounted) {
       ref
@@ -611,7 +624,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   ) async {
     final picked = await AppDateTimePickers.pickTime(
       context,
-      initialTime: TimeOfDay.fromDateTime(state.draft.startAt),
+      initialTime: TimeOfDay.fromDateTime(
+        state.draft.timelineStartAt ?? DateTime.now(),
+      ),
     );
     if (picked != null && mounted) {
       ref
@@ -627,7 +642,9 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
   ) async {
     final picked = await AppDateTimePickers.pickTime(
       context,
-      initialTime: TimeOfDay.fromDateTime(state.draft.endAt),
+      initialTime: TimeOfDay.fromDateTime(
+        state.draft.timelineEndAt ?? DateTime.now(),
+      ),
     );
     if (picked != null && mounted) {
       ref
@@ -636,48 +653,21 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
     }
   }
 
-  Future<void> _pickEstimatedDuration(
-    BuildContext context,
-    WidgetRef ref,
-    ItemEditorPageState state,
-  ) async {
-    final picked = await AppDurationPicker.pickDuration(
-      context,
-      initialDuration: state.draft.estimatedDuration,
-    );
-    if (picked != null && mounted) {
-      ref
-          .read(itemEditorPageControllerProvider.notifier)
-          .updateEstimatedDuration(picked);
-    }
-  }
-
   Future<void> _pickDeadlineDateTime(
     BuildContext context,
     WidgetRef ref,
     ItemEditorPageState state,
   ) async {
-    final initialDateTime = state.draft.deadline ?? state.draft.endAt;
-    final DateTime? picked;
-    if (state.draft.isAllDay) {
-      picked = await AppDateTimePickers.pickDate(
-        context,
-        initialDate: initialDateTime,
-      );
-    } else {
-      picked = await AppDateTimePickers.pickDateTime(
-        context,
-        initialDateTime: initialDateTime,
-      );
-    }
+    final initialDateTime = state.draft.deadlineAt ?? DateTime.now();
+    final picked = await AppDateTimePickers.pickDateTime(
+      context,
+      initialDateTime: initialDateTime,
+    );
 
     if (picked != null && mounted) {
-      final normalized = state.draft.isAllDay
-          ? DateTime(picked.year, picked.month, picked.day, 23, 59)
-          : picked;
       ref
           .read(itemEditorPageControllerProvider.notifier)
-          .updateDeadlineDateTime(normalized);
+          .updateDeadlineDateTime(picked);
     }
   }
 
@@ -788,31 +778,6 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
       TimeOfDay.fromDateTime(value),
       alwaysUse24HourFormat: true,
     );
-  }
-
-  String _formatDuration(BuildContext context, Duration value) {
-    final locale = Localizations.localeOf(context).languageCode.toLowerCase();
-    if (value == Duration.zero) {
-      return locale.startsWith('zh') ? '未设置' : 'Unset';
-    }
-    final hours = value.inHours;
-    final minutes = value.inMinutes.remainder(60);
-    if (locale.startsWith('zh')) {
-      if (hours > 0 && minutes > 0) {
-        return '$hours 小时 $minutes 分钟';
-      }
-      if (hours > 0) {
-        return '$hours 小时';
-      }
-      return '$minutes 分钟';
-    }
-    if (hours > 0 && minutes > 0) {
-      return '${hours}h ${minutes}m';
-    }
-    if (hours > 0) {
-      return '${hours}h';
-    }
-    return '${minutes}m';
   }
 
   String _formatDateTimeSummary(

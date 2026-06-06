@@ -5,8 +5,8 @@ import 'package:luotopia/shared/data/id/app_id_generator.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -44,7 +44,10 @@ class UserDataMutationService {
       updatedAt: now,
       sortOrder: nextOrder,
     );
-    await _db.into(_db.agendaItemRows).insert(_agendaItemCompanion(item));
+    await _db.transaction(() async {
+      await _db.into(_db.agendaItemRows).insert(_agendaItemCompanion(item));
+      await _upsertDetails(item);
+    });
     return item;
   }
 
@@ -55,7 +58,7 @@ class UserDataMutationService {
     if (row == null) {
       return null;
     }
-    final current = _agendaItemFromRow(row);
+    final current = await _agendaItemFromRow(row);
     final updated = current.copyWith(
       type: draft.type,
       title: draft.title.trim(),
@@ -64,17 +67,16 @@ class UserDataMutationService {
       color: draft.color,
       reminder: draft.reminder,
       repeatRule: draft.repeatRule,
-      startAt: draft.startAt,
-      endAt: draft.endAt,
-      isAllDay: draft.isAllDay,
-      taskDetails: draft.taskDetails,
-      courseDetails: draft.courseDetails,
+      details: draft.details,
       updatedAt: DateTime.now(),
       sourceKind: draft.sourceKind,
       sourceRef: draft.sourceRef.trim(),
     );
-    await (_db.update(_db.agendaItemRows)..where((table) => table.id.equals(id)))
-        .write(_agendaItemCompanion(updated));
+    await _db.transaction(() async {
+      await (_db.update(_db.agendaItemRows)..where((table) => table.id.equals(id)))
+          .write(_agendaItemCompanion(updated));
+      await _replaceDetails(updated);
+    });
     return updated;
   }
 
@@ -89,7 +91,7 @@ class UserDataMutationService {
     if (row == null) {
       return null;
     }
-    final current = _agendaItemFromRow(row);
+    final current = await _agendaItemFromRow(row);
     final completed = !current.isCompleted;
     final updated = current.copyWith(
       isCompleted: completed,
@@ -100,6 +102,50 @@ class UserDataMutationService {
     await (_db.update(_db.agendaItemRows)..where((table) => table.id.equals(id)))
         .write(_agendaItemCompanion(updated));
     return updated;
+  }
+
+  Future<void> autoCompleteDueSchedules(DateTime now) async {
+    final due = await (_db.select(_db.scheduleItemDetailRows)
+          ..where(
+            (row) =>
+                row.endAt.isSmallerOrEqualValue(now) &
+                row.autoCompletedOnceAt.isNull(),
+          ))
+        .get();
+    if (due.isEmpty) {
+      return;
+    }
+    await _db.transaction(() async {
+      for (final detail in due) {
+        final row = await (_db.select(_db.agendaItemRows)
+              ..where((table) =>
+                  table.id.equals(detail.itemId) &
+                  table.type.equals(ItemType.schedule.name) &
+                  table.isCompleted.equals(false) &
+                  table.deletedAt.isNull()))
+            .getSingleOrNull();
+        if (row == null) {
+          continue;
+        }
+        await (_db.update(_db.agendaItemRows)
+              ..where((table) => table.id.equals(detail.itemId)))
+            .write(
+          AgendaItemRowsCompanion(
+            isCompleted: const Value(true),
+            completedAt: Value(now),
+            updatedAt: Value(now),
+            dirty: const Value(true),
+          ),
+        );
+        await (_db.update(_db.scheduleItemDetailRows)
+              ..where((table) => table.itemId.equals(detail.itemId)))
+            .write(
+          ScheduleItemDetailRowsCompanion(
+            autoCompletedOnceAt: Value(now),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> reorderItems(List<String> orderedIds) async {
@@ -134,6 +180,7 @@ class UserDataMutationService {
         await _db
             .into(_db.agendaItemRows)
             .insertOnConflictUpdate(_agendaItemCompanion(item));
+        await _replaceDetails(item);
       }
     });
   }
@@ -213,11 +260,17 @@ class UserDataMutationService {
 
   Future<void> deleteTimetable(String id) async {
     await _db.transaction(() async {
-      final courseItems = await (_db.select(_db.agendaItemRows)
-            ..where((row) => row.courseTimetableId.equals(id) & row.deletedAt.isNull()))
+      final courseDetails = await (_db.select(_db.courseItemDetailRows)
+            ..where((row) => row.timetableId.equals(id)))
           .get();
-      for (final item in courseItems) {
-        await _markDeletedInTransaction(entityType: 'agenda_item', entityId: item.id);
+      for (final detail in courseDetails) {
+        final item = await (_db.select(_db.agendaItemRows)
+              ..where((row) =>
+                  row.id.equals(detail.itemId) & row.deletedAt.isNull()))
+            .getSingleOrNull();
+        if (item != null) {
+          await _markDeletedInTransaction(entityType: 'agenda_item', entityId: item.id);
+        }
       }
       await _markDeletedInTransaction(entityType: 'selected_course_timetable', entityId: id);
       await _markDeletedInTransaction(entityType: 'course_timetable', entityId: id);
@@ -333,27 +386,69 @@ class UserDataMutationService {
       color: item.color.name,
       reminder: item.reminder.name,
       repeatRule: item.repeatRule.name,
-      startAt: item.startAt,
-      endAt: item.endAt,
-      isAllDay: Value(item.isAllDay),
-      deadline: Value(item.deadline),
-      estimatedDurationMinutes: Value(item.estimatedDuration.inMinutes),
       isCompleted: Value(item.isCompleted),
       completedAt: Value(item.completedAt),
       sortOrder: Value(item.sortOrder),
       sourceKind: Value(item.sourceKind.name),
       sourceRef: Value(item.sourceRef),
-      courseTimetableId: Value(item.courseDetails.timetableId),
-      courseSourceKind: Value(item.courseDetails.sourceKind.name),
-      courseSourceCourseId: Value(item.courseDetails.sourceCourseId),
-      courseNature: Value(item.courseDetails.courseNature),
-      instructor: Value(item.courseDetails.instructor),
-      weekMeta: Value(item.courseDetails.weekMeta),
       dirty: const Value(true),
       deletedAt: const Value(null),
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     );
+  }
+
+  Future<void> _replaceDetails(AgendaItem item) async {
+    await (_db.delete(_db.scheduleItemDetailRows)
+          ..where((row) => row.itemId.equals(item.id)))
+        .go();
+    await (_db.delete(_db.taskItemDetailRows)
+          ..where((row) => row.itemId.equals(item.id)))
+        .go();
+    await (_db.delete(_db.courseItemDetailRows)
+          ..where((row) => row.itemId.equals(item.id)))
+        .go();
+    await _upsertDetails(item);
+  }
+
+  Future<void> _upsertDetails(AgendaItem item) async {
+    switch (item.details) {
+      case ScheduleItemDetails details:
+        await _db.into(_db.scheduleItemDetailRows).insertOnConflictUpdate(
+              ScheduleItemDetailRowsCompanion.insert(
+                itemId: item.id,
+                startAt: details.startAt,
+                endAt: details.endAt,
+                isAllDay: Value(details.isAllDay),
+                autoCompletedOnceAt: Value(details.autoCompletedOnceAt),
+              ),
+            );
+      case TaskItemDetails details:
+        await _db.into(_db.taskItemDetailRows).insertOnConflictUpdate(
+              TaskItemDetailRowsCompanion.insert(
+                itemId: item.id,
+                deadlineAt: details.deadlineAt,
+              ),
+            );
+      case MemoItemDetails():
+        break;
+      case CourseAgendaItemDetails details:
+        final course = details.course;
+        await _db.into(_db.courseItemDetailRows).insertOnConflictUpdate(
+              CourseItemDetailRowsCompanion.insert(
+                itemId: item.id,
+                startAt: details.startAt,
+                endAt: details.endAt,
+                isAllDay: Value(details.isAllDay),
+                timetableId: Value(course.timetableId),
+                sourceKind: Value(course.sourceKind.name),
+                sourceCourseId: Value(course.sourceCourseId),
+                courseNature: Value(course.courseNature),
+                instructor: Value(course.instructor),
+                weekMeta: Value(course.weekMeta),
+              ),
+            );
+    }
   }
 
   CourseTimetableRowsCompanion _courseTimetableCompanion(CourseTimetable timetable) {
@@ -369,7 +464,7 @@ class UserDataMutationService {
     );
   }
 
-  AgendaItem _agendaItemFromRow(AgendaItemRow row) {
+  Future<AgendaItem> _agendaItemFromRow(AgendaItemRow row) async {
     return AgendaItem(
       id: row.id,
       type: _enumByName(ItemType.values, row.type) ?? ItemType.task,
@@ -381,22 +476,7 @@ class UserDataMutationService {
           ReminderOption.none,
       repeatRule:
           _enumByName(RepeatRule.values, row.repeatRule) ?? RepeatRule.none,
-      startAt: row.startAt,
-      endAt: row.endAt,
-      isAllDay: row.isAllDay,
-      taskDetails: ItemTaskDetails(
-        deadline: row.deadline,
-        estimatedDuration: Duration(minutes: row.estimatedDurationMinutes),
-      ),
-      courseDetails: ItemCourseDetails(
-        timetableId: row.courseTimetableId,
-        sourceKind: _enumByName(CourseItemSourceKind.values, row.courseSourceKind) ??
-            CourseItemSourceKind.manual,
-        sourceCourseId: row.courseSourceCourseId,
-        courseNature: row.courseNature,
-        instructor: row.instructor,
-        weekMeta: row.weekMeta,
-      ),
+      details: await _detailsForRow(row),
       isCompleted: row.isCompleted,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -405,6 +485,55 @@ class UserDataMutationService {
       sourceKind: _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
           AgendaItemSourceKind.manual,
       sourceRef: row.sourceRef,
+    );
+  }
+
+  Future<AgendaItemDetails> _detailsForRow(AgendaItemRow row) async {
+    final type = _enumByName(ItemType.values, row.type) ?? ItemType.task;
+    return switch (type) {
+      ItemType.schedule => await _scheduleDetails(row.id),
+      ItemType.task => await _taskDetails(row.id),
+      ItemType.memo => const MemoItemDetails(),
+      ItemType.course => await _courseDetails(row.id),
+    };
+  }
+
+  Future<ScheduleItemDetails> _scheduleDetails(String itemId) async {
+    final row = await (_db.select(_db.scheduleItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return ScheduleItemDetails(
+      startAt: row.startAt,
+      endAt: row.endAt,
+      isAllDay: row.isAllDay,
+      autoCompletedOnceAt: row.autoCompletedOnceAt,
+    );
+  }
+
+  Future<TaskItemDetails> _taskDetails(String itemId) async {
+    final row = await (_db.select(_db.taskItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return TaskItemDetails(deadlineAt: row.deadlineAt);
+  }
+
+  Future<CourseAgendaItemDetails> _courseDetails(String itemId) async {
+    final row = await (_db.select(_db.courseItemDetailRows)
+          ..where((table) => table.itemId.equals(itemId)))
+        .getSingle();
+    return CourseAgendaItemDetails(
+      startAt: row.startAt,
+      endAt: row.endAt,
+      isAllDay: row.isAllDay,
+      course: ItemCourseDetails(
+        timetableId: row.timetableId,
+        sourceKind: _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
+            CourseItemSourceKind.manual,
+        sourceCourseId: row.sourceCourseId,
+        courseNature: row.courseNature,
+        instructor: row.instructor,
+        weekMeta: row.weekMeta,
+      ),
     );
   }
 

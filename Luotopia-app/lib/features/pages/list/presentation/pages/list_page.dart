@@ -443,13 +443,12 @@ class ListPage extends ConsumerWidget {
               notes: item.notes,
               location: item.location,
               color: item.color,
-              isAllDay: item.isAllDay,
+              isAllDay: item.timelineIsAllDay,
               reminder: item.reminder,
               repeatRule: item.repeatRule,
-              startAt: item.startAt,
-              endAt: item.endAt,
-              deadline: item.deadline,
-              estimatedDuration: item.estimatedDuration,
+              startAt: item.timelineStartAt,
+              endAt: item.timelineEndAt,
+              deadlineAt: item.deadlineAt,
               courseDetails: item.courseDetails,
             ),
           );
@@ -544,13 +543,12 @@ class _PendingTaskRowList extends ConsumerWidget {
           notes: item.notes,
           location: item.location,
           color: item.color,
-          isAllDay: item.isAllDay,
+          isAllDay: item.timelineIsAllDay,
           reminder: item.reminder,
           repeatRule: item.repeatRule,
-          startAt: item.startAt,
-          endAt: item.endAt,
-          deadline: item.deadline,
-          estimatedDuration: item.estimatedDuration,
+          startAt: item.timelineStartAt,
+          endAt: item.timelineEndAt,
+          deadlineAt: item.deadlineAt,
           courseDetails: item.courseDetails,
         ),
       ),
@@ -707,18 +705,31 @@ class _ListItemRowState extends State<_ListItemRow>
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                              decoration: isEffectivelyCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              height: 1,
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurface,
+                                    decoration: isEffectivelyCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    height: 1,
+                                  ),
+                                ),
+                              ),
+                              if (item.type == ItemType.task) ...[
+                                const SizedBox(width: 8),
+                                _TaskCountdownChip(
+                                  deadlineAt: item.deadlineAt!,
+                                  now: DateTime.now(),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),
@@ -758,6 +769,62 @@ IconData _typeIcon(ItemType type) {
     ItemType.memo => AppIcons.itemTypeMemo,
     ItemType.course => AppIcons.itemTypeCourse,
   };
+}
+
+class _TaskCountdownChip extends StatelessWidget {
+  const _TaskCountdownChip({
+    required this.deadlineAt,
+    required this.now,
+  });
+
+  final DateTime deadlineAt;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final overdue = deadlineAt.isBefore(now);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: overdue
+            ? theme.colorScheme.errorContainer
+            : theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          _label(context),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: overdue
+                ? theme.colorScheme.onErrorContainer
+                : theme.colorScheme.onSecondaryContainer,
+            fontWeight: FontWeight.w700,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _label(BuildContext context) {
+    final zh = Localizations.localeOf(context)
+        .languageCode
+        .toLowerCase()
+        .startsWith('zh');
+    final today = DateTime(now.year, now.month, now.day);
+    final deadlineDay = DateTime(deadlineAt.year, deadlineAt.month, deadlineAt.day);
+    final days = deadlineDay.difference(today).inDays;
+    if (days == 0) {
+      return zh ? '今天到期' : 'Due today';
+    }
+    if (days > 0) {
+      return zh ? '还剩 $days 天' : '$days d left';
+    }
+    return zh ? '已过 ${-days} 天' : '${-days} d overdue';
+  }
 }
 
 class _CompletedToggleRow extends StatelessWidget {

@@ -15,9 +15,7 @@ class BuildListPrefillUseCase {
       ListHeaderTab.allItems => const ItemEditorPrefill(),
       ListHeaderTab.tasks => ItemEditorPrefill(
           type: ItemType.task,
-          startAt: today.add(const Duration(hours: 9)),
-          endAt: today.add(const Duration(hours: 10)),
-          deadline: today.add(const Duration(hours: 18)),
+          deadlineAt: today.add(const Duration(hours: 18)),
         ),
       ListHeaderTab.schedules => ItemEditorPrefill(
           type: ItemType.schedule,

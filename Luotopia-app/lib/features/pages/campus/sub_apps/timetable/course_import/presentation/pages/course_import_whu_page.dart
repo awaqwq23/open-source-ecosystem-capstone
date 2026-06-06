@@ -267,8 +267,11 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       final currentWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
       final currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
       final currentWeekCount = payload.items.where((item) {
-        final startAt = item.startAt;
-        final endAt = item.endAt;
+        final startAt = item.timelineStartAt;
+        final endAt = item.timelineEndAt;
+        if (startAt == null || endAt == null) {
+          return false;
+        }
         return endAt.isAfter(currentWeekStart) && startAt.isBefore(currentWeekEnd);
       }).length;
 

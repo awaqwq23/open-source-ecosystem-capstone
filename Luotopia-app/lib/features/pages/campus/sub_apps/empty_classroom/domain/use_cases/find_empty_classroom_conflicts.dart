@@ -26,8 +26,12 @@ class FindEmptyClassroomConflictsUseCase {
         if (item.type == ItemType.memo) {
           return false;
         }
-        return range.start.isBefore(item.endAt) &&
-            range.end.isAfter(item.startAt);
+        final start = item.timelineStartAt;
+        final end = item.timelineEndAt;
+        return start != null &&
+            end != null &&
+            range.start.isBefore(end) &&
+            range.end.isAfter(start);
       });
       if (hasConflict) {
         conflicts.add(section);

@@ -6,7 +6,7 @@ import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -158,18 +158,17 @@ class WhuCourseImportService {
             color: color,
             reminder: ReminderOption.none,
             repeatRule: RepeatRule.none,
-            startAt: startAt,
-            endAt: endAt,
-            isAllDay: false,
-            taskDetails: ItemTaskDetails(
-              deadline: null,
-            ),
-            courseDetails: ItemCourseDetails(
-              sourceKind: CourseItemSourceKind.whuJw,
-              sourceCourseId: course.courseId,
-              courseNature: course.courseNature,
-              instructor: course.instructor,
-              weekMeta: course.weekMeta,
+            details: CourseAgendaItemDetails(
+              startAt: startAt,
+              endAt: endAt,
+              isAllDay: false,
+              course: ItemCourseDetails(
+                sourceKind: CourseItemSourceKind.whuJw,
+                sourceCourseId: course.courseId,
+                courseNature: course.courseNature,
+                instructor: course.instructor,
+                weekMeta: course.weekMeta,
+              ),
             ),
             sourceKind: AgendaItemSourceKind.whuCourse,
             sourceRef: course.courseId,

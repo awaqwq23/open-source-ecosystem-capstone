@@ -10,7 +10,7 @@ import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provi
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -471,12 +471,10 @@ class _SeatReservationCandidate {
       color: ItemColorOption.indigo,
       reminder: ReminderOption.none,
       repeatRule: RepeatRule.none,
-      startAt: startAt,
-      endAt: endAt,
-      isAllDay: false,
-      taskDetails: ItemTaskDetails(
-        deadline: null,
-        estimatedDuration: endAt.difference(startAt),
+      details: ScheduleItemDetails(
+        startAt: startAt,
+        endAt: endAt,
+        isAllDay: false,
       ),
       sourceKind: AgendaItemSourceKind.seatReservation,
       sourceRef: sourceId,

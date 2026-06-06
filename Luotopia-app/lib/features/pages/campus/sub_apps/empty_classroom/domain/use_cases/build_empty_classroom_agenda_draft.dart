@@ -1,6 +1,6 @@
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -86,12 +86,10 @@ class BuildEmptyClassroomAgendaDraftUseCase {
       color: colorForSection(section),
       reminder: ReminderOption.none,
       repeatRule: RepeatRule.none,
-      startAt: range.start,
-      endAt: range.end,
-      isAllDay: false,
-      taskDetails: const ItemTaskDetails(
-        deadline: null,
-        estimatedDuration: Duration.zero,
+      details: ScheduleItemDetails(
+        startAt: range.start,
+        endAt: range.end,
+        isAllDay: false,
       ),
     );
   }

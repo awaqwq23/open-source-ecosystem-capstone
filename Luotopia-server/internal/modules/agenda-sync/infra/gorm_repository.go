@@ -139,6 +139,9 @@ func (r *GormRepository) applyAgendaItemChange(ctx context.Context, tx *gorm.DB,
 	if err := tx.WithContext(ctx).Save(&model).Error; err != nil {
 		return domain.SyncAppliedChange{}, nil, err
 	}
+	if err := replaceAgendaItemDetails(ctx, tx, userID, payload); err != nil {
+		return domain.SyncAppliedChange{}, nil, err
+	}
 	canonicalPayload, err := json.Marshal(payload)
 	if err != nil {
 		return domain.SyncAppliedChange{}, nil, err
@@ -346,34 +349,101 @@ func reject(change domain.SyncChangeInput, reason string) *domain.SyncRejectedCh
 
 func agendaItemModelFromPayload(userID string, payload domain.AgendaItemPayload, revision int64) agendaItemModel {
 	return agendaItemModel{
-		UserID:                   userID,
-		ID:                       payload.ID,
-		Type:                     payload.Type,
-		Title:                    payload.Title,
-		Notes:                    payload.Notes,
-		Location:                 payload.Location,
-		Color:                    payload.Color,
-		Reminder:                 payload.Reminder,
-		RepeatRule:               payload.RepeatRule,
-		StartAt:                  payload.StartAt,
-		EndAt:                    payload.EndAt,
-		IsAllDay:                 payload.IsAllDay,
-		Deadline:                 payload.Deadline,
-		EstimatedDurationMinutes: payload.EstimatedDurationMinutes,
-		IsCompleted:              payload.IsCompleted,
-		CompletedAt:              payload.CompletedAt,
-		SortOrder:                payload.SortOrder,
-		SourceKind:               payload.SourceKind,
-		SourceRef:                payload.SourceRef,
-		CourseTimetableID:        payload.CourseTimetableID,
-		CourseSourceKind:         payload.CourseSourceKind,
-		CourseSourceCourseID:     payload.CourseSourceCourseID,
-		CourseNature:             payload.CourseNature,
-		Instructor:               payload.Instructor,
-		WeekMeta:                 payload.WeekMeta,
-		Revision:                 revision,
-		CreatedAt:                payload.CreatedAt,
-		UpdatedAt:                payload.UpdatedAt,
+		UserID:      userID,
+		ID:          payload.ID,
+		Type:        payload.Type,
+		Title:       payload.Title,
+		Notes:       payload.Notes,
+		Location:    payload.Location,
+		Color:       payload.Color,
+		Reminder:    payload.Reminder,
+		RepeatRule:  payload.RepeatRule,
+		IsCompleted: payload.IsCompleted,
+		CompletedAt: payload.CompletedAt,
+		SortOrder:   payload.SortOrder,
+		SourceKind:  payload.SourceKind,
+		SourceRef:   payload.SourceRef,
+		Revision:    revision,
+		CreatedAt:   payload.CreatedAt,
+		UpdatedAt:   payload.UpdatedAt,
+	}
+}
+
+func replaceAgendaItemDetails(ctx context.Context, tx *gorm.DB, userID string, payload domain.AgendaItemPayload) error {
+	if err := tx.WithContext(ctx).Where("user_id = ? AND item_id = ?", userID, payload.ID).Delete(&scheduleItemDetailModel{}).Error; err != nil {
+		return err
+	}
+	if err := tx.WithContext(ctx).Where("user_id = ? AND item_id = ?", userID, payload.ID).Delete(&taskItemDetailModel{}).Error; err != nil {
+		return err
+	}
+	if err := tx.WithContext(ctx).Where("user_id = ? AND item_id = ?", userID, payload.ID).Delete(&courseItemDetailModel{}).Error; err != nil {
+		return err
+	}
+	raw, err := json.Marshal(payload.Details)
+	if err != nil {
+		return err
+	}
+	switch payload.Type {
+	case "schedule":
+		var details struct {
+			StartAt             time.Time  `json:"start_at"`
+			EndAt               time.Time  `json:"end_at"`
+			IsAllDay            bool       `json:"is_all_day"`
+			AutoCompletedOnceAt *time.Time `json:"auto_completed_once_at"`
+		}
+		if err := json.Unmarshal(raw, &details); err != nil {
+			return err
+		}
+		return tx.WithContext(ctx).Create(&scheduleItemDetailModel{
+			UserID:              userID,
+			ItemID:              payload.ID,
+			StartAt:             details.StartAt,
+			EndAt:               details.EndAt,
+			IsAllDay:            details.IsAllDay,
+			AutoCompletedOnceAt: details.AutoCompletedOnceAt,
+		}).Error
+	case "task":
+		var details struct {
+			DeadlineAt time.Time `json:"deadline_at"`
+		}
+		if err := json.Unmarshal(raw, &details); err != nil {
+			return err
+		}
+		return tx.WithContext(ctx).Create(&taskItemDetailModel{
+			UserID:     userID,
+			ItemID:     payload.ID,
+			DeadlineAt: details.DeadlineAt,
+		}).Error
+	case "course":
+		var details struct {
+			StartAt        time.Time `json:"start_at"`
+			EndAt          time.Time `json:"end_at"`
+			IsAllDay       bool      `json:"is_all_day"`
+			TimetableID    string    `json:"timetable_id"`
+			SourceKind     string    `json:"source_kind"`
+			SourceCourseID string    `json:"source_course_id"`
+			CourseNature   string    `json:"course_nature"`
+			Instructor     string    `json:"instructor"`
+			WeekMeta       string    `json:"week_meta"`
+		}
+		if err := json.Unmarshal(raw, &details); err != nil {
+			return err
+		}
+		return tx.WithContext(ctx).Create(&courseItemDetailModel{
+			UserID:         userID,
+			ItemID:         payload.ID,
+			StartAt:        details.StartAt,
+			EndAt:          details.EndAt,
+			IsAllDay:       details.IsAllDay,
+			TimetableID:    details.TimetableID,
+			SourceKind:     details.SourceKind,
+			SourceCourseID: details.SourceCourseID,
+			CourseNature:   details.CourseNature,
+			Instructor:     details.Instructor,
+			WeekMeta:       details.WeekMeta,
+		}).Error
+	default:
+		return nil
 	}
 }
 
@@ -391,38 +461,62 @@ func courseTimetableModelFromPayload(userID string, payload domain.CourseTimetab
 }
 
 type agendaItemModel struct {
-	UserID                   string `gorm:"primaryKey;column:user_id"`
-	ID                       string `gorm:"primaryKey;column:id"`
-	Type                     string
-	Title                    string
-	Notes                    string
-	Location                 string
-	Color                    string
-	Reminder                 string
-	RepeatRule               string
-	StartAt                  time.Time
-	EndAt                    time.Time
-	IsAllDay                 bool
-	Deadline                 *time.Time
-	EstimatedDurationMinutes int
-	IsCompleted              bool
-	CompletedAt              *time.Time
-	SortOrder                float64
-	SourceKind               string
-	SourceRef                string
-	CourseTimetableID        string
-	CourseSourceKind         string
-	CourseSourceCourseID     string
-	CourseNature             string
-	Instructor               string
-	WeekMeta                 string
-	Revision                 int64
-	DeletedAt                *time.Time
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	UserID      string `gorm:"primaryKey;column:user_id"`
+	ID          string `gorm:"primaryKey;column:id"`
+	Type        string
+	Title       string
+	Notes       string
+	Location    string
+	Color       string
+	Reminder    string
+	RepeatRule  string
+	IsCompleted bool
+	CompletedAt *time.Time
+	SortOrder   float64
+	SourceKind  string
+	SourceRef   string
+	Revision    int64
+	DeletedAt   *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 func (agendaItemModel) TableName() string { return "sync_agenda_items" }
+
+type scheduleItemDetailModel struct {
+	UserID              string `gorm:"primaryKey;column:user_id"`
+	ItemID              string `gorm:"primaryKey;column:item_id"`
+	StartAt             time.Time
+	EndAt               time.Time
+	IsAllDay            bool
+	AutoCompletedOnceAt *time.Time
+}
+
+func (scheduleItemDetailModel) TableName() string { return "sync_schedule_item_details" }
+
+type taskItemDetailModel struct {
+	UserID     string `gorm:"primaryKey;column:user_id"`
+	ItemID     string `gorm:"primaryKey;column:item_id"`
+	DeadlineAt time.Time
+}
+
+func (taskItemDetailModel) TableName() string { return "sync_task_item_details" }
+
+type courseItemDetailModel struct {
+	UserID         string `gorm:"primaryKey;column:user_id"`
+	ItemID         string `gorm:"primaryKey;column:item_id"`
+	StartAt        time.Time
+	EndAt          time.Time
+	IsAllDay       bool
+	TimetableID    string
+	SourceKind     string
+	SourceCourseID string
+	CourseNature   string
+	Instructor     string
+	WeekMeta       string
+}
+
+func (courseItemDetailModel) TableName() string { return "sync_course_item_details" }
 
 type courseTimetableModel struct {
 	UserID    string `gorm:"primaryKey;column:user_id"`

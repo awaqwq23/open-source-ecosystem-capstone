@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/shared/data/database/app_database.dart';
 import 'package:luotopia/shared/data/sync/device_id_store.dart';
 import 'package:luotopia/shared/data/sync/local_sync_store.dart';
 import 'package:luotopia/shared/data/sync/sync_client.dart';
@@ -13,6 +14,7 @@ final agendaSyncServiceProvider = Provider<AgendaSyncService>((ref) {
     deviceIdStore: ref.read(syncDeviceIdStoreProvider),
     cursorStore: ref.read(syncCursorStoreProvider),
     localStore: ref.read(localSyncStoreProvider),
+    db: ref.read(appDatabaseProvider),
   );
   ref.onDispose(service.dispose);
   return service;
@@ -24,15 +26,18 @@ class AgendaSyncService {
     required SyncDeviceIdStore deviceIdStore,
     required SyncCursorStore cursorStore,
     required LocalSyncStore localStore,
+    required AppDatabase db,
   })  : _client = client,
         _deviceIdStore = deviceIdStore,
         _cursorStore = cursorStore,
-        _localStore = localStore;
+        _localStore = localStore,
+        _db = db;
 
   final SyncClient _client;
   final SyncDeviceIdStore _deviceIdStore;
   final SyncCursorStore _cursorStore;
   final LocalSyncStore _localStore;
+  final AppDatabase _db;
   bool _syncing = false;
   bool _queued = false;
   String? _queuedAccessToken;
@@ -140,15 +145,18 @@ class AgendaSyncService {
     final dirtyTimetables = await _localStore.dirtyCourseTimetables();
     final dirtySelectedTimetables = await _localStore.dirtySelectedTimetables();
     final tombstones = await _localStore.dirtyTombstones();
-    final changes = <Map<String, dynamic>>[
-      for (final row in dirtyAgenda)
-        if (row.deletedAt == null)
-          {
-            'entity_type': 'agenda_item',
-            'entity_id': row.id,
-            'operation': 'upsert',
-            'payload': SyncPayloadMapper.agendaItemPayload(row),
-          },
+    final changes = <Map<String, dynamic>>[];
+    for (final row in dirtyAgenda) {
+      if (row.deletedAt == null) {
+        changes.add({
+          'entity_type': 'agenda_item',
+          'entity_id': row.id,
+          'operation': 'upsert',
+          'payload': await SyncPayloadMapper.agendaItemPayload(_db, row),
+        });
+      }
+    }
+    changes.addAll([
       for (final row in dirtyTimetables)
         if (row.deletedAt == null)
           {
@@ -171,7 +179,7 @@ class AgendaSyncService {
           'operation': 'delete',
           'payload': null,
         },
-    ];
+    ]);
     if (changes.isEmpty) {
       return;
     }

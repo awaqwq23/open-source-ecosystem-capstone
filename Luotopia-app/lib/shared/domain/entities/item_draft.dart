@@ -1,7 +1,7 @@
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -16,11 +16,7 @@ class ItemDraft {
     required this.color,
     required this.reminder,
     required this.repeatRule,
-    required this.startAt,
-    required this.endAt,
-    required this.isAllDay,
-    required this.taskDetails,
-    this.courseDetails = const ItemCourseDetails(),
+    required this.details,
     this.sourceKind = AgendaItemSourceKind.manual,
     this.sourceRef = '',
   });
@@ -32,16 +28,55 @@ class ItemDraft {
   final ItemColorOption color;
   final ReminderOption reminder;
   final RepeatRule repeatRule;
-  final DateTime startAt;
-  final DateTime endAt;
-  final bool isAllDay;
-  final ItemTaskDetails taskDetails;
-  final ItemCourseDetails courseDetails;
+  final AgendaItemDetails details;
   final AgendaItemSourceKind sourceKind;
   final String sourceRef;
 
-  DateTime? get deadline => taskDetails.deadline;
-  Duration get estimatedDuration => taskDetails.estimatedDuration;
+  DateTime? get deadlineAt {
+    final details = this.details;
+    return details is TaskItemDetails ? details.deadlineAt : null;
+  }
+
+  ScheduleItemDetails? get scheduleDetails {
+    final details = this.details;
+    return details is ScheduleItemDetails ? details : null;
+  }
+
+  CourseAgendaItemDetails? get courseAgendaDetails {
+    final details = this.details;
+    return details is CourseAgendaItemDetails ? details : null;
+  }
+
+  ItemCourseDetails get courseDetails {
+    final details = this.details;
+    return details is CourseAgendaItemDetails
+        ? details.course
+        : const ItemCourseDetails();
+  }
+
+  DateTime? get timelineStartAt {
+    return switch (details) {
+      ScheduleItemDetails(:final startAt) => startAt,
+      CourseAgendaItemDetails(:final startAt) => startAt,
+      _ => null,
+    };
+  }
+
+  DateTime? get timelineEndAt {
+    return switch (details) {
+      ScheduleItemDetails(:final endAt) => endAt,
+      CourseAgendaItemDetails(:final endAt) => endAt,
+      _ => null,
+    };
+  }
+
+  bool get timelineIsAllDay {
+    return switch (details) {
+      ScheduleItemDetails(:final isAllDay) => isAllDay,
+      CourseAgendaItemDetails(:final isAllDay) => isAllDay,
+      _ => false,
+    };
+  }
 
   ItemDraft copyWith({
     ItemType? type,
@@ -51,25 +86,22 @@ class ItemDraft {
     ItemColorOption? color,
     ReminderOption? reminder,
     RepeatRule? repeatRule,
-    bool? isAllDay,
-    DateTime? startAt,
-    DateTime? endAt,
-    DateTime? deadline,
-    bool clearDeadline = false,
-    Duration? estimatedDuration,
-    ItemTaskDetails? taskDetails,
+    AgendaItemDetails? details,
+    DateTime? scheduleStartAt,
+    DateTime? scheduleEndAt,
+    bool? scheduleIsAllDay,
+    DateTime? taskDeadlineAt,
     ItemCourseDetails? courseDetails,
     AgendaItemSourceKind? sourceKind,
     String? sourceRef,
   }) {
-    final nextStartAt = startAt ?? this.startAt;
-    final nextEndAt = endAt ?? this.endAt;
-    final nextTaskDetails = taskDetails ??
-        this.taskDetails.copyWith(
-          deadline: deadline,
-          clearDeadline: clearDeadline,
-          estimatedDuration: estimatedDuration,
-        );
+    final nextDetails = details ?? _copyDetails(
+      scheduleStartAt: scheduleStartAt,
+      scheduleEndAt: scheduleEndAt,
+      scheduleIsAllDay: scheduleIsAllDay,
+      taskDeadlineAt: taskDeadlineAt,
+      courseDetails: courseDetails,
+    );
     return ItemDraft(
       type: type ?? this.type,
       title: title ?? this.title,
@@ -78,17 +110,42 @@ class ItemDraft {
       color: color ?? this.color,
       reminder: reminder ?? this.reminder,
       repeatRule: repeatRule ?? this.repeatRule,
-      startAt: nextStartAt,
-      endAt: nextEndAt,
-      isAllDay: isAllDay ?? this.isAllDay,
-      taskDetails: nextTaskDetails,
-      courseDetails: courseDetails ?? this.courseDetails,
+      details: nextDetails,
       sourceKind: sourceKind ?? this.sourceKind,
       sourceRef: sourceRef ?? this.sourceRef,
     );
   }
 
   DateTimeRangeValue get range {
-    return DateTimeRangeValue(start: startAt, end: endAt);
+    final start = timelineStartAt;
+    final end = timelineEndAt;
+    if (start == null || end == null) {
+      throw StateError('Only timed agenda drafts expose a range.');
+    }
+    return DateTimeRangeValue(start: start, end: end);
+  }
+
+  AgendaItemDetails _copyDetails({
+    DateTime? scheduleStartAt,
+    DateTime? scheduleEndAt,
+    bool? scheduleIsAllDay,
+    DateTime? taskDeadlineAt,
+    ItemCourseDetails? courseDetails,
+  }) {
+    return switch (details) {
+      ScheduleItemDetails details => details.copyWith(
+          startAt: scheduleStartAt,
+          endAt: scheduleEndAt,
+          isAllDay: scheduleIsAllDay,
+        ),
+      TaskItemDetails details => details.copyWith(deadlineAt: taskDeadlineAt),
+      MemoItemDetails details => details,
+      CourseAgendaItemDetails details => details.copyWith(
+          startAt: scheduleStartAt,
+          endAt: scheduleEndAt,
+          isAllDay: scheduleIsAllDay,
+          course: courseDetails,
+        ),
+    };
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:luotopia/core/localization/generated/app_localizations.dart';
 import 'package:luotopia/features/pages/item_editor/domain/item_editor_defaults.dart';
 import 'package:luotopia/features/pages/item_editor/domain/item_editor_validator.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 
 void main() {
@@ -19,14 +20,11 @@ void main() {
       expect(errors.hasErrors, isTrue);
     });
 
-    test('任务 ddl 早于开始时间时返回错误', () {
-      final start = DateTime(2026, 3, 20, 10);
+    test('任务缺少截止时间时返回错误', () {
       final draft = ItemEditorDefaults.createDraft().copyWith(
         type: ItemType.task,
         title: '任务',
-        startAt: start,
-        endAt: start.add(const Duration(hours: 1)),
-        deadline: start.subtract(const Duration(minutes: 30)),
+        details: const MemoItemDetails(),
       );
 
       final errors = ItemEditorValidator.validate(

@@ -179,13 +179,12 @@ class _AiPageState extends ConsumerState<AiPage> {
       notes: itemDraft.notes,
       location: itemDraft.location,
       color: itemDraft.color,
-      isAllDay: itemDraft.isAllDay,
+      isAllDay: itemDraft.timelineIsAllDay,
       reminder: itemDraft.reminder,
       repeatRule: itemDraft.repeatRule,
-      startAt: itemDraft.startAt,
-      endAt: itemDraft.endAt,
-      deadline: itemDraft.deadline,
-      estimatedDuration: itemDraft.estimatedDuration,
+      startAt: itemDraft.timelineStartAt,
+      endAt: itemDraft.timelineEndAt,
+      deadlineAt: itemDraft.deadlineAt,
     );
   }
 
@@ -463,9 +462,10 @@ class _DraftEntryLine extends StatelessWidget {
     final title = draft.title.trim().isEmpty
         ? _text(context, zh: '未命名事项', en: 'Untitled item')
         : draft.title.trim();
-    final timeLabel = draft.type.name == 'memo'
+    final anchor = draft.deadlineAt ?? draft.timelineStartAt;
+    final timeLabel = anchor == null
         ? _text(context, zh: '备忘', en: 'Memo')
-        : '${DateFormat.yMd(locale).format(draft.startAt)} ${DateFormat.Hm(locale).format(draft.startAt)}';
+        : '${DateFormat.yMd(locale).format(anchor)} ${DateFormat.Hm(locale).format(anchor)}';
 
     return Align(
       alignment: Alignment.centerLeft,

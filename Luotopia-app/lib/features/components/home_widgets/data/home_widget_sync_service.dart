@@ -197,9 +197,10 @@ Map<String, dynamic> _buildSnapshotPayload({
           'location': item.location,
           'isCompleted': item.isCompleted,
           'sortOrder': item.sortOrder,
-          'startAt': item.startAt.toIso8601String(),
-          'endAt': item.endAt.toIso8601String(),
-          'isAllDay': item.isAllDay,
+          'startAt': item.timelineStartAt?.toIso8601String(),
+          'endAt': item.timelineEndAt?.toIso8601String(),
+          'deadlineAt': item.deadlineAt?.toIso8601String(),
+          'isAllDay': item.timelineIsAllDay,
           'timetableId': item.courseDetails.timetableId,
           'accentColorLight': _toArgbHex(item.color.resolve(Brightness.light)),
           'accentColorDark': _toArgbHex(item.color.resolve(Brightness.dark)),
@@ -285,7 +286,7 @@ bool _shouldShowInLeftColumn(
   required DateTime now,
   required DateTime day,
 }) {
-  if (item.isCompleted) {
+  if (item.isEffectivelyCompleted(now)) {
     return false;
   }
   if (item.type != ItemType.course && item.type != ItemType.schedule) {
@@ -296,13 +297,13 @@ bool _shouldShowInLeftColumn(
   }
   final today = DateTime(now.year, now.month, now.day);
   if (_isSameDay(day, today)) {
-    return item.endAt.isAfter(now);
+    return item.timelineEndAt?.isAfter(now) ?? false;
   }
   return true;
 }
 
 bool _shouldShowInRightColumn(AgendaItem item) {
-  if (item.isCompleted) {
+  if (item.isEffectivelyCompleted(DateTime.now())) {
     return false;
   }
   return item.type == ItemType.task || item.type == ItemType.memo;
@@ -315,7 +316,11 @@ DateTime _displayDayForItem(
   if (item.type == ItemType.memo) {
     return fallback;
   }
-  return DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
+  final anchor = item.type == ItemType.task ? item.deadlineAt : item.timelineStartAt;
+  if (anchor == null) {
+    return fallback;
+  }
+  return DateTime(anchor.year, anchor.month, anchor.day);
 }
 
 Map<String, dynamic> _toAgendaListRow(
@@ -381,7 +386,9 @@ bool _itemInDay(AgendaItem item, DateTime day) {
   if (item.type == ItemType.memo) {
     return true;
   }
-  return item.endAt.isAfter(dayStart) && item.startAt.isBefore(dayEnd);
+  final start = item.timelineStartAt;
+  final end = item.timelineEndAt;
+  return start != null && end != null && end.isAfter(dayStart) && start.isBefore(dayEnd);
 }
 
 DateTime _sortStart(AgendaItem item, DateTime day) {
@@ -389,7 +396,11 @@ DateTime _sortStart(AgendaItem item, DateTime day) {
   if (item.type == ItemType.memo) {
     return dayStart.add(const Duration(hours: 23, minutes: 59));
   }
-  return item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
+  final start = item.timelineStartAt;
+  if (start == null) {
+    return dayStart;
+  }
+  return start.isBefore(dayStart) ? dayStart : start;
 }
 
 String _buildItemTimeText(
@@ -401,7 +412,7 @@ String _buildItemTimeText(
   if (item.type == ItemType.memo) {
     return zh ? '备忘' : 'Memo';
   }
-  if (item.isAllDay) {
+  if (item.timelineIsAllDay) {
     final allDayText = zh ? '全天' : 'All day';
     if (!includeDay) {
       return allDayText;
@@ -411,8 +422,10 @@ String _buildItemTimeText(
 
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
-  final effectiveStart = item.startAt.isBefore(dayStart) ? dayStart : item.startAt;
-  final effectiveEnd = item.endAt.isAfter(dayEnd) ? dayEnd : item.endAt;
+  final start = item.timelineStartAt ?? dayStart;
+  final end = item.timelineEndAt ?? dayEnd;
+  final effectiveStart = start.isBefore(dayStart) ? dayStart : start;
+  final effectiveEnd = end.isAfter(dayEnd) ? dayEnd : end;
   final range = '${_formatHm(effectiveStart)}-${_formatHm(effectiveEnd)}';
   if (!includeDay) {
     return range;
@@ -485,7 +498,11 @@ String? _semesterWeekLabel({
   DateTime? semesterFirstDay;
   for (final item in timetabledCourseItems) {
     if (item.courseDetails.timetableId != targetTimetableId) continue;
-    final startDate = DateUtils.dateOnly(item.startAt);
+    final start = item.timelineStartAt;
+    if (start == null) {
+      continue;
+    }
+    final startDate = DateUtils.dateOnly(start);
     if (semesterFirstDay == null || startDate.isBefore(semesterFirstDay)) {
       semesterFirstDay = startDate;
     }

@@ -151,8 +151,13 @@ class _TimetableListView extends ConsumerWidget {
       for (final item in agendaItems) {
         if (item.type == ItemType.course &&
             item.courseDetails.timetableId == t.id) {
-          final s = DateUtils.dateOnly(item.startAt);
-          final e = DateUtils.dateOnly(item.endAt);
+          final start = item.timelineStartAt;
+          final end = item.timelineEndAt;
+          if (start == null || end == null) {
+            continue;
+          }
+          final s = DateUtils.dateOnly(start);
+          final e = DateUtils.dateOnly(end);
           if (first == null || s.isBefore(first)) first = s;
           if (last == null || e.isAfter(last)) last = e;
         }

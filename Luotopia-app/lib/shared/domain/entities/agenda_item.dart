@@ -1,6 +1,6 @@
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
+import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
-import 'package:luotopia/shared/domain/value_objects/item_task_details.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
@@ -16,11 +16,7 @@ class AgendaItem {
     required this.color,
     required this.reminder,
     required this.repeatRule,
-    required this.startAt,
-    required this.endAt,
-    required this.isAllDay,
-    required this.taskDetails,
-    this.courseDetails = const ItemCourseDetails(),
+    required this.details,
     required this.isCompleted,
     required this.createdAt,
     required this.updatedAt,
@@ -38,11 +34,7 @@ class AgendaItem {
   final ItemColorOption color;
   final ReminderOption reminder;
   final RepeatRule repeatRule;
-  final DateTime startAt;
-  final DateTime endAt;
-  final bool isAllDay;
-  final ItemTaskDetails taskDetails;
-  final ItemCourseDetails courseDetails;
+  final AgendaItemDetails details;
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -51,8 +43,52 @@ class AgendaItem {
   final AgendaItemSourceKind sourceKind;
   final String sourceRef;
 
-  DateTime? get deadline => taskDetails.deadline;
-  Duration get estimatedDuration => taskDetails.estimatedDuration;
+  DateTime? get deadlineAt {
+    final details = this.details;
+    return details is TaskItemDetails ? details.deadlineAt : null;
+  }
+
+  ScheduleItemDetails? get scheduleDetails {
+    final details = this.details;
+    return details is ScheduleItemDetails ? details : null;
+  }
+
+  CourseAgendaItemDetails? get courseAgendaDetails {
+    final details = this.details;
+    return details is CourseAgendaItemDetails ? details : null;
+  }
+
+  ItemCourseDetails get courseDetails {
+    final details = this.details;
+    return details is CourseAgendaItemDetails
+        ? details.course
+        : const ItemCourseDetails();
+  }
+
+  DateTime? get timelineStartAt {
+    return switch (details) {
+      ScheduleItemDetails(:final startAt) => startAt,
+      CourseAgendaItemDetails(:final startAt) => startAt,
+      _ => null,
+    };
+  }
+
+  DateTime? get timelineEndAt {
+    return switch (details) {
+      ScheduleItemDetails(:final endAt) => endAt,
+      CourseAgendaItemDetails(:final endAt) => endAt,
+      _ => null,
+    };
+  }
+
+  bool get timelineIsAllDay {
+    return switch (details) {
+      ScheduleItemDetails(:final isAllDay) => isAllDay,
+      CourseAgendaItemDetails(:final isAllDay) => isAllDay,
+      _ => false,
+    };
+  }
+
   bool get supportsManualCompletion {
     return switch (type) {
       ItemType.task || ItemType.memo || ItemType.schedule || ItemType.course => true,
@@ -60,10 +96,13 @@ class AgendaItem {
   }
 
   bool isEffectivelyCompleted(DateTime now) {
+    if (type == ItemType.schedule) {
+      return isCompleted || (timelineEndAt?.isAfter(now) == false);
+    }
     if (supportsManualCompletion) {
       return isCompleted;
     }
-    return !endAt.isAfter(now);
+    return timelineEndAt?.isAfter(now) == false;
   }
 
   AgendaItem copyWith({
@@ -75,11 +114,7 @@ class AgendaItem {
     ItemColorOption? color,
     ReminderOption? reminder,
     RepeatRule? repeatRule,
-    DateTime? startAt,
-    DateTime? endAt,
-    bool? isAllDay,
-    ItemTaskDetails? taskDetails,
-    ItemCourseDetails? courseDetails,
+    AgendaItemDetails? details,
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -98,11 +133,7 @@ class AgendaItem {
       color: color ?? this.color,
       reminder: reminder ?? this.reminder,
       repeatRule: repeatRule ?? this.repeatRule,
-      startAt: startAt ?? this.startAt,
-      endAt: endAt ?? this.endAt,
-      isAllDay: isAllDay ?? this.isAllDay,
-      taskDetails: taskDetails ?? this.taskDetails,
-      courseDetails: courseDetails ?? this.courseDetails,
+      details: details ?? this.details,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -122,11 +153,7 @@ class AgendaItem {
       color: color,
       reminder: reminder,
       repeatRule: repeatRule,
-      startAt: startAt,
-      endAt: endAt,
-      isAllDay: isAllDay,
-      taskDetails: taskDetails,
-      courseDetails: courseDetails,
+      details: details,
       sourceKind: sourceKind,
       sourceRef: sourceRef,
     );
@@ -150,11 +177,7 @@ class AgendaItem {
       color: draft.color,
       reminder: draft.reminder,
       repeatRule: draft.repeatRule,
-      startAt: draft.startAt,
-      endAt: draft.endAt,
-      isAllDay: draft.isAllDay,
-      taskDetails: draft.taskDetails,
-      courseDetails: draft.courseDetails,
+      details: draft.details,
       isCompleted: isCompleted,
       createdAt: createdAt,
       updatedAt: updatedAt,

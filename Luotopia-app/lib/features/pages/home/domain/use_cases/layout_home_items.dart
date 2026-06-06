@@ -22,11 +22,11 @@ class LayoutHomeItemsUseCase {
       for (final item in items)
         if (_isVisible(item, visibleRange)) item,
     ]..sort((left, right) {
-        final startCompare = left.startAt.compareTo(right.startAt);
+        final startCompare = _anchorStart(left).compareTo(_anchorStart(right));
         if (startCompare != 0) {
           return startCompare;
         }
-        final endCompare = left.endAt.compareTo(right.endAt);
+        final endCompare = _anchorEnd(left).compareTo(_anchorEnd(right));
         if (endCompare != 0) {
           return endCompare;
         }
@@ -45,6 +45,7 @@ class LayoutHomeItemsUseCase {
         _segmentsForItem(
           item: item,
           visibleRange: visibleRange,
+          timeSlots: timeSlots,
           dayStartMinute: dayStartMinute,
           dayEndMinute: dayEndMinute,
         ),
@@ -63,21 +64,57 @@ class LayoutHomeItemsUseCase {
   }
 
   bool _isVisible(AgendaItem item, DateTimeRangeValue visibleRange) {
-    return item.type != ItemType.memo &&
-        item.endAt.isAfter(visibleRange.start) &&
-        item.startAt.isBefore(visibleRange.end);
+    if (item.type == ItemType.memo) {
+      return false;
+    }
+    if (item.type == ItemType.task) {
+      final deadline = item.deadlineAt;
+      return deadline != null &&
+          !deadline.isBefore(visibleRange.start) &&
+          deadline.isBefore(visibleRange.end);
+    }
+    final start = item.timelineStartAt;
+    final end = item.timelineEndAt;
+    return start != null &&
+        end != null &&
+        end.isAfter(visibleRange.start) &&
+        start.isBefore(visibleRange.end);
   }
 
   List<_ItemSegment> _segmentsForItem({
     required AgendaItem item,
     required DateTimeRangeValue visibleRange,
+    required List<HomeTimeSlot> timeSlots,
     required int dayStartMinute,
     required int dayEndMinute,
   }) {
-    final clippedStart = item.startAt.isBefore(visibleRange.start)
+    if (item.type == ItemType.task) {
+      final deadline = item.deadlineAt!;
+      final minute = deadline.hour * 60 + deadline.minute;
+      final slot = _slotContaining(
+        minute: minute,
+        timeSlots: timeSlots,
+        dayStartMinute: dayStartMinute,
+        dayEndMinute: dayEndMinute,
+      );
+      return [
+        _ItemSegment(
+          item: item,
+          columnIndex: DateTime(deadline.year, deadline.month, deadline.day)
+              .difference(visibleRange.start)
+              .inDays,
+          startMinute: slot.$1,
+          endMinute: slot.$2,
+        ),
+      ];
+    }
+
+    final itemStart = item.timelineStartAt!;
+    final itemEnd = item.timelineEndAt!;
+    final clippedStart = itemStart.isBefore(visibleRange.start)
         ? visibleRange.start
-        : item.startAt;
-    final clippedEnd = item.endAt.isAfter(visibleRange.end) ? visibleRange.end : item.endAt;
+        : itemStart;
+    final clippedEnd = itemEnd.isAfter(visibleRange.end) ? visibleRange.end : itemEnd;
     final firstDate = DateTime(clippedStart.year, clippedStart.month, clippedStart.day);
     final lastMoment = clippedEnd.subtract(const Duration(milliseconds: 1));
     final lastDate = DateTime(lastMoment.year, lastMoment.month, lastMoment.day);
@@ -105,6 +142,35 @@ class LayoutHomeItemsUseCase {
       );
     }
     return segments;
+  }
+
+  DateTime _anchorStart(AgendaItem item) {
+    return item.type == ItemType.task
+        ? item.deadlineAt!
+        : item.timelineStartAt ?? item.createdAt;
+  }
+
+  DateTime _anchorEnd(AgendaItem item) {
+    return item.type == ItemType.task
+        ? item.deadlineAt!
+        : item.timelineEndAt ?? item.createdAt;
+  }
+
+  (int, int) _slotContaining({
+    required int minute,
+    required List<HomeTimeSlot> timeSlots,
+    required int dayStartMinute,
+    required int dayEndMinute,
+  }) {
+    for (final slot in timeSlots) {
+      if (minute >= slot.startMinute && minute <= slot.endMinute) {
+        return (slot.startMinute, slot.endMinute);
+      }
+    }
+    if (minute <= dayStartMinute) {
+      return (timeSlots.first.startMinute, timeSlots.first.endMinute);
+    }
+    return (timeSlots.last.startMinute, timeSlots.last.endMinute);
   }
 }
 

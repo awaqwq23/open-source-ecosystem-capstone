@@ -22,13 +22,18 @@ class FilterListItemsUseCase {
   }
 
   bool _isInMyDay(AgendaItem item, DateTime now) {
-    final today = DateTime(now.year, now.month, now.day);
-    if (item.type == ItemType.memo) {
+    if (!item.isEffectivelyCompleted(now) &&
+        (item.type == ItemType.task || item.type == ItemType.memo)) {
       return true;
     }
-
-    final startDay = DateTime(item.startAt.year, item.startAt.month, item.startAt.day);
-    final endDay = DateTime(item.endAt.year, item.endAt.month, item.endAt.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final start = item.timelineStartAt;
+    final end = item.timelineEndAt;
+    if (start == null || end == null) {
+      return false;
+    }
+    final startDay = DateTime(start.year, start.month, start.day);
+    final endDay = DateTime(end.year, end.month, end.day);
     return !today.isBefore(startDay) && !today.isAfter(endDay);
   }
 }
