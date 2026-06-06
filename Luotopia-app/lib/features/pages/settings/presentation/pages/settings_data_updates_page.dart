@@ -2,15 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_selector/file_selector.dart' as file_selector;
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
+import 'package:luotopia/shared/data/export/local_database_backup_service.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class SettingsDataUpdatesPage extends ConsumerStatefulWidget {
@@ -27,6 +32,8 @@ class _SettingsDataUpdatesPageState
   bool _notificationRefreshing = false;
   bool _hotUpdateChecking = false;
   bool _syncing = false;
+  bool _databaseExporting = false;
+  bool _databaseImporting = false;
   String? _syncMessage;
 
   @override
@@ -94,6 +101,33 @@ class _SettingsDataUpdatesPageState
                   ),
                 ],
               ),
+            SettingsFlatSection(
+              title: '本地数据库',
+              children: [
+                SettingsFlatTile(
+                  title: '导出数据库',
+                  subtitle: '分享当前日程与课程数据库备份',
+                  leading: const Icon(Icons.ios_share_outlined),
+                  trailing: _ActionIconButton(
+                    tooltip: '导出',
+                    loading: _databaseExporting,
+                    icon: Icons.file_upload_outlined,
+                    onPressed: () => unawaited(_exportDatabase()),
+                  ),
+                ),
+                SettingsFlatTile(
+                  title: '导入数据库',
+                  subtitle: '选择备份文件并覆盖当前本地数据库',
+                  leading: const Icon(Icons.restore_page_outlined),
+                  trailing: _ActionIconButton(
+                    tooltip: '导入',
+                    loading: _databaseImporting,
+                    icon: Icons.file_download_outlined,
+                    onPressed: () => unawaited(_importDatabase()),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -190,6 +224,108 @@ class _SettingsDataUpdatesPageState
     }
   }
 
+  Future<void> _exportDatabase() async {
+    if (_databaseExporting) {
+      return;
+    }
+    setState(() => _databaseExporting = true);
+    try {
+      final backup = await ref
+          .read(localDatabaseBackupServiceProvider)
+          .exportDatabase();
+      if (!mounted) {
+        return;
+      }
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'Luotopia 本地数据库备份',
+          files: [XFile(backup.path, name: backup.fileName)],
+          fileNameOverrides: [backup.fileName],
+        ),
+      );
+      if (mounted) {
+        _showMessage('数据库备份已准备分享');
+      }
+    } catch (error) {
+      if (mounted) {
+        _showMessage('数据库导出失败：$error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _databaseExporting = false);
+      }
+    }
+  }
+
+  Future<void> _importDatabase() async {
+    if (_databaseImporting) {
+      return;
+    }
+    final file = await file_selector.openFile(
+      acceptedTypeGroups: const [
+        file_selector.XTypeGroup(
+          label: 'SQLite 数据库',
+          extensions: ['sqlite', 'db'],
+          mimeTypes: ['application/vnd.sqlite3', 'application/octet-stream'],
+        ),
+      ],
+      confirmButtonText: '导入',
+    );
+    if (file == null || !mounted) {
+      return;
+    }
+    final confirmed = await _confirmImport();
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _databaseImporting = true);
+    try {
+      await ref
+          .read(localDatabaseBackupServiceProvider)
+          .importDatabase(file.path);
+      ref.invalidate(agendaItemRepositoryProvider);
+      ref.invalidate(courseTimetableRepositoryProvider);
+      ref.invalidate(pendingSyncChangeCountProvider);
+      ref.invalidate(lastSyncTimeProvider);
+      if (mounted) {
+        _showMessage('数据库已导入');
+      }
+    } catch (error) {
+      if (mounted) {
+        _showMessage('数据库导入失败：$error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _databaseImporting = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmImport() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导入数据库'),
+        content: const Text(
+          '导入会覆盖当前本地日程、课程表、选中课程表与同步状态。'
+          '账号、AI 设置、天气缓存等非数据库数据不会被恢复。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('覆盖导入'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
   String _syncSubtitle(int pendingCount, DateTime? lastSyncedAt) {
     final parts = <String>[];
     parts.add(pendingCount > 0 ? '$pendingCount 条待推送' : '无待推送变更');
@@ -217,11 +353,13 @@ class _SettingsDataUpdatesPageState
 
 class _ActionIconButton extends StatelessWidget {
   const _ActionIconButton({
+    this.tooltip = '更新',
     required this.loading,
     required this.icon,
     required this.onPressed,
   });
 
+  final String tooltip;
   final bool loading;
   final IconData icon;
   final VoidCallback onPressed;
@@ -229,7 +367,7 @@ class _ActionIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: '更新',
+      tooltip: tooltip,
       onPressed: loading ? null : onPressed,
       icon: loading
           ? const SizedBox(
