@@ -55,30 +55,29 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
   @override
   HomeHeaderState build() {
     final now = DateUtils.dateOnly(DateTime.now());
-    return HomeHeaderState(
-      anchor: now,
-      selectedDate: now,
-    );
+    return HomeHeaderState(anchor: now, selectedDate: now);
   }
 
   void showPrevious(HomeDisplayScope scope) {
-    _moveToAnchor(
-      switch (scope) {
-        HomeDisplayScope.week => state.anchor.subtract(const Duration(days: 7)),
-        HomeDisplayScope.month => DateTime(state.anchor.year, state.anchor.month - 1, 1),
-      },
-      scope: scope,
-    );
+    _moveToAnchor(switch (scope) {
+      HomeDisplayScope.week => state.anchor.subtract(const Duration(days: 7)),
+      HomeDisplayScope.month => DateTime(
+        state.anchor.year,
+        state.anchor.month - 1,
+        1,
+      ),
+    }, scope: scope);
   }
 
   void showNext(HomeDisplayScope scope) {
-    _moveToAnchor(
-      switch (scope) {
-        HomeDisplayScope.week => state.anchor.add(const Duration(days: 7)),
-        HomeDisplayScope.month => DateTime(state.anchor.year, state.anchor.month + 1, 1),
-      },
-      scope: scope,
-    );
+    _moveToAnchor(switch (scope) {
+      HomeDisplayScope.week => state.anchor.add(const Duration(days: 7)),
+      HomeDisplayScope.month => DateTime(
+        state.anchor.year,
+        state.anchor.month + 1,
+        1,
+      ),
+    }, scope: scope);
   }
 
   void showCurrentPeriod(HomeDisplayScope scope) {
@@ -91,6 +90,10 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
       scope: scope,
       fallbackSelectedDate: today,
     );
+  }
+
+  void showCurrentWeek() {
+    showCurrentPeriod(HomeDisplayScope.week);
   }
 
   void selectDate(DateTime date) {
@@ -149,16 +152,21 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
 
 final homeHeaderViewModelProvider =
     NotifierProvider<HomeHeaderViewModel, HomeHeaderState>(
-  HomeHeaderViewModel.new,
-);
+      HomeHeaderViewModel.new,
+    );
 
-final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, query) {
+final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((
+  ref,
+  query,
+) {
   final state = ref.watch(homeHeaderViewModelProvider);
   final settings = ref.watch(appHomeSettingsProvider);
   final repositoryItems = ref.watch(agendaItemRepositoryProvider);
   final timetableStore = ref.watch(courseTimetableRepositoryProvider);
   final selectedTimetableIds = timetableStore.selectedTimetableIds;
-  final scope = query.allowMonthLayout && settings.wideLayoutScope == HomeWideLayoutScope.month
+  final scope =
+      query.allowMonthLayout &&
+          settings.wideLayoutScope == HomeWideLayoutScope.month
       ? HomeDisplayScope.month
       : HomeDisplayScope.week;
   final previewGrid = HomeHeaderViewModel._gridBuilder.build(
@@ -183,7 +191,8 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     visibleRange: previewGrid.visibleRange,
     timeSlots: previewGrid.timeSlots,
   );
-  final selectedCell = state.selectedDate == null || state.selectedSlotIndex == null
+  final selectedCell =
+      state.selectedDate == null || state.selectedSlotIndex == null
       ? null
       : () {
           final slotIndex = state.selectedSlotIndex!;
@@ -212,7 +221,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
     selectedTimetableIds: selectedTimetableIds,
     timetabledCourseItems: [
       for (final item in repositoryItems)
-        if (item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty) item,
+        if (item.type == ItemType.course &&
+            item.courseDetails.timetableId.isNotEmpty)
+          item,
     ],
   );
   final isCurrentWeek = _isCurrentWeek(baseViewData.visibleRange.start);
@@ -233,7 +244,9 @@ final homeViewDataProvider = Provider.family<HomeViewData, HomeViewQuery>((ref, 
 
 bool _isCurrentWeek(DateTime visibleRangeStart) {
   final today = DateUtils.dateOnly(DateTime.now());
-  final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+  final monday = today.subtract(
+    Duration(days: today.weekday - DateTime.monday),
+  );
   return DateUtils.isSameDay(monday, DateUtils.dateOnly(visibleRangeStart));
 }
 
@@ -279,11 +292,14 @@ String? _buildSemesterWeekLabel({
     return null;
   }
 
-  final semesterWeekOneMonday =
-      semesterFirstDay.subtract(Duration(days: semesterFirstDay.weekday - DateTime.monday));
-  final currentMonday = DateUtils.dateOnly(visibleRangeStart)
-      .subtract(Duration(days: visibleRangeStart.weekday - DateTime.monday));
-  final weekIndex = currentMonday.difference(semesterWeekOneMonday).inDays ~/ 7 + 1;
+  final semesterWeekOneMonday = semesterFirstDay.subtract(
+    Duration(days: semesterFirstDay.weekday - DateTime.monday),
+  );
+  final currentMonday = DateUtils.dateOnly(
+    visibleRangeStart,
+  ).subtract(Duration(days: visibleRangeStart.weekday - DateTime.monday));
+  final weekIndex =
+      currentMonday.difference(semesterWeekOneMonday).inDays ~/ 7 + 1;
   if (weekIndex <= 0) {
     return null;
   }
