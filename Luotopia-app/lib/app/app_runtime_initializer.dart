@@ -51,7 +51,7 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer>
   void _handleForegroundResume() {
     final auth = ref.read(luotopiaAuthProvider);
     if (auth.status != LuotopiaAuthStatus.authenticated) {
-      unawaited(_performPublicPull(trigger: 'foreground'));
+      unawaited(_performPublicForegroundPull());
       return;
     }
     unawaited(_performForegroundPull(auth));
@@ -146,14 +146,21 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer>
     await _applyPullResult(auth, result);
   }
 
-  Future<void> _performPublicPull({String trigger = 'cold_start'}) async {
+  Future<void> _performPublicPull() async {
     final result = await ref
         .read(unifiedPullServiceProvider)
-        .pullPublicScoped(
-          trigger: trigger,
-          scopes: const ['weather', 'notification'],
-        );
+        .pullPublicColdStart();
     if (result.isSuccess) {
+      ref.invalidate(weatherProvider);
+      ref.invalidate(notificationProvider);
+    }
+  }
+
+  Future<void> _performPublicForegroundPull() async {
+    final result = await ref
+        .read(unifiedPullServiceProvider)
+        .pullPublicSilent();
+    if (result?.isSuccess == true) {
       ref.invalidate(weatherProvider);
       ref.invalidate(notificationProvider);
     }

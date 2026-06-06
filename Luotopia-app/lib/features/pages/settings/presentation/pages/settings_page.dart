@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
@@ -505,26 +503,15 @@ class _SettingsLinkTile extends StatelessWidget {
   }
 }
 
-class _NotificationSection extends ConsumerStatefulWidget {
+class _NotificationSection extends ConsumerWidget {
   const _NotificationSection();
 
   @override
-  ConsumerState<_NotificationSection> createState() =>
-      _NotificationSectionState();
-}
-
-class _NotificationSectionState extends ConsumerState<_NotificationSection> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(notificationProvider.notifier).loadList());
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(notificationProvider);
+    final title = state.title;
 
-    if (state.items.isEmpty && !state.loading) {
+    if (state.latestId == null || state.latestId!.isEmpty || title == null) {
       return const SizedBox.shrink();
     }
 
@@ -533,75 +520,23 @@ class _NotificationSectionState extends ConsumerState<_NotificationSection> {
       children: [
         const SizedBox(height: _settingsSectionSpacing),
         _SettingsLinkCard(
-          children: state.loading && state.items.isEmpty
-              ? const [
-                  Padding(
-                    padding: EdgeInsets.all(18),
-                    child: Center(
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  ),
-                ]
-              : [
-                  for (final item in state.items)
-                    _SettingsLinkTile(
-                      title: item.title,
-                      subtitle: item.content,
-                      icon: _notificationIcon(item.icon),
-                      onTap: () =>
-                          unawaited(_showNotificationDetail(context, item)),
-                    ),
-                ],
+          children: [
+            _SettingsLinkTile(
+              title: title,
+              subtitle: _notificationSubtitle(state),
+              icon: _notificationIcon(state.icon),
+              onTap: () =>
+                  context.openSecondary(AppRoutePaths.settingsDataUpdates),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Future<void> _showNotificationDetail(
-    BuildContext context,
-    NotificationSummary item,
-  ) async {
-    NotificationDetail? detail;
-    try {
-      detail = await ref
-          .read(notificationProvider.notifier)
-          .loadDetail(item.id);
-    } catch (_) {
-      detail = null;
-    }
-    if (!mounted || !context.mounted) {
-      return;
-    }
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return AlertDialog(
-          title: Text(
-            detail?.title.isNotEmpty == true ? detail!.title : item.title,
-          ),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: SingleChildScrollView(
-              child: SelectableText(
-                detail?.content.isNotEmpty == true ? detail!.content : '暂无详情',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('关闭'),
-            ),
-          ],
-        );
-      },
-    );
+  String _notificationSubtitle(NotificationState state) {
+    final countText = state.count > 0 ? '共 ${state.count} 条通知' : '服务通知';
+    return state.hasNew ? '有新通知 · $countText' : countText;
   }
 
   IconData _notificationIcon(String icon) {

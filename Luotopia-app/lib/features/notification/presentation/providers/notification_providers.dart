@@ -9,6 +9,7 @@ class NotificationState {
   final String? latestId;
   final String? title;
   final String? content;
+  final String icon;
   final bool hasNew;
   final int count;
   final bool loading;
@@ -18,6 +19,7 @@ class NotificationState {
     this.latestId,
     this.title,
     this.content,
+    this.icon = '',
     this.hasNew = false,
     this.count = 0,
     this.loading = false,
@@ -28,6 +30,7 @@ class NotificationState {
     String? latestId,
     String? title,
     String? content,
+    String? icon,
     bool? hasNew,
     int? count,
     bool? loading,
@@ -37,6 +40,7 @@ class NotificationState {
       latestId: latestId ?? this.latestId,
       title: title ?? this.title,
       content: content ?? this.content,
+      icon: icon ?? this.icon,
       hasNew: hasNew ?? this.hasNew,
       count: count ?? this.count,
       loading: loading ?? this.loading,
@@ -153,6 +157,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     return NotificationState(
       latestId: block.latestId,
       title: block.title.isEmpty ? null : block.title,
+      icon: block.icon,
       hasNew: block.hasNew,
       count: block.count,
     );

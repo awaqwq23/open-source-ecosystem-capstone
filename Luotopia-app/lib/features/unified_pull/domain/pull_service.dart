@@ -63,6 +63,30 @@ class UnifiedPullService {
     }
   }
 
+  Future<PullResult> pullPublicColdStart({
+    List<String> scopes = const ['weather', 'notification'],
+  }) async {
+    if (_isColdStartCooldown) {
+      return PullResult(throttled: true);
+    }
+    _lastColdStartPull = DateTime.now();
+    return pullPublicScoped(trigger: 'cold_start', scopes: scopes);
+  }
+
+  Future<PullResult?> pullPublicSilent({
+    List<String> scopes = const ['weather', 'notification'],
+  }) async {
+    if (_isForegroundCooldown) {
+      return null;
+    }
+    _lastForegroundPull = DateTime.now();
+    try {
+      return await pullPublicScoped(trigger: 'foreground', scopes: scopes);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<PullResult> pullScoped({
     required String trigger,
     required List<String> scopes,
