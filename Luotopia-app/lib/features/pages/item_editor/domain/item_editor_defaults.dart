@@ -27,20 +27,19 @@ class ItemEditorDefaults {
     final end = prefill?.endAt ?? start.add(const Duration(hours: 1));
     final details = switch (type) {
       ItemType.schedule => ScheduleItemDetails(
-          startAt: start,
-          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-          isAllDay: prefill?.isAllDay ?? false,
-        ),
-      ItemType.task => TaskItemDetails(
-          deadlineAt: prefill?.deadlineAt ?? end,
-        ),
+        startAt: start,
+        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        isAllDay: prefill?.isAllDay ?? false,
+        countdownEnabled: prefill?.countdownEnabled ?? false,
+      ),
+      ItemType.task => TaskItemDetails(deadlineAt: prefill?.deadlineAt ?? end),
       ItemType.memo => const MemoItemDetails(),
       ItemType.course => CourseAgendaItemDetails(
-          startAt: start,
-          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-          isAllDay: prefill?.isAllDay ?? false,
-          course: prefill?.courseDetails ?? const ItemCourseDetails(),
-        ),
+        startAt: start,
+        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        isAllDay: prefill?.isAllDay ?? false,
+        course: prefill?.courseDetails ?? const ItemCourseDetails(),
+      ),
     };
 
     return ItemDraft(
@@ -71,20 +70,19 @@ class ItemEditorDefaults {
     final end = draft.timelineEndAt ?? start.add(const Duration(hours: 1));
     final details = switch (type) {
       ItemType.schedule => ScheduleItemDetails(
-          startAt: start,
-          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-          isAllDay: draft.timelineIsAllDay,
-        ),
-      ItemType.task => TaskItemDetails(
-          deadlineAt: draft.deadlineAt ?? end,
-        ),
+        startAt: start,
+        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        isAllDay: draft.timelineIsAllDay,
+        countdownEnabled: draft.scheduleCountdownEnabled,
+      ),
+      ItemType.task => TaskItemDetails(deadlineAt: draft.deadlineAt ?? end),
       ItemType.memo => const MemoItemDetails(),
       ItemType.course => CourseAgendaItemDetails(
-          startAt: start,
-          endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
-          isAllDay: draft.timelineIsAllDay,
-          course: draft.courseDetails,
-        ),
+        startAt: start,
+        endAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        isAllDay: draft.timelineIsAllDay,
+        course: draft.courseDetails,
+      ),
     };
 
     return draft.copyWith(
@@ -95,4 +93,3 @@ class ItemEditorDefaults {
     );
   }
 }
-

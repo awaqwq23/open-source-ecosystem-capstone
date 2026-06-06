@@ -1147,6 +1147,21 @@ class $ScheduleItemDetailRowsTable extends ScheduleItemDetailRows
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _countdownEnabledMeta = const VerificationMeta(
+    'countdownEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> countdownEnabled = GeneratedColumn<bool>(
+    'countdown_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("countdown_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _autoCompletedOnceAtMeta =
       const VerificationMeta('autoCompletedOnceAt');
   @override
@@ -1164,6 +1179,7 @@ class $ScheduleItemDetailRowsTable extends ScheduleItemDetailRows
     startAt,
     endAt,
     isAllDay,
+    countdownEnabled,
     autoCompletedOnceAt,
   ];
   @override
@@ -1208,6 +1224,15 @@ class $ScheduleItemDetailRowsTable extends ScheduleItemDetailRows
         isAllDay.isAcceptableOrUnknown(data['is_all_day']!, _isAllDayMeta),
       );
     }
+    if (data.containsKey('countdown_enabled')) {
+      context.handle(
+        _countdownEnabledMeta,
+        countdownEnabled.isAcceptableOrUnknown(
+          data['countdown_enabled']!,
+          _countdownEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('auto_completed_once_at')) {
       context.handle(
         _autoCompletedOnceAtMeta,
@@ -1242,6 +1267,10 @@ class $ScheduleItemDetailRowsTable extends ScheduleItemDetailRows
         DriftSqlType.bool,
         data['${effectivePrefix}is_all_day'],
       )!,
+      countdownEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}countdown_enabled'],
+      )!,
       autoCompletedOnceAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}auto_completed_once_at'],
@@ -1261,12 +1290,14 @@ class ScheduleItemDetailRow extends DataClass
   final DateTime startAt;
   final DateTime endAt;
   final bool isAllDay;
+  final bool countdownEnabled;
   final DateTime? autoCompletedOnceAt;
   const ScheduleItemDetailRow({
     required this.itemId,
     required this.startAt,
     required this.endAt,
     required this.isAllDay,
+    required this.countdownEnabled,
     this.autoCompletedOnceAt,
   });
   @override
@@ -1276,6 +1307,7 @@ class ScheduleItemDetailRow extends DataClass
     map['start_at'] = Variable<DateTime>(startAt);
     map['end_at'] = Variable<DateTime>(endAt);
     map['is_all_day'] = Variable<bool>(isAllDay);
+    map['countdown_enabled'] = Variable<bool>(countdownEnabled);
     if (!nullToAbsent || autoCompletedOnceAt != null) {
       map['auto_completed_once_at'] = Variable<DateTime>(autoCompletedOnceAt);
     }
@@ -1288,6 +1320,7 @@ class ScheduleItemDetailRow extends DataClass
       startAt: Value(startAt),
       endAt: Value(endAt),
       isAllDay: Value(isAllDay),
+      countdownEnabled: Value(countdownEnabled),
       autoCompletedOnceAt: autoCompletedOnceAt == null && nullToAbsent
           ? const Value.absent()
           : Value(autoCompletedOnceAt),
@@ -1304,6 +1337,7 @@ class ScheduleItemDetailRow extends DataClass
       startAt: serializer.fromJson<DateTime>(json['startAt']),
       endAt: serializer.fromJson<DateTime>(json['endAt']),
       isAllDay: serializer.fromJson<bool>(json['isAllDay']),
+      countdownEnabled: serializer.fromJson<bool>(json['countdownEnabled']),
       autoCompletedOnceAt: serializer.fromJson<DateTime?>(
         json['autoCompletedOnceAt'],
       ),
@@ -1317,6 +1351,7 @@ class ScheduleItemDetailRow extends DataClass
       'startAt': serializer.toJson<DateTime>(startAt),
       'endAt': serializer.toJson<DateTime>(endAt),
       'isAllDay': serializer.toJson<bool>(isAllDay),
+      'countdownEnabled': serializer.toJson<bool>(countdownEnabled),
       'autoCompletedOnceAt': serializer.toJson<DateTime?>(autoCompletedOnceAt),
     };
   }
@@ -1326,12 +1361,14 @@ class ScheduleItemDetailRow extends DataClass
     DateTime? startAt,
     DateTime? endAt,
     bool? isAllDay,
+    bool? countdownEnabled,
     Value<DateTime?> autoCompletedOnceAt = const Value.absent(),
   }) => ScheduleItemDetailRow(
     itemId: itemId ?? this.itemId,
     startAt: startAt ?? this.startAt,
     endAt: endAt ?? this.endAt,
     isAllDay: isAllDay ?? this.isAllDay,
+    countdownEnabled: countdownEnabled ?? this.countdownEnabled,
     autoCompletedOnceAt: autoCompletedOnceAt.present
         ? autoCompletedOnceAt.value
         : this.autoCompletedOnceAt,
@@ -1344,6 +1381,9 @@ class ScheduleItemDetailRow extends DataClass
       startAt: data.startAt.present ? data.startAt.value : this.startAt,
       endAt: data.endAt.present ? data.endAt.value : this.endAt,
       isAllDay: data.isAllDay.present ? data.isAllDay.value : this.isAllDay,
+      countdownEnabled: data.countdownEnabled.present
+          ? data.countdownEnabled.value
+          : this.countdownEnabled,
       autoCompletedOnceAt: data.autoCompletedOnceAt.present
           ? data.autoCompletedOnceAt.value
           : this.autoCompletedOnceAt,
@@ -1357,14 +1397,21 @@ class ScheduleItemDetailRow extends DataClass
           ..write('startAt: $startAt, ')
           ..write('endAt: $endAt, ')
           ..write('isAllDay: $isAllDay, ')
+          ..write('countdownEnabled: $countdownEnabled, ')
           ..write('autoCompletedOnceAt: $autoCompletedOnceAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(itemId, startAt, endAt, isAllDay, autoCompletedOnceAt);
+  int get hashCode => Object.hash(
+    itemId,
+    startAt,
+    endAt,
+    isAllDay,
+    countdownEnabled,
+    autoCompletedOnceAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1373,6 +1420,7 @@ class ScheduleItemDetailRow extends DataClass
           other.startAt == this.startAt &&
           other.endAt == this.endAt &&
           other.isAllDay == this.isAllDay &&
+          other.countdownEnabled == this.countdownEnabled &&
           other.autoCompletedOnceAt == this.autoCompletedOnceAt);
 }
 
@@ -1382,6 +1430,7 @@ class ScheduleItemDetailRowsCompanion
   final Value<DateTime> startAt;
   final Value<DateTime> endAt;
   final Value<bool> isAllDay;
+  final Value<bool> countdownEnabled;
   final Value<DateTime?> autoCompletedOnceAt;
   final Value<int> rowid;
   const ScheduleItemDetailRowsCompanion({
@@ -1389,6 +1438,7 @@ class ScheduleItemDetailRowsCompanion
     this.startAt = const Value.absent(),
     this.endAt = const Value.absent(),
     this.isAllDay = const Value.absent(),
+    this.countdownEnabled = const Value.absent(),
     this.autoCompletedOnceAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1397,6 +1447,7 @@ class ScheduleItemDetailRowsCompanion
     required DateTime startAt,
     required DateTime endAt,
     this.isAllDay = const Value.absent(),
+    this.countdownEnabled = const Value.absent(),
     this.autoCompletedOnceAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : itemId = Value(itemId),
@@ -1407,6 +1458,7 @@ class ScheduleItemDetailRowsCompanion
     Expression<DateTime>? startAt,
     Expression<DateTime>? endAt,
     Expression<bool>? isAllDay,
+    Expression<bool>? countdownEnabled,
     Expression<DateTime>? autoCompletedOnceAt,
     Expression<int>? rowid,
   }) {
@@ -1415,6 +1467,7 @@ class ScheduleItemDetailRowsCompanion
       if (startAt != null) 'start_at': startAt,
       if (endAt != null) 'end_at': endAt,
       if (isAllDay != null) 'is_all_day': isAllDay,
+      if (countdownEnabled != null) 'countdown_enabled': countdownEnabled,
       if (autoCompletedOnceAt != null)
         'auto_completed_once_at': autoCompletedOnceAt,
       if (rowid != null) 'rowid': rowid,
@@ -1426,6 +1479,7 @@ class ScheduleItemDetailRowsCompanion
     Value<DateTime>? startAt,
     Value<DateTime>? endAt,
     Value<bool>? isAllDay,
+    Value<bool>? countdownEnabled,
     Value<DateTime?>? autoCompletedOnceAt,
     Value<int>? rowid,
   }) {
@@ -1434,6 +1488,7 @@ class ScheduleItemDetailRowsCompanion
       startAt: startAt ?? this.startAt,
       endAt: endAt ?? this.endAt,
       isAllDay: isAllDay ?? this.isAllDay,
+      countdownEnabled: countdownEnabled ?? this.countdownEnabled,
       autoCompletedOnceAt: autoCompletedOnceAt ?? this.autoCompletedOnceAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1454,6 +1509,9 @@ class ScheduleItemDetailRowsCompanion
     if (isAllDay.present) {
       map['is_all_day'] = Variable<bool>(isAllDay.value);
     }
+    if (countdownEnabled.present) {
+      map['countdown_enabled'] = Variable<bool>(countdownEnabled.value);
+    }
     if (autoCompletedOnceAt.present) {
       map['auto_completed_once_at'] = Variable<DateTime>(
         autoCompletedOnceAt.value,
@@ -1472,6 +1530,7 @@ class ScheduleItemDetailRowsCompanion
           ..write('startAt: $startAt, ')
           ..write('endAt: $endAt, ')
           ..write('isAllDay: $isAllDay, ')
+          ..write('countdownEnabled: $countdownEnabled, ')
           ..write('autoCompletedOnceAt: $autoCompletedOnceAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4691,6 +4750,7 @@ typedef $$ScheduleItemDetailRowsTableCreateCompanionBuilder =
       required DateTime startAt,
       required DateTime endAt,
       Value<bool> isAllDay,
+      Value<bool> countdownEnabled,
       Value<DateTime?> autoCompletedOnceAt,
       Value<int> rowid,
     });
@@ -4700,6 +4760,7 @@ typedef $$ScheduleItemDetailRowsTableUpdateCompanionBuilder =
       Value<DateTime> startAt,
       Value<DateTime> endAt,
       Value<bool> isAllDay,
+      Value<bool> countdownEnabled,
       Value<DateTime?> autoCompletedOnceAt,
       Value<int> rowid,
     });
@@ -4764,6 +4825,11 @@ class $$ScheduleItemDetailRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get countdownEnabled => $composableBuilder(
+    column: $table.countdownEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get autoCompletedOnceAt => $composableBuilder(
     column: $table.autoCompletedOnceAt,
     builder: (column) => ColumnFilters(column),
@@ -4817,6 +4883,11 @@ class $$ScheduleItemDetailRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get countdownEnabled => $composableBuilder(
+    column: $table.countdownEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get autoCompletedOnceAt => $composableBuilder(
     column: $table.autoCompletedOnceAt,
     builder: (column) => ColumnOrderings(column),
@@ -4863,6 +4934,11 @@ class $$ScheduleItemDetailRowsTableAnnotationComposer
 
   GeneratedColumn<bool> get isAllDay =>
       $composableBuilder(column: $table.isAllDay, builder: (column) => column);
+
+  GeneratedColumn<bool> get countdownEnabled => $composableBuilder(
+    column: $table.countdownEnabled,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get autoCompletedOnceAt => $composableBuilder(
     column: $table.autoCompletedOnceAt,
@@ -4936,6 +5012,7 @@ class $$ScheduleItemDetailRowsTableTableManager
                 Value<DateTime> startAt = const Value.absent(),
                 Value<DateTime> endAt = const Value.absent(),
                 Value<bool> isAllDay = const Value.absent(),
+                Value<bool> countdownEnabled = const Value.absent(),
                 Value<DateTime?> autoCompletedOnceAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScheduleItemDetailRowsCompanion(
@@ -4943,6 +5020,7 @@ class $$ScheduleItemDetailRowsTableTableManager
                 startAt: startAt,
                 endAt: endAt,
                 isAllDay: isAllDay,
+                countdownEnabled: countdownEnabled,
                 autoCompletedOnceAt: autoCompletedOnceAt,
                 rowid: rowid,
               ),
@@ -4952,6 +5030,7 @@ class $$ScheduleItemDetailRowsTableTableManager
                 required DateTime startAt,
                 required DateTime endAt,
                 Value<bool> isAllDay = const Value.absent(),
+                Value<bool> countdownEnabled = const Value.absent(),
                 Value<DateTime?> autoCompletedOnceAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScheduleItemDetailRowsCompanion.insert(
@@ -4959,6 +5038,7 @@ class $$ScheduleItemDetailRowsTableTableManager
                 startAt: startAt,
                 endAt: endAt,
                 isAllDay: isAllDay,
+                countdownEnabled: countdownEnabled,
                 autoCompletedOnceAt: autoCompletedOnceAt,
                 rowid: rowid,
               ),

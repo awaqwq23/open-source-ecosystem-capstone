@@ -449,6 +449,7 @@ class ListPage extends ConsumerWidget {
               startAt: item.timelineStartAt,
               endAt: item.timelineEndAt,
               deadlineAt: item.deadlineAt,
+              countdownEnabled: item.scheduleCountdownEnabled,
               courseDetails: item.courseDetails,
             ),
           );
@@ -544,6 +545,7 @@ class _PendingTaskRowList extends ConsumerWidget {
           location: item.location,
           color: item.color,
           isAllDay: item.timelineIsAllDay,
+          countdownEnabled: item.scheduleCountdownEnabled,
           reminder: item.reminder,
           repeatRule: item.repeatRule,
           startAt: item.timelineStartAt,
@@ -742,10 +744,10 @@ class _ListItemRowState extends State<_ListItemRow>
                                   ),
                                 ),
                               ),
-                              if (item.type == ItemType.task) ...[
+                              if (_countdownAt(item) != null) ...[
                                 const SizedBox(width: 8),
                                 _TaskCountdownChip(
-                                  deadlineAt: item.deadlineAt!,
+                                  deadlineAt: _countdownAt(item)!,
                                   now: DateTime.now(),
                                 ),
                               ],
@@ -770,7 +772,7 @@ class _ListItemRowState extends State<_ListItemRow>
                           ),
                         ),
                       ],
-                      SizedBox(width: item.type == ItemType.task ? 12 : 4),
+                      SizedBox(width: _countdownAt(item) != null ? 12 : 4),
                       _ActionIconButton(
                         onPressed: widget.onEdit,
                         icon: AppIcons.edit,
@@ -786,6 +788,16 @@ class _ListItemRowState extends State<_ListItemRow>
       ),
     );
   }
+}
+
+DateTime? _countdownAt(AgendaItem item) {
+  if (item.type == ItemType.task) {
+    return item.deadlineAt;
+  }
+  if (item.type == ItemType.schedule && item.scheduleCountdownEnabled) {
+    return item.timelineEndAt;
+  }
+  return null;
 }
 
 IconData _typeIcon(ItemType type) {

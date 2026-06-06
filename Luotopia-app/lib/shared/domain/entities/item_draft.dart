@@ -78,6 +78,11 @@ class ItemDraft {
     };
   }
 
+  bool get scheduleCountdownEnabled {
+    final details = this.details;
+    return details is ScheduleItemDetails && details.countdownEnabled;
+  }
+
   ItemDraft copyWith({
     ItemType? type,
     String? title,
@@ -90,18 +95,22 @@ class ItemDraft {
     DateTime? scheduleStartAt,
     DateTime? scheduleEndAt,
     bool? scheduleIsAllDay,
+    bool? scheduleCountdownEnabled,
     DateTime? taskDeadlineAt,
     ItemCourseDetails? courseDetails,
     AgendaItemSourceKind? sourceKind,
     String? sourceRef,
   }) {
-    final nextDetails = details ?? _copyDetails(
-      scheduleStartAt: scheduleStartAt,
-      scheduleEndAt: scheduleEndAt,
-      scheduleIsAllDay: scheduleIsAllDay,
-      taskDeadlineAt: taskDeadlineAt,
-      courseDetails: courseDetails,
-    );
+    final nextDetails =
+        details ??
+        _copyDetails(
+          scheduleStartAt: scheduleStartAt,
+          scheduleEndAt: scheduleEndAt,
+          scheduleIsAllDay: scheduleIsAllDay,
+          scheduleCountdownEnabled: scheduleCountdownEnabled,
+          taskDeadlineAt: taskDeadlineAt,
+          courseDetails: courseDetails,
+        );
     return ItemDraft(
       type: type ?? this.type,
       title: title ?? this.title,
@@ -129,23 +138,25 @@ class ItemDraft {
     DateTime? scheduleStartAt,
     DateTime? scheduleEndAt,
     bool? scheduleIsAllDay,
+    bool? scheduleCountdownEnabled,
     DateTime? taskDeadlineAt,
     ItemCourseDetails? courseDetails,
   }) {
     return switch (details) {
       ScheduleItemDetails details => details.copyWith(
-          startAt: scheduleStartAt,
-          endAt: scheduleEndAt,
-          isAllDay: scheduleIsAllDay,
-        ),
+        startAt: scheduleStartAt,
+        endAt: scheduleEndAt,
+        isAllDay: scheduleIsAllDay,
+        countdownEnabled: scheduleCountdownEnabled,
+      ),
       TaskItemDetails details => details.copyWith(deadlineAt: taskDeadlineAt),
       MemoItemDetails details => details,
       CourseAgendaItemDetails details => details.copyWith(
-          startAt: scheduleStartAt,
-          endAt: scheduleEndAt,
-          isAllDay: scheduleIsAllDay,
-          course: courseDetails,
-        ),
+        startAt: scheduleStartAt,
+        endAt: scheduleEndAt,
+        isAllDay: scheduleIsAllDay,
+        course: courseDetails,
+      ),
     };
   }
 }

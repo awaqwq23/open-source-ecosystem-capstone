@@ -25,9 +25,13 @@ class SortListItemsUseCase {
   ) {
     switch (mode) {
       case ListSortMode.dueDate:
-        return _compareNullableDate(_dueDateOf(a), _dueDateOf(b), fallback: () {
-          return _compareByTimeThenCreated(a, b);
-        });
+        return _compareNullableDate(
+          _dueDateOf(a),
+          _dueDateOf(b),
+          fallback: () {
+            return _compareByTimeThenCreated(a, b);
+          },
+        );
       case ListSortMode.todayFocus:
         final aScore = _todayFocusScore(a, now);
         final bScore = _todayFocusScore(b, now);
@@ -37,7 +41,9 @@ class SortListItemsUseCase {
         }
         return _compareByTimeThenCreated(a, b);
       case ListSortMode.alphabetical:
-        final titleOrder = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        final titleOrder = a.title.toLowerCase().compareTo(
+          b.title.toLowerCase(),
+        );
         if (titleOrder != 0) {
           return titleOrder;
         }
@@ -73,7 +79,10 @@ class SortListItemsUseCase {
     return switch (item.type) {
       ItemType.memo => item.createdAt,
       ItemType.task => item.deadlineAt!,
-      ItemType.schedule => item.timelineStartAt!,
+      ItemType.schedule =>
+        item.scheduleCountdownEnabled
+            ? item.timelineEndAt!
+            : item.timelineStartAt!,
       ItemType.course => item.timelineStartAt!,
     };
   }
@@ -82,7 +91,10 @@ class SortListItemsUseCase {
     return switch (item.type) {
       ItemType.memo => null,
       ItemType.task => item.deadlineAt,
-      ItemType.schedule => item.timelineStartAt,
+      ItemType.schedule =>
+        item.scheduleCountdownEnabled
+            ? item.timelineEndAt
+            : item.timelineStartAt,
       ItemType.course => item.timelineStartAt,
     };
   }
@@ -113,4 +125,3 @@ class SortListItemsUseCase {
     return result != 0 ? result : fallback();
   }
 }
-

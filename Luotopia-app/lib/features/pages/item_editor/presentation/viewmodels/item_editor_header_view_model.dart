@@ -13,10 +13,7 @@ import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
-enum CourseColorUpdateScope {
-  singleItem,
-  sameTitleCourses,
-}
+enum CourseColorUpdateScope { singleItem, sameTitleCourses }
 
 class ItemEditorPageState {
   const ItemEditorPageState({
@@ -54,7 +51,8 @@ class ItemEditorPageState {
   }
 }
 
-class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> {
+class ItemEditorPageController
+    extends AutoDisposeNotifier<ItemEditorPageState> {
   static const _buildDraft = BuildItemEditorDraftUseCase();
   ItemEditorArgs? _args;
   CourseColorUpdateScope _courseColorUpdateScope =
@@ -62,10 +60,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
 
   @override
   ItemEditorPageState build() {
-    return ItemEditorPageState(
-      itemId: null,
-      draft: _buildDraft(),
-    );
+    return ItemEditorPageState(itemId: null, draft: _buildDraft());
   }
 
   void initialize([ItemEditorArgs? args]) {
@@ -87,9 +82,11 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     _updateDraft(ItemEditorDefaults.applyType(state.draft, type));
   }
 
-  void updateTitle(String value) => _updateDraft(state.draft.copyWith(title: value));
+  void updateTitle(String value) =>
+      _updateDraft(state.draft.copyWith(title: value));
 
-  void updateDetails(String value) => _updateDraft(state.draft.copyWith(notes: value));
+  void updateDetails(String value) =>
+      _updateDraft(state.draft.copyWith(notes: value));
 
   void updateLocation(String value) =>
       _updateDraft(state.draft.copyWith(location: value));
@@ -119,14 +116,25 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   void toggleAllDay(bool value) {
-    if (state.draft.type == ItemType.task || state.draft.type == ItemType.memo) {
+    if (state.draft.type == ItemType.task ||
+        state.draft.type == ItemType.memo) {
       return;
     }
     final currentStart = _rangeStart();
     final currentEnd = _rangeEnd(currentStart);
     if (value) {
-      final start = DateTime(currentStart.year, currentStart.month, currentStart.day);
-      final end = DateTime(currentEnd.year, currentEnd.month, currentEnd.day, 23, 59);
+      final start = DateTime(
+        currentStart.year,
+        currentStart.month,
+        currentStart.day,
+      );
+      final end = DateTime(
+        currentEnd.year,
+        currentEnd.month,
+        currentEnd.day,
+        23,
+        59,
+      );
       _updateDraft(
         state.draft.copyWith(
           scheduleIsAllDay: true,
@@ -138,7 +146,12 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       );
       return;
     }
-    final start = DateTime(currentStart.year, currentStart.month, currentStart.day, 9);
+    final start = DateTime(
+      currentStart.year,
+      currentStart.month,
+      currentStart.day,
+      9,
+    );
     final end = DateUtils.isSameDay(currentStart, currentEnd)
         ? start.add(const Duration(hours: 1))
         : DateTime(currentEnd.year, currentEnd.month, currentEnd.day, 10);
@@ -146,9 +159,18 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       state.draft.copyWith(
         scheduleIsAllDay: false,
         scheduleStartAt: start,
-        scheduleEndAt: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+        scheduleEndAt: end.isBefore(start)
+            ? start.add(const Duration(hours: 1))
+            : end,
       ),
     );
+  }
+
+  void toggleScheduleCountdown(bool value) {
+    if (state.draft.type != ItemType.schedule) {
+      return;
+    }
+    _updateDraft(state.draft.copyWith(scheduleCountdownEnabled: value));
   }
 
   void selectReminder(ReminderOption option) {
@@ -296,10 +318,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
         repeatRule: RepeatRule.none,
       );
     }
-    await saveDraft(
-      itemId: state.itemId,
-      draft: draft,
-    );
+    await saveDraft(itemId: state.itemId, draft: draft);
     if (draft.type == ItemType.course &&
         state.itemId != null &&
         _courseColorUpdateScope == CourseColorUpdateScope.sameTitleCourses) {
@@ -309,10 +328,7 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
       );
     }
     _courseColorUpdateScope = CourseColorUpdateScope.singleItem;
-    state = state.copyWith(
-      isSubmitting: false,
-      submitSucceeded: true,
-    );
+    state = state.copyWith(isSubmitting: false, submitSucceeded: true);
     return true;
   }
 
@@ -334,7 +350,9 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
     if (draft.type == ItemType.task && draft.details is! TaskItemDetails) {
       return draft.copyWith(
         details: TaskItemDetails(
-          deadlineAt: draft.timelineEndAt ?? DateTime.now().add(const Duration(hours: 1)),
+          deadlineAt:
+              draft.timelineEndAt ??
+              DateTime.now().add(const Duration(hours: 1)),
         ),
       );
     }
@@ -357,11 +375,12 @@ class ItemEditorPageController extends AutoDisposeNotifier<ItemEditorPageState> 
   }
 
   DateTime _rangeEnd(DateTime fallbackStart) {
-    return state.draft.timelineEndAt ?? fallbackStart.add(const Duration(hours: 1));
+    return state.draft.timelineEndAt ??
+        fallbackStart.add(const Duration(hours: 1));
   }
 }
 
 final itemEditorPageControllerProvider =
     NotifierProvider.autoDispose<ItemEditorPageController, ItemEditorPageState>(
-  ItemEditorPageController.new,
-);
+      ItemEditorPageController.new,
+    );

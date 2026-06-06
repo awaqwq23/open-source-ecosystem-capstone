@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS sync_schedule_item_details (
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ NOT NULL,
   is_all_day BOOLEAN NOT NULL DEFAULT FALSE,
+  countdown_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   auto_completed_once_at TIMESTAMPTZ,
   PRIMARY KEY (user_id, item_id),
   FOREIGN KEY (user_id, item_id) REFERENCES sync_agenda_items(user_id, id) ON DELETE CASCADE

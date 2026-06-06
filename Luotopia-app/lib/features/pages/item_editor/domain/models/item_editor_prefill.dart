@@ -13,6 +13,7 @@ class ItemEditorPrefill {
     this.location,
     this.color,
     this.isAllDay,
+    this.countdownEnabled,
     this.reminder,
     this.repeatRule,
     this.startAt,
@@ -29,6 +30,7 @@ class ItemEditorPrefill {
   final String? location;
   final ItemColorOption? color;
   final bool? isAllDay;
+  final bool? countdownEnabled;
   final ReminderOption? reminder;
   final RepeatRule? repeatRule;
   final DateTime? startAt;

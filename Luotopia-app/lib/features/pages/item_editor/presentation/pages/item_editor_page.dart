@@ -227,7 +227,10 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                           _PlainActionRow(
                             rowKey: const ValueKey('item-editor-row-date'),
                             label: l10n.editorFieldDate,
-                            value: _formatDate(context, state.draft.timelineStartAt!),
+                            value: _formatDate(
+                              context,
+                              state.draft.timelineStartAt!,
+                            ),
                             onTap: () => _pickStartDate(context, ref, state),
                           ),
                           if (!isCourse)
@@ -271,19 +274,30 @@ class _ItemEditorPageState extends ConsumerState<ItemEditorPage> {
                                     rowKey: const ValueKey(
                                       'item-editor-row-end-time',
                                     ),
-                                  label: l10n.editorFieldEndTime,
-                                  value: _formatTime(
-                                    context,
-                                    state.draft.timelineEndAt!,
-                                  ),
+                                    label: l10n.editorFieldEndTime,
+                                    value: _formatTime(
+                                      context,
+                                      state.draft.timelineEndAt!,
+                                    ),
                                     errorText: state.errors.timeRange,
                                     onTap: () =>
                                         _pickEndTime(context, ref, state),
-                                  )
+                                  ),
                               ],
                             ),
                           ),
                           if (state.draft.type != ItemType.course) ...[
+                            if (state.draft.type == ItemType.schedule)
+                              _SwitchRow(
+                                rowKey: const ValueKey(
+                                  'item-editor-row-countdown',
+                                ),
+                                label: _isChinese(context)
+                                    ? '倒计时'
+                                    : 'Countdown',
+                                value: state.draft.scheduleCountdownEnabled,
+                                onChanged: notifier.toggleScheduleCountdown,
+                              ),
                             _PlainActionRow(
                               rowKey: const ValueKey('item-editor-row-repeat'),
                               label: l10n.editorSectionRepeat,

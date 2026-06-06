@@ -11,19 +11,24 @@ class FilterListItemsUseCase {
     DateTime now,
   ) {
     return switch (tab) {
-      ListHeaderTab.myDay => items.where((item) => _isInMyDay(item, now)).toList(),
+      ListHeaderTab.myDay =>
+        items.where((item) => _isInMyDay(item, now)).toList(),
       ListHeaderTab.allItems =>
         items.where((item) => item.type != ItemType.course).toList(),
-      ListHeaderTab.tasks => items.where((item) => item.type == ItemType.task).toList(),
+      ListHeaderTab.tasks =>
+        items.where((item) => item.type == ItemType.task).toList(),
       ListHeaderTab.schedules =>
         items.where((item) => item.type == ItemType.schedule).toList(),
-      ListHeaderTab.memos => items.where((item) => item.type == ItemType.memo).toList(),
+      ListHeaderTab.memos =>
+        items.where((item) => item.type == ItemType.memo).toList(),
     };
   }
 
   bool _isInMyDay(AgendaItem item, DateTime now) {
     if (!item.isEffectivelyCompleted(now) &&
-        (item.type == ItemType.task || item.type == ItemType.memo)) {
+        (item.type == ItemType.task ||
+            item.type == ItemType.memo ||
+            item.scheduleCountdownEnabled)) {
       return true;
     }
     final today = DateTime(now.year, now.month, now.day);
@@ -37,4 +42,3 @@ class FilterListItemsUseCase {
     return !today.isBefore(startDay) && !today.isAfter(endDay);
   }
 }
-

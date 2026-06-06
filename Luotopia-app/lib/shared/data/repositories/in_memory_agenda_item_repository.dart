@@ -22,18 +22,20 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   List<AgendaItem> build() {
     _db = ref.read(appDatabaseProvider);
     _mutations = ref.read(userDataMutationServiceProvider);
-    final subscription = (_db.select(_db.agendaItemRows)
-          ..where((row) => row.deletedAt.isNull())
-          ..orderBy([
-            (row) => OrderingTerm(expression: row.sortOrder),
-            (row) => OrderingTerm(expression: row.createdAt),
-          ]))
-        .watch()
-        .asyncMap((rows) async {
-      return Future.wait(rows.map(_fromRow));
-    }).listen((items) {
-      state = items;
-    });
+    final subscription =
+        (_db.select(_db.agendaItemRows)
+              ..where((row) => row.deletedAt.isNull())
+              ..orderBy([
+                (row) => OrderingTerm(expression: row.sortOrder),
+                (row) => OrderingTerm(expression: row.createdAt),
+              ]))
+            .watch()
+            .asyncMap((rows) async {
+              return Future.wait(rows.map(_fromRow));
+            })
+            .listen((items) {
+              state = items;
+            });
     ref.onDispose(subscription.cancel);
     return const [];
   }
@@ -98,10 +100,11 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   bool _matchesRange(AgendaItem item, DateTimeRangeValue range) {
     return switch (item.type) {
       ItemType.memo => true,
-      _ => item.timelineEndAt != null &&
-          item.timelineStartAt != null &&
-          item.timelineEndAt!.isAfter(range.start) &&
-          item.timelineStartAt!.isBefore(range.end),
+      _ =>
+        item.timelineEndAt != null &&
+            item.timelineStartAt != null &&
+            item.timelineEndAt!.isAfter(range.start) &&
+            item.timelineStartAt!.isBefore(range.end),
     };
   }
 
@@ -112,8 +115,10 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       title: row.title,
       notes: row.notes,
       location: row.location,
-      color: _enumByName(ItemColorOption.values, row.color) ?? ItemColorOption.sky,
-      reminder: _enumByName(ReminderOption.values, row.reminder) ??
+      color:
+          _enumByName(ItemColorOption.values, row.color) ?? ItemColorOption.sky,
+      reminder:
+          _enumByName(ReminderOption.values, row.reminder) ??
           ReminderOption.none,
       repeatRule:
           _enumByName(RepeatRule.values, row.repeatRule) ?? RepeatRule.none,
@@ -123,7 +128,8 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
       updatedAt: row.updatedAt,
       completedAt: row.completedAt,
       sortOrder: row.sortOrder,
-      sourceKind: _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
+      sourceKind:
+          _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
           AgendaItemSourceKind.manual,
       sourceRef: row.sourceRef,
     );
@@ -140,35 +146,37 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   }
 
   Future<ScheduleItemDetails> _scheduleDetails(String itemId) async {
-    final row = await (_db.select(_db.scheduleItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.scheduleItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return ScheduleItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
       isAllDay: row.isAllDay,
+      countdownEnabled: row.countdownEnabled,
       autoCompletedOnceAt: row.autoCompletedOnceAt,
     );
   }
 
   Future<TaskItemDetails> _taskDetails(String itemId) async {
-    final row = await (_db.select(_db.taskItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.taskItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return TaskItemDetails(deadlineAt: row.deadlineAt);
   }
 
   Future<CourseAgendaItemDetails> _courseDetails(String itemId) async {
-    final row = await (_db.select(_db.courseItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.courseItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return CourseAgendaItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
       isAllDay: row.isAllDay,
       course: ItemCourseDetails(
         timetableId: row.timetableId,
-        sourceKind: _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
+        sourceKind:
+            _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
             CourseItemSourceKind.manual,
         sourceCourseId: row.sourceCourseId,
         courseNature: row.courseNature,
@@ -190,10 +198,12 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
 
 final agendaItemRepositoryProvider =
     NotifierProvider<InMemoryAgendaItemRepository, List<AgendaItem>>(
-  InMemoryAgendaItemRepository.new,
-);
+      InMemoryAgendaItemRepository.new,
+    );
 
-final agendaItemRepositoryNotifierProvider = Provider<AgendaItemRepository>((ref) {
+final agendaItemRepositoryNotifierProvider = Provider<AgendaItemRepository>((
+  ref,
+) {
   return ref.read(agendaItemRepositoryProvider.notifier);
 });
 

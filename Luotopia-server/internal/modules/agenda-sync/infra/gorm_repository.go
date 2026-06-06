@@ -389,6 +389,7 @@ func replaceAgendaItemDetails(ctx context.Context, tx *gorm.DB, userID string, p
 			StartAt             time.Time  `json:"start_at"`
 			EndAt               time.Time  `json:"end_at"`
 			IsAllDay            bool       `json:"is_all_day"`
+			CountdownEnabled    bool       `json:"countdown_enabled"`
 			AutoCompletedOnceAt *time.Time `json:"auto_completed_once_at"`
 		}
 		if err := json.Unmarshal(raw, &details); err != nil {
@@ -400,6 +401,7 @@ func replaceAgendaItemDetails(ctx context.Context, tx *gorm.DB, userID string, p
 			StartAt:             details.StartAt,
 			EndAt:               details.EndAt,
 			IsAllDay:            details.IsAllDay,
+			CountdownEnabled:    details.CountdownEnabled,
 			AutoCompletedOnceAt: details.AutoCompletedOnceAt,
 		}).Error
 	case "task":
@@ -489,6 +491,7 @@ type scheduleItemDetailModel struct {
 	StartAt             time.Time
 	EndAt               time.Time
 	IsAllDay            bool
+	CountdownEnabled    bool
 	AutoCompletedOnceAt *time.Time
 }
 

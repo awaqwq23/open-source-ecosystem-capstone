@@ -180,6 +180,7 @@ class _AiPageState extends ConsumerState<AiPage> {
       location: itemDraft.location,
       color: itemDraft.color,
       isAllDay: itemDraft.timelineIsAllDay,
+      countdownEnabled: itemDraft.scheduleCountdownEnabled,
       reminder: itemDraft.reminder,
       repeatRule: itemDraft.repeatRule,
       startAt: itemDraft.timelineStartAt,

@@ -9,18 +9,21 @@ class ScheduleItemDetails extends AgendaItemDetails {
     required this.startAt,
     required this.endAt,
     required this.isAllDay,
+    this.countdownEnabled = false,
     this.autoCompletedOnceAt,
   });
 
   final DateTime startAt;
   final DateTime endAt;
   final bool isAllDay;
+  final bool countdownEnabled;
   final DateTime? autoCompletedOnceAt;
 
   ScheduleItemDetails copyWith({
     DateTime? startAt,
     DateTime? endAt,
     bool? isAllDay,
+    bool? countdownEnabled,
     DateTime? autoCompletedOnceAt,
     bool clearAutoCompletedOnceAt = false,
   }) {
@@ -28,6 +31,7 @@ class ScheduleItemDetails extends AgendaItemDetails {
       startAt: startAt ?? this.startAt,
       endAt: endAt ?? this.endAt,
       isAllDay: isAllDay ?? this.isAllDay,
+      countdownEnabled: countdownEnabled ?? this.countdownEnabled,
       autoCompletedOnceAt: clearAutoCompletedOnceAt
           ? null
           : (autoCompletedOnceAt ?? this.autoCompletedOnceAt),
@@ -36,18 +40,12 @@ class ScheduleItemDetails extends AgendaItemDetails {
 }
 
 class TaskItemDetails extends AgendaItemDetails {
-  const TaskItemDetails({
-    required this.deadlineAt,
-  });
+  const TaskItemDetails({required this.deadlineAt});
 
   final DateTime deadlineAt;
 
-  TaskItemDetails copyWith({
-    DateTime? deadlineAt,
-  }) {
-    return TaskItemDetails(
-      deadlineAt: deadlineAt ?? this.deadlineAt,
-    );
+  TaskItemDetails copyWith({DateTime? deadlineAt}) {
+    return TaskItemDetails(deadlineAt: deadlineAt ?? this.deadlineAt);
   }
 }
 

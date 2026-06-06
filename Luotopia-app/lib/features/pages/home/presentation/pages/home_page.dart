@@ -200,6 +200,8 @@ class HomePage extends ConsumerWidget {
                             location: item.item.location,
                             color: item.item.color,
                             isAllDay: item.item.timelineIsAllDay,
+                            countdownEnabled:
+                                item.item.scheduleCountdownEnabled,
                             reminder: item.item.reminder,
                             repeatRule: item.item.repeatRule,
                             startAt: item.item.timelineStartAt,

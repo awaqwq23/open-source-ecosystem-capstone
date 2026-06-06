@@ -89,9 +89,17 @@ class AgendaItem {
     };
   }
 
+  bool get scheduleCountdownEnabled {
+    final details = this.details;
+    return details is ScheduleItemDetails && details.countdownEnabled;
+  }
+
   bool get supportsManualCompletion {
     return switch (type) {
-      ItemType.task || ItemType.memo || ItemType.schedule || ItemType.course => true,
+      ItemType.task ||
+      ItemType.memo ||
+      ItemType.schedule ||
+      ItemType.course => true,
     };
   }
 

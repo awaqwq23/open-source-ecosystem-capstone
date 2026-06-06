@@ -33,26 +33,26 @@ class SyncPayloadMapper {
   ) async {
     switch (row.type) {
       case 'schedule':
-        final detail = await (db.select(db.scheduleItemDetailRows)
-              ..where((table) => table.itemId.equals(row.id)))
-            .getSingle();
+        final detail = await (db.select(
+          db.scheduleItemDetailRows,
+        )..where((table) => table.itemId.equals(row.id))).getSingle();
         return {
           'start_at': detail.startAt.toIso8601String(),
           'end_at': detail.endAt.toIso8601String(),
           'is_all_day': detail.isAllDay,
-          'auto_completed_once_at': detail.autoCompletedOnceAt?.toIso8601String(),
+          'countdown_enabled': detail.countdownEnabled,
+          'auto_completed_once_at': detail.autoCompletedOnceAt
+              ?.toIso8601String(),
         };
       case 'task':
-        final detail = await (db.select(db.taskItemDetailRows)
-              ..where((table) => table.itemId.equals(row.id)))
-            .getSingle();
-        return {
-          'deadline_at': detail.deadlineAt.toIso8601String(),
-        };
+        final detail = await (db.select(
+          db.taskItemDetailRows,
+        )..where((table) => table.itemId.equals(row.id))).getSingle();
+        return {'deadline_at': detail.deadlineAt.toIso8601String()};
       case 'course':
-        final detail = await (db.select(db.courseItemDetailRows)
-              ..where((table) => table.itemId.equals(row.id)))
-            .getSingle();
+        final detail = await (db.select(
+          db.courseItemDetailRows,
+        )..where((table) => table.itemId.equals(row.id))).getSingle();
         return {
           'start_at': detail.startAt.toIso8601String(),
           'end_at': detail.endAt.toIso8601String(),
@@ -82,7 +82,9 @@ class SyncPayloadMapper {
     };
   }
 
-  static Map<String, dynamic> selectedTimetablePayload(SelectedCourseTimetableRow row) {
+  static Map<String, dynamic> selectedTimetablePayload(
+    SelectedCourseTimetableRow row,
+  ) {
     return {
       'timetable_id': row.timetableId,
       'sort_order': row.sortOrder,

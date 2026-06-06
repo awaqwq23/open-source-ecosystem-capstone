@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS sync_schedule_item_details (
   start_at TIMESTAMPTZ NOT NULL,
   end_at TIMESTAMPTZ NOT NULL,
   is_all_day BOOLEAN NOT NULL DEFAULT FALSE,
+  countdown_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   auto_completed_once_at TIMESTAMPTZ,
   PRIMARY KEY (user_id, item_id),
   FOREIGN KEY (user_id, item_id) REFERENCES sync_agenda_items(user_id, id) ON DELETE CASCADE
@@ -34,9 +35,10 @@ CREATE TABLE IF NOT EXISTS sync_course_item_details (
 );
 
 INSERT INTO sync_schedule_item_details (
-  user_id, item_id, start_at, end_at, is_all_day, auto_completed_once_at
+  user_id, item_id, start_at, end_at, is_all_day, countdown_enabled,
+  auto_completed_once_at
 )
-SELECT user_id, id, start_at, end_at, is_all_day, NULL
+SELECT user_id, id, start_at, end_at, is_all_day, FALSE, NULL
 FROM sync_agenda_items
 WHERE type = 'schedule'
 ON CONFLICT (user_id, item_id) DO NOTHING;
@@ -78,6 +80,7 @@ SET payload = payload
         'start_at', payload->>'start_at',
         'end_at', payload->>'end_at',
         'is_all_day', COALESCE((payload->>'is_all_day')::boolean, false),
+        'countdown_enabled', false,
         'auto_completed_once_at', NULL
       )
       WHEN 'task' THEN jsonb_build_object(

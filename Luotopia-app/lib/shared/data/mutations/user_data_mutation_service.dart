@@ -12,7 +12,9 @@ import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
-final userDataMutationServiceProvider = Provider<UserDataMutationService>((ref) {
+final userDataMutationServiceProvider = Provider<UserDataMutationService>((
+  ref,
+) {
   return UserDataMutationService(
     db: ref.read(appDatabaseProvider),
     idGenerator: ref.read(appIdGeneratorProvider),
@@ -23,17 +25,17 @@ class UserDataMutationService {
   const UserDataMutationService({
     required AppDatabase db,
     required AppIdGenerator idGenerator,
-  })  : _db = db,
-        _idGenerator = idGenerator;
+  }) : _db = db,
+       _idGenerator = idGenerator;
 
   final AppDatabase _db;
   final AppIdGenerator _idGenerator;
 
   Future<AgendaItem> createItem(ItemDraft draft) async {
     final now = DateTime.now();
-    final rows = await (_db.select(_db.agendaItemRows)
-          ..where((row) => row.deletedAt.isNull()))
-        .get();
+    final rows = await (_db.select(
+      _db.agendaItemRows,
+    )..where((row) => row.deletedAt.isNull())).get();
     final nextOrder = rows.isEmpty
         ? 0.0
         : rows.map((row) => row.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
@@ -52,9 +54,11 @@ class UserDataMutationService {
   }
 
   Future<AgendaItem?> updateItem(String id, ItemDraft draft) async {
-    final row = await (_db.select(_db.agendaItemRows)
-          ..where((table) => table.id.equals(id) & table.deletedAt.isNull()))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(
+              _db.agendaItemRows,
+            )..where((table) => table.id.equals(id) & table.deletedAt.isNull()))
+            .getSingleOrNull();
     if (row == null) {
       return null;
     }
@@ -73,7 +77,8 @@ class UserDataMutationService {
       sourceRef: draft.sourceRef.trim(),
     );
     await _db.transaction(() async {
-      await (_db.update(_db.agendaItemRows)..where((table) => table.id.equals(id)))
+      await (_db.update(_db.agendaItemRows)
+            ..where((table) => table.id.equals(id)))
           .write(_agendaItemCompanion(updated));
       await _replaceDetails(updated);
     });
@@ -85,9 +90,11 @@ class UserDataMutationService {
   }
 
   Future<AgendaItem?> toggleCompleted(String id) async {
-    final row = await (_db.select(_db.agendaItemRows)
-          ..where((table) => table.id.equals(id) & table.deletedAt.isNull()))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(
+              _db.agendaItemRows,
+            )..where((table) => table.id.equals(id) & table.deletedAt.isNull()))
+            .getSingleOrNull();
     if (row == null) {
       return null;
     }
@@ -99,37 +106,40 @@ class UserDataMutationService {
       clearCompletedAt: !completed,
       updatedAt: DateTime.now(),
     );
-    await (_db.update(_db.agendaItemRows)..where((table) => table.id.equals(id)))
+    await (_db.update(_db.agendaItemRows)
+          ..where((table) => table.id.equals(id)))
         .write(_agendaItemCompanion(updated));
     return updated;
   }
 
   Future<void> autoCompleteDueSchedules(DateTime now) async {
-    final due = await (_db.select(_db.scheduleItemDetailRows)
-          ..where(
-            (row) =>
-                row.endAt.isSmallerOrEqualValue(now) &
-                row.autoCompletedOnceAt.isNull(),
-          ))
-        .get();
+    final due =
+        await (_db.select(_db.scheduleItemDetailRows)..where(
+              (row) =>
+                  row.endAt.isSmallerOrEqualValue(now) &
+                  row.autoCompletedOnceAt.isNull(),
+            ))
+            .get();
     if (due.isEmpty) {
       return;
     }
     await _db.transaction(() async {
       for (final detail in due) {
-        final row = await (_db.select(_db.agendaItemRows)
-              ..where((table) =>
-                  table.id.equals(detail.itemId) &
-                  table.type.equals(ItemType.schedule.name) &
-                  table.isCompleted.equals(false) &
-                  table.deletedAt.isNull()))
-            .getSingleOrNull();
+        final row =
+            await (_db.select(_db.agendaItemRows)..where(
+                  (table) =>
+                      table.id.equals(detail.itemId) &
+                      table.type.equals(ItemType.schedule.name) &
+                      table.isCompleted.equals(false) &
+                      table.deletedAt.isNull(),
+                ))
+                .getSingleOrNull();
         if (row == null) {
           continue;
         }
-        await (_db.update(_db.agendaItemRows)
-              ..where((table) => table.id.equals(detail.itemId)))
-            .write(
+        await (_db.update(
+          _db.agendaItemRows,
+        )..where((table) => table.id.equals(detail.itemId))).write(
           AgendaItemRowsCompanion(
             isCompleted: const Value(true),
             completedAt: Value(now),
@@ -137,12 +147,10 @@ class UserDataMutationService {
             dirty: const Value(true),
           ),
         );
-        await (_db.update(_db.scheduleItemDetailRows)
-              ..where((table) => table.itemId.equals(detail.itemId)))
-            .write(
-          ScheduleItemDetailRowsCompanion(
-            autoCompletedOnceAt: Value(now),
-          ),
+        await (_db.update(
+          _db.scheduleItemDetailRows,
+        )..where((table) => table.itemId.equals(detail.itemId))).write(
+          ScheduleItemDetailRowsCompanion(autoCompletedOnceAt: Value(now)),
         );
       }
     });
@@ -152,9 +160,9 @@ class UserDataMutationService {
     await _db.transaction(() async {
       final now = DateTime.now();
       for (var index = 0; index < orderedIds.length; index++) {
-        await (_db.update(_db.agendaItemRows)
-              ..where((row) => row.id.equals(orderedIds[index])))
-            .write(
+        await (_db.update(
+          _db.agendaItemRows,
+        )..where((row) => row.id.equals(orderedIds[index]))).write(
           AgendaItemRowsCompanion(
             sortOrder: Value(index.toDouble()),
             updatedAt: Value(now),
@@ -170,11 +178,16 @@ class UserDataMutationService {
     required List<AgendaItem> items,
   }) async {
     await _db.transaction(() async {
-      final rows = await (_db.select(_db.agendaItemRows)
-            ..where((row) => row.id.like('$idPrefix%') & row.deletedAt.isNull()))
-          .get();
+      final rows =
+          await (_db.select(_db.agendaItemRows)..where(
+                (row) => row.id.like('$idPrefix%') & row.deletedAt.isNull(),
+              ))
+              .get();
       for (final row in rows) {
-        await _markDeletedInTransaction(entityType: 'agenda_item', entityId: row.id);
+        await _markDeletedInTransaction(
+          entityType: 'agenda_item',
+          entityId: row.id,
+        );
       }
       for (final item in items) {
         await _db
@@ -191,9 +204,9 @@ class UserDataMutationService {
     String termLabel = '',
   }) async {
     final now = DateTime.now();
-    final rows = await (_db.select(_db.courseTimetableRows)
-          ..where((row) => row.deletedAt.isNull()))
-        .get();
+    final rows = await (_db.select(
+      _db.courseTimetableRows,
+    )..where((row) => row.deletedAt.isNull())).get();
     final timetable = CourseTimetable(
       id: await _createUniqueCourseTimetableId(),
       name: name.trim().isEmpty ? '课程表 ${rows.length + 1}' : name.trim(),
@@ -203,7 +216,9 @@ class UserDataMutationService {
       updatedAt: now,
     );
     await _db.transaction(() async {
-      await _db.into(_db.courseTimetableRows).insert(_courseTimetableCompanion(timetable));
+      await _db
+          .into(_db.courseTimetableRows)
+          .insert(_courseTimetableCompanion(timetable));
       await _upsertSelectedTimetable(
         timetableId: timetable.id,
         sortOrder: await _nextSelectedSortOrder(),
@@ -218,8 +233,9 @@ class UserDataMutationService {
     if (normalized.isEmpty) {
       return;
     }
-    await (_db.update(_db.courseTimetableRows)..where((row) => row.id.equals(id)))
-        .write(
+    await (_db.update(
+      _db.courseTimetableRows,
+    )..where((row) => row.id.equals(id))).write(
       CourseTimetableRowsCompanion(
         name: Value(normalized),
         updatedAt: Value(DateTime.now()),
@@ -230,14 +246,14 @@ class UserDataMutationService {
 
   Future<void> setSelectedTimetables(Set<String> ids) async {
     await _db.transaction(() async {
-      final activeTimetables = await (_db.select(_db.courseTimetableRows)
-            ..where((row) => row.deletedAt.isNull()))
-          .get();
+      final activeTimetables = await (_db.select(
+        _db.courseTimetableRows,
+      )..where((row) => row.deletedAt.isNull())).get();
       final validIds = activeTimetables.map((row) => row.id).toSet();
       final nextIds = ids.where(validIds.contains).toList(growable: false);
-      final existing = await (_db.select(_db.selectedCourseTimetableRows)
-            ..where((row) => row.deletedAt.isNull()))
-          .get();
+      final existing = await (_db.select(
+        _db.selectedCourseTimetableRows,
+      )..where((row) => row.deletedAt.isNull())).get();
       final nextSet = nextIds.toSet();
       final now = DateTime.now();
       for (final row in existing) {
@@ -260,20 +276,31 @@ class UserDataMutationService {
 
   Future<void> deleteTimetable(String id) async {
     await _db.transaction(() async {
-      final courseDetails = await (_db.select(_db.courseItemDetailRows)
-            ..where((row) => row.timetableId.equals(id)))
-          .get();
+      final courseDetails = await (_db.select(
+        _db.courseItemDetailRows,
+      )..where((row) => row.timetableId.equals(id))).get();
       for (final detail in courseDetails) {
-        final item = await (_db.select(_db.agendaItemRows)
-              ..where((row) =>
-                  row.id.equals(detail.itemId) & row.deletedAt.isNull()))
-            .getSingleOrNull();
+        final item =
+            await (_db.select(_db.agendaItemRows)..where(
+                  (row) =>
+                      row.id.equals(detail.itemId) & row.deletedAt.isNull(),
+                ))
+                .getSingleOrNull();
         if (item != null) {
-          await _markDeletedInTransaction(entityType: 'agenda_item', entityId: item.id);
+          await _markDeletedInTransaction(
+            entityType: 'agenda_item',
+            entityId: item.id,
+          );
         }
       }
-      await _markDeletedInTransaction(entityType: 'selected_course_timetable', entityId: id);
-      await _markDeletedInTransaction(entityType: 'course_timetable', entityId: id);
+      await _markDeletedInTransaction(
+        entityType: 'selected_course_timetable',
+        entityId: id,
+      );
+      await _markDeletedInTransaction(
+        entityType: 'course_timetable',
+        entityId: id,
+      );
     });
   }
 
@@ -282,7 +309,10 @@ class UserDataMutationService {
     required String entityId,
   }) async {
     await _db.transaction(() async {
-      await _markDeletedInTransaction(entityType: entityType, entityId: entityId);
+      await _markDeletedInTransaction(
+        entityType: entityType,
+        entityId: entityId,
+      );
     });
   }
 
@@ -292,8 +322,9 @@ class UserDataMutationService {
   }) async {
     final now = DateTime.now();
     if (entityType == 'agenda_item') {
-      await (_db.update(_db.agendaItemRows)..where((row) => row.id.equals(entityId)))
-          .write(
+      await (_db.update(
+        _db.agendaItemRows,
+      )..where((row) => row.id.equals(entityId))).write(
         AgendaItemRowsCompanion(
           deletedAt: Value(now),
           updatedAt: Value(now),
@@ -301,8 +332,9 @@ class UserDataMutationService {
         ),
       );
     } else if (entityType == 'course_timetable') {
-      await (_db.update(_db.courseTimetableRows)..where((row) => row.id.equals(entityId)))
-          .write(
+      await (_db.update(
+        _db.courseTimetableRows,
+      )..where((row) => row.id.equals(entityId))).write(
         CourseTimetableRowsCompanion(
           deletedAt: Value(now),
           updatedAt: Value(now),
@@ -310,9 +342,9 @@ class UserDataMutationService {
         ),
       );
     } else if (entityType == 'selected_course_timetable') {
-      await (_db.update(_db.selectedCourseTimetableRows)
-            ..where((row) => row.timetableId.equals(entityId)))
-          .write(
+      await (_db.update(
+        _db.selectedCourseTimetableRows,
+      )..where((row) => row.timetableId.equals(entityId))).write(
         SelectedCourseTimetableRowsCompanion(
           deletedAt: Value(now),
           updatedAt: Value(now),
@@ -320,7 +352,9 @@ class UserDataMutationService {
         ),
       );
     }
-    await _db.into(_db.syncTombstoneRows).insertOnConflictUpdate(
+    await _db
+        .into(_db.syncTombstoneRows)
+        .insertOnConflictUpdate(
           SyncTombstoneRowsCompanion.insert(
             entityType: entityType,
             entityId: entityId,
@@ -335,7 +369,9 @@ class UserDataMutationService {
     required double sortOrder,
     required DateTime updatedAt,
   }) {
-    return _db.into(_db.selectedCourseTimetableRows).insertOnConflictUpdate(
+    return _db
+        .into(_db.selectedCourseTimetableRows)
+        .insertOnConflictUpdate(
           SelectedCourseTimetableRowsCompanion.insert(
             timetableId: timetableId,
             sortOrder: Value(sortOrder),
@@ -347,9 +383,9 @@ class UserDataMutationService {
   }
 
   Future<double> _nextSelectedSortOrder() async {
-    final rows = await (_db.select(_db.selectedCourseTimetableRows)
-          ..where((row) => row.deletedAt.isNull()))
-        .get();
+    final rows = await (_db.select(
+      _db.selectedCourseTimetableRows,
+    )..where((row) => row.deletedAt.isNull())).get();
     if (rows.isEmpty) {
       return 0;
     }
@@ -399,32 +435,37 @@ class UserDataMutationService {
   }
 
   Future<void> _replaceDetails(AgendaItem item) async {
-    await (_db.delete(_db.scheduleItemDetailRows)
-          ..where((row) => row.itemId.equals(item.id)))
-        .go();
-    await (_db.delete(_db.taskItemDetailRows)
-          ..where((row) => row.itemId.equals(item.id)))
-        .go();
-    await (_db.delete(_db.courseItemDetailRows)
-          ..where((row) => row.itemId.equals(item.id)))
-        .go();
+    await (_db.delete(
+      _db.scheduleItemDetailRows,
+    )..where((row) => row.itemId.equals(item.id))).go();
+    await (_db.delete(
+      _db.taskItemDetailRows,
+    )..where((row) => row.itemId.equals(item.id))).go();
+    await (_db.delete(
+      _db.courseItemDetailRows,
+    )..where((row) => row.itemId.equals(item.id))).go();
     await _upsertDetails(item);
   }
 
   Future<void> _upsertDetails(AgendaItem item) async {
     switch (item.details) {
       case ScheduleItemDetails details:
-        await _db.into(_db.scheduleItemDetailRows).insertOnConflictUpdate(
+        await _db
+            .into(_db.scheduleItemDetailRows)
+            .insertOnConflictUpdate(
               ScheduleItemDetailRowsCompanion.insert(
                 itemId: item.id,
                 startAt: details.startAt,
                 endAt: details.endAt,
                 isAllDay: Value(details.isAllDay),
+                countdownEnabled: Value(details.countdownEnabled),
                 autoCompletedOnceAt: Value(details.autoCompletedOnceAt),
               ),
             );
       case TaskItemDetails details:
-        await _db.into(_db.taskItemDetailRows).insertOnConflictUpdate(
+        await _db
+            .into(_db.taskItemDetailRows)
+            .insertOnConflictUpdate(
               TaskItemDetailRowsCompanion.insert(
                 itemId: item.id,
                 deadlineAt: details.deadlineAt,
@@ -434,7 +475,9 @@ class UserDataMutationService {
         break;
       case CourseAgendaItemDetails details:
         final course = details.course;
-        await _db.into(_db.courseItemDetailRows).insertOnConflictUpdate(
+        await _db
+            .into(_db.courseItemDetailRows)
+            .insertOnConflictUpdate(
               CourseItemDetailRowsCompanion.insert(
                 itemId: item.id,
                 startAt: details.startAt,
@@ -451,7 +494,9 @@ class UserDataMutationService {
     }
   }
 
-  CourseTimetableRowsCompanion _courseTimetableCompanion(CourseTimetable timetable) {
+  CourseTimetableRowsCompanion _courseTimetableCompanion(
+    CourseTimetable timetable,
+  ) {
     return CourseTimetableRowsCompanion.insert(
       id: timetable.id,
       name: timetable.name,
@@ -471,8 +516,10 @@ class UserDataMutationService {
       title: row.title,
       notes: row.notes,
       location: row.location,
-      color: _enumByName(ItemColorOption.values, row.color) ?? ItemColorOption.sky,
-      reminder: _enumByName(ReminderOption.values, row.reminder) ??
+      color:
+          _enumByName(ItemColorOption.values, row.color) ?? ItemColorOption.sky,
+      reminder:
+          _enumByName(ReminderOption.values, row.reminder) ??
           ReminderOption.none,
       repeatRule:
           _enumByName(RepeatRule.values, row.repeatRule) ?? RepeatRule.none,
@@ -482,7 +529,8 @@ class UserDataMutationService {
       updatedAt: row.updatedAt,
       completedAt: row.completedAt,
       sortOrder: row.sortOrder,
-      sourceKind: _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
+      sourceKind:
+          _enumByName(AgendaItemSourceKind.values, row.sourceKind) ??
           AgendaItemSourceKind.manual,
       sourceRef: row.sourceRef,
     );
@@ -499,35 +547,37 @@ class UserDataMutationService {
   }
 
   Future<ScheduleItemDetails> _scheduleDetails(String itemId) async {
-    final row = await (_db.select(_db.scheduleItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.scheduleItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return ScheduleItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
       isAllDay: row.isAllDay,
+      countdownEnabled: row.countdownEnabled,
       autoCompletedOnceAt: row.autoCompletedOnceAt,
     );
   }
 
   Future<TaskItemDetails> _taskDetails(String itemId) async {
-    final row = await (_db.select(_db.taskItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.taskItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return TaskItemDetails(deadlineAt: row.deadlineAt);
   }
 
   Future<CourseAgendaItemDetails> _courseDetails(String itemId) async {
-    final row = await (_db.select(_db.courseItemDetailRows)
-          ..where((table) => table.itemId.equals(itemId)))
-        .getSingle();
+    final row = await (_db.select(
+      _db.courseItemDetailRows,
+    )..where((table) => table.itemId.equals(itemId))).getSingle();
     return CourseAgendaItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
       isAllDay: row.isAllDay,
       course: ItemCourseDetails(
         timetableId: row.timetableId,
-        sourceKind: _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
+        sourceKind:
+            _enumByName(CourseItemSourceKind.values, row.sourceKind) ??
             CourseItemSourceKind.manual,
         sourceCourseId: row.sourceCourseId,
         courseNature: row.courseNature,

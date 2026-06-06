@@ -79,6 +79,7 @@ class ItemDetailPage extends ConsumerWidget {
           location: item.location,
           color: item.color,
           isAllDay: item.timelineIsAllDay,
+          countdownEnabled: item.scheduleCountdownEnabled,
           reminder: item.reminder,
           repeatRule: item.repeatRule,
           startAt: item.timelineStartAt,
@@ -205,19 +206,13 @@ class _ItemDetailContent extends ConsumerWidget {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, startAt));
     } else if (startAt != null && endAt != null && _isSameDay(startAt, endAt)) {
       addRow(AppIcons.calendar, _formatDateWithWeekday(context, startAt));
-      addRow(
-        AppIcons.clock,
-        _formatTimeOnly(context, startAt, endAt),
-      );
+      addRow(AppIcons.clock, _formatTimeOnly(context, startAt, endAt));
     } else if (startAt != null && endAt != null) {
       addRow(
         AppIcons.calendar,
         '${_formatDateTime(context, startAt, allDay: false)} 至',
       );
-      addRow(
-        AppIcons.clock,
-        _formatDateTime(context, endAt, allDay: false),
-      );
+      addRow(AppIcons.clock, _formatDateTime(context, endAt, allDay: false));
     }
 
     // ── Deadline ──
@@ -814,6 +809,7 @@ String _formatTimeOnly(BuildContext context, DateTime start, DateTime end) {
   );
   return '$startTime ~ $endTime';
 }
+
 String _formatDateWithWeekday(BuildContext context, DateTime value) {
   final localeName = Localizations.localeOf(context).toLanguageTag();
   if (localeName.startsWith('zh')) {

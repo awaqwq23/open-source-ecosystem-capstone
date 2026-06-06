@@ -25,24 +25,38 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.revision);
-            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.dirty);
-            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.deletedAt);
-            await m.addColumn(selectedCourseTimetableRows, selectedCourseTimetableRows.lastSyncedAt);
-          }
-          if (from < 3) {
-            await customStatement('ALTER TABLE agenda_item_rows RENAME TO agenda_item_rows_old');
-            await m.createTable(agendaItemRows);
-            await m.createTable(scheduleItemDetailRows);
-            await m.createTable(taskItemDetailRows);
-            await m.createTable(courseItemDetailRows);
-            await customStatement('''
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(
+          selectedCourseTimetableRows,
+          selectedCourseTimetableRows.revision,
+        );
+        await m.addColumn(
+          selectedCourseTimetableRows,
+          selectedCourseTimetableRows.dirty,
+        );
+        await m.addColumn(
+          selectedCourseTimetableRows,
+          selectedCourseTimetableRows.deletedAt,
+        );
+        await m.addColumn(
+          selectedCourseTimetableRows,
+          selectedCourseTimetableRows.lastSyncedAt,
+        );
+      }
+      if (from < 3) {
+        await customStatement(
+          'ALTER TABLE agenda_item_rows RENAME TO agenda_item_rows_old',
+        );
+        await m.createTable(agendaItemRows);
+        await m.createTable(scheduleItemDetailRows);
+        await m.createTable(taskItemDetailRows);
+        await m.createTable(courseItemDetailRows);
+        await customStatement('''
               INSERT INTO agenda_item_rows (
                 id, type, title, notes, location, color, reminder, repeat_rule,
                 is_completed, completed_at, sort_order, source_kind, source_ref,
@@ -56,21 +70,22 @@ class AppDatabase extends _$AppDatabase {
                 created_at, updated_at
               FROM agenda_item_rows_old
             ''');
-            await customStatement('''
+        await customStatement('''
               INSERT INTO schedule_item_detail_rows (
-                item_id, start_at, end_at, is_all_day, auto_completed_once_at
+                item_id, start_at, end_at, is_all_day, countdown_enabled,
+                auto_completed_once_at
               )
-              SELECT id, start_at, end_at, is_all_day, NULL
+              SELECT id, start_at, end_at, is_all_day, FALSE, NULL
               FROM agenda_item_rows_old
               WHERE type = 'schedule'
             ''');
-            await customStatement('''
+        await customStatement('''
               INSERT INTO task_item_detail_rows (item_id, deadline_at)
               SELECT id, COALESCE(deadline, end_at)
               FROM agenda_item_rows_old
               WHERE type = 'task'
             ''');
-            await customStatement('''
+        await customStatement('''
               INSERT INTO course_item_detail_rows (
                 item_id, start_at, end_at, is_all_day, timetable_id,
                 source_kind, source_course_id, course_nature, instructor, week_meta
@@ -82,10 +97,16 @@ class AppDatabase extends _$AppDatabase {
               FROM agenda_item_rows_old
               WHERE type = 'course'
             ''');
-            await customStatement('DROP TABLE agenda_item_rows_old');
-          }
-        },
-      );
+        await customStatement('DROP TABLE agenda_item_rows_old');
+      }
+      if (from >= 3 && from < 4) {
+        await m.addColumn(
+          scheduleItemDetailRows,
+          scheduleItemDetailRows.countdownEnabled,
+        );
+      }
+    },
+  );
 }
 
 QueryExecutor _openConnection() {
@@ -123,6 +144,8 @@ class ScheduleItemDetailRows extends Table {
   DateTimeColumn get startAt => dateTime()();
   DateTimeColumn get endAt => dateTime()();
   BoolColumn get isAllDay => boolean().withDefault(const Constant(false))();
+  BoolColumn get countdownEnabled =>
+      boolean().withDefault(const Constant(false))();
   DateTimeColumn get autoCompletedOnceAt => dateTime().nullable()();
 
   @override
