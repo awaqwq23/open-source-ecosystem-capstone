@@ -780,7 +780,7 @@ class _TaskCountdownChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final topBarTitleStyle = theme.textTheme.titleLarge;
+    final shadTheme = ui.Theme.of(context);
     final taskTitleStyle = theme.textTheme.titleMedium;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -793,7 +793,7 @@ class _TaskCountdownChip extends StatelessWidget {
           _label(),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: topBarTitleStyle?.copyWith(
+          style: shadTheme.typography.sans.copyWith(
             color: theme.colorScheme.onSurface,
             fontSize: taskTitleStyle?.fontSize,
             fontWeight: FontWeight.w900,
