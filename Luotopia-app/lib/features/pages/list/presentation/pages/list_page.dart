@@ -727,6 +727,7 @@ class _ListItemRowState extends State<_ListItemRow>
                                 _TaskCountdownChip(
                                   deadlineAt: item.deadlineAt!,
                                   now: DateTime.now(),
+                                  color: accent,
                                 ),
                               ],
                             ],
@@ -775,55 +776,36 @@ class _TaskCountdownChip extends StatelessWidget {
   const _TaskCountdownChip({
     required this.deadlineAt,
     required this.now,
+    required this.color,
   });
 
   final DateTime deadlineAt;
   final DateTime now;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final overdue = deadlineAt.isBefore(now);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: overdue
-            ? theme.colorScheme.errorContainer
-            : theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          _label(context),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: overdue
-                ? theme.colorScheme.onErrorContainer
-                : theme.colorScheme.onSecondaryContainer,
-            fontWeight: FontWeight.w700,
-            height: 1,
-          ),
-        ),
+    return Text(
+      _label(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.titleMedium?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+        height: 1,
       ),
     );
   }
 
-  String _label(BuildContext context) {
-    final zh = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
+  String _label() {
     final today = DateTime(now.year, now.month, now.day);
-    final deadlineDay = DateTime(deadlineAt.year, deadlineAt.month, deadlineAt.day);
-    final days = deadlineDay.difference(today).inDays;
-    if (days == 0) {
-      return zh ? '今天到期' : 'Due today';
-    }
-    if (days > 0) {
-      return zh ? '还剩 $days 天' : '$days d left';
-    }
-    return zh ? '已过 ${-days} 天' : '${-days} d overdue';
+    final deadlineDay = DateTime(
+      deadlineAt.year,
+      deadlineAt.month,
+      deadlineAt.day,
+    );
+    return deadlineDay.difference(today).inDays.toString();
   }
 }
 
