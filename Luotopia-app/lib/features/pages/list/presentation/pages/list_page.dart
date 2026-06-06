@@ -727,7 +727,6 @@ class _ListItemRowState extends State<_ListItemRow>
                                 _TaskCountdownChip(
                                   deadlineAt: item.deadlineAt!,
                                   now: DateTime.now(),
-                                  color: accent,
                                 ),
                               ],
                             ],
@@ -745,7 +744,7 @@ class _ListItemRowState extends State<_ListItemRow>
                           ),
                         ),
                       ],
-                      const SizedBox(width: 4),
+                      SizedBox(width: item.type == ItemType.task ? 12 : 4),
                       _ActionIconButton(
                         onPressed: widget.onEdit,
                         icon: AppIcons.edit,
@@ -773,27 +772,31 @@ IconData _typeIcon(ItemType type) {
 }
 
 class _TaskCountdownChip extends StatelessWidget {
-  const _TaskCountdownChip({
-    required this.deadlineAt,
-    required this.now,
-    required this.color,
-  });
+  const _TaskCountdownChip({required this.deadlineAt, required this.now});
 
   final DateTime deadlineAt;
   final DateTime now;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Text(
-      _label(),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: theme.textTheme.titleMedium?.copyWith(
-        color: color,
-        fontWeight: FontWeight.w600,
-        height: 1,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          _label(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
+        ),
       ),
     );
   }
