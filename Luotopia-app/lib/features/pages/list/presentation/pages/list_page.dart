@@ -1234,7 +1234,7 @@ class _CompletedHeaderRow extends _ListVisualRow {
 
 abstract final class _ListRowMetrics {
   static const rowHeight = 62.0;
-  static const cardHorizontalPadding = 8.0;
+  static const cardHorizontalPadding = 12.0;
   static const cardVerticalInset = 3.0;
   static const cardRadius = 4.0;
   static const leadingIconSize = visualControlSize;
