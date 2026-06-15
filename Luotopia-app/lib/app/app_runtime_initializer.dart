@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/time/now_ticker_provider.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/features/components/wallpaper/data/bing_wallpaper_repository.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
@@ -67,6 +68,8 @@ class _AppRuntimeInitializerState extends ConsumerState<AppRuntimeInitializer>
     final service = ref.read(homeWidgetSyncServiceProvider);
     _homeWidgetSyncService = service;
     await service.initialize();
+    // 预加载今日 Bing 壁纸（provider 惰性加载，首次读取即触发下载）
+    ref.read(todayWallpaperProvider);
     _subs.add(
       ref.listenManual(agendaItemRepositoryProvider, (_, _) {
         service.syncDebounced();
