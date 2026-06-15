@@ -150,6 +150,7 @@ class AppBootstrapLoader {
           'ai' => MiddleTabMode.ai,
           _ => MiddleTabMode.forum,
         },
+        defaultTab: json['defaultTab'] as String? ?? '/',
       );
     } catch (_) {
       return const NavigationSettings.defaults();

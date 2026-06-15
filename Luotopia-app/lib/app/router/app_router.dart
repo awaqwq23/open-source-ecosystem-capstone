@@ -30,6 +30,7 @@ import 'package:luotopia/features/pages/item_editor/presentation/pages/item_edit
 import 'package:luotopia/features/pages/item_editor/presentation/pages/reminder_settings_page.dart';
 import 'package:luotopia/features/pages/item_editor/presentation/pages/repeat_settings_page.dart';
 import 'package:luotopia/features/pages/list/presentation/pages/list_page.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_ai_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_course_grid_page.dart';
 import 'package:luotopia/features/pages/settings/presentation/pages/settings_data_updates_page.dart';
@@ -43,8 +44,9 @@ import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final navSettings = ref.read(appNavigationSettingsProvider);
   return GoRouter(
-    initialLocation: AppRoutePaths.home,
+    initialLocation: navSettings.defaultTab,
     routes: [
       StatefulShellRoute(
         navigatorContainerBuilder: (context, navigationShell, children) {

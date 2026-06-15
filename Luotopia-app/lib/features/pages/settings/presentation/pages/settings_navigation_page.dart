@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/app/shell/app_shell_destination.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
@@ -51,6 +52,19 @@ class SettingsNavigationPage extends ConsumerWidget {
                 ),
               ),
             ),
+            SettingsFlatTile(
+              title: isZh ? '启动时默认页面' : 'Default home tab',
+              subtitle: isZh
+                  ? '打开应用时首先显示的页面（默认主页）'
+                  : 'The page shown when the app starts (default Home).',
+              leading: const Icon(Icons.home_outlined),
+              trailing: _DefaultTabDropdown(
+                value: state.navigationSettings.defaultTab,
+                onChanged: (value) => viewModel.saveNavigationSettings(
+                  state.navigationSettings.copyWith(defaultTab: value),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -87,6 +101,37 @@ class _MiddleTabDropdown extends StatelessWidget {
             value: MiddleTabMode.ai,
             child: Text(isZh ? 'AI 助手' : 'AI'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DefaultTabDropdown extends StatelessWidget {
+  const _DefaultTabDropdown({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        value: value,
+        onChanged: (selected) {
+          if (selected != null) {
+            onChanged(selected);
+          }
+        },
+        items: [
+          for (final destination in AppShellDestination.values)
+            DropdownMenuItem(
+              value: destination.route,
+              child: Text(destination.label(context)),
+            ),
         ],
       ),
     );

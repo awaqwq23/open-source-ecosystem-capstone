@@ -103,6 +103,7 @@ class RiverpodSettingsRepository implements SettingsRepository {
       jsonEncode({
         'showLabels': settings.showLabels,
         'middleTabMode': settings.middleTabMode.name,
+        'defaultTab': settings.defaultTab,
       }),
     );
   }
