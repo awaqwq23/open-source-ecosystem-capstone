@@ -32,6 +32,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
 
   final _expandedClassroomKeys = <String>{};
   final _conflictingSectionKeys = <String>{};
+  bool _onlyConflictFree = false;
   String? _successBannerMessage;
   List<String>? _lastAddedIds;
 
@@ -82,7 +83,9 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
   }
 
   void _expandAll() {
-    final classrooms = ref.read(emptyClassroomViewModelProvider).classrooms;
+    final classrooms = _visibleClassrooms(
+      ref.read(emptyClassroomViewModelProvider).classrooms,
+    );
     setState(() {
       _expandedClassroomKeys.addAll(classrooms.map(_classroomKey));
     });
@@ -223,7 +226,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     final l10n = context.l10n;
     final state = ref.read(emptyClassroomViewModelProvider);
     final expandedCount = _expandedClassroomKeys.length;
-    final totalCount = state.classrooms.length;
+    final totalCount = _visibleClassrooms(state.classrooms).length;
     final theme = Theme.of(context);
 
     showModalBottomSheet<void>(
@@ -293,6 +296,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     final state = ref.watch(emptyClassroomViewModelProvider);
     final notifier = ref.read(emptyClassroomViewModelProvider.notifier);
     final theme = Theme.of(context);
+    final visibleClassroomCount = _visibleClassrooms(state.classrooms).length;
 
     return ui.Scaffold(
       headers: [
@@ -387,11 +391,13 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
               bottom: 24,
               child: FloatingActionButton(
                 heroTag: 'empty-classroom-fab',
-                onPressed: state.classrooms.isEmpty ? null : _showActionsSheet,
-                backgroundColor: state.classrooms.isEmpty
+                onPressed: visibleClassroomCount == 0
+                    ? null
+                    : _showActionsSheet,
+                backgroundColor: visibleClassroomCount == 0
                     ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
                     : theme.colorScheme.primary,
-                foregroundColor: state.classrooms.isEmpty
+                foregroundColor: visibleClassroomCount == 0
                     ? theme.colorScheme.onSurface.withValues(alpha: 0.38)
                     : theme.colorScheme.onPrimary,
                 child: const Icon(Icons.dashboard_customize),
@@ -408,6 +414,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     required EmptyClassroomViewModel notifier,
   }) {
     final l10n = context.l10n;
+    final visibleClassrooms = _visibleClassrooms(state.classrooms);
 
     if (!authState.isAuthenticated) {
       return EmptyClassroomLoginRequiredView(onLogin: _openLogin);
@@ -465,6 +472,18 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
             ),
           ),
         ),
+        if (state.hasQueried && state.classrooms.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _ConflictFreeFilterRow(
+            value: _onlyConflictFree,
+            onChanged: (value) {
+              setState(() {
+                _onlyConflictFree = value;
+                _expandedClassroomKeys.clear();
+              });
+            },
+          ),
+        ],
         const SizedBox(height: 20),
         if (state.isQuerying)
           const Center(
@@ -484,12 +503,12 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
                 ? _openLogin
                 : _query,
           )
-        else if (state.classrooms.isEmpty && state.selectedCampus != null)
+        else if (visibleClassrooms.isEmpty && state.selectedCampus != null)
           state.hasQueried
               ? const EmptyClassroomEmptyCard()
               : const EmptyClassroomQueryHint()
         else
-          ...state.classrooms.map((classroom) {
+          ...visibleClassrooms.map((classroom) {
             final classroomKey = _classroomKey(classroom);
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -515,6 +534,23 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     return '${classroom.building}|${classroom.name}';
   }
 
+  List<EmptyClassroom> _visibleClassrooms(List<EmptyClassroom> classrooms) {
+    if (!_onlyConflictFree) {
+      return classrooms;
+    }
+    return classrooms.where(_hasConflictFreeSection).toList();
+  }
+
+  bool _hasConflictFreeSection(EmptyClassroom classroom) {
+    final classroomKey = _classroomKey(classroom);
+    for (final section in classroom.availableSections) {
+      if (!_conflictingSectionKeys.contains('$classroomKey|$section')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Set<String> _sectionConflictsForClassroom(String classroomKey) {
     final prefix = '$classroomKey|';
     return _conflictingSectionKeys
@@ -528,5 +564,43 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     return sections
         .map((section) => l10n.emptyClassroomSectionLabel(section))
         .join('、');
+  }
+}
+
+class _ConflictFreeFilterRow extends StatelessWidget {
+  const _ConflictFreeFilterRow({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Material(
+      color: colors.surfaceContainerHighest.withValues(alpha: 0.36),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '只看无冲突节次',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
