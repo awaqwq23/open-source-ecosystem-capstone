@@ -106,6 +106,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     try {
       await ref.read(whuAuthProvider.notifier).completeCasLogin(
             educationCookieHeader: await _readDocumentCookie(controller),
+            educationAccountHtml: await _readEducationAccountHtml(controller),
           );
       if (!mounted) {
         return;
@@ -153,6 +154,25 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     final value = await controller.runJavaScriptReturningResult(
       'document.cookie',
     );
+    return _normalizeJavaScriptString(value);
+  }
+
+  Future<String> _readEducationAccountHtml(WebViewController controller) async {
+    final value = await controller.runJavaScriptReturningResult(r'''
+      (async () => {
+        const response = await fetch('/xtgl/index_cxYhxxIndex.html?xt=jw&localeKey=zh_CN&gnmkdm=index', {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html, */*; q=0.01'
+          },
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          throw new Error(`account request failed: ${response.status}`);
+        }
+        return await response.text();
+      })()
+    ''');
     return _normalizeJavaScriptString(value);
   }
 

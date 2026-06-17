@@ -52,6 +52,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   Future<void> completeCasLogin({
     String? casCookieHeader,
     String? educationCookieHeader,
+    String? educationAccountHtml,
   }) async {
     state = state.copyWith(status: WhuAuthStatus.loading, clearError: true);
     try {
@@ -73,6 +74,14 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
 
       _casCookieHeader = latestCasCookieHeader;
       _educationCookieHeader = latestEducationCookieHeader;
+      final accountHtml = educationAccountHtml?.trim();
+      if (accountHtml != null && accountHtml.isNotEmpty) {
+        final account = ref
+            .read(whuCasServiceProvider)
+            .parseEducationAccountHtml(accountHtml);
+        await _persistAuthenticated(account);
+        return;
+      }
       final client = await authorizeEducation();
       try {
         final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);

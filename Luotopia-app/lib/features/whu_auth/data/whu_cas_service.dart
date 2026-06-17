@@ -112,7 +112,7 @@ class WhuCasService {
         '获取教务账户信息失败（HTTP ${response.statusCode}）。',
       );
     }
-    final account = _parseAccount(response.body);
+    final account = parseEducationAccountHtml(response.body);
     if (!account.hasProfile && _looksLikeLoginPage(response.body)) {
       throw const WhuAuthException(
         WhuAuthExceptionCode.serviceLoginFailed,
@@ -122,7 +122,7 @@ class WhuCasService {
     return account;
   }
 
-  WhuAccount _parseAccount(String html) {
+  WhuAccount parseEducationAccountHtml(String html) {
     final studentId = RegExp(r'xh_id=([^"&]+)')
             .firstMatch(html)
             ?.group(1)
