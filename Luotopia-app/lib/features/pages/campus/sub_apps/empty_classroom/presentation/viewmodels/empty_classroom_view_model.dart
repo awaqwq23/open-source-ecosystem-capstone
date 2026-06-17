@@ -19,6 +19,8 @@ class EmptyClassroomState {
     this.isQuerying = false,
     this.errorMessage,
     this.errorCode,
+    this.onlyConflictFree = false,
+    this.conflictingSectionKeys = const {},
     this.hasLoadedInitialData = false,
     this.hasQueried = false,
   });
@@ -34,6 +36,8 @@ class EmptyClassroomState {
   final bool isQuerying;
   final String? errorMessage;
   final EmptyClassroomExceptionCode? errorCode;
+  final bool onlyConflictFree;
+  final Set<String> conflictingSectionKeys;
   final bool hasLoadedInitialData;
   final bool hasQueried;
 
@@ -54,6 +58,13 @@ class EmptyClassroomState {
 
   bool get hasInitialError => errorMessage != null && campuses.isEmpty;
 
+  List<EmptyClassroom> get visibleClassrooms {
+    if (!onlyConflictFree) {
+      return classrooms;
+    }
+    return classrooms.where(_hasConflictFreeSection).toList();
+  }
+
   EmptyClassroomState copyWith({
     TermInfo? termInfo,
     List<CampusBuilding>? campuses,
@@ -66,6 +77,8 @@ class EmptyClassroomState {
     bool? isQuerying,
     String? errorMessage,
     EmptyClassroomExceptionCode? errorCode,
+    bool? onlyConflictFree,
+    Set<String>? conflictingSectionKeys,
     bool clearErrorMessage = false,
     bool? hasLoadedInitialData,
     bool? hasQueried,
@@ -90,9 +103,22 @@ class EmptyClassroomState {
           ? null
           : errorMessage ?? this.errorMessage,
       errorCode: clearErrorMessage ? null : errorCode ?? this.errorCode,
+      onlyConflictFree: onlyConflictFree ?? this.onlyConflictFree,
+      conflictingSectionKeys:
+          conflictingSectionKeys ?? this.conflictingSectionKeys,
       hasLoadedInitialData: hasLoadedInitialData ?? this.hasLoadedInitialData,
       hasQueried: hasQueried ?? this.hasQueried,
     );
+  }
+
+  bool _hasConflictFreeSection(EmptyClassroom classroom) {
+    final classroomKey = '${classroom.building}|${classroom.name}';
+    for (final section in classroom.availableSections) {
+      if (!conflictingSectionKeys.contains('$classroomKey|$section')) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -223,6 +249,14 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       clearErrorMessage: true,
     );
     _saveFilterSnapshot();
+  }
+
+  void setOnlyConflictFree(bool value) {
+    state = state.copyWith(onlyConflictFree: value);
+  }
+
+  void updateConflictingSectionKeys(Set<String> keys) {
+    state = state.copyWith(conflictingSectionKeys: keys);
   }
 
   String _errorMessage(Object error) {

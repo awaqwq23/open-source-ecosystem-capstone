@@ -34,7 +34,6 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
 
   final _expandedClassroomKeys = <String>{};
   final _conflictingSectionKeys = <String>{};
-  bool _onlyConflictFree = false;
   String? _successBannerMessage;
   List<String>? _lastAddedIds;
 
@@ -64,6 +63,9 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
       _expandedClassroomKeys.clear();
       _conflictingSectionKeys.clear();
     });
+    ref
+        .read(emptyClassroomViewModelProvider.notifier)
+        .updateConflictingSectionKeys(const {});
     await ref.read(emptyClassroomViewModelProvider.notifier).query();
     if (mounted) {
       setState(_refreshConflicts);
@@ -85,9 +87,9 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
   }
 
   void _expandAll() {
-    final classrooms = _visibleClassrooms(
-      ref.read(emptyClassroomViewModelProvider).classrooms,
-    );
+    final classrooms = ref
+        .read(emptyClassroomViewModelProvider)
+        .visibleClassrooms;
     setState(() {
       _expandedClassroomKeys.addAll(classrooms.map(_classroomKey));
     });
@@ -215,6 +217,9 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     final draftContext = _draftContext();
     if (draftContext == null) {
       _conflictingSectionKeys.clear();
+      ref
+          .read(emptyClassroomViewModelProvider.notifier)
+          .updateConflictingSectionKeys(const {});
       return;
     }
     final now = DateTime.now();
@@ -233,13 +238,16 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
         _conflictingSectionKeys.add('$classroomKey|$section');
       }
     }
+    ref
+        .read(emptyClassroomViewModelProvider.notifier)
+        .updateConflictingSectionKeys({..._conflictingSectionKeys});
   }
 
   void _showActionsSheet() {
     final l10n = context.l10n;
     final state = ref.read(emptyClassroomViewModelProvider);
     final expandedCount = _expandedClassroomKeys.length;
-    final totalCount = _visibleClassrooms(state.classrooms).length;
+    final totalCount = state.visibleClassrooms.length;
     final theme = Theme.of(context);
 
     showModalBottomSheet<void>(
@@ -309,7 +317,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     final state = ref.watch(emptyClassroomViewModelProvider);
     final notifier = ref.read(emptyClassroomViewModelProvider.notifier);
     final theme = Theme.of(context);
-    final visibleClassroomCount = _visibleClassrooms(state.classrooms).length;
+    final visibleClassroomCount = state.visibleClassrooms.length;
 
     return ui.Scaffold(
       headers: [
@@ -427,7 +435,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     required EmptyClassroomViewModel notifier,
   }) {
     final l10n = context.l10n;
-    final visibleClassrooms = _visibleClassrooms(state.classrooms);
+    final visibleClassrooms = state.visibleClassrooms;
 
     if (!authState.isAuthenticated) {
       return EmptyClassroomLoginRequiredView(onLogin: _openLogin);
@@ -488,12 +496,12 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
         if (state.hasQueried && state.classrooms.isNotEmpty) ...[
           const SizedBox(height: 12),
           _ConflictFreeFilterRow(
-            value: _onlyConflictFree,
+            value: state.onlyConflictFree,
             onChanged: (value) {
               setState(() {
-                _onlyConflictFree = value;
                 _expandedClassroomKeys.clear();
               });
+              notifier.setOnlyConflictFree(value);
             },
           ),
         ],
@@ -548,23 +556,6 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
 
   String _classroomKey(EmptyClassroom classroom) {
     return '${classroom.building}|${classroom.name}';
-  }
-
-  List<EmptyClassroom> _visibleClassrooms(List<EmptyClassroom> classrooms) {
-    if (!_onlyConflictFree) {
-      return classrooms;
-    }
-    return classrooms.where(_hasConflictFreeSection).toList();
-  }
-
-  bool _hasConflictFreeSection(EmptyClassroom classroom) {
-    final classroomKey = _classroomKey(classroom);
-    for (final section in classroom.availableSections) {
-      if (!_conflictingSectionKeys.contains('$classroomKey|$section')) {
-        return true;
-      }
-    }
-    return false;
   }
 
   Set<String> _sectionConflictsForClassroom(String classroomKey) {
