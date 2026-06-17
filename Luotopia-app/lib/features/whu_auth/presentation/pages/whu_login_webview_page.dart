@@ -59,7 +59,7 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
         if (uri != null &&
             _isEducationPage(uri) &&
             await _isEducationHomePage(controller)) {
-          _completeLoginFromEducationPage();
+          await _completeLoginFromEducationPage(controller);
         }
       },
       onNavigationRequest: (request, _) {
@@ -98,13 +98,15 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     );
   }
 
-  Future<void> _tryCompleteLogin() async {
+  Future<void> _tryCompleteLogin(WebViewController controller) async {
     if (_completing) {
       return;
     }
     setState(() => _completing = true);
     try {
-      await ref.read(whuAuthProvider.notifier).completeCasLogin();
+      await ref.read(whuAuthProvider.notifier).completeCasLogin(
+            educationCookieHeader: await _readDocumentCookie(controller),
+          );
       if (!mounted) {
         return;
       }
@@ -121,12 +123,14 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     }
   }
 
-  void _completeLoginFromEducationPage() {
+  Future<void> _completeLoginFromEducationPage(
+    WebViewController controller,
+  ) async {
     if (_completing) {
       return;
     }
     _educationReached = true;
-    Future<void>.microtask(_tryCompleteLogin);
+    await _tryCompleteLogin(controller);
   }
 
   bool _isEducationPage(Uri uri) {
@@ -143,6 +147,24 @@ class _WhuLoginWebViewPageState extends ConsumerState<WhuLoginWebViewPage> {
     return pageText.contains('教学管理信息服务平台') ||
         pageText.contains('index_cxYhxxIndex.html') ||
         pageText.contains('xh_id=');
+  }
+
+  Future<String> _readDocumentCookie(WebViewController controller) async {
+    final value = await controller.runJavaScriptReturningResult(
+      'document.cookie',
+    );
+    return _normalizeJavaScriptString(value);
+  }
+
+  String _normalizeJavaScriptString(Object value) {
+    final text = value.toString();
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      return text
+          .substring(1, text.length - 1)
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\\', r'\');
+    }
+    return text;
   }
 }
 

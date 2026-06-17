@@ -11,6 +11,7 @@ import 'package:luotopia/features/whu_auth/domain/models/whu_auth_snapshot.dart'
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_cas_service_request.dart';
 import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 
 final whuAuthProvider = NotifierProvider<WhuAuthNotifier, WhuAuthState>(
@@ -27,7 +28,7 @@ final whuAuthGatewayProvider = Provider<WhuAuthGateway>((ref) {
 
 class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   final WhuAuthStorage _storage = const WhuAuthStorage();
-  final WebviewCookieManager _cookieManager = WebviewCookieManager();
+  final _WebViewCookieStore _cookieStore = _WebViewCookieStore();
 
   String _casCookieHeader = '';
   String _educationCookieHeader = '';
@@ -48,20 +49,30 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     );
   }
 
-  Future<void> completeCasLogin() async {
+  Future<void> completeCasLogin({
+    String? casCookieHeader,
+    String? educationCookieHeader,
+  }) async {
     state = state.copyWith(status: WhuAuthStatus.loading, clearError: true);
     try {
-      final cookieHeader = await _readCasCookieHeader();
-      final educationCookieHeader = await _readEducationCookieHeader();
-      if (!_hasCasSession(cookieHeader)) {
+      final latestCasCookieHeader = _coalesceCookieHeader(
+        casCookieHeader,
+        await _readCasCookieHeader(),
+      );
+      final latestEducationCookieHeader = _coalesceCookieHeader(
+        educationCookieHeader,
+        await _readEducationCookieHeader(),
+      );
+      if (!_hasCasSession(latestCasCookieHeader) &&
+          latestEducationCookieHeader.trim().isEmpty) {
         throw const WhuAuthException(
           WhuAuthExceptionCode.loginRequired,
           '没有检测到有效的武大统一认证 Cookie。',
         );
       }
 
-      _casCookieHeader = cookieHeader;
-      _educationCookieHeader = educationCookieHeader;
+      _casCookieHeader = latestCasCookieHeader;
+      _educationCookieHeader = latestEducationCookieHeader;
       final client = await authorizeEducation();
       try {
         final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
@@ -144,7 +155,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
         '请先登录武大统一认证。',
       );
     }
-    await _cookieManager.setCookies(
+    await _cookieStore.setCookies(
       cookies,
       origin: 'https://cas.whu.edu.cn',
     );
@@ -154,7 +165,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     _casCookieHeader = '';
     _educationCookieHeader = '';
     await _storage.clear(ref.read(sharedPreferencesProvider));
-    await _cookieManager.clearCookies();
+    await _cookieStore.clearCookies();
     state = const WhuAuthState();
   }
 
@@ -186,8 +197,8 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   Future<String> _readCasCookieHeader() async {
-    final cookies = await _cookieManager.getCookies(
-      'https://cas.whu.edu.cn/authserver/',
+    final cookies = await _cookieStore.getCookies(
+      Uri.parse('https://cas.whu.edu.cn/authserver/'),
     );
     final casCookies = [
       for (final cookie in cookies)
@@ -200,8 +211,8 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   Future<String> _readEducationCookieHeader() async {
-    final cookies = await _cookieManager.getCookies(
-      'https://jwgl.whu.edu.cn/',
+    final cookies = await _cookieStore.getCookies(
+      Uri.parse('https://jwgl.whu.edu.cn/'),
     );
     final educationCookies = [
       for (final cookie in cookies)
@@ -225,8 +236,76 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   bool _hasCasSession(String cookieHeader) {
-    return cookieHeader.contains('CASTGC=') && cookieHeader.contains('JSESSIONID=');
+    return _hasNonEmptyCookie(cookieHeader, 'CASTGC');
   }
+
+  String _coalesceCookieHeader(String? preferred, String fallback) {
+    final value = preferred?.trim();
+    return value == null || value.isEmpty ? fallback : value;
+  }
+}
+
+class _WebViewCookieStore {
+  final WebviewCookieManager _mobileCookieManager = WebviewCookieManager();
+
+  Future<List<Cookie>> getCookies(Uri uri) async {
+    if (_usesMobileCookieManager) {
+      return _mobileCookieManager.getCookies(uri.toString());
+    }
+    final platformCookieManager = WebViewCookieManager().platform;
+    final cookies = await platformCookieManager.getCookies(uri);
+    return [
+      for (final cookie in cookies)
+        Cookie(cookie.name, cookie.value)
+          ..domain = cookie.domain
+          ..path = cookie.path,
+    ];
+  }
+
+  Future<void> setCookies(List<Cookie> cookies, {required String origin}) async {
+    if (_usesMobileCookieManager) {
+      await _mobileCookieManager.setCookies(cookies, origin: origin);
+      return;
+    }
+    final cookieManager = WebViewCookieManager();
+    for (final cookie in cookies) {
+      await cookieManager.setCookie(
+        WebViewCookie(
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain ?? Uri.parse(origin).host,
+          path: cookie.path ?? '/',
+        ),
+      );
+    }
+  }
+
+  Future<void> clearCookies() async {
+    if (_usesMobileCookieManager) {
+      await _mobileCookieManager.clearCookies();
+      return;
+    }
+    await WebViewCookieManager().clearCookies();
+  }
+
+  bool get _usesMobileCookieManager {
+    return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  }
+}
+
+bool hasWhuCasSessionCookie(String cookieHeader) {
+  return _hasNonEmptyCookie(cookieHeader, 'CASTGC');
+}
+
+bool _hasNonEmptyCookie(String cookieHeader, String name) {
+  for (final part in cookieHeader.split(';')) {
+    final trimmed = part.trim();
+    if (!trimmed.startsWith('$name=')) {
+      continue;
+    }
+    return trimmed.substring(name.length + 1).trim().isNotEmpty;
+  }
+  return false;
 }
 
 List<Cookie> buildWhuCasWebViewCookies(String cookieHeader) {
