@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/exceptions/empty_classroom_exception.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 
@@ -55,7 +56,10 @@ class WhuEmptyRoomService {
     final decoded = _decodeMap(response);
     final data = decoded['data'];
     if (data is! Map<String, dynamic>) {
-      throw Exception('学期信息返回格式异常。');
+      throw const EmptyClassroomException(
+        EmptyClassroomExceptionCode.invalidResponse,
+        '学期信息返回格式异常。',
+      );
     }
     return TermInfo.fromJson(data);
   }
@@ -69,7 +73,10 @@ class WhuEmptyRoomService {
     final decoded = _decodeMap(response);
     final data = decoded['data'];
     if (data is! List) {
-      throw Exception('楼栋信息返回格式异常。');
+      throw const EmptyClassroomException(
+        EmptyClassroomExceptionCode.invalidResponse,
+        '楼栋信息返回格式异常。',
+      );
     }
     return data
         .whereType<Map<String, dynamic>>()
@@ -106,9 +113,15 @@ class WhuEmptyRoomService {
     final data = decoded['data'];
     if (data is! List) {
       if (decoded['code'] == -1) {
-        throw Exception(decoded['msg'] as String? ?? '请求数据异常');
+        throw EmptyClassroomException(
+          EmptyClassroomExceptionCode.serverRejected,
+          decoded['msg'] as String? ?? '请求数据异常',
+        );
       }
-      throw Exception('空闲教室返回格式异常。');
+      throw const EmptyClassroomException(
+        EmptyClassroomExceptionCode.invalidResponse,
+        '空闲教室返回格式异常。',
+      );
     }
     return data
         .whereType<Map<String, dynamic>>()
@@ -118,10 +131,16 @@ class WhuEmptyRoomService {
 
   void _checkResponse(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('空闲教室接口请求失败（HTTP ${response.statusCode}）。');
+      throw EmptyClassroomException(
+        EmptyClassroomExceptionCode.networkFailure,
+        '空闲教室接口请求失败（HTTP ${response.statusCode}）。',
+      );
     }
     if (_looksLikeAuthFailure(response.body)) {
-      throw Exception('空闲教室授权已失效，请重新登录武大统一认证。');
+      throw const EmptyClassroomException(
+        EmptyClassroomExceptionCode.authExpired,
+        '空闲教室授权已失效，请重新登录武大统一认证。',
+      );
     }
   }
 
@@ -134,9 +153,15 @@ class WhuEmptyRoomService {
       throw const FormatException('not a JSON object');
     } on FormatException {
       if (_looksLikeAuthFailure(response.body)) {
-        throw Exception('空闲教室授权已失效，请重新登录武大统一认证。');
+        throw const EmptyClassroomException(
+          EmptyClassroomExceptionCode.authExpired,
+          '空闲教室授权已失效，请重新登录武大统一认证。',
+        );
       }
-      throw Exception('空闲教室接口返回格式异常。');
+      throw const EmptyClassroomException(
+        EmptyClassroomExceptionCode.invalidResponse,
+        '空闲教室接口返回格式异常。',
+      );
     }
   }
 

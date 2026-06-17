@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/exceptions/empty_classroom_exception.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository_provider.dart';
@@ -118,7 +119,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
     } catch (error) {
       state = state.copyWith(
         isInitialLoading: false,
-        errorMessage: error.toString(),
+        errorMessage: _errorMessage(error),
       );
     }
   }
@@ -155,7 +156,10 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
         clearErrorMessage: true,
       );
     } catch (error) {
-      state = state.copyWith(isQuerying: false, errorMessage: error.toString());
+      state = state.copyWith(
+        isQuerying: false,
+        errorMessage: _errorMessage(error),
+      );
     }
   }
 
@@ -196,6 +200,13 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       hasQueried: false,
       clearErrorMessage: true,
     );
+  }
+
+  String _errorMessage(Object error) {
+    if (error is EmptyClassroomException) {
+      return error.message;
+    }
+    return error.toString();
   }
 }
 
