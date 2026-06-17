@@ -268,7 +268,7 @@ Future<void> _probeEmptyRoom({
       headers: _smartCampusHeaders(accept: 'text/html,application/xhtml+xml'),
       timeout: timeout,
     );
-    await _request(
+    final termResponse = await _request(
       label: 'empty room term API',
       client: client,
       method: 'GET',
@@ -276,9 +276,202 @@ Future<void> _probeEmptyRoom({
       headers: _smartCampusHeaders(),
       timeout: timeout,
     );
+    final floorResponse = await _request(
+      label: 'empty room floor API',
+      client: client,
+      method: 'GET',
+      uri: Uri.parse('https://zhlj.whu.edu.cn/whdxEmptyRoom/getFloor'),
+      headers: _smartCampusHeaders(),
+      timeout: timeout,
+    );
+    final floorShape = _jsonShape(floorResponse.body);
+    _printLine('empty room floor shape', floorShape);
+
+    final floorJson = _jsonMap(floorResponse.body);
+    final campuses = _extractCampusNames(floorJson);
+    final campus = campuses.isEmpty ? '工学部' : campuses.first;
+    final firstBuildingCode = _extractFirstBuildingCode(floorJson, campus);
+    final termData = _extractTermData(_jsonMap(termResponse.body));
+    final schoolYear = '${termData['xnmc'] ?? '2025-2026'}';
+    final schoolYearStart = schoolYear.split('-').first;
+    final baseBody = <String, Object?>{
+      'campus': campus,
+      'schoolYear': schoolYear,
+      'term': '${termData['xqmc'] ?? '2'}',
+      'week': termData['dqzc'] ?? 16,
+      'weekDay': termData['weekDay'] ?? 3,
+      'section': null,
+      'teachingBuilding': firstBuildingCode,
+    };
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API app-current',
+      body: baseBody,
+      timeout: timeout,
+    );
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API term-code',
+      body: {...baseBody, 'term': '${termData['xqm'] ?? '12'}'},
+      timeout: timeout,
+    );
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API school-year-start',
+      body: {...baseBody, 'schoolYear': schoolYearStart},
+      timeout: timeout,
+    );
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API numeric-term-and-year',
+      body: {
+        ...baseBody,
+        'schoolYear': int.tryParse(schoolYearStart) ?? schoolYearStart,
+        'term': int.tryParse('${termData['xqm'] ?? '12'}') ?? 12,
+      },
+      timeout: timeout,
+    );
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API string-week',
+      body: {
+        ...baseBody,
+        'week': '${termData['dqzc'] ?? 16}',
+        'weekDay': '${termData['weekDay'] ?? 3}',
+      },
+      timeout: timeout,
+    );
+    if (firstBuildingCode.isNotEmpty) {
+      await _probeEmptyRoomListVariant(
+        client: client,
+        label: 'empty room list API building-code',
+        body: {...baseBody, 'teachingBuilding': firstBuildingCode},
+        timeout: timeout,
+      );
+    }
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API section-empty',
+      body: {...baseBody, 'section': ''},
+      timeout: timeout,
+    );
+    final noSectionBody = {...baseBody}..remove('section');
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API no-section',
+      body: noSectionBody,
+      timeout: timeout,
+    );
   } finally {
     client.close();
   }
+}
+
+Future<void> _probeEmptyRoomListVariant({
+  required _ProbeClient client,
+  required String label,
+  required Map<String, Object?> body,
+  required Duration timeout,
+}) async {
+  _printLine('$label bodyKeys', body.keys.join(','));
+  final response = await _request(
+    label: label,
+    client: client,
+    method: 'POST',
+    uri: Uri.parse('https://zhlj.whu.edu.cn/whdxEmptyRoom/getEmptyRoom'),
+    headers: _smartCampusHeaders(
+      contentType: 'application/json; charset=utf-8',
+    ),
+    body: jsonEncode(body),
+    timeout: timeout,
+  );
+  _printLine('$label shape', _jsonShape(response.body));
+}
+
+Map<String, dynamic> _jsonMap(String body) {
+  final decoded = jsonDecode(body);
+  if (decoded is Map<String, dynamic>) {
+    return decoded;
+  }
+  return const <String, dynamic>{};
+}
+
+String _jsonShape(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    return _shapeOf(decoded);
+  } catch (error) {
+    return 'invalid-json: $error';
+  }
+}
+
+String _shapeOf(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.map((key) => '$key').take(8).join(',');
+    final data = value['data'];
+    if (data == null) {
+      return 'map(keys=$keys)';
+    }
+    return 'map(keys=$keys; data=${_shapeOf(data)})';
+  }
+  if (value is List) {
+    if (value.isEmpty) {
+      return 'list(len=0)';
+    }
+    return 'list(len=${value.length}; first=${_shapeOf(value.first)})';
+  }
+  return value == null ? 'null' : value.runtimeType.toString();
+}
+
+List<String> _extractCampusNames(Map<String, dynamic> floorJson) {
+  final data = floorJson['data'];
+  if (data is List) {
+    return [
+      for (final item in data)
+        if (item is Map && item['campus'] != null) '${item['campus']}',
+    ];
+  }
+  if (data is Map) {
+    final keys = data.keys.map((key) => '$key').where((key) => key.isNotEmpty);
+    return keys.toList(growable: false);
+  }
+  return const <String>[];
+}
+
+String _extractFirstBuildingCode(
+  Map<String, dynamic> floorJson,
+  String campus,
+) {
+  final data = floorJson['data'];
+  if (data is! List) {
+    return '';
+  }
+  for (final item in data) {
+    if (item is! Map || '${item['campus'] ?? ''}' != campus) {
+      continue;
+    }
+    final floors = item['floors'];
+    if (floors is! List) {
+      return '';
+    }
+    for (final floor in floors) {
+      if (floor is Map && '${floor['jxldm'] ?? ''}'.isNotEmpty) {
+        return '${floor['jxldm']}';
+      }
+    }
+  }
+  return '';
+}
+
+Map<String, dynamic> _extractTermData(Map<String, dynamic> termJson) {
+  final data = termJson['data'];
+  if (data is Map<String, dynamic>) {
+    return data;
+  }
+  if (data is Map) {
+    return Map<String, dynamic>.from(data);
+  }
+  return const <String, dynamic>{};
 }
 
 Future<void> _probeSeat({
@@ -427,7 +620,7 @@ Future<_ProbeClient?> _authorize({
   }
 }
 
-Future<void> _request({
+Future<http.Response> _request({
   required String label,
   required _ProbeClient client,
   required String method,
@@ -454,6 +647,7 @@ Future<void> _request({
     _ => throw ArgumentError.value(method, 'method'),
   };
   _printResponse(label, response);
+  return response;
 }
 
 http.Request _postRequest({

@@ -112,10 +112,12 @@ class WhuEmptyRoomService {
     final decoded = _decodeMap(response);
     final data = decoded['data'];
     if (data is! List) {
-      if (decoded['code'] == -1) {
+      final result = decoded['result'];
+      final message = decoded['msg'] as String?;
+      if (decoded['code'] == -1 || result == 0 || result == '0') {
         throw EmptyClassroomException(
           EmptyClassroomExceptionCode.serverRejected,
-          decoded['msg'] as String? ?? '请求数据异常',
+          message == null || message.trim().isEmpty ? '请求数据异常' : message,
         );
       }
       throw const EmptyClassroomException(

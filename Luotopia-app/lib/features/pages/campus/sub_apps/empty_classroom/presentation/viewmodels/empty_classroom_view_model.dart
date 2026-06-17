@@ -191,6 +191,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
               week: state.selectedWeek,
               weekDay: state.selectedWeekDay,
               teachingBuilding: state.selectedBuilding?.name,
+              teachingBuildingCode: state.selectedBuilding?.code,
             ),
           );
       state = state.copyWith(
