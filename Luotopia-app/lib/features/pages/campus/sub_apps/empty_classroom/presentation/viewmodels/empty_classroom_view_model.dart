@@ -227,15 +227,14 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
     List<CampusBuilding> campuses,
     String? campusName,
   ) {
-    if (campusName == null || campusName.isEmpty) {
-      return null;
-    }
-    for (final campus in campuses) {
-      if (campus.campus == campusName) {
-        return campus;
+    if (campusName != null && campusName.isNotEmpty) {
+      for (final campus in campuses) {
+        if (campus.campus == campusName) {
+          return campus;
+        }
       }
     }
-    return null;
+    return campuses.isEmpty ? null : campuses.first;
   }
 
   Building? _savedBuilding(CampusBuilding? campus, String? buildingName) {
