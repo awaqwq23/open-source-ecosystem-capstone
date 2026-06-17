@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/data/whu_empty_room_service.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
-import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository_provider.dart';
 
 class EmptyClassroomState {
   const EmptyClassroomState({
@@ -103,30 +103,18 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
     state = state.copyWith(isInitialLoading: true, clearErrorMessage: true);
 
     try {
-      final client = await ref
-          .read(whuAuthGatewayProvider)
-          .authorizeService(WhuEmptyRoomService.smartCampusServiceRequest);
-      try {
-        final service = WhuEmptyRoomService(client: client);
-        await service.prepareSession();
-        final results = await Future.wait([
-          service.getTerm(),
-          service.getFloor(),
-        ]);
-        final termInfo = results[0] as TermInfo;
-        final campuses = results[1] as List<CampusBuilding>;
-        state = state.copyWith(
-          termInfo: termInfo,
-          campuses: campuses,
-          selectedWeek: termInfo.currentWeek,
-          selectedWeekDay: termInfo.weekDay,
-          isInitialLoading: false,
-          hasLoadedInitialData: true,
-          clearErrorMessage: true,
-        );
-      } finally {
-        client.close();
-      }
+      final filters = await ref
+          .read(emptyClassroomRepositoryProvider)
+          .loadFilters();
+      state = state.copyWith(
+        termInfo: filters.termInfo,
+        campuses: filters.campuses,
+        selectedWeek: filters.termInfo.currentWeek,
+        selectedWeekDay: filters.termInfo.weekDay,
+        isInitialLoading: false,
+        hasLoadedInitialData: true,
+        clearErrorMessage: true,
+      );
     } catch (error) {
       state = state.copyWith(
         isInitialLoading: false,
@@ -148,29 +136,24 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
     state = state.copyWith(isQuerying: true, clearErrorMessage: true);
 
     try {
-      final client = await ref
-          .read(whuAuthGatewayProvider)
-          .authorizeService(WhuEmptyRoomService.smartCampusServiceRequest);
-      try {
-        final service = WhuEmptyRoomService(client: client);
-        await service.prepareSession();
-        final classrooms = await service.getEmptyRoom(
-          campus: selectedCampus.campus,
-          schoolYear: termInfo.schoolYear,
-          term: termInfo.termName,
-          week: state.selectedWeek,
-          weekDay: state.selectedWeekDay,
-          teachingBuilding: selectedBuilding.name,
-        );
-        state = state.copyWith(
-          classrooms: classrooms,
-          isQuerying: false,
-          hasQueried: true,
-          clearErrorMessage: true,
-        );
-      } finally {
-        client.close();
-      }
+      final classrooms = await ref
+          .read(emptyClassroomRepositoryProvider)
+          .queryRooms(
+            EmptyClassroomQuery(
+              campus: selectedCampus.campus,
+              schoolYear: termInfo.schoolYear,
+              term: termInfo.termName,
+              week: state.selectedWeek,
+              weekDay: state.selectedWeekDay,
+              teachingBuilding: selectedBuilding.name,
+            ),
+          );
+      state = state.copyWith(
+        classrooms: classrooms,
+        isQuerying: false,
+        hasQueried: true,
+        clearErrorMessage: true,
+      );
     } catch (error) {
       state = state.copyWith(isQuerying: false, errorMessage: error.toString());
     }
