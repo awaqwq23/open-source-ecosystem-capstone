@@ -24,9 +24,13 @@ data class WidgetSnapshotItem(
     val location: String,
     val isCompleted: Boolean,
     val manualOrder: Double,
-    val startAt: Date,
-    val endAt: Date,
+    val createdAt: Date,
+    val updatedAt: Date,
+    val startAt: Date?,
+    val endAt: Date?,
+    val deadlineAt: Date?,
     val isAllDay: Boolean,
+    val scheduleCountdownEnabled: Boolean,
     val timetableId: String,
     val accentColorLight: String,
     val accentColorDark: String,
@@ -67,18 +71,31 @@ object WidgetSnapshotReader {
         val items = mutableListOf<WidgetSnapshotItem>()
         for (index in 0 until array.length()) {
             val obj = array.optJSONObject(index) ?: continue
-            val startAt = parseDate(obj.optString("startAt")) ?: continue
-            val endAt = parseDate(obj.optString("endAt")) ?: continue
+            val type = obj.optString("type", "task")
+            val startAt = parseDate(obj.optString("startAt"))
+            val endAt = parseDate(obj.optString("endAt"))
+            val deadlineAt = parseDate(obj.optString("deadlineAt"))
+            val createdAt = parseDate(obj.optString("createdAt")) ?: Date(0L)
+            if ((type == "schedule" || type == "course") && (startAt == null || endAt == null)) {
+                continue
+            }
+            if (type == "task" && deadlineAt == null) {
+                continue
+            }
             items += WidgetSnapshotItem(
                 id = obj.optString("id"),
-                type = obj.optString("type", "task"),
+                type = type,
                 title = obj.optString("title"),
                 location = obj.optString("location"),
                 isCompleted = obj.optBoolean("isCompleted", false),
                 manualOrder = obj.optDouble("manualOrder", 0.0),
+                createdAt = createdAt,
+                updatedAt = parseDate(obj.optString("updatedAt")) ?: createdAt,
                 startAt = startAt,
                 endAt = endAt,
+                deadlineAt = deadlineAt,
                 isAllDay = obj.optBoolean("isAllDay", false),
+                scheduleCountdownEnabled = obj.optBoolean("scheduleCountdownEnabled", false),
                 timetableId = obj.optString("timetableId"),
                 accentColorLight = obj.optString("accentColorLight"),
                 accentColorDark = obj.optString("accentColorDark"),
@@ -112,8 +129,9 @@ object WidgetSnapshotModelBuilder {
         zh: Boolean,
         weekSubtitle: String,
     ): AgendaListWidgetModel {
-        val leftItems = snapshot.items
-            .filter { shouldShowInLeftColumn(it, now, today) }
+        val myDayItems = snapshot.items.filter { isInMyDay(it, now) && !isEffectivelyCompleted(it, now) }
+        val leftItems = myDayItems
+            .filter { isTodayScheduleOrCourse(it, today) }
             .sortedWith(compareBy<WidgetSnapshotItem> { sortStart(it, today) }.thenBy { it.manualOrder })
         val dateLabel = if (zh) "${month(today)}月${dayOfMonth(today)}日" else "${month(today)}/${dayOfMonth(today)}"
         val leftStatusLabel =
@@ -123,8 +141,8 @@ object WidgetSnapshotModelBuilder {
                 dateLabel
             }
 
-        val rightItems = snapshot.items
-            .filter { !it.isCompleted && (it.type == "task" || it.type == "memo") }
+        val rightItems = myDayItems
+            .filter { isRightColumnItem(it, today) }
             .sortedWith(
                 compareBy<WidgetSnapshotItem> { displayDay(it, today) }
                     .thenBy { sortStart(it, displayDay(it, today)) }
@@ -133,7 +151,7 @@ object WidgetSnapshotModelBuilder {
 
         return AgendaListWidgetModel(
             title = if (zh) "事项列表" else "Agenda List",
-            subtitle = if (zh) "左列日程，右列任务与备忘" else "Schedule left, tasks and memos right",
+            subtitle = if (zh) "左列今日日程，右列任务备忘" else "Today schedule left, tasks and memos right",
             mode = if (leftItems.isEmpty()) "today_empty" else "today_schedule",
             leftTitle = leftStatusLabel,
             rightTitle = if (zh) "任务备忘" else "Tasks & Memos",
@@ -144,11 +162,40 @@ object WidgetSnapshotModelBuilder {
         )
     }
 
-    private fun shouldShowInLeftColumn(item: WidgetSnapshotItem, now: Date, day: Date): Boolean {
-        if (item.isCompleted) return false
-        if (item.type != "course" && item.type != "schedule") return false
-        if (!itemInDay(item, day)) return false
-        return if (sameDay(day, now)) item.endAt.after(now) else true
+    private fun isInMyDay(item: WidgetSnapshotItem, now: Date): Boolean {
+        if (!isEffectivelyCompleted(item, now) &&
+            (item.type == "task" || item.type == "memo" || item.scheduleCountdownEnabled)
+        ) {
+            return true
+        }
+        val start = item.startAt ?: return false
+        val end = item.endAt ?: return false
+        val today = startOfDay(now)
+        val startDay = startOfDay(start)
+        val endDay = startOfDay(end)
+        return !today.before(startDay) && !today.after(endDay)
+    }
+
+    private fun isEffectivelyCompleted(item: WidgetSnapshotItem, now: Date): Boolean {
+        if (item.type == "schedule") {
+            val end = item.endAt
+            return item.isCompleted || end?.after(now) == false
+        }
+        return item.isCompleted
+    }
+
+    private fun isTodayScheduleOrCourse(item: WidgetSnapshotItem, today: Date): Boolean {
+        if (item.type != "course" && item.type != "schedule") {
+            return false
+        }
+        return itemOccursInDay(item, today)
+    }
+
+    private fun isRightColumnItem(item: WidgetSnapshotItem, today: Date): Boolean {
+        if (isTodayScheduleOrCourse(item, today)) {
+            return false
+        }
+        return item.type == "task" || item.type == "memo"
     }
 
     private fun toAgendaRow(
@@ -195,35 +242,51 @@ private fun buildItemTimeText(item: WidgetSnapshotItem, day: Date, zh: Boolean, 
     if (item.type == "memo") {
         return if (zh) "备忘" else "Memo"
     }
+    if (item.type == "task") {
+        val deadline = item.deadlineAt ?: return if (zh) "任务" else "Task"
+        val text = formatHm(deadline)
+        return if (includeDay) "${month(deadline)}/${dayOfMonth(deadline)} $text" else text
+    }
     if (item.isAllDay) {
         val text = if (zh) "全天" else "All day"
         return if (includeDay) "${month(day)}/${dayOfMonth(day)} $text" else text
     }
+    val itemStart = item.startAt ?: day
+    val itemEnd = item.endAt ?: itemStart
     val dayStart = startOfDay(day)
     val dayEnd = addDays(dayStart, 1)
-    val start = if (item.startAt.before(dayStart)) dayStart else item.startAt
-    val end = if (item.endAt.after(dayEnd)) dayEnd else item.endAt
+    val start = if (itemStart.before(dayStart)) dayStart else itemStart
+    val end = if (itemEnd.after(dayEnd)) dayEnd else itemEnd
     val range = "${formatHm(start)}-${formatHm(end)}"
     return if (includeDay) "${month(day)}/${dayOfMonth(day)} $range" else range
 }
 
-private fun itemInDay(item: WidgetSnapshotItem, day: Date): Boolean {
+private fun itemOccursInDay(item: WidgetSnapshotItem, day: Date): Boolean {
+    val start = item.startAt ?: return false
+    val end = item.endAt ?: return false
     val dayStart = startOfDay(day)
     val dayEnd = addDays(dayStart, 1)
-    if (item.type == "memo") return true
-    return item.endAt.after(dayStart) && item.startAt.before(dayEnd)
+    return end.after(dayStart) && start.before(dayEnd)
 }
 
 private fun displayDay(item: WidgetSnapshotItem, fallback: Date): Date {
-    return if (item.type == "memo") fallback else startOfDay(item.startAt)
+    return when (item.type) {
+        "task" -> startOfDay(item.deadlineAt ?: fallback)
+        "memo" -> fallback
+        else -> startOfDay(item.startAt ?: fallback)
+    }
 }
 
 private fun sortStart(item: WidgetSnapshotItem, day: Date): Date {
     val dayStart = startOfDay(day)
-    if (item.type == "memo") {
-        return addMinutes(dayStart, 23 * 60 + 59)
+    return when (item.type) {
+        "task" -> item.deadlineAt ?: dayStart
+        "memo" -> addMinutes(dayStart, 23 * 60 + 59)
+        else -> {
+            val start = item.startAt ?: dayStart
+            if (start.before(dayStart)) dayStart else start
+        }
     }
-    return if (item.startAt.before(dayStart)) dayStart else item.startAt
 }
 
 private fun semesterWeekLabel(snapshot: WidgetSnapshot, now: Date, zh: Boolean): String? {
@@ -236,7 +299,7 @@ private fun semesterWeekLabel(snapshot: WidgetSnapshot, now: Date, zh: Boolean):
     }
     val firstDay = courses
         .filter { it.timetableId == targetId }
-        .map { startOfDay(it.startAt) }
+        .mapNotNull { it.startAt?.let(::startOfDay) }
         .minOrNull()
         ?: return null
     val weekOneMonday = startOfWeek(firstDay)
@@ -297,13 +360,6 @@ private fun startOfWeek(date: Date): Date {
 private fun addDays(date: Date, days: Int): Date = calendar(date).apply { add(Calendar.DAY_OF_MONTH, days) }.time
 
 private fun addMinutes(date: Date, minutes: Int): Date = calendar(date).apply { add(Calendar.MINUTE, minutes) }.time
-
-private fun sameDay(a: Date, b: Date): Boolean {
-    val ca = calendar(a)
-    val cb = calendar(b)
-    return ca.get(Calendar.YEAR) == cb.get(Calendar.YEAR) &&
-        ca.get(Calendar.DAY_OF_YEAR) == cb.get(Calendar.DAY_OF_YEAR)
-}
 
 private fun calendar(date: Date): Calendar = Calendar.getInstance().apply { time = date }
 

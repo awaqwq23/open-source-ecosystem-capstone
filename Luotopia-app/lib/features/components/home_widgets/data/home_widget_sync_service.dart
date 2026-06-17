@@ -10,6 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:luotopia/core/localization/locale_controller.dart';
 import 'package:luotopia/core/theme/theme_controller.dart';
+import 'package:luotopia/features/pages/list/domain/models/list_filters.dart';
+import 'package:luotopia/features/pages/list/domain/use_cases/filter_list_items.dart';
+import 'package:luotopia/features/pages/list/domain/use_cases/sort_list_items.dart';
 import 'package:luotopia/features/pages/settings/domain/models/widget_settings.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
@@ -22,6 +25,9 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 final homeWidgetSyncServiceProvider = Provider<HomeWidgetSyncService>((ref) {
   return HomeWidgetSyncService(ref);
 });
+
+const _filterListItems = FilterListItemsUseCase();
+const _sortListItems = SortListItemsUseCase();
 
 class HomeWidgetSyncService {
   HomeWidgetSyncService(this._ref);
@@ -72,6 +78,17 @@ class HomeWidgetSyncService {
       final timetableStore = _ref.read(courseTimetableRepositoryProvider);
       final now = DateTime.now();
       final week = _weekRange(now);
+      final activeTimetableId = timetableStore.selectedTimetableIds.isEmpty
+          ? null
+          : timetableStore.selectedTimetableIds.first;
+      final visibleItems = _visibleItemsForListPage(
+        items: items,
+        activeTimetableId: activeTimetableId,
+      );
+      final myDayItems = _myDayItems(
+        items: visibleItems,
+        now: now,
+      );
 
       final timetabledCourseItems = items
           .where((item) => item.type == ItemType.course && item.courseDetails.timetableId.isNotEmpty)
@@ -95,7 +112,7 @@ class HomeWidgetSyncService {
           'updatedLabel': _formatWidgetTimestamp(now, zh),
         },
         'agendaList': _buildAgendaListPayload(
-          items: items,
+          items: myDayItems,
           now: now,
           zh: zh,
           darkMode: _isDarkMode(settings, themeMode),
@@ -107,7 +124,7 @@ class HomeWidgetSyncService {
         'version': 5,
         'renderedPayload': payload,
         'snapshot': _buildSnapshotPayload(
-          items: items,
+          items: visibleItems,
           timetableStore: timetableStore,
           settings: settings,
           now: now,
@@ -197,16 +214,44 @@ Map<String, dynamic> _buildSnapshotPayload({
           'location': item.location,
           'isCompleted': item.isCompleted,
           'sortOrder': item.sortOrder,
+          'createdAt': item.createdAt.toIso8601String(),
+          'updatedAt': item.updatedAt.toIso8601String(),
           'startAt': item.timelineStartAt?.toIso8601String(),
           'endAt': item.timelineEndAt?.toIso8601String(),
           'deadlineAt': item.deadlineAt?.toIso8601String(),
           'isAllDay': item.timelineIsAllDay,
+          'scheduleCountdownEnabled': item.scheduleCountdownEnabled,
           'timetableId': item.courseDetails.timetableId,
           'accentColorLight': _toArgbHex(item.color.resolve(Brightness.light)),
           'accentColorDark': _toArgbHex(item.color.resolve(Brightness.dark)),
         },
     ],
   };
+}
+
+List<AgendaItem> _visibleItemsForListPage({
+  required List<AgendaItem> items,
+  required String? activeTimetableId,
+}) {
+  return [
+    for (final item in items)
+      if (item.type != ItemType.course ||
+          (activeTimetableId != null &&
+              item.courseDetails.timetableId == activeTimetableId))
+        item,
+  ];
+}
+
+List<AgendaItem> _myDayItems({
+  required List<AgendaItem> items,
+  required DateTime now,
+}) {
+  final filtered = _filterListItems(items, ListHeaderTab.myDay, now);
+  final pending = [
+    for (final item in filtered)
+      if (!item.isEffectivelyCompleted(now)) item,
+  ];
+  return _sortListItems(pending, ListSortMode.dueDate, now);
 }
 
 Map<String, dynamic> _buildAgendaListPayload({
@@ -219,7 +264,7 @@ Map<String, dynamic> _buildAgendaListPayload({
   final today = DateTime(now.year, now.month, now.day);
 
   final leftItems = items
-      .where((item) => _shouldShowInLeftColumn(item, now: now, day: today))
+      .where((item) => _shouldShowInLeftColumn(item, day: today))
       .toList(growable: false)
     ..sort((a, b) {
       final byStart = _sortStart(a, today).compareTo(_sortStart(b, today));
@@ -234,7 +279,7 @@ Map<String, dynamic> _buildAgendaListPayload({
       : dateLabel;
 
   final rightItems = items
-      .where(_shouldShowInRightColumn)
+      .where((item) => _shouldShowInRightColumn(item, day: today))
       .toList(growable: false)
     ..sort((a, b) {
       final dayA = _displayDayForItem(a, fallback: today);
@@ -252,7 +297,7 @@ Map<String, dynamic> _buildAgendaListPayload({
 
   return {
     'title': zh ? '事项列表' : 'Agenda List',
-    'subtitle': zh ? '左列日程，右列任务与备忘' : 'Schedule left, tasks and memos right',
+    'subtitle': zh ? '左列今日日程，右列任务备忘' : 'Today schedule left, tasks and memos right',
     'mode': leftItems.isEmpty ? 'today_empty' : 'today_schedule',
     'leftTitle': leftStatusLabel,
     'rightTitle': zh ? '任务备忘' : 'Tasks & Memos',
@@ -282,28 +327,21 @@ Map<String, dynamic> _buildAgendaListPayload({
 }
 
 bool _shouldShowInLeftColumn(
-  AgendaItem item, {
-  required DateTime now,
+  AgendaItem item,
+  {
   required DateTime day,
 }) {
-  if (item.isEffectivelyCompleted(now)) {
-    return false;
-  }
   if (item.type != ItemType.course && item.type != ItemType.schedule) {
     return false;
   }
-  if (!_itemInDay(item, day)) {
-    return false;
-  }
-  final today = DateTime(now.year, now.month, now.day);
-  if (_isSameDay(day, today)) {
-    return item.timelineEndAt?.isAfter(now) ?? false;
-  }
-  return true;
+  return _itemOccursInDay(item, day);
 }
 
-bool _shouldShowInRightColumn(AgendaItem item) {
-  if (item.isEffectivelyCompleted(DateTime.now())) {
+bool _shouldShowInRightColumn(
+  AgendaItem item, {
+  required DateTime day,
+}) {
+  if (_shouldShowInLeftColumn(item, day: day)) {
     return false;
   }
   return item.type == ItemType.task || item.type == ItemType.memo;
@@ -380,12 +418,9 @@ DateTimeRange _weekRange(DateTime now) {
   return DateTimeRange(start: start, end: end);
 }
 
-bool _itemInDay(AgendaItem item, DateTime day) {
+bool _itemOccursInDay(AgendaItem item, DateTime day) {
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
-  if (item.type == ItemType.memo) {
-    return true;
-  }
   final start = item.timelineStartAt;
   final end = item.timelineEndAt;
   return start != null && end != null && end.isAfter(dayStart) && start.isBefore(dayEnd);
@@ -395,6 +430,9 @@ DateTime _sortStart(AgendaItem item, DateTime day) {
   final dayStart = DateTime(day.year, day.month, day.day);
   if (item.type == ItemType.memo) {
     return dayStart.add(const Duration(hours: 23, minutes: 59));
+  }
+  if (item.type == ItemType.task) {
+    return item.deadlineAt ?? dayStart;
   }
   final start = item.timelineStartAt;
   if (start == null) {
@@ -411,6 +449,17 @@ String _buildItemTimeText(
 }) {
   if (item.type == ItemType.memo) {
     return zh ? '备忘' : 'Memo';
+  }
+  if (item.type == ItemType.task) {
+    final deadline = item.deadlineAt;
+    if (deadline == null) {
+      return zh ? '任务' : 'Task';
+    }
+    final text = _formatHm(deadline);
+    if (!includeDay) {
+      return text;
+    }
+    return '${deadline.month}/${deadline.day} $text';
   }
   if (item.timelineIsAllDay) {
     final allDayText = zh ? '全天' : 'All day';
@@ -431,10 +480,6 @@ String _buildItemTimeText(
     return range;
   }
   return '${day.month}/${day.day} $range';
-}
-
-bool _isSameDay(DateTime a, DateTime b) {
-  return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 String _formatWidgetTimestamp(DateTime time, bool zh) {
