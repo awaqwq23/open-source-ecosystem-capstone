@@ -6,7 +6,6 @@ import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/data/whu_course_import_service.dart';
-import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -266,7 +265,6 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
           year: _selectedTerm.year,
           semester: _selectedTerm.semester,
           weekOneMonday: _weekOneMonday!,
-          homeSettings: ref.read(appHomeSettingsProvider),
         );
       } finally {
         client.close();

@@ -125,6 +125,22 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   Future<WhuServiceSession> authorizeEducation() async {
     final fallbackCasCookieHeader = _casCookieHeader;
     await _refreshWebViewCookieHeaders();
+    WhuAuthException? lastCasError;
+    for (final casCookieHeader in [
+      _casCookieHeader,
+      if (fallbackCasCookieHeader != _casCookieHeader) fallbackCasCookieHeader,
+    ]) {
+      if (!hasWhuCasSessionCookie(casCookieHeader)) {
+        continue;
+      }
+      try {
+        return await _authorizeEducationWithCasCookie(casCookieHeader);
+      } on WhuAuthException catch (error) {
+        lastCasError = error;
+        debugPrint('[WhuAuth] CAS education authorization failed: $error');
+      }
+    }
+
     if (_educationCookieHeader.trim().isNotEmpty) {
       try {
         return ref
@@ -136,19 +152,13 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
         debugPrint('[WhuAuth] education cookie authorization failed: $error');
       }
     }
-    try {
-      return await _authorizeEducationWithCasCookie(_casCookieHeader);
-    } on WhuAuthException catch (error) {
-      if (!hasWhuCasSessionCookie(fallbackCasCookieHeader) ||
-          fallbackCasCookieHeader == _casCookieHeader) {
-        rethrow;
-      }
-      debugPrint(
-        '[WhuAuth] refreshed CAS education authorization failed, '
-        'retry with stored CAS cookies: $error',
-      );
-      return _authorizeEducationWithCasCookie(fallbackCasCookieHeader);
+    if (lastCasError != null) {
+      throw lastCasError;
     }
+    throw const WhuAuthException(
+      WhuAuthExceptionCode.loginRequired,
+      '请先登录武大统一认证。',
+    );
   }
 
   Future<WhuServiceSession> _authorizeEducationWithCasCookie(

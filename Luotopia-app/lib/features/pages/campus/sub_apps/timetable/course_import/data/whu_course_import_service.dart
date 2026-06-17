@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
-import 'package:luotopia/features/whu_auth/whu_auth.dart';
+import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/item_course_details.dart';
@@ -34,7 +33,6 @@ class WhuCourseImportService {
     required int year,
     required int semester,
     required DateTime weekOneMonday,
-    required HomeSettings homeSettings,
   }) async {
     final response = await client.post(
       Uri.parse(_courseApiUrl),
@@ -177,7 +175,7 @@ class WhuCourseImportService {
       }
     }
 
-    final termLabel = '$year-${semester == 1 ? year + 1 : year} 学期$semester';
+    final termLabel = '$year-${year + 1} 学期$semester';
     return WhuCourseImportPayload(
       items: items,
       termLabel: termLabel,
