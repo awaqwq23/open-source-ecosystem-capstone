@@ -5,9 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 
 class SeatReservationWebSession {
-  const SeatReservationWebSession({
-    required this.launchUri,
-  });
+  const SeatReservationWebSession({required this.launchUri});
 
   final Uri launchUri;
 }
@@ -22,8 +20,13 @@ class SeatReservationAuthService {
   );
   Future<SeatReservationWebSession> createWebSession() async {
     final serviceRequest = await _loadSeatServiceRequest();
-    await gateway.ensureCasSessionFresh();
-    return SeatReservationWebSession(launchUri: serviceRequest.entryUrl!);
+    final client = await gateway.authorizeService(serviceRequest);
+    try {
+      final launchUri = client.lastResponseUri ?? serviceRequest.entryUrl!;
+      return SeatReservationWebSession(launchUri: launchUri);
+    } finally {
+      client.close();
+    }
   }
 
   static bool _hasSeatToken(http.Response response) {
@@ -35,9 +38,10 @@ class SeatReservationAuthService {
     final config = await _loadSeatConfig();
     final casService = _readConfigUri(config, 'CASSSERVICE');
     final vueService = _readConfigUri(config, 'VUESERVICE');
-    final entryUri = _appendPath(casService, 'static/sso/login').replace(
-      queryParameters: {'redirectUrl': vueService.toString()},
-    );
+    final entryUri = _appendPath(
+      casService,
+      'static/sso/login',
+    ).replace(queryParameters: {'redirectUrl': vueService.toString()});
     debugPrint('[SeatReservationAuth] use SSO entry ${_sanitizeUri(entryUri)}');
     return WhuCasServiceRequest(
       serviceUrl: entryUri,
@@ -139,14 +143,16 @@ class SeatReservationAuthService {
         'bodyKind=$bodyKind; '
         'bodyExcerpt=$excerpt';
   }
+
   static String _sanitizeUri(Uri? uri) {
     if (uri == null) {
       return 'unknown';
     }
-    final queryKeys = uri.queryParameters.keys
-        .where((key) => key.toLowerCase() != 'token')
-        .toList(growable: false)
-      ..sort();
+    final queryKeys =
+        uri.queryParameters.keys
+            .where((key) => key.toLowerCase() != 'token')
+            .toList(growable: false)
+          ..sort();
     final queryText = queryKeys.isEmpty ? '' : '?${queryKeys.join(',')}';
     final fragmentText = uri.fragment.isEmpty ? '' : '#<fragment>';
     return '${uri.scheme}://${uri.host}${uri.path}$queryText$fragmentText';
@@ -173,8 +179,14 @@ class SeatReservationAuthService {
 
   static String _bodyExcerpt(String body) {
     final text = body
-        .replaceAll(RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), ' ')
-        .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), ' ')
+        .replaceAll(
+          RegExp(r'<script[\s\S]*?</script>', caseSensitive: false),
+          ' ',
+        )
+        .replaceAll(
+          RegExp(r'<style[\s\S]*?</style>', caseSensitive: false),
+          ' ',
+        )
         .replaceAll(RegExp(r'<[^>]+>'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .replaceAll(RegExp(r'token=[^&\s]+'), 'token=<redacted>')

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/data/whu_score_service.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/domain/models/score_entity.dart';
-import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
+import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class ScorePage extends ConsumerStatefulWidget {
@@ -39,7 +41,9 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     });
 
     try {
-      final client = await ref.read(whuAuthGatewayProvider).authorizeEducation();
+      final client = await ref
+          .read(whuAuthGatewayProvider)
+          .authorizeEducation();
       final ScoreListResult result;
       try {
         result = await WhuScoreService(client: client).getScoreList();
@@ -129,13 +133,10 @@ class _ScorePageState extends ConsumerState<ScorePage> {
           children: [
             Icon(Icons.lock_outline, size: 48, color: colors.onSurfaceVariant),
             const SizedBox(height: 16),
-            Text(
-              '请先登录武大教务账户',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            Text('请先登录武大教务账户', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             ui.OutlineButton(
-              onPressed: () => Navigator.of(context).maybePop(),
+              onPressed: () => context.openSecondary(AppRoutePaths.whuAccount),
               child: const Text('去登录'),
             ),
           ],
@@ -158,10 +159,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
-              ui.OutlineButton(
-                onPressed: _loadScores,
-                child: const Text('重试'),
-              ),
+              ui.OutlineButton(onPressed: _loadScores, child: const Text('重试')),
             ],
           ),
         ),
@@ -186,8 +184,8 @@ class _ScorePageState extends ConsumerState<ScorePage> {
                       child: Text(
                         '该学期暂无成绩数据',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colors.onSurfaceVariant,
-                            ),
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   )
@@ -238,10 +236,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       return const SizedBox.shrink();
     }
 
-    final totalCredits = scores.fold<double>(
-      0,
-      (sum, s) => sum + s.credit,
-    );
+    final totalCredits = scores.fold<double>(0, (sum, s) => sum + s.credit);
     final weightedGPA = _calculateWeightedGPA(scores);
     final passed = scores.where((s) => s.score >= 60).length;
     final failed = scores.length - passed;
@@ -251,17 +246,9 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       child: Row(
         children: [
           _summaryItem(colors, '学分', totalCredits.toStringAsFixed(1)),
-          Container(
-            width: 1,
-            height: 32,
-            color: colors.outlineVariant,
-          ),
+          Container(width: 1, height: 32, color: colors.outlineVariant),
           _summaryItem(colors, 'GPA', weightedGPA.toStringAsFixed(2)),
-          Container(
-            width: 1,
-            height: 32,
-            color: colors.outlineVariant,
-          ),
+          Container(width: 1, height: 32, color: colors.outlineVariant),
           _summaryItem(colors, '通过', '$passed/$failed'),
         ],
       ),
@@ -283,10 +270,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: colors.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
           ),
         ],
       ),

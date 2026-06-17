@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/features/pages/campus/data/smart_campus_web_session_service.dart';
 import 'package:luotopia/features/whu_auth/domain/exceptions/whu_auth_exception.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
@@ -43,16 +44,6 @@ class LuojiaEcardWebViewPage extends ConsumerStatefulWidget {
 
 class _LuojiaEcardWebViewPageState
     extends ConsumerState<LuojiaEcardWebViewPage> {
-  static const _smartCampusPackage = 'com.chaoxing.mobile.wuhanuniversity';
-  static const _smartCampusReferer =
-      'https://zhlj.whu.edu.cn/mobile/homepage?customizecolor=0x01A185';
-  static const _zhljReferer = 'https://zhlj.whu.edu.cn/';
-  static const _smartCampusUserAgent =
-      'Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 '
-      '(KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.59 Mobile Safari/537.36 '
-      'Language/zh_CN '
-      'com.chaoxing.mobile.wuhanuniversity/ChaoXingStudy_1000028_5.4_android_phone_640_233';
-
   var _needsLogin = false;
   String? _errorMessage;
 
@@ -76,12 +67,9 @@ class _LuojiaEcardWebViewPageState
     }
 
     try {
-      await ref.read(whuAuthProvider.notifier).primeCasCookiesForWebView();
-      await controller.setUserAgent(_smartCampusUserAgent);
-      return AppWebViewRequest(
-        uri: widget.entry.uri,
-        headers: luojiaEcardSmartCampusHeaders(widget.entry.uri),
-      );
+      return SmartCampusWebSessionService(
+        gateway: ref.read(whuAuthGatewayProvider),
+      ).prepareRequest(controller: controller, uri: widget.entry.uri);
     } on WhuAuthException catch (error) {
       if (!mounted) {
         return null;
@@ -148,7 +136,7 @@ class _LuojiaEcardWebViewPageState
         if (_shouldLoadWithSmartCampusHeaders(uri)) {
           return AppWebViewNavigationAction.reloadWithHeaders(
             uri,
-            luojiaEcardSmartCampusHeaders(uri),
+            SmartCampusWebSessionService.headersFor(uri),
           );
         }
         return const AppWebViewNavigationAction.navigate();
@@ -219,27 +207,7 @@ class _LuojiaEcardWebViewPageState
 }
 
 Map<String, String> luojiaEcardSmartCampusHeaders(Uri uri) {
-  final referer = uri.host == 'zhlj.whu.edu.cn'
-      ? _LuojiaEcardWebViewPageState._smartCampusReferer
-      : _LuojiaEcardWebViewPageState._zhljReferer;
-
-  return <String, String>{
-    'Accept':
-        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-    'Accept-Language': 'zh_CN',
-    'Referer': referer,
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
-    'User-Agent': _LuojiaEcardWebViewPageState._smartCampusUserAgent,
-    'X-Requested-With': _LuojiaEcardWebViewPageState._smartCampusPackage,
-    'sec-ch-ua':
-        '"Not(A:Brand";v="8", "Chromium";v="144", "Android WebView";v="144"',
-    'sec-ch-ua-mobile': '?1',
-    'sec-ch-ua-platform': '"Android"',
-  };
+  return SmartCampusWebSessionService.headersFor(uri);
 }
 
 class _StateOverlay extends StatelessWidget {

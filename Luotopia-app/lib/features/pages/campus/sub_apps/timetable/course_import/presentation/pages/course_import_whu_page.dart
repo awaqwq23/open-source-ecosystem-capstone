@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
+import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/data/whu_course_import_service.dart';
-import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
@@ -26,7 +28,11 @@ class _TermOption {
     if (isZh) {
       return '$year-$next 学年第$semester学期';
     }
-    final sem = switch (semester) { 1 => 'Fall', 2 => 'Spring', _ => 'Summer' };
+    final sem = switch (semester) {
+      1 => 'Fall',
+      2 => 'Spring',
+      _ => 'Summer',
+    };
     return '$year-$next $sem';
   }
 
@@ -44,7 +50,11 @@ List<_TermOption> _availableTerms() {
   final now = DateTime.now();
   final current = _inferCurrentTerm(now);
   final options = <_TermOption>{};
-  for (var y = current.academicYearStart - 2; y <= current.academicYearStart + 1; y++) {
+  for (
+    var y = current.academicYearStart - 2;
+    y <= current.academicYearStart + 1;
+    y++
+  ) {
     for (var s = 1; s <= 3; s++) {
       options.add(_TermOption(year: y, semester: s));
     }
@@ -75,7 +85,8 @@ class CourseImportWhuPage extends ConsumerStatefulWidget {
   const CourseImportWhuPage({super.key});
 
   @override
-  ConsumerState<CourseImportWhuPage> createState() => _CourseImportWhuPageState();
+  ConsumerState<CourseImportWhuPage> createState() =>
+      _CourseImportWhuPageState();
 }
 
 class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
@@ -89,7 +100,10 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   _TermOption _selectedTerm;
 
   _CourseImportWhuPageState()
-      : _selectedTerm = _TermOption(year: 0, semester: 0); // dummy, set in initState
+    : _selectedTerm = _TermOption(
+        year: 0,
+        semester: 0,
+      ); // dummy, set in initState
 
   @override
   void initState() {
@@ -97,7 +111,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     final inferred = _inferCurrentTerm(DateTime.now());
     _allTerms = _availableTerms();
     _selectedTerm = _allTerms.firstWhere(
-      (t) => t.year == inferred.academicYearStart && t.semester == inferred.semester,
+      (t) =>
+          t.year == inferred.academicYearStart &&
+          t.semester == inferred.semester,
       orElse: () => _allTerms.first,
     );
   }
@@ -118,11 +134,14 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   }
 
   bool _isChinese(BuildContext context) {
-    return Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    return Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
   }
 
   @override
   Widget build(BuildContext context) {
+    final whuAuth = ref.watch(whuAuthProvider);
     final theme = Theme.of(context);
     final isZh = _isChinese(context);
 
@@ -138,73 +157,80 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
           title: Text(isZh ? '导入课程表' : 'Import Schedule'),
         ),
       ],
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── 课程表名称 ──
-            _RoundedTextField(
-              controller: _nameController,
-              hintText: isZh ? '课程表名称' : 'Timetable name',
-            ),
-            const Gap(12),
-
-            // ── 导入学期选择 ──
-            _SemesterPicker(
-              allTerms: _allTerms,
-              selected: _selectedTerm,
-              onChange: (term) {
-                setState(() {
-                  _selectedTerm = term;
-                  _nameController.text = term.label(isZh);
-                });
-              },
-            ),
-            const Gap(16),
-
-            // ── 第1周周一 ──
-            _FlatActionRow(
-              label: isZh ? '第一周周一' : 'Week-1 Monday',
-              value: _weekOneMonday == null
-                  ? (isZh ? '点击选择' : 'Tap to select')
-                  : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
-              onTap: _submitting ? null : () => _pickWeekOneMonday(context),
-            ),
-            const Gap(24),
-
-            // ── 开始导入 ──
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ui.PrimaryButton(
-                onPressed: _submitting ? null : _submit,
-                leading: _submitting
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(AppIcons.import, size: 18),
-                child: Text(isZh ? '开始导入' : 'Start Import'),
-              ),
-            ),
-
-            if (_statusText != null) ...[
-              const Gap(12),
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  _statusText!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+      child: whuAuth.isAuthenticated
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── 课程表名称 ──
+                  _RoundedTextField(
+                    controller: _nameController,
+                    hintText: isZh ? '课程表名称' : 'Timetable name',
                   ),
-                ),
+                  const Gap(12),
+
+                  // ── 导入学期选择 ──
+                  _SemesterPicker(
+                    allTerms: _allTerms,
+                    selected: _selectedTerm,
+                    onChange: (term) {
+                      setState(() {
+                        _selectedTerm = term;
+                        _nameController.text = term.label(isZh);
+                      });
+                    },
+                  ),
+                  const Gap(16),
+
+                  // ── 第1周周一 ──
+                  _FlatActionRow(
+                    label: isZh ? '第一周周一' : 'Week-1 Monday',
+                    value: _weekOneMonday == null
+                        ? (isZh ? '点击选择' : 'Tap to select')
+                        : '${_weekOneMonday!.year}-${_weekOneMonday!.month.toString().padLeft(2, '0')}-${_weekOneMonday!.day.toString().padLeft(2, '0')}',
+                    onTap: _submitting
+                        ? null
+                        : () => _pickWeekOneMonday(context),
+                  ),
+                  const Gap(24),
+
+                  // ── 开始导入 ──
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ui.PrimaryButton(
+                      onPressed: _submitting ? null : _submit,
+                      leading: _submitting
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(AppIcons.import, size: 18),
+                      child: Text(isZh ? '开始导入' : 'Start Import'),
+                    ),
+                  ),
+
+                  if (_statusText != null) ...[
+                    const Gap(12),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        _statusText!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
-        ),
-      ),
+            )
+          : _ImportLoginRequiredView(
+              isZh: isZh,
+              onLogin: () => context.openSecondary(AppRoutePaths.whuAccount),
+            ),
     );
   }
 
@@ -222,13 +248,17 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
     }
     setState(() {
       _submitting = true;
-      _statusText = isZh ? '正在校验并建立教务会话...' : 'Verifying and establishing education session...';
+      _statusText = isZh
+          ? '正在校验并建立教务会话...'
+          : 'Verifying and establishing education session...';
     });
     try {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
-      final client = await ref.read(whuAuthGatewayProvider).authorizeEducation();
+      final client = await ref
+          .read(whuAuthGatewayProvider)
+          .authorizeEducation();
       final WhuCourseImportPayload payload;
       try {
         final service = WhuCourseImportService(client: client);
@@ -246,7 +276,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
           ? '${_selectedTerm.label(isZh)} ${_formatNow()}'
           : '$baseName ${_formatNow()}';
       final termLabel = _selectedTerm.termLabel();
-      final timetable = await ref.read(courseTimetableRepositoryProvider.notifier).createTimetable(
+      final timetable = await ref
+          .read(courseTimetableRepositoryProvider.notifier)
+          .createTimetable(
             name: tableName,
             source: CourseTimetableSource.whuJw,
             termLabel: termLabel,
@@ -255,7 +287,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       for (final draft in payload.items) {
         await agendaRepo.createItem(
           draft.copyWith(
-            courseDetails: draft.courseDetails.copyWith(timetableId: timetable.id),
+            courseDetails: draft.courseDetails.copyWith(
+              timetableId: timetable.id,
+            ),
           ),
         );
       }
@@ -264,7 +298,9 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         return;
       }
       final today = DateUtils.dateOnly(DateTime.now());
-      final currentWeekStart = today.subtract(Duration(days: today.weekday - DateTime.monday));
+      final currentWeekStart = today.subtract(
+        Duration(days: today.weekday - DateTime.monday),
+      );
       final currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
       final currentWeekCount = payload.items.where((item) {
         final startAt = item.timelineStartAt;
@@ -272,7 +308,8 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         if (startAt == null || endAt == null) {
           return false;
         }
-        return endAt.isAfter(currentWeekStart) && startAt.isBefore(currentWeekEnd);
+        return endAt.isAfter(currentWeekStart) &&
+            startAt.isBefore(currentWeekEnd);
       }).length;
 
       setState(() {
@@ -339,8 +376,45 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
   }
 }
 
+class _ImportLoginRequiredView extends StatelessWidget {
+  const _ImportLoginRequiredView({required this.isZh, required this.onLogin});
+
+  final bool isZh;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 48, color: colors.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              isZh ? '请先登录武大教务账户' : 'Please login to WHU Academic System',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ui.OutlineButton(
+              onPressed: onLogin,
+              child: Text(isZh ? '去登录' : 'Login'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _InferredTerm {
-  const _InferredTerm({required this.academicYearStart, required this.semester});
+  const _InferredTerm({
+    required this.academicYearStart,
+    required this.semester,
+  });
   final int academicYearStart;
   final int semester;
 }
@@ -361,7 +435,9 @@ class _SemesterPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     return SizedBox(
       height: _rowHeight,
@@ -408,7 +484,9 @@ class _SemesterPicker extends StatelessWidget {
     final initialYearIndex = years.indexOf(selected.year);
     final initialSemIndex = selected.semester - 1;
 
-    final yearCtrl = FixedExtentScrollController(initialItem: initialYearIndex.clamp(0, years.length - 1));
+    final yearCtrl = FixedExtentScrollController(
+      initialItem: initialYearIndex.clamp(0, years.length - 1),
+    );
 
     await showModalBottomSheet<void>(
       context: context,
@@ -465,13 +543,18 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
   }
 
   List<int> get _availableSems =>
-      widget.allTerms.where((t) => t.year == _selectedYear).map((t) => t.semester).toList()
+      widget.allTerms
+          .where((t) => t.year == _selectedYear)
+          .map((t) => t.semester)
+          .toList()
         ..sort();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
     final availSems = _availableSems;
 
     return Container(
@@ -496,7 +579,8 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
                 ui.TextButton(
                   onPressed: () {
                     final match = widget.allTerms.firstWhere(
-                      (t) => t.year == _selectedYear && t.semester == _selectedSem,
+                      (t) =>
+                          t.year == _selectedYear && t.semester == _selectedSem,
                       orElse: () => widget.allTerms.first,
                     );
                     widget.onChange(match);
@@ -565,11 +649,7 @@ class _SemesterWheelSheetState extends State<_SemesterWheelSheet> {
 // ── 组件 ──
 
 class _FlatActionRow extends StatelessWidget {
-  const _FlatActionRow({
-    required this.label,
-    required this.value,
-    this.onTap,
-  });
+  const _FlatActionRow({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
@@ -587,12 +667,7 @@ class _FlatActionRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                label,
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
+            Expanded(child: Text(label, style: theme.textTheme.titleMedium)),
             Expanded(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -629,10 +704,7 @@ class _FlatActionRow extends StatelessWidget {
 }
 
 class _RoundedTextField extends StatelessWidget {
-  const _RoundedTextField({
-    required this.controller,
-    required this.hintText,
-  });
+  const _RoundedTextField({required this.controller, required this.hintText});
 
   final TextEditingController controller;
   final String hintText;
