@@ -183,18 +183,14 @@ class HomePage extends ConsumerWidget {
                     onNext: () => viewModel.showNext(viewData.scope),
                     onSelectCell: (date, slotIndex) =>
                         viewModel.selectCell(date, slotIndex),
-                    onOpenItem: (itemId) async {
-                      await context.openSecondary(
+                    onOpenItem: (itemId) {
+                      context.openSecondary(
                         AppRoutePaths.itemDetail,
                         extra: ItemDetailArgs(itemId: itemId),
                       );
-                      if (!context.mounted) {
-                        return;
-                      }
-                      viewModel.showCurrentWeek();
                     },
-                    onEditItem: (item) async {
-                      await context.openItemEditorFlow(
+                    onEditItem: (item) {
+                      context.openItemEditorFlow(
                         extra: ItemEditorArgs(
                           itemId: item.item.id,
                           prefill: ItemEditorPrefill(
@@ -215,13 +211,9 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                       );
-                      if (!context.mounted) {
-                        return;
-                      }
-                      viewModel.showCurrentWeek();
                     },
-                    onCreateFromCell: (date, slot) async {
-                      await context.openItemEditorFlow(
+                    onCreateFromCell: (date, slot) {
+                      context.openItemEditorFlow(
                         extra: ItemEditorPrefill(
                           startAt: DateTime(
                             date.year,
@@ -239,10 +231,6 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                       );
-                      if (!context.mounted) {
-                        return;
-                      }
-                      viewModel.showCurrentWeek();
                     },
                   ),
                 ),
