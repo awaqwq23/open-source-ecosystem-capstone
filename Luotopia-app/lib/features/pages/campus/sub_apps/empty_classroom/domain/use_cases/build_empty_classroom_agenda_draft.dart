@@ -1,6 +1,7 @@
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/value_objects/agenda_item_details.dart';
+import 'package:luotopia/shared/domain/value_objects/course_period_schedule.dart';
 import 'package:luotopia/shared/enums/item_type.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
@@ -47,25 +48,24 @@ class BuildEmptyClassroomAgendaDraftUseCase {
     );
     final targetDate = targetMonday.add(Duration(days: targetWeekDay - 1));
 
-    final periodIndex = _periodIndex(section);
-    if (periodIndex < 0 || periodIndex >= _coursePeriods.length) {
+    final period = CoursePeriodSchedule.period(section);
+    if (period == null) {
       throw Exception('第$section节时间信息异常，无法添加到日程。');
     }
-    final (startMinute, endMinute) = _coursePeriods[periodIndex];
     return DateTimeRangeValue(
       start: DateTime(
         targetDate.year,
         targetDate.month,
         targetDate.day,
-        startMinute ~/ 60,
-        startMinute % 60,
+        period.startMinute ~/ 60,
+        period.startMinute % 60,
       ),
       end: DateTime(
         targetDate.year,
         targetDate.month,
         targetDate.day,
-        endMinute ~/ 60,
-        endMinute % 60,
+        period.endMinute ~/ 60,
+        period.endMinute % 60,
       ),
     );
   }
@@ -98,25 +98,4 @@ class BuildEmptyClassroomAgendaDraftUseCase {
     final options = ItemColorOption.values;
     return options[(section - 1) % options.length];
   }
-
-  int _periodIndex(int section) {
-    return section <= 5 ? section - 1 : section;
-  }
 }
-
-const _coursePeriods = <(int, int)>[
-  (480, 525),
-  (530, 575),
-  (590, 635),
-  (640, 685),
-  (690, 735),
-  (735, 845),
-  (845, 890),
-  (895, 940),
-  (945, 990),
-  (1000, 1045),
-  (1050, 1095),
-  (1110, 1155),
-  (1160, 1205),
-  (1210, 1255),
-];

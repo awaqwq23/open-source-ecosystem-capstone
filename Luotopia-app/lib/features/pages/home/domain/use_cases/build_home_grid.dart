@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:luotopia/features/pages/home/domain/models/home_view_data.dart';
 import 'package:luotopia/features/pages/settings/domain/models/home_settings.dart';
+import 'package:luotopia/shared/domain/value_objects/course_period_schedule.dart';
 import 'package:luotopia/shared/value_objects/date_time_range.dart';
 import 'package:intl/intl.dart';
 
@@ -65,7 +66,9 @@ class BuildHomeGridUseCase {
     }
 
     final weekdayOffset = anchor.weekday - DateTime.monday;
-    final start = DateUtils.dateOnly(anchor).subtract(Duration(days: weekdayOffset));
+    final start = DateUtils.dateOnly(
+      anchor,
+    ).subtract(Duration(days: weekdayOffset));
     return DateTimeRangeValue(
       start: start,
       end: start.add(const Duration(days: 7)),
@@ -88,30 +91,20 @@ class BuildHomeGridUseCase {
     required String localeTag,
   }) {
     final base = DateUtils.dateOnly(anchor);
-    // 13 fixed course periods with specific times
-    const coursePeriods = <(int start, int end)>[
-      (480, 525),   // 1:  8:00-8:45
-      (530, 575),   // 2:  8:50-9:35
-      (590, 635),   // 3:  9:50-10:35
-      (640, 685),   // 4: 10:40-11:25
-      (690, 735),   // 5: 11:30-12:15
-      (735, 845),   // 午休: 12:15-14:05
-      (845, 890),   // 6: 14:05-14:50
-      (895, 940),   // 7: 14:55-15:40
-      (945, 990),   // 8: 15:45-16:30
-      (1000, 1045), // 9: 16:40-17:25
-      (1050, 1095), //10: 17:30-18:15
-      (1110, 1155), //11: 18:30-19:15
-      (1160, 1205), //12: 19:20-20:05
-      (1210, 1255), //13: 20:10-20:55
-    ];
+    const coursePeriods = CoursePeriodSchedule.periods;
     final localeIsChinese = localeTag.startsWith('zh');
-    const lunchBreakIndex = 5;
+    final slots = [
+      ...coursePeriods.take(5),
+      _courseGridLunchBreak(),
+      ...coursePeriods.skip(5),
+    ];
 
     return [
-      for (var index = 0; index < coursePeriods.length; index++)
+      for (var index = 0; index < slots.length; index++)
         () {
-          final (slotStartMinute, slotEndMinute) = coursePeriods[index];
+          final slot = slots[index];
+          final slotStartMinute = slot.startMinute;
+          final slotEndMinute = slot.endMinute;
           final start = DateTime(
             base.year,
             base.month,
@@ -128,13 +121,14 @@ class BuildHomeGridUseCase {
           );
           final startLabel = _formatMinute(slotStartMinute);
           final endLabel = _formatMinute(slotEndMinute);
-          final isLunchBreak = index == lunchBreakIndex;
-          final courseNumber = isLunchBreak ? null : (index < lunchBreakIndex ? index + 1 : index);
+          final isLunchBreak = slot.period == 0;
           return HomeTimeSlot(
             label: '$startLabel~$endLabel',
             shortLabel: isLunchBreak
                 ? (localeIsChinese ? '午休' : 'Lunch')
-                : (localeIsChinese ? '第$courseNumber节' : 'Period $courseNumber'),
+                : (localeIsChinese
+                      ? '第${slot.period}节'
+                      : 'Period ${slot.period}'),
             start: start,
             end: end,
             startMinute: slotStartMinute,
@@ -145,18 +139,31 @@ class BuildHomeGridUseCase {
     ];
   }
 
+  CoursePeriodTime _courseGridLunchBreak() {
+    final period5 = CoursePeriodSchedule.period(5);
+    final period6 = CoursePeriodSchedule.period(6);
+    return CoursePeriodTime(
+      period: 0,
+      startMinute: period5?.endMinute ?? 735,
+      endMinute: period6?.startMinute ?? 845,
+    );
+  }
+
   List<HomeTimeSlot> _buildDefaultTimeSlots({
     required DateTime anchor,
     required HomeSettings settings,
   }) {
     final base = DateUtils.dateOnly(anchor);
-    final startMinute = settings.dayStartTime.hour * 60 + settings.dayStartTime.minute;
+    final startMinute =
+        settings.dayStartTime.hour * 60 + settings.dayStartTime.minute;
 
     return [
       for (var index = 0; index < settings.blockCount; index++)
         () {
-          final slotStartMinute = startMinute +
-              index * (settings.blockDurationMinutes + settings.blockGapMinutes);
+          final slotStartMinute =
+              startMinute +
+              index *
+                  (settings.blockDurationMinutes + settings.blockGapMinutes);
           final slotEndMinute = slotStartMinute + settings.blockDurationMinutes;
           final start = DateTime(
             base.year,
@@ -194,9 +201,12 @@ class BuildHomeGridUseCase {
   }) {
     final dayCount = visibleRange.end.difference(visibleRange.start).inDays;
     final today = DateUtils.dateOnly(DateTime.now());
-    final normalizedSelected = selectedDate == null ? null : DateUtils.dateOnly(selectedDate);
-    final weekdayFormatter =
-        localeTag.startsWith('zh') ? DateFormat('E', localeTag) : DateFormat('EEE', localeTag);
+    final normalizedSelected = selectedDate == null
+        ? null
+        : DateUtils.dateOnly(selectedDate);
+    final weekdayFormatter = localeTag.startsWith('zh')
+        ? DateFormat('E', localeTag)
+        : DateFormat('EEE', localeTag);
     final dateFormatter = localeTag.startsWith('zh')
         ? DateFormat('M/d', localeTag)
         : DateFormat('M/d', localeTag);
@@ -215,13 +225,18 @@ class BuildHomeGridUseCase {
             dateLabel: dateFormatter.format(date),
             isToday: normalizedDate == today,
             isSelected: normalizedSelected == normalizedDate,
-            emphasize: date.weekday == DateTime.saturday || date.weekday == DateTime.sunday,
+            emphasize:
+                date.weekday == DateTime.saturday ||
+                date.weekday == DateTime.sunday,
           );
         }(),
     ];
   }
 
-  HomeLayoutMetrics _buildMetrics(List<HomeTimeSlot> timeSlots, {required int dayCount}) {
+  HomeLayoutMetrics _buildMetrics(
+    List<HomeTimeSlot> timeSlots, {
+    required int dayCount,
+  }) {
     if (timeSlots.isEmpty) {
       return const HomeLayoutMetrics(
         startMinuteOfDay: 0,
@@ -292,7 +307,9 @@ class BuildHomeGridUseCase {
 
   bool _isCurrentWeek(DateTime visibleRangeStart) {
     final today = DateUtils.dateOnly(DateTime.now());
-    final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final monday = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
     return DateUtils.isSameDay(monday, DateUtils.dateOnly(visibleRangeStart));
   }
 
