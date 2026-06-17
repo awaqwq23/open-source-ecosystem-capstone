@@ -6,12 +6,18 @@ import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 
 class WhuEmptyClassroomRepository implements EmptyClassroomRepository {
-  const WhuEmptyClassroomRepository({required this.authGateway});
+  WhuEmptyClassroomRepository({required this.authGateway});
 
   final WhuAuthGateway authGateway;
+  EmptyClassroomFilters? _cachedFilters;
 
   @override
   Future<EmptyClassroomFilters> loadFilters() async {
+    final cached = _cachedFilters;
+    if (cached != null) {
+      return cached;
+    }
+
     final client = await authGateway.authorizeService(
       WhuEmptyRoomService.smartCampusServiceRequest,
     );
@@ -22,10 +28,12 @@ class WhuEmptyClassroomRepository implements EmptyClassroomRepository {
         service.getTerm(),
         service.getFloor(),
       ]);
-      return EmptyClassroomFilters(
+      final filters = EmptyClassroomFilters(
         termInfo: results[0] as TermInfo,
         campuses: results[1] as List<CampusBuilding>,
       );
+      _cachedFilters = filters;
+      return filters;
     } finally {
       client.close();
     }
