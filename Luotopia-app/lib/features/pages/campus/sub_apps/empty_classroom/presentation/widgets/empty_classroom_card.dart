@@ -8,8 +8,10 @@ class EmptyClassroomCard extends StatelessWidget {
     required this.classroom,
     required this.isExpanded,
     required this.formatSections,
+    required this.groupSections,
     required this.conflictingSections,
     required this.onSectionTap,
+    required this.onSectionGroupTap,
     required this.onToggleExpanded,
     super.key,
   });
@@ -17,14 +19,19 @@ class EmptyClassroomCard extends StatelessWidget {
   final EmptyClassroom classroom;
   final bool isExpanded;
   final String Function(List<int> sections) formatSections;
+  final List<List<int>> Function(List<int> sections) groupSections;
   final Set<String> conflictingSections;
   final ValueChanged<int> onSectionTap;
+  final ValueChanged<List<int>> onSectionGroupTap;
   final VoidCallback onToggleExpanded;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = Theme.of(context).colorScheme;
+    final sectionGroups = groupSections(
+      classroom.availableSections,
+    ).where((group) => group.length > 1).toList();
     return ui.Card(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -92,6 +99,14 @@ class EmptyClassroomCard extends StatelessWidget {
               conflictingSections: conflictingSections,
               onSectionTap: onSectionTap,
             ),
+            if (sectionGroups.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _SectionGroupButtons(
+                groups: sectionGroups,
+                formatSections: formatSections,
+                onSectionGroupTap: onSectionGroupTap,
+              ),
+            ],
           ] else ...[
             const SizedBox(height: 4),
             Text(
@@ -105,6 +120,39 @@ class EmptyClassroomCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _SectionGroupButtons extends StatelessWidget {
+  const _SectionGroupButtons({
+    required this.groups,
+    required this.formatSections,
+    required this.onSectionGroupTap,
+  });
+
+  final List<List<int>> groups;
+  final String Function(List<int> sections) formatSections;
+  final ValueChanged<List<int>> onSectionGroupTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: groups.map((group) {
+        return OutlinedButton.icon(
+          onPressed: () => onSectionGroupTap(group),
+          icon: const Icon(Icons.add, size: 16),
+          label: Text('添加${formatSections(group)}'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.primary,
+            side: BorderSide(color: colors.primary.withValues(alpha: 0.36)),
+            visualDensity: VisualDensity.compact,
+          ),
+        );
+      }).toList(),
     );
   }
 }

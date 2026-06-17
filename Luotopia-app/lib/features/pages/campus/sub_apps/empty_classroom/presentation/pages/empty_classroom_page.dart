@@ -9,6 +9,7 @@ import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/m
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/build_empty_classroom_agenda_draft.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/find_empty_classroom_conflicts.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/format_empty_classroom_sections.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/group_empty_classroom_sections.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/viewmodels/empty_classroom_view_model.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/widgets/empty_classroom_card.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/widgets/empty_classroom_filter_card.dart';
@@ -27,6 +28,7 @@ class EmptyClassroomPage extends ConsumerStatefulWidget {
 
 class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
   static const _formatSections = FormatEmptyClassroomSectionsUseCase();
+  static const _groupSections = GroupEmptyClassroomSectionsUseCase();
   static const _draftBuilder = BuildEmptyClassroomAgendaDraftUseCase();
   static const _findConflicts = FindEmptyClassroomConflictsUseCase();
 
@@ -101,6 +103,17 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
       classroom: classroom,
       sections: [section],
       successMessage: l10n.emptyClassroomAddedSingle(classroom.name, section),
+    );
+  }
+
+  Future<void> _addSectionGroup(
+    EmptyClassroom classroom,
+    List<int> sections,
+  ) async {
+    await _addSectionsToAgenda(
+      classroom: classroom,
+      sections: sections,
+      successMessage: '已添加${classroom.name}${_formatSections(sections)}自习',
     );
   }
 
@@ -517,11 +530,14 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
                 classroom: classroom,
                 isExpanded: _expandedClassroomKeys.contains(classroomKey),
                 formatSections: _formatSections.call,
+                groupSections: _groupSections.call,
                 conflictingSections: _sectionConflictsForClassroom(
                   classroomKey,
                 ),
                 onSectionTap: (section) =>
                     _addSingleSection(classroom, section),
+                onSectionGroupTap: (sections) =>
+                    _addSectionGroup(classroom, sections),
                 onToggleExpanded: () => _toggleExpanded(classroomKey),
               ),
             );
