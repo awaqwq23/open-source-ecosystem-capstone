@@ -1298,6 +1298,22 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.0.3"
+  webview_all_linux:
+    dependency: "direct main"
+    description:
+      name: webview_all_linux
+      sha256: "328d63ec38d4f0626fd0f7eec9ad47601cff4874b28d6ef56bbd0d663d206caf"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.5.4"
+  webview_all_windows:
+    dependency: "direct main"
+    description:
+      name: webview_all_windows
+      sha256: "6bcd9173ea709976005c96dcef75d596d6e2a58192e859f574d305dbee9954b6"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.5.2"
   webview_cookie_manager_flutter:
     dependency: "direct main"
     description:

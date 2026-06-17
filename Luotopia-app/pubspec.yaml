@@ -55,6 +55,8 @@ dependencies:
   crypto: ^3.0.6
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.11.0
+  webview_all_windows: ^0.5.2
+  webview_all_linux: ^0.5.4
   webview_cookie_manager_flutter: ^3.0.1
   home_widget: ^0.7.0
   material_symbols_icons: ^4.2928.1
