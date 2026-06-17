@@ -30,7 +30,8 @@ class WhuCasService {
     }
     final client = WhuAuthorizedClient(initialCookieHeader: casCookieHeader);
     try {
-      final loginUri = request.entryUrl ??
+      final loginUri =
+          request.entryUrl ??
           Uri.parse(
             'https://cas.whu.edu.cn/authserver/login?service=${Uri.encodeComponent(request.serviceUrl.toString())}',
           );
@@ -123,22 +124,19 @@ class WhuCasService {
   }
 
   WhuAccount _parseAccount(String html) {
-    final studentId = RegExp(r'xh_id=([^"&]+)')
-            .firstMatch(html)
-            ?.group(1)
-            ?.trim() ??
-        '';
-    final nameRaw = RegExp(r'<h4[^>]*class="[^"]*media-heading[^"]*"[^>]*>(.*?)</h4>',
-            dotAll: true)
-        .firstMatch(html)
-        ?.group(1);
-    final name = _stripHtml(nameRaw ?? '')
-        .replaceAll(RegExp(r'\s*学生.*'), '')
-        .trim();
-    final bodyText = RegExp(r'<div[^>]*class="[^"]*media-body[^"]*"[^>]*>.*?<p[^>]*>(.*?)</p>',
-            dotAll: true)
-        .firstMatch(html)
-        ?.group(1);
+    final studentId =
+        RegExp(r'xh_id=([^"&]+)').firstMatch(html)?.group(1)?.trim() ?? '';
+    final nameRaw = RegExp(
+      r'<h4[^>]*class="[^"]*media-heading[^"]*"[^>]*>(.*?)</h4>',
+      dotAll: true,
+    ).firstMatch(html)?.group(1);
+    final name = _stripHtml(
+      nameRaw ?? '',
+    ).replaceAll(RegExp(r'\s*学生.*'), '').trim();
+    final bodyText = RegExp(
+      r'<div[^>]*class="[^"]*media-body[^"]*"[^>]*>.*?<p[^>]*>(.*?)</p>',
+      dotAll: true,
+    ).firstMatch(html)?.group(1);
     final collegeText = _stripHtml(bodyText ?? '').trim();
     final college = collegeText.replaceAll(RegExp(r'\s+\d{4}.*'), '').trim();
     return WhuAccount(
@@ -179,8 +177,7 @@ bool _isEducationSessionResponse(http.Response response) {
   }
   if (uri != null &&
       uri.host == 'jwgl.whu.edu.cn' &&
-      (uri.path == '/xtgl/index_initMenu.html' ||
-          uri.path == '/xtgl/login_slogin.html')) {
+      uri.path == '/xtgl/index_initMenu.html') {
     return true;
   }
   final body = response.body;
@@ -196,5 +193,7 @@ bool _looksLikeLoginPage(String body) {
   return body.contains('authserver/login') ||
       body.contains('统一身份认证') ||
       body.contains('统一认证') ||
+      body.contains('用户登录') ||
+      body.contains('统一身份认证登录') ||
       body.contains('login-page');
 }

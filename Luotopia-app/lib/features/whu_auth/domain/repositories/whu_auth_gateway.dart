@@ -3,6 +3,8 @@ import 'package:luotopia/features/whu_auth/domain/models/whu_cas_service_request
 
 abstract class WhuServiceSession extends http.BaseClient {
   Uri? get lastResponseUri;
+
+  String cookieHeaderFor(Uri uri);
 }
 
 abstract class WhuAuthGateway {

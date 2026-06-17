@@ -7,11 +7,11 @@ class WhuAuthorizedClient extends WhuServiceSession {
     required String initialCookieHeader,
     String initialCookieHost = 'cas.whu.edu.cn',
     http.Client? inner,
-  })  : _cookieJar = _CookieJar.fromHeader(
-          initialCookieHeader,
-          host: initialCookieHost,
-        ),
-        _inner = inner ?? http.Client();
+  }) : _cookieJar = _CookieJar.fromHeader(
+         initialCookieHeader,
+         host: initialCookieHost,
+       ),
+       _inner = inner ?? http.Client();
 
   final http.Client _inner;
   final _CookieJar _cookieJar;
@@ -21,9 +21,16 @@ class WhuAuthorizedClient extends WhuServiceSession {
   Uri? get lastResponseUri => _lastResponseUri;
 
   @override
+  String cookieHeaderFor(Uri uri) => _cookieJar.headerFor(uri);
+
+  @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     var current = request;
-    for (var redirectCount = 0; redirectCount <= current.maxRedirects; redirectCount++) {
+    for (
+      var redirectCount = 0;
+      redirectCount <= current.maxRedirects;
+      redirectCount++
+    ) {
       current.followRedirects = false;
       _attachHeaders(current);
       final response = await _inner.send(current);
@@ -45,7 +52,9 @@ class WhuAuthorizedClient extends WhuServiceSession {
       }
       await response.stream.drain<void>();
       final redirectedUri = current.url.resolve(location);
-      debugPrint('[WhuAuthorizedClient] redirect to ${_sanitizeUri(redirectedUri)}');
+      debugPrint(
+        '[WhuAuthorizedClient] redirect to ${_sanitizeUri(redirectedUri)}',
+      );
       current = http.Request('GET', redirectedUri)
         ..headers.addAll(current.headers)
         ..followRedirects = false
@@ -77,13 +86,14 @@ class WhuAuthorizedClient extends WhuServiceSession {
   }
 
   String _sanitizeUri(Uri uri) {
-    final queryKeys = uri.queryParameters.keys
-        .where((key) {
-          final lower = key.toLowerCase();
-          return lower != 'ticket' && lower != 'token';
-        })
-        .toList(growable: false)
-      ..sort();
+    final queryKeys =
+        uri.queryParameters.keys
+            .where((key) {
+              final lower = key.toLowerCase();
+              return lower != 'ticket' && lower != 'token';
+            })
+            .toList(growable: false)
+          ..sort();
     final queryText = queryKeys.isEmpty ? '' : '?${queryKeys.join(',')}';
     return '${uri.scheme}://${uri.host}${uri.path}$queryText';
   }
@@ -109,7 +119,10 @@ class _CookieJar {
       final name = trimmed.substring(0, index).trim();
       final value = trimmed.substring(index + 1).trim();
       if (name.isNotEmpty && value.isNotEmpty) {
-        values[_CookieKey(host: host, name: name)] = value;
+        values.putIfAbsent(
+          _CookieKey(host: host, path: '/', name: name),
+          () => value,
+        );
       }
     }
     return _CookieJar(values);
@@ -117,24 +130,37 @@ class _CookieJar {
 
   final Map<_CookieKey, String> _values;
 
-  String headerFor(Uri uri) => _values.entries
-      .where((entry) => entry.value.isNotEmpty && entry.key.matches(uri.host))
-      .map((entry) => '${entry.key.name}=${entry.value}')
-      .join('; ');
+  String headerFor(Uri uri) {
+    final entries =
+        _values.entries
+            .where((entry) => entry.value.isNotEmpty && entry.key.matches(uri))
+            .toList()
+          ..sort(
+            (left, right) =>
+                right.key.path.length.compareTo(left.key.path.length),
+          );
+    return entries
+        .map((entry) => '${entry.key.name}=${entry.value}')
+        .join('; ');
+  }
 
   String debugNamesFor(Uri uri) {
-    final names = _values.keys
-        .where((key) => key.matches(uri.host))
-        .map((key) => key.name)
-        .toSet()
-        .toList(growable: false)
-      ..sort();
+    final names =
+        _values.keys
+            .where((key) => key.matches(uri))
+            .map((key) => key.name)
+            .toSet()
+            .toList(growable: false)
+          ..sort();
     return names.isEmpty ? '<none>' : names.join(',');
   }
 
   void mergeSetCookieHeader(String header, Uri uri) {
     for (final rawCookie in _splitSetCookie(header)) {
-      final parts = rawCookie.split(';').map((part) => part.trim()).toList(growable: false);
+      final parts = rawCookie
+          .split(';')
+          .map((part) => part.trim())
+          .toList(growable: false);
       final firstPart = parts.first;
       if (!firstPart.contains('=')) {
         continue;
@@ -143,7 +169,16 @@ class _CookieJar {
       final name = firstPart.substring(0, index).trim();
       final value = firstPart.substring(index + 1).trim();
       if (name.isNotEmpty) {
-        _values[_CookieKey(host: _cookieDomain(parts, uri.host), name: name)] = value;
+        final key = _CookieKey(
+          host: _cookieDomain(parts, uri.host),
+          path: _cookiePath(parts, uri),
+          name: name,
+        );
+        if (value.isEmpty || _isDeletion(parts)) {
+          _values.remove(key);
+        } else {
+          _values[key] = value;
+        }
       }
     }
   }
@@ -163,6 +198,52 @@ class _CookieJar {
       }
     }
     return fallbackHost.toLowerCase();
+  }
+
+  String _cookiePath(List<String> parts, Uri uri) {
+    for (final part in parts.skip(1)) {
+      final index = part.indexOf('=');
+      if (index <= 0) {
+        continue;
+      }
+      final name = part.substring(0, index).trim().toLowerCase();
+      if (name == 'path') {
+        final value = part.substring(index + 1).trim();
+        if (value.startsWith('/')) {
+          return value;
+        }
+      }
+    }
+    return _defaultCookiePath(uri.path);
+  }
+
+  String _defaultCookiePath(String requestPath) {
+    if (requestPath.isEmpty || !requestPath.startsWith('/')) {
+      return '/';
+    }
+    final lastSlash = requestPath.lastIndexOf('/');
+    if (lastSlash <= 0) {
+      return '/';
+    }
+    return requestPath.substring(0, lastSlash);
+  }
+
+  bool _isDeletion(List<String> parts) {
+    for (final part in parts.skip(1)) {
+      final index = part.indexOf('=');
+      if (index <= 0) {
+        continue;
+      }
+      final name = part.substring(0, index).trim().toLowerCase();
+      final value = part.substring(index + 1).trim().toLowerCase();
+      if (name == 'max-age' && value == '0') {
+        return true;
+      }
+      if (name == 'expires' && value.startsWith('thu, 01 jan 1970')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   List<String> _splitSetCookie(String header) {
@@ -194,29 +275,46 @@ class _CookieJar {
 class _CookieKey {
   const _CookieKey({
     required this.host,
+    required this.path,
     required this.name,
   });
 
   final String host;
+  final String path;
   final String name;
 
-  bool matches(String requestHost) {
-    final normalizedHost = requestHost.toLowerCase();
+  bool matches(Uri uri) {
+    final normalizedHost = uri.host.toLowerCase();
     final normalizedCookieHost = host.toLowerCase();
-    if (normalizedHost == normalizedCookieHost) {
+    final hostMatches =
+        normalizedHost == normalizedCookieHost ||
+        (normalizedCookieHost.startsWith('.') &&
+            normalizedHost.endsWith(normalizedCookieHost.substring(1)));
+    if (!hostMatches) {
+      return false;
+    }
+    return _pathMatches(uri.path);
+  }
+
+  bool _pathMatches(String requestPath) {
+    final normalizedPath = requestPath.isEmpty ? '/' : requestPath;
+    if (normalizedPath == path) {
       return true;
     }
-    if (normalizedCookieHost.startsWith('.')) {
-      return normalizedHost.endsWith(normalizedCookieHost.substring(1));
+    if (!normalizedPath.startsWith(path)) {
+      return false;
     }
-    return false;
+    return path.endsWith('/') || normalizedPath[path.length] == '/';
   }
 
   @override
   bool operator ==(Object other) {
-    return other is _CookieKey && other.host == host && other.name == name;
+    return other is _CookieKey &&
+        other.host == host &&
+        other.path == path &&
+        other.name == name;
   }
 
   @override
-  int get hashCode => Object.hash(host, name);
+  int get hashCode => Object.hash(host, path, name);
 }

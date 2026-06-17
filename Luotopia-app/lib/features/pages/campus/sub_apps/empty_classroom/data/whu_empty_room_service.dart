@@ -187,10 +187,10 @@ class WhuEmptyRoomService {
     if (response.statusCode < 200 || response.statusCode >= 400) {
       return false;
     }
-    if (_looksLikeAuthFailure(response.body)) {
+    if (uri == null || uri.host != 'zhlj.whu.edu.cn') {
       return false;
     }
-    return uri != null && uri.host == 'zhlj.whu.edu.cn';
+    return !_looksLikeNotLoggedInText(response.body);
   }
 
   static String? _parseSmartCampusLoginFailure(http.Response response) {
@@ -204,14 +204,20 @@ class WhuEmptyRoomService {
   }
 
   static bool _looksLikeAuthFailure(String body) {
+    return _looksLikeNotLoggedInText(body) ||
+        _looksLikeCasLoginPage(body) ||
+        body.contains('login-page');
+  }
+
+  static bool _looksLikeNotLoggedInText(String body) {
     final normalized = body.trim();
-    return normalized == '未登录' ||
-        body.contains('未登录') ||
-        body.contains('authserver/login') ||
+    return normalized == '未登录' || body.contains('未登录');
+  }
+
+  static bool _looksLikeCasLoginPage(String body) {
+    return body.contains('authserver/login') ||
         body.contains('统一身份认证') ||
         body.contains('统一认证') ||
-        body.contains('cas.whu.edu.cn') ||
-        body.contains('/casLogin') ||
-        body.contains('login-page');
+        body.contains('cas.whu.edu.cn');
   }
 }

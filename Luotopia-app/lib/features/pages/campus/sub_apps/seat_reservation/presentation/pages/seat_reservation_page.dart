@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ import 'package:luotopia/shared/value_objects/reminder_option.dart';
 import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 import 'package:luotopia/shared/presentation/widgets/app_web_view_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
+import 'package:webview_cookie_manager_flutter/webview_cookie_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class SeatReservationPage extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class SeatReservationPage extends ConsumerStatefulWidget {
 }
 
 class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
+  final WebviewCookieManager _cookieManager = WebviewCookieManager();
   WebViewController? _controller;
   bool _showingSyncDialog = false;
   String? _errorMessage;
@@ -53,10 +56,14 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       if (!mounted) {
         return null;
       }
+      await _primeSeatCookies(session);
       setState(() {
         _controller = controller;
       });
-      return AppWebViewRequest(uri: session.launchUri);
+      return AppWebViewRequest(
+        uri: session.launchUri,
+        headers: _seatHeaders(session),
+      );
     } catch (error) {
       if (!mounted) {
         return null;
@@ -74,6 +81,49 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       'SeatReservationBridge',
       onMessageReceived: _handleBridgeMessage,
     );
+  }
+
+  Future<void> _primeSeatCookies(SeatReservationWebSession session) async {
+    final cookies = _seatCookies(session.cookieHeader);
+    if (cookies.isEmpty) {
+      return;
+    }
+    await _cookieManager.setCookies(
+      cookies,
+      origin: 'https://seat.lib.whu.edu.cn',
+    );
+  }
+
+  Map<String, String> _seatHeaders(SeatReservationWebSession session) {
+    if (session.cookieHeader.trim().isEmpty) {
+      return const <String, String>{};
+    }
+    return <String, String>{'Cookie': session.cookieHeader};
+  }
+
+  List<Cookie> _seatCookies(String cookieHeader) {
+    final values = <String, String>{};
+    for (final part in cookieHeader.split(';')) {
+      final trimmed = part.trim();
+      if (trimmed.isEmpty || !trimmed.contains('=')) {
+        continue;
+      }
+      final separator = trimmed.indexOf('=');
+      final name = trimmed.substring(0, separator).trim();
+      final value = trimmed.substring(separator + 1).trim();
+      if (name.isEmpty || value.isEmpty || values.containsKey(name)) {
+        continue;
+      }
+      values[name] = value;
+    }
+    return [
+      for (final entry in values.entries)
+        Cookie(entry.key, entry.value)
+          ..domain = 'seat.lib.whu.edu.cn'
+          ..path = '/'
+          ..secure = true
+          ..httpOnly = true,
+    ];
   }
 
   Future<void> _injectReservationBridge() async {

@@ -2,6 +2,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:luotopia/features/whu_auth/presentation/providers/whu_auth_provider.dart';
 
 void main() {
+  group('hasWhuCasSessionCookie', () {
+    test('accepts non-empty CASTGC without JSESSIONID', () {
+      expect(
+        hasWhuCasSessionCookie(
+          'happyVoyage=value; CASTGC=TGT-53690-value; platformMultilingual=zh_CN',
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects missing or cleared CASTGC', () {
+      expect(hasWhuCasSessionCookie('JSESSIONID=session-value'), isFalse);
+      expect(
+        hasWhuCasSessionCookie('CASTGC=; JSESSIONID=session-value'),
+        isFalse,
+      );
+    });
+  });
+
   group('buildWhuCasWebViewCookies', () {
     test('maps CAS cookie header to secure WebView cookies', () {
       final cookies = buildWhuCasWebViewCookies(

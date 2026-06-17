@@ -25,6 +25,26 @@ Future<void> main(List<String> args) async {
     });
   }
 
+  if (options.targets.contains('score')) {
+    await _runSection('score', () async {
+      await _probeScore(
+        casCookie: casCookie,
+        educationCookie: educationCookie,
+        timeout: options.timeout,
+      );
+    });
+  }
+
+  if (options.targets.contains('timetable')) {
+    await _runSection('timetable', () async {
+      await _probeTimetable(
+        casCookie: casCookie,
+        educationCookie: educationCookie,
+        timeout: options.timeout,
+      );
+    });
+  }
+
   if (options.targets.contains('empty-room')) {
     await _runSection('empty-room', () async {
       await _probeEmptyRoom(casCookie: casCookie, timeout: options.timeout);
@@ -34,6 +54,12 @@ Future<void> main(List<String> args) async {
   if (options.targets.contains('seat')) {
     await _runSection('seat', () async {
       await _probeSeat(casCookie: casCookie, timeout: options.timeout);
+    });
+  }
+
+  if (options.targets.contains('ecard')) {
+    await _runSection('ecard', () async {
+      await _probeEcard(casCookie: casCookie, timeout: options.timeout);
     });
   }
 }
@@ -99,6 +125,122 @@ Future<void> _probeEducation({
   }
 }
 
+Future<void> _probeScore({
+  required String casCookie,
+  required String educationCookie,
+  required Duration timeout,
+}) async {
+  final client = await _openEducationSession(
+    label: 'score education session',
+    casCookie: casCookie,
+    educationCookie: educationCookie,
+    timeout: timeout,
+  );
+  if (client == null) {
+    return;
+  }
+  try {
+    await _request(
+      label: 'score list API',
+      client: client,
+      method: 'POST',
+      uri: Uri.parse(
+        'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html?doType=query&gnmkdm=N305005',
+      ),
+      headers: const {
+        'Host': 'jwgl.whu.edu.cn',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'validate': _generateValidate(),
+        'xnm': '',
+        'xqm': '',
+        'queryModel.showCount': '150',
+      },
+      timeout: timeout,
+    );
+  } finally {
+    client.close();
+  }
+}
+
+Future<void> _probeTimetable({
+  required String casCookie,
+  required String educationCookie,
+  required Duration timeout,
+}) async {
+  final client = await _openEducationSession(
+    label: 'timetable education session',
+    casCookie: casCookie,
+    educationCookie: educationCookie,
+    timeout: timeout,
+  );
+  if (client == null) {
+    return;
+  }
+  try {
+    final now = DateTime.now();
+    final schoolYear = now.month >= 8 ? now.year : now.year - 1;
+    final semester = now.month >= 8 || now.month <= 1 ? 3 : 12;
+    await _request(
+      label: 'timetable course API',
+      client: client,
+      method: 'POST',
+      uri: Uri.parse(
+        'https://jwgl.whu.edu.cn/kbcx/xskbcx_cxXsgrkb.html?gnmkdm=N2151',
+      ),
+      headers: const {
+        'Host': 'jwgl.whu.edu.cn',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'validate': _generateValidate(),
+        'xnm': '$schoolYear',
+        'xqm': '$semester',
+        'xzlx': 'ck',
+      },
+      timeout: timeout,
+    );
+  } finally {
+    client.close();
+  }
+}
+
+Future<_ProbeClient?> _openEducationSession({
+  required String label,
+  required String casCookie,
+  required String educationCookie,
+  required Duration timeout,
+}) async {
+  if (educationCookie.trim().isNotEmpty) {
+    final client = _ProbeClient(
+      initialCookieHeader: educationCookie,
+      initialCookieHost: 'jwgl.whu.edu.cn',
+    );
+    final response = await client
+        .get(_educationHomeUrl, headers: const {'Host': 'jwgl.whu.edu.cn'})
+        .timeout(timeout);
+    _printResponse('$label with education cookie', response);
+    if (_educationRequest.isSuccess(response)) {
+      return client;
+    }
+    client.close();
+  } else {
+    _printLine('$label with education cookie', 'SKIP: WHU_EDU_COOKIE is empty');
+  }
+
+  if (casCookie.trim().isEmpty) {
+    _printLine('$label with CAS', 'SKIP: WHU_CAS_COOKIE is empty');
+    return null;
+  }
+  return _authorize(
+    label: '$label with CAS',
+    request: _educationRequest,
+    casCookie: casCookie,
+    timeout: timeout,
+  );
+}
+
 Future<void> _probeEmptyRoom({
   required String casCookie,
   required Duration timeout,
@@ -158,6 +300,40 @@ Future<void> _probeSeat({
   client?.close();
 }
 
+Future<void> _probeEcard({
+  required String casCookie,
+  required Duration timeout,
+}) async {
+  if (casCookie.trim().isEmpty) {
+    _printLine(
+      'ecard smart campus authorization',
+      'SKIP: WHU_CAS_COOKIE is empty',
+    );
+    return;
+  }
+  final client = await _authorize(
+    label: 'ecard smart campus authorization',
+    request: _emptyRoomRequest,
+    casCookie: casCookie,
+    timeout: timeout,
+  );
+  if (client == null) {
+    return;
+  }
+  try {
+    await _request(
+      label: 'ecard page entry',
+      client: client,
+      method: 'GET',
+      uri: _ecardEntryUri,
+      headers: _smartCampusWebHeaders(_ecardEntryUri),
+      timeout: timeout,
+    );
+  } finally {
+    client.close();
+  }
+}
+
 Future<_ServiceRequest> _loadSeatServiceRequest(Duration timeout) async {
   final response = await http
       .post(
@@ -196,12 +372,21 @@ Future<_ServiceRequest> _loadSeatServiceRequest(Duration timeout) async {
   return _ServiceRequest(
     serviceUrl: entryUri,
     entryUrl: entryUri,
-    isSuccess: (response) => _extractToken(response.request?.url) != null,
+    isSuccess: (response) {
+      final uri = response.request?.url;
+      if (response.statusCode < 200 || response.statusCode >= 400) {
+        return false;
+      }
+      if (_looksLikeCasLoginPage(response.body)) {
+        return false;
+      }
+      return uri != null && uri.host == 'seat.lib.whu.edu.cn';
+    },
     parseFailure: (response) {
       if (_looksLikeCasLoginPage(response.body)) {
         return 'CAS login page returned';
       }
-      return 'seat token not found';
+      return 'seat system page not reached';
     },
   );
 }
@@ -252,12 +437,39 @@ Future<void> _request({
   Object? body,
 }) async {
   final response = switch (method) {
-    'GET' => await client.get(uri, headers: headers).timeout(timeout),
+    'GET' =>
+      await client
+          .send(
+            http.Request('GET', uri)
+              ..headers.addAll(headers)
+              ..maxRedirects = 12,
+          )
+          .then(http.Response.fromStream)
+          .timeout(timeout),
     'POST' =>
-      await client.post(uri, headers: headers, body: body).timeout(timeout),
+      await client
+          .send(_postRequest(uri: uri, headers: headers, body: body))
+          .then(http.Response.fromStream)
+          .timeout(timeout),
     _ => throw ArgumentError.value(method, 'method'),
   };
   _printResponse(label, response);
+}
+
+http.Request _postRequest({
+  required Uri uri,
+  required Map<String, String> headers,
+  required Object? body,
+}) {
+  final request = http.Request('POST', uri)
+    ..headers.addAll(headers)
+    ..maxRedirects = 12;
+  if (body is Map<String, String>) {
+    request.bodyFields = body;
+  } else if (body is String) {
+    request.body = body;
+  }
+  return request;
 }
 
 final _educationHomeUrl = Uri.parse(
@@ -273,8 +485,7 @@ final _educationRequest = _ServiceRequest(
     }
     if (uri != null &&
         uri.host == 'jwgl.whu.edu.cn' &&
-        (uri.path == '/xtgl/index_initMenu.html' ||
-            uri.path == '/xtgl/login_slogin.html')) {
+        uri.path == '/xtgl/index_initMenu.html') {
       return true;
     }
     final body = response.body;
@@ -297,6 +508,10 @@ final _educationRequest = _ServiceRequest(
 
 final _emptyRoomEntryUri = Uri.parse('https://zhlj.whu.edu.cn/pc/toEmptyRoom');
 
+final _ecardEntryUri = Uri.parse(
+  'https://zhlj.whu.edu.cn/mobile/homepageapi/showApp?appid=100000083&go=3A951E717A54699002E12202B5C8D4900DE42F32C030654FD17718CFBFB249AEFFE16B734A902AA80213296633D535817FC5933ADD813784A17E766EAB7860A453551EF48221E88B745FA0BB5AC35586BC7600F17BD706D54BED697A39BBAC1A56AAFE6F5F1C944C8263D962BB28A68E',
+);
+
 final _emptyRoomRequest = _ServiceRequest(
   serviceUrl: Uri.parse('https://zhlj.whu.edu.cn/casLogin'),
   isSuccess: (response) {
@@ -304,10 +519,10 @@ final _emptyRoomRequest = _ServiceRequest(
     if (response.statusCode < 200 || response.statusCode >= 400) {
       return false;
     }
-    if (_looksLikeSmartCampusAuthFailure(response.body)) {
+    if (uri == null || uri.host != 'zhlj.whu.edu.cn') {
       return false;
     }
-    return uri != null && uri.host == 'zhlj.whu.edu.cn';
+    return !_looksLikeSmartCampusNotLoggedIn(response.body);
   },
   parseFailure: (response) {
     if (_looksLikeSmartCampusAuthFailure(response.body)) {
@@ -341,6 +556,35 @@ Map<String, String> _smartCampusHeaders({
   return headers;
 }
 
+Map<String, String> _smartCampusWebHeaders(Uri uri) {
+  final referer = uri.host == 'zhlj.whu.edu.cn'
+      ? 'https://zhlj.whu.edu.cn/mobile/homepage?customizecolor=0x01A185'
+      : 'https://zhlj.whu.edu.cn/';
+  return <String, String>{
+    'Accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'zh_CN',
+    'Referer': referer,
+    'User-Agent':
+        'Mozilla/5.0 (Linux; Android 14; wv) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Version/4.0 Chrome/144.0.7559.59 Mobile Safari/537.36 '
+        'Language/zh_CN '
+        'com.chaoxing.mobile.wuhanuniversity/ChaoXingStudy_1000028_5.4_android_phone_640_233',
+    'X-Requested-With': 'com.chaoxing.mobile.wuhanuniversity',
+  };
+}
+
+String _generateValidate() {
+  const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+  final now = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+  final seed = DateTime.now().microsecondsSinceEpoch;
+  final randomPart = List.generate(7, (index) {
+    final value = (seed + index * 1103515245) & 0x7fffffff;
+    return chars[value % chars.length];
+  }).join();
+  return 'sl$randomPart$now';
+}
+
 Uri _readConfigUri(Map<String, dynamic> config, String key) {
   final value = config[key];
   if (value is! String || value.trim().isEmpty) {
@@ -361,33 +605,23 @@ Uri _appendPath(Uri base, String path) {
   return base.replace(path: '$basePath/$nextPath');
 }
 
-String? _extractToken(Uri? uri) {
-  final token = uri?.queryParameters['token']?.trim();
-  if (token != null && token.isNotEmpty) {
-    return token;
-  }
-  final fragment = uri?.fragment;
-  if (fragment == null || fragment.isEmpty || !fragment.contains('?')) {
-    return null;
-  }
-  final query = fragment.substring(fragment.indexOf('?') + 1);
-  return Uri.splitQueryString(query)['token']?.trim();
-}
-
 bool _looksLikeCasLoginPage(String body) {
   return body.contains('authserver/login') ||
       body.contains('统一身份认证') ||
+      body.contains('统一身份认证登录') ||
+      body.contains('用户登录') ||
       body.contains('cas.whu.edu.cn');
 }
 
 bool _looksLikeSmartCampusAuthFailure(String body) {
-  final normalized = body.trim();
-  return normalized == '未登录' ||
-      body.contains('未登录') ||
+  return _looksLikeSmartCampusNotLoggedIn(body) ||
       _looksLikeCasLoginPage(body) ||
-      body.contains('统一认证') ||
-      body.contains('/casLogin') ||
       body.contains('login-page');
+}
+
+bool _looksLikeSmartCampusNotLoggedIn(String body) {
+  final normalized = body.trim();
+  return normalized == '未登录' || body.contains('未登录');
 }
 
 String _bodyKind(String body) {
@@ -617,7 +851,10 @@ class _CookieJar {
       final name = trimmed.substring(0, index).trim();
       final value = trimmed.substring(index + 1).trim();
       if (name.isNotEmpty && value.isNotEmpty) {
-        values[_CookieKey(host: host, name: name)] = value;
+        values.putIfAbsent(
+          _CookieKey(host: host, path: '/', name: name),
+          () => value,
+        );
       }
     }
     return _CookieJar(values);
@@ -625,15 +862,24 @@ class _CookieJar {
 
   final Map<_CookieKey, String> _values;
 
-  String headerFor(Uri uri) => _values.entries
-      .where((entry) => entry.value.isNotEmpty && entry.key.matches(uri.host))
-      .map((entry) => '${entry.key.name}=${entry.value}')
-      .join('; ');
+  String headerFor(Uri uri) {
+    final entries =
+        _values.entries
+            .where((entry) => entry.value.isNotEmpty && entry.key.matches(uri))
+            .toList()
+          ..sort(
+            (left, right) =>
+                right.key.path.length.compareTo(left.key.path.length),
+          );
+    return entries
+        .map((entry) => '${entry.key.name}=${entry.value}')
+        .join('; ');
+  }
 
   String debugNamesFor(Uri uri) {
     final names =
         _values.keys
-            .where((key) => key.matches(uri.host))
+            .where((key) => key.matches(uri))
             .map((key) => key.name)
             .toSet()
             .toList(growable: false)
@@ -655,8 +901,16 @@ class _CookieJar {
       final name = firstPart.substring(0, index).trim();
       final value = firstPart.substring(index + 1).trim();
       if (name.isNotEmpty) {
-        _values[_CookieKey(host: _cookieDomain(parts, uri.host), name: name)] =
-            value;
+        final key = _CookieKey(
+          host: _cookieDomain(parts, uri.host),
+          path: _cookiePath(parts, uri),
+          name: name,
+        );
+        if (value.isEmpty || _isDeletion(parts)) {
+          _values.remove(key);
+        } else {
+          _values[key] = value;
+        }
       }
     }
   }
@@ -676,6 +930,52 @@ class _CookieJar {
       }
     }
     return fallbackHost.toLowerCase();
+  }
+
+  String _cookiePath(List<String> parts, Uri uri) {
+    for (final part in parts.skip(1)) {
+      final index = part.indexOf('=');
+      if (index <= 0) {
+        continue;
+      }
+      final name = part.substring(0, index).trim().toLowerCase();
+      if (name == 'path') {
+        final value = part.substring(index + 1).trim();
+        if (value.startsWith('/')) {
+          return value;
+        }
+      }
+    }
+    return _defaultCookiePath(uri.path);
+  }
+
+  String _defaultCookiePath(String requestPath) {
+    if (requestPath.isEmpty || !requestPath.startsWith('/')) {
+      return '/';
+    }
+    final lastSlash = requestPath.lastIndexOf('/');
+    if (lastSlash <= 0) {
+      return '/';
+    }
+    return requestPath.substring(0, lastSlash);
+  }
+
+  bool _isDeletion(List<String> parts) {
+    for (final part in parts.skip(1)) {
+      final index = part.indexOf('=');
+      if (index <= 0) {
+        continue;
+      }
+      final name = part.substring(0, index).trim().toLowerCase();
+      final value = part.substring(index + 1).trim().toLowerCase();
+      if (name == 'max-age' && value == '0') {
+        return true;
+      }
+      if (name == 'expires' && value.startsWith('thu, 01 jan 1970')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   List<String> _splitSetCookie(String header) {
@@ -705,30 +1005,50 @@ class _CookieJar {
 }
 
 class _CookieKey {
-  const _CookieKey({required this.host, required this.name});
+  const _CookieKey({
+    required this.host,
+    required this.path,
+    required this.name,
+  });
 
   final String host;
+  final String path;
   final String name;
 
-  bool matches(String requestHost) {
-    final normalizedHost = requestHost.toLowerCase();
+  bool matches(Uri uri) {
+    final normalizedHost = uri.host.toLowerCase();
     final normalizedCookieHost = host.toLowerCase();
-    if (normalizedHost == normalizedCookieHost) {
+    final hostMatches =
+        normalizedHost == normalizedCookieHost ||
+        (normalizedCookieHost.startsWith('.') &&
+            normalizedHost.endsWith(normalizedCookieHost.substring(1)));
+    if (!hostMatches) {
+      return false;
+    }
+    return _pathMatches(uri.path);
+  }
+
+  bool _pathMatches(String requestPath) {
+    final normalizedPath = requestPath.isEmpty ? '/' : requestPath;
+    if (normalizedPath == path) {
       return true;
     }
-    if (normalizedCookieHost.startsWith('.')) {
-      return normalizedHost.endsWith(normalizedCookieHost.substring(1));
+    if (!normalizedPath.startsWith(path)) {
+      return false;
     }
-    return false;
+    return path.endsWith('/') || normalizedPath[path.length] == '/';
   }
 
   @override
   bool operator ==(Object other) {
-    return other is _CookieKey && other.host == host && other.name == name;
+    return other is _CookieKey &&
+        other.host == host &&
+        other.path == path &&
+        other.name == name;
   }
 
   @override
-  int get hashCode => Object.hash(host, name);
+  int get hashCode => Object.hash(host, path, name);
 }
 
 class _ProbeOptions {
@@ -737,7 +1057,14 @@ class _ProbeOptions {
   final Set<String> targets;
   final Duration timeout;
 
-  static const _allTargets = {'education', 'empty-room', 'seat'};
+  static const _allTargets = {
+    'education',
+    'score',
+    'timetable',
+    'empty-room',
+    'seat',
+    'ecard',
+  };
 
   factory _ProbeOptions.parse(List<String> args) {
     var targets = _allTargets;
@@ -775,7 +1102,7 @@ class _ProbeOptions {
   static Never _printUsageAndExit([int code = 0]) {
     stdout.writeln('''
 Usage:
-  dart run tool/whu_auth_probe.dart [--target=education,empty-room,seat] [--timeout=15]
+  dart run tool/whu_auth_probe.dart [--target=education,score,timetable,empty-room,seat,ecard] [--timeout=15]
 
 Environment:
   WHU_CAS_COOKIE   CAS cookie header copied from cas.whu.edu.cn

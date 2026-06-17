@@ -5,9 +5,13 @@ import 'package:http/http.dart' as http;
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
 
 class SeatReservationWebSession {
-  const SeatReservationWebSession({required this.launchUri});
+  const SeatReservationWebSession({
+    required this.launchUri,
+    required this.cookieHeader,
+  });
 
   final Uri launchUri;
+  final String cookieHeader;
 }
 
 class SeatReservationAuthService {
@@ -23,15 +27,24 @@ class SeatReservationAuthService {
     final client = await gateway.authorizeService(serviceRequest);
     try {
       final launchUri = client.lastResponseUri ?? serviceRequest.entryUrl!;
-      return SeatReservationWebSession(launchUri: launchUri);
+      return SeatReservationWebSession(
+        launchUri: launchUri,
+        cookieHeader: client.cookieHeaderFor(serviceRequest.entryUrl!),
+      );
     } finally {
       client.close();
     }
   }
 
-  static bool _hasSeatToken(http.Response response) {
-    final token = _extractToken(response.request?.url);
-    return token != null && token.isNotEmpty;
+  static bool _isSeatLoginSuccess(http.Response response) {
+    final uri = response.request?.url;
+    if (response.statusCode < 200 || response.statusCode >= 400) {
+      return false;
+    }
+    if (_looksLikeCasLoginPage(response.body)) {
+      return false;
+    }
+    return uri != null && uri.host == 'seat.lib.whu.edu.cn';
   }
 
   static Future<WhuCasServiceRequest> _loadSeatServiceRequest() async {
@@ -46,7 +59,7 @@ class SeatReservationAuthService {
     return WhuCasServiceRequest(
       serviceUrl: entryUri,
       entryUrl: entryUri,
-      isSuccess: _hasSeatToken,
+      isSuccess: _isSeatLoginSuccess,
       parseFailure: _parseSeatFailure,
     );
   }
@@ -111,7 +124,7 @@ class SeatReservationAuthService {
     if (response.statusCode < 200 || response.statusCode >= 400) {
       return '座位预约系统授权失败（HTTP ${response.statusCode}）。\n$diagnostic';
     }
-    return '座位预约系统授权失败：未获取到座位系统 token。\n$diagnostic';
+    return '座位预约系统授权失败：未进入座位预约系统。\n$diagnostic';
   }
 
   static String? _extractToken(Uri? uri) {

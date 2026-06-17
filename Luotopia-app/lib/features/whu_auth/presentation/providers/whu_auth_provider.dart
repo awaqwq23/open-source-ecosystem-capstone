@@ -53,7 +53,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     try {
       final cookieHeader = await _readCasCookieHeader();
       final educationCookieHeader = await _readEducationCookieHeader();
-      if (!_hasCasSession(cookieHeader)) {
+      if (!hasWhuCasSessionCookie(cookieHeader)) {
         throw const WhuAuthException(
           WhuAuthExceptionCode.loginRequired,
           '没有检测到有效的武大统一认证 Cookie。',
@@ -64,7 +64,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
       _educationCookieHeader = educationCookieHeader;
       final client = await authorizeEducation();
       try {
-        final account = await ref.read(whuCasServiceProvider).loadEducationAccount(client);
+        final account = await ref
+            .read(whuCasServiceProvider)
+            .loadEducationAccount(client);
         await _persistAuthenticated(account);
       } finally {
         client.close();
@@ -90,7 +92,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
   }
 
   @override
-  Future<WhuServiceSession> authorizeService(WhuCasServiceRequest request) async {
+  Future<WhuServiceSession> authorizeService(
+    WhuCasServiceRequest request,
+  ) async {
     await _refreshCasCookieHeader();
     if (_casCookieHeader.trim().isEmpty) {
       throw const WhuAuthException(
@@ -98,19 +102,22 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
         '请先登录武大统一认证。',
       );
     }
-    return ref.read(whuCasServiceProvider).authorizeService(
-          casCookieHeader: _casCookieHeader,
-          request: request,
-        );
+    return ref
+        .read(whuCasServiceProvider)
+        .authorizeService(casCookieHeader: _casCookieHeader, request: request);
   }
 
   Future<void> _refreshCasCookieHeader() async {
     final latestCookieHeader = await _readCasCookieHeader();
-    if (_hasCasSession(latestCookieHeader)) {
+    if (hasWhuCasSessionCookie(latestCookieHeader)) {
       _casCookieHeader = latestCookieHeader;
-      debugPrint('[WhuAuth] refreshed CAS cookies before service authorization');
+      debugPrint(
+        '[WhuAuth] refreshed CAS cookies before service authorization',
+      );
     } else {
-      debugPrint('[WhuAuth] no fresh CAS cookies found before service authorization');
+      debugPrint(
+        '[WhuAuth] no fresh CAS cookies found before service authorization',
+      );
     }
   }
 
@@ -119,7 +126,9 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     await _refreshWebViewCookieHeaders();
     if (_educationCookieHeader.trim().isNotEmpty) {
       try {
-        return ref.read(whuCasServiceProvider).authorizeEducationWithCookies(
+        return ref
+            .read(whuCasServiceProvider)
+            .authorizeEducationWithCookies(
               educationCookieHeader: _educationCookieHeader,
             );
       } on WhuAuthException catch (error) {
@@ -131,7 +140,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
 
   @override
   Future<void> primeCasCookiesForWebView() async {
-    if (!_hasCasSession(_casCookieHeader)) {
+    if (!hasWhuCasSessionCookie(_casCookieHeader)) {
       throw const WhuAuthException(
         WhuAuthExceptionCode.loginRequired,
         '请先登录武大统一认证。',
@@ -144,10 +153,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
         '请先登录武大统一认证。',
       );
     }
-    await _cookieManager.setCookies(
-      cookies,
-      origin: 'https://cas.whu.edu.cn',
-    );
+    await _cookieManager.setCookies(cookies, origin: 'https://cas.whu.edu.cn');
   }
 
   Future<void> logout() async {
@@ -163,12 +169,7 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     final nextAccount = account.hasProfile
         ? account
         : state.account ??
-            const WhuAccount(
-              studentId: '',
-              name: '',
-              college: '',
-              major: '',
-            );
+              const WhuAccount(studentId: '', name: '', college: '', major: '');
     final snapshot = WhuAuthSnapshot(
       casCookieHeader: _casCookieHeader,
       educationCookieHeader: _educationCookieHeader,
@@ -191,46 +192,56 @@ class WhuAuthNotifier extends Notifier<WhuAuthState> implements WhuAuthGateway {
     );
     final casCookies = [
       for (final cookie in cookies)
-        if ((cookie.domain == null || cookie.domain!.contains('cas.whu.edu.cn')) &&
+        if ((cookie.domain == null ||
+                cookie.domain!.contains('cas.whu.edu.cn')) &&
             cookie.name.trim().isNotEmpty &&
             cookie.value.trim().isNotEmpty)
           cookie,
     ];
-    return casCookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+    return _buildCookieHeader(casCookies);
   }
 
   Future<String> _readEducationCookieHeader() async {
-    final cookies = await _cookieManager.getCookies(
-      'https://jwgl.whu.edu.cn/',
-    );
+    final cookies = await _cookieManager.getCookies('https://jwgl.whu.edu.cn/');
     final educationCookies = [
       for (final cookie in cookies)
-        if ((cookie.domain == null || cookie.domain!.contains('jwgl.whu.edu.cn')) &&
+        if ((cookie.domain == null ||
+                cookie.domain!.contains('jwgl.whu.edu.cn')) &&
             cookie.name.trim().isNotEmpty &&
             cookie.value.trim().isNotEmpty)
           cookie,
     ];
-    return educationCookies.map((cookie) => '${cookie.name}=${cookie.value}').join('; ');
+    return _buildCookieHeader(educationCookies);
   }
 
   Future<void> _refreshWebViewCookieHeaders() async {
     final latestCasCookieHeader = await _readCasCookieHeader();
     final latestEducationCookieHeader = await _readEducationCookieHeader();
-    if (_hasCasSession(latestCasCookieHeader)) {
+    if (hasWhuCasSessionCookie(latestCasCookieHeader)) {
       _casCookieHeader = latestCasCookieHeader;
     }
     if (latestEducationCookieHeader.trim().isNotEmpty) {
       _educationCookieHeader = latestEducationCookieHeader;
     }
   }
+}
 
-  bool _hasCasSession(String cookieHeader) {
-    return cookieHeader.contains('CASTGC=') && cookieHeader.contains('JSESSIONID=');
+bool hasWhuCasSessionCookie(String cookieHeader) {
+  for (final part in cookieHeader.split(';')) {
+    final trimmed = part.trim();
+    if (!trimmed.startsWith('CASTGC=')) {
+      continue;
+    }
+    final value = trimmed.substring('CASTGC='.length).trim();
+    if (value.isNotEmpty) {
+      return true;
+    }
   }
+  return false;
 }
 
 List<Cookie> buildWhuCasWebViewCookies(String cookieHeader) {
-  final cookies = <Cookie>[];
+  final values = <String, String>{};
   for (final part in cookieHeader.split(';')) {
     final trimmed = part.trim();
     if (trimmed.isEmpty || !trimmed.contains('=')) {
@@ -239,11 +250,15 @@ List<Cookie> buildWhuCasWebViewCookies(String cookieHeader) {
     final separator = trimmed.indexOf('=');
     final name = trimmed.substring(0, separator).trim();
     final value = trimmed.substring(separator + 1).trim();
-    if (name.isEmpty || value.isEmpty) {
+    if (name.isEmpty || value.isEmpty || values.containsKey(name)) {
       continue;
     }
+    values[name] = value;
+  }
+  final cookies = <Cookie>[];
+  for (final entry in values.entries) {
     cookies.add(
-      Cookie(name, value)
+      Cookie(entry.key, entry.value)
         ..domain = 'cas.whu.edu.cn'
         ..path = '/'
         ..secure = true
@@ -251,4 +266,19 @@ List<Cookie> buildWhuCasWebViewCookies(String cookieHeader) {
     );
   }
   return cookies;
+}
+
+String _buildCookieHeader(Iterable<Cookie> cookies) {
+  final values = <String, String>{};
+  for (final cookie in cookies) {
+    final name = cookie.name.trim();
+    final value = cookie.value.trim();
+    if (name.isEmpty || value.isEmpty || values.containsKey(name)) {
+      continue;
+    }
+    values[name] = value;
+  }
+  return values.entries
+      .map((entry) => '${entry.key}=${entry.value}')
+      .join('; ');
 }
