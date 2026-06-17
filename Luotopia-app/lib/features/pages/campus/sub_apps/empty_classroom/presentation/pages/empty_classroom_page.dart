@@ -473,7 +473,7 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
             message: state.errorMessage!,
             onRetry: _query,
           )
-        else if (state.classrooms.isEmpty && state.selectedBuilding != null)
+        else if (state.classrooms.isEmpty && state.selectedCampus != null)
           state.hasQueried
               ? const EmptyClassroomEmptyCard()
               : const EmptyClassroomQueryHint()

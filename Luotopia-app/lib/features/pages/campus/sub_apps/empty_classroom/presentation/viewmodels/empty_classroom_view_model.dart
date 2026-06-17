@@ -42,7 +42,6 @@ class EmptyClassroomState {
 
   bool get canQuery {
     return selectedCampus != null &&
-        selectedBuilding != null &&
         termInfo != null &&
         selectedWeek.isNotEmpty &&
         selectedWeekDay.isNotEmpty &&
@@ -126,11 +125,8 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
 
   Future<void> query() async {
     final selectedCampus = state.selectedCampus;
-    final selectedBuilding = state.selectedBuilding;
     final termInfo = state.termInfo;
-    if (selectedCampus == null ||
-        selectedBuilding == null ||
-        termInfo == null) {
+    if (selectedCampus == null || termInfo == null) {
       return;
     }
 
@@ -146,7 +142,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
               term: termInfo.termName,
               week: state.selectedWeek,
               weekDay: state.selectedWeekDay,
-              teachingBuilding: selectedBuilding.name,
+              teachingBuilding: state.selectedBuilding?.name,
             ),
           );
       state = state.copyWith(

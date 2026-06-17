@@ -74,15 +74,20 @@ class EmptyClassroomFilterCard extends StatelessWidget {
                 vertical: 10,
               ),
             ),
-            items: state.buildings
-                .map(
-                  (building) => DropdownMenuItem(
-                    value: building,
-                    child: Text(building.name),
-                  ),
-                )
-                .toList(),
-            onChanged: onBuildingChanged,
+            hint: const Text('全部教学楼'),
+            items: [
+              const DropdownMenuItem<Building>(
+                value: null,
+                child: Text('全部教学楼'),
+              ),
+              ...state.buildings.map(
+                (building) => DropdownMenuItem(
+                  value: building,
+                  child: Text(building.name),
+                ),
+              ),
+            ],
+            onChanged: state.selectedCampus == null ? null : onBuildingChanged,
           ),
           const SizedBox(height: 12),
           Row(
