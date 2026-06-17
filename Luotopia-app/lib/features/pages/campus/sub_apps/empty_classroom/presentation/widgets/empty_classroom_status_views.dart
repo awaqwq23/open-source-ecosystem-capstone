@@ -72,11 +72,13 @@ class EmptyClassroomQueryErrorCard extends StatelessWidget {
   const EmptyClassroomQueryErrorCard({
     required this.message,
     required this.onRetry,
+    this.actionLabel,
     super.key,
   });
 
   final String message;
   final VoidCallback onRetry;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +94,7 @@ class EmptyClassroomQueryErrorCard extends StatelessWidget {
           const SizedBox(height: 16),
           ui.OutlineButton(
             onPressed: onRetry,
-            child: Text(l10n.emptyClassroomRetry),
+            child: Text(actionLabel ?? l10n.emptyClassroomRetry),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/exceptions/empty_classroom_exception.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/build_empty_classroom_agenda_draft.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/find_empty_classroom_conflicts.dart';
@@ -417,10 +418,14 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
     }
 
     if (state.hasInitialError && state.errorMessage != null) {
+      final authExpired =
+          state.errorCode == EmptyClassroomExceptionCode.authExpired;
       return EmptyClassroomInitialErrorView(
         message: state.errorMessage!,
-        retryLabel: l10n.emptyClassroomRetry,
-        onRetry: notifier.loadInitialData,
+        retryLabel: authExpired
+            ? l10n.emptyClassroomGoLogin
+            : l10n.emptyClassroomRetry,
+        onRetry: authExpired ? _openLogin : notifier.loadInitialData,
       );
     }
 
@@ -471,7 +476,13 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
         else if (state.errorMessage != null)
           EmptyClassroomQueryErrorCard(
             message: state.errorMessage!,
-            onRetry: _query,
+            actionLabel:
+                state.errorCode == EmptyClassroomExceptionCode.authExpired
+                ? l10n.emptyClassroomGoLogin
+                : null,
+            onRetry: state.errorCode == EmptyClassroomExceptionCode.authExpired
+                ? _openLogin
+                : _query,
           )
         else if (state.classrooms.isEmpty && state.selectedCampus != null)
           state.hasQueried

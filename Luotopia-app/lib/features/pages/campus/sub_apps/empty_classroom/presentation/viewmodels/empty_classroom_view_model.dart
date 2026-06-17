@@ -18,6 +18,7 @@ class EmptyClassroomState {
     this.isInitialLoading = false,
     this.isQuerying = false,
     this.errorMessage,
+    this.errorCode,
     this.hasLoadedInitialData = false,
     this.hasQueried = false,
   });
@@ -32,6 +33,7 @@ class EmptyClassroomState {
   final bool isInitialLoading;
   final bool isQuerying;
   final String? errorMessage;
+  final EmptyClassroomExceptionCode? errorCode;
   final bool hasLoadedInitialData;
   final bool hasQueried;
 
@@ -63,6 +65,7 @@ class EmptyClassroomState {
     bool? isInitialLoading,
     bool? isQuerying,
     String? errorMessage,
+    EmptyClassroomExceptionCode? errorCode,
     bool clearErrorMessage = false,
     bool? hasLoadedInitialData,
     bool? hasQueried,
@@ -86,6 +89,7 @@ class EmptyClassroomState {
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
+      errorCode: clearErrorMessage ? null : errorCode ?? this.errorCode,
       hasLoadedInitialData: hasLoadedInitialData ?? this.hasLoadedInitialData,
       hasQueried: hasQueried ?? this.hasQueried,
     );
@@ -136,6 +140,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       state = state.copyWith(
         isInitialLoading: false,
         errorMessage: _errorMessage(error),
+        errorCode: _errorCode(error),
       );
     }
   }
@@ -172,6 +177,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       state = state.copyWith(
         isQuerying: false,
         errorMessage: _errorMessage(error),
+        errorCode: _errorCode(error),
       );
     }
   }
@@ -224,6 +230,13 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       return error.message;
     }
     return error.toString();
+  }
+
+  EmptyClassroomExceptionCode? _errorCode(Object error) {
+    if (error is EmptyClassroomException) {
+      return error.code;
+    }
+    return null;
   }
 
   CampusBuilding? _savedCampus(
