@@ -585,6 +585,9 @@ class _AppGrid extends StatelessWidget {
       case '自习预约':
         context.openSecondary(AppRoutePaths.campusSeatReservation);
         return;
+      case '运动场馆':
+        context.openSecondary(AppRoutePaths.campusSportsReservation);
+        return;
       case '珞珈E卡':
         context.openSecondary(AppRoutePaths.campusLuojiaEcard);
         return;

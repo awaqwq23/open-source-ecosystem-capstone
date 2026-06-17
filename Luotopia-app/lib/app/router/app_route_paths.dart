@@ -9,6 +9,13 @@ abstract final class AppRoutePaths {
   static const campusScore = '/campus/score';
   static const campusTimetable = '/campus/timetable';
   static const campusSeatReservation = '/campus/seat-reservation';
+  static const campusSportsReservation = '/campus/sports-reservation';
+  static const campusSportsReservationSession =
+      '/campus/sports-reservation/session';
+  static const campusSportsReservationCheckout =
+      '/campus/sports-reservation/checkout';
+  static const campusSportsReservationOrder =
+      '/campus/sports-reservation/order';
   static const campusLuojiaEcard = '/campus/luojia-ecard';
   static const campusEcardPaymentCode = '/campus/ecard-payment-code';
   static const campusEmptyClassroom = '/campus/empty-classroom';

@@ -18,6 +18,12 @@ import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presenta
 import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/presentation/pages/score_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/seat_reservation/presentation/pages/seat_reservation_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/data/sports_reservation_session.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/domain/sports_reservation_domain.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/pages/sports_reservation_checkout_webview_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/pages/sports_reservation_order_webview_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/pages/sports_reservation_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/pages/sports_reservation_session_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/presentation/pages/campus_timetable_page.dart';
 import 'package:luotopia/features/pages/forum/presentation/pages/forum_page.dart';
 import 'package:luotopia/features/pages/ai/presentation/pages/ai_page.dart';
@@ -171,6 +177,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           state,
                           const SeatReservationPage(),
                         ),
+                  ),
+                  GoRoute(
+                    path: 'sports-reservation',
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const SportsReservationPage(),
+                        ),
+                  ),
+                  GoRoute(
+                    path: 'sports-reservation/session',
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<
+                          SportsReservationSession
+                        >(
+                          context,
+                          state,
+                          const SportsReservationSessionWebViewPage(),
+                        ),
+                  ),
+                  GoRoute(
+                    path: 'sports-reservation/checkout',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<
+                        SportsCheckoutResult
+                      >(
+                        context,
+                        state,
+                        args is SportsCheckoutArgs
+                            ? SportsReservationCheckoutWebViewPage(args: args)
+                            : const _MissingSportsCheckoutArgsPage(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'sports-reservation/order',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<void>(
+                        context,
+                        state,
+                        args is SportsReservationOrderWebViewArgs
+                            ? SportsReservationOrderWebViewPage(args: args)
+                            : const _MissingSportsOrderArgsPage(),
+                      );
+                    },
                   ),
                   GoRoute(
                     path: 'luojia-ecard',
@@ -479,4 +533,22 @@ ItemEditorArgs? _resolveItemEditorArgs(GoRouterState state) {
             )
           : null,
   };
+}
+
+class _MissingSportsCheckoutArgsPage extends StatelessWidget {
+  const _MissingSportsCheckoutArgsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('预约确认参数缺失，请返回重新选择。'));
+  }
+}
+
+class _MissingSportsOrderArgsPage extends StatelessWidget {
+  const _MissingSportsOrderArgsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('订单参数缺失，请返回重新选择。'));
+  }
 }

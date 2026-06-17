@@ -99,8 +99,10 @@ class AppWebViewPage extends StatefulWidget {
     this.onRefresh,
     this.overlayBuilder,
     this.onExit,
+    this.trailingActions = const <Widget>[],
     this.showRefresh = true,
     this.enableZoom = true,
+    this.allowMixedContent = false,
     this.loadingMessage = '正在加载页面...',
     this.preparingMessage = '正在准备页面...',
     this.errorTitle = '页面暂时无法打开',
@@ -118,8 +120,10 @@ class AppWebViewPage extends StatefulWidget {
   final AppWebViewRefreshCallback? onRefresh;
   final AppWebViewOverlayBuilder? overlayBuilder;
   final VoidCallback? onExit;
+  final List<Widget> trailingActions;
   final bool showRefresh;
   final bool enableZoom;
+  final bool allowMixedContent;
   final String loadingMessage;
   final String preparingMessage;
   final String errorTitle;
@@ -194,6 +198,11 @@ class _AppWebViewPageState extends State<AppWebViewPage> {
       if (platformController is AndroidWebViewController) {
         await platformController.setUseWideViewPort(true);
         await platformController.setTextZoom(100);
+        if (widget.allowMixedContent) {
+          await platformController.setMixedContentMode(
+            MixedContentMode.alwaysAllow,
+          );
+        }
       }
       await widget.onControllerCreated?.call(_controller);
       await _loadInitialRequest();
@@ -324,6 +333,7 @@ class _AppWebViewPageState extends State<AppWebViewPage> {
             ],
             title: Text(widget.title),
             trailing: [
+              ...widget.trailingActions,
               if (widget.showRefresh)
                 ui.IconButton.ghost(
                   icon: const Icon(Icons.refresh),
