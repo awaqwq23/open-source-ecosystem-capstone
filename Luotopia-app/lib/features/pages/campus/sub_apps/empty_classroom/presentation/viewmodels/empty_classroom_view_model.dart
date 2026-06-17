@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/data/empty_classroom_filter_preferences.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/exceptions/empty_classroom_exception.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository.dart';
@@ -106,11 +107,24 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       final filters = await ref
           .read(emptyClassroomRepositoryProvider)
           .loadFilters();
+      final savedFilters = ref
+          .read(emptyClassroomFilterPreferencesProvider)
+          .read();
+      final selectedCampus = _savedCampus(
+        filters.campuses,
+        savedFilters?.campus,
+      );
+      final selectedBuilding = _savedBuilding(
+        selectedCampus,
+        savedFilters?.building,
+      );
       state = state.copyWith(
         termInfo: filters.termInfo,
         campuses: filters.campuses,
-        selectedWeek: filters.termInfo.currentWeek,
-        selectedWeekDay: filters.termInfo.weekDay,
+        selectedCampus: selectedCampus,
+        selectedBuilding: selectedBuilding,
+        selectedWeek: _savedWeek(savedFilters?.week, filters.termInfo),
+        selectedWeekDay: _savedWeekDay(savedFilters?.weekDay, filters.termInfo),
         isInitialLoading: false,
         hasLoadedInitialData: true,
         clearErrorMessage: true,
@@ -168,6 +182,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       hasQueried: false,
       clearErrorMessage: true,
     );
+    _saveFilterSnapshot();
   }
 
   void selectBuilding(Building? building) {
@@ -178,6 +193,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       hasQueried: false,
       clearErrorMessage: true,
     );
+    _saveFilterSnapshot();
   }
 
   void selectWeek(String week) {
@@ -187,6 +203,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       hasQueried: false,
       clearErrorMessage: true,
     );
+    _saveFilterSnapshot();
   }
 
   void selectWeekDay(String weekDay) {
@@ -196,6 +213,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       hasQueried: false,
       clearErrorMessage: true,
     );
+    _saveFilterSnapshot();
   }
 
   String _errorMessage(Object error) {
@@ -203,6 +221,63 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       return error.message;
     }
     return error.toString();
+  }
+
+  CampusBuilding? _savedCampus(
+    List<CampusBuilding> campuses,
+    String? campusName,
+  ) {
+    if (campusName == null || campusName.isEmpty) {
+      return null;
+    }
+    for (final campus in campuses) {
+      if (campus.campus == campusName) {
+        return campus;
+      }
+    }
+    return null;
+  }
+
+  Building? _savedBuilding(CampusBuilding? campus, String? buildingName) {
+    if (campus == null || buildingName == null || buildingName.isEmpty) {
+      return null;
+    }
+    for (final building in campus.buildings) {
+      if (building.name == buildingName) {
+        return building;
+      }
+    }
+    return null;
+  }
+
+  String _savedWeek(String? savedWeek, TermInfo termInfo) {
+    final maxWeek = int.tryParse(termInfo.maxWeek) ?? 18;
+    final week = int.tryParse(savedWeek ?? '');
+    if (week != null && week >= 1 && week <= maxWeek) {
+      return '$week';
+    }
+    return termInfo.currentWeek;
+  }
+
+  String _savedWeekDay(String? savedWeekDay, TermInfo termInfo) {
+    final weekDay = int.tryParse(savedWeekDay ?? '');
+    if (weekDay != null && weekDay >= 1 && weekDay <= 7) {
+      return '$weekDay';
+    }
+    return termInfo.weekDay;
+  }
+
+  void _saveFilterSnapshot() {
+    ref
+        .read(emptyClassroomFilterPreferencesProvider)
+        .write(
+          EmptyClassroomFilterSnapshot(
+            campus: state.selectedCampus?.campus,
+            building: state.selectedBuilding?.name,
+            week: state.selectedWeek,
+            weekDay: state.selectedWeekDay,
+          ),
+        );
   }
 }
 
