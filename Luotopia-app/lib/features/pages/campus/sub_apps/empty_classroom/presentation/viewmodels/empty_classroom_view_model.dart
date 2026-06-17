@@ -4,6 +4,7 @@ import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/e
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/models/empty_classroom.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/repositories/empty_classroom_repository_provider.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/domain/use_cases/sort_empty_classrooms.dart';
 
 class EmptyClassroomState {
   const EmptyClassroomState({
@@ -92,6 +93,8 @@ class EmptyClassroomState {
 }
 
 class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
+  static const _sortClassrooms = SortEmptyClassroomsUseCase();
+
   @override
   EmptyClassroomState build() {
     return const EmptyClassroomState();
@@ -160,7 +163,7 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
             ),
           );
       state = state.copyWith(
-        classrooms: classrooms,
+        classrooms: _sortClassrooms(classrooms),
         isQuerying: false,
         hasQueried: true,
         clearErrorMessage: true,
