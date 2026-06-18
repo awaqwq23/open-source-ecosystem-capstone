@@ -61,12 +61,12 @@ func (h Handler) publicPullPost(c *gin.Context) {
 
 func publicScopes(scopes []string) []string {
 	if len(scopes) == 0 {
-		return []string{"weather", "notification", "hot_update"}
+		return []string{"weather", "notification", "hot_update", "school_timetable"}
 	}
 	allowed := make([]string, 0, len(scopes))
 	for _, scope := range scopes {
 		switch scope {
-		case "weather", "notification", "hot_update":
+		case "weather", "notification", "hot_update", "school_timetable":
 			allowed = append(allowed, scope)
 		}
 	}

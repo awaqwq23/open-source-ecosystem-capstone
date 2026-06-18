@@ -11,6 +11,11 @@ abstract class AllSchoolTimetableRepository {
     required List<Map<String, String>> rows,
   });
 
+  Future<void> replaceTermFromPackageBytes({
+    required List<int> bytes,
+    required String sourceVersion,
+  });
+
   Future<List<SchoolTimetableTerm>> loadTerms();
 
   Future<List<SchoolCourseHead>> searchCourseHeads(

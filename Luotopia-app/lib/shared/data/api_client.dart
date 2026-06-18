@@ -17,14 +17,14 @@ class ApiClient {
   final Duration timeout;
 
   Map<String, String> get _jsonHeaders => {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
 
   Map<String, String> get _authHeaders => {
-        ..._jsonHeaders,
-        'Authorization': 'Bearer ${tokenProvider()}',
-      };
+    ..._jsonHeaders,
+    'Authorization': 'Bearer ${tokenProvider()}',
+  };
 
   Future<Map<String, dynamic>> get(String path) async {
     return _request(
@@ -37,9 +37,25 @@ class ApiClient {
         .get(Uri.parse('$baseUrl$path'), headers: _authHeaders)
         .timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiClientException._(response.statusCode, _parseErrorMessage(response));
+      throw ApiClientException._(
+        response.statusCode,
+        _parseErrorMessage(response),
+      );
     }
     return response.body;
+  }
+
+  Future<List<int>> getBytes(String path) async {
+    final response = await _client
+        .get(Uri.parse('$baseUrl$path'), headers: _authHeaders)
+        .timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiClientException._(
+        response.statusCode,
+        _parseErrorMessage(response),
+      );
+    }
+    return response.bodyBytes;
   }
 
   Future<Map<String, dynamic>> post(
@@ -59,7 +75,10 @@ class ApiClient {
   Future<Map<String, dynamic>> _request(Future<http.Response> future) async {
     final response = await future.timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiClientException._(response.statusCode, _parseErrorMessage(response));
+      throw ApiClientException._(
+        response.statusCode,
+        _parseErrorMessage(response),
+      );
     }
     final decoded = jsonDecode(response.body);
     if (decoded is Map<String, dynamic>) {

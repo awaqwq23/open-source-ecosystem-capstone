@@ -10,6 +10,7 @@ const titles = {
   dashboard: ["Dashboard", "仪表盘"],
   notifications: ["Announcements", "通知"],
   weather: ["Weather", "天气"],
+  "school-timetable": ["School Timetable", "全校课表"],
   scripts: ["Hot Update", "热更新脚本"],
   sync: ["Sync", "同步白名单"],
   users: ["Users", "用户"],
@@ -69,6 +70,27 @@ async function login(identifier, password) {
   saveTokens(accessToken, refreshToken);
 }
 
+async function apiForm(path, formData, retry = true) {
+  const response = await fetch(path, {
+    method: "POST",
+    body: formData,
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${state.token}`,
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && retry && state.refreshToken) {
+    await refreshSession();
+    return apiForm(path, formData, false);
+  }
+  if (!response.ok) {
+    const message = data?.error?.message || `请求失败（${response.status}）`;
+    throw new Error(message);
+  }
+  return data;
+}
+
 async function refreshSession() {
   const response = await fetch("/api/v1/auth/token/refresh", {
     method: "POST",
@@ -126,6 +148,7 @@ async function render() {
     if (state.view === "dashboard") await renderDashboard();
     if (state.view === "notifications") await renderNotifications();
     if (state.view === "weather") await renderWeather();
+    if (state.view === "school-timetable") await renderSchoolTimetable();
     if (state.view === "scripts") await renderScripts();
     if (state.view === "sync") await renderSync();
     if (state.view === "users") await renderUsers();
@@ -268,6 +291,92 @@ async function refreshWeather() {
     showMessage(error.message, true);
   }
   renderWeather();
+}
+
+async function renderSchoolTimetable() {
+  const terms = await api("/admin/api/v1/school-timetable/terms");
+  $("content").innerHTML = `
+    <section class="panel">
+      <h3>导入课表数据包</h3>
+      <form id="school-timetable-form" class="form-grid">
+        <label>gzip NDJSON 数据包<input name="file" type="file" accept=".gz,.ndjson.gz" required /></label>
+        <div class="actions">
+          <button class="secondary" type="button" onclick="validateSchoolTimetable()">预检</button>
+          <button class="primary" type="submit">发布为新版本</button>
+        </div>
+        <pre id="school-timetable-preview" class="muted">请选择由爬虫工具导出的 .ndjson.gz 数据包。</pre>
+      </form>
+    </section>
+    <section class="table-panel">
+      ${table(["学期", "激活版本", "行数", "Checksum", "发布时间", "操作"], (terms.items || []).map((item) => [
+        `<strong>${escapeHtml(item.term_key)}</strong><pre>${escapeHtml(item.school_year)} 第 ${escapeHtml(item.term)} 学期</pre>`,
+        item.version || 0,
+        item.row_count || 0,
+        `<pre>${escapeHtml(item.checksum || "")}</pre>`,
+        formatDate(item.published_at),
+        actions([button("查看版本", `loadSchoolTimetableReleases('${item.term_key}')`)]),
+      ]))}
+    </section>
+    <section id="school-timetable-releases" class="table-panel"></section>
+  `;
+  $("school-timetable-form").addEventListener("submit", publishSchoolTimetable);
+}
+
+function schoolTimetableFormData() {
+  const form = $("school-timetable-form");
+  if (!form) throw new Error("上传表单不存在");
+  const file = new FormData(form).get("file");
+  if (!(file instanceof File) || !file.name) {
+    throw new Error("请选择数据包文件");
+  }
+  const body = new FormData();
+  body.append("file", file);
+  return body;
+}
+
+async function validateSchoolTimetable() {
+  try {
+    const result = await apiForm("/admin/api/v1/school-timetable/imports/validate", schoolTimetableFormData());
+    $("school-timetable-preview").textContent = JSON.stringify(result, null, 2);
+    showMessage("数据包预检通过");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+async function publishSchoolTimetable(event) {
+  event.preventDefault();
+  try {
+    const result = await apiForm("/admin/api/v1/school-timetable/imports/publish", schoolTimetableFormData());
+    $("school-timetable-preview").textContent = JSON.stringify(result, null, 2);
+    showMessage("全校课表新版本已发布");
+    renderSchoolTimetable();
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+async function loadSchoolTimetableReleases(termKey) {
+  const data = await api(`/admin/api/v1/school-timetable/terms/${encodeURIComponent(termKey)}/releases`);
+  $("school-timetable-releases").innerHTML = table(
+    ["学期", "版本", "状态", "行数", "Checksum", "发布时间", "操作"],
+    (data.items || []).map((item) => [
+      escapeHtml(item.term_key),
+      item.version || 0,
+      badge(item.active ? "enabled" : "disabled"),
+      item.row_count || 0,
+      `<pre>${escapeHtml(item.checksum || "")}</pre>`,
+      formatDate(item.published_at),
+      item.active ? "" : actions([button("激活", `activateSchoolTimetableRelease('${item.term_key}', ${Number(item.version || 0)})`)]),
+    ]),
+  );
+}
+
+async function activateSchoolTimetableRelease(termKey, version) {
+  await api(`/admin/api/v1/school-timetable/terms/${encodeURIComponent(termKey)}/releases/${version}/activate`, {method: "POST"});
+  showMessage("全校课表版本已激活");
+  await renderSchoolTimetable();
+  await loadSchoolTimetableReleases(termKey);
 }
 
 async function renderScripts() {
@@ -453,6 +562,9 @@ Object.assign(window, {
   publishNotification,
   deleteNotification,
   refreshWeather,
+  validateSchoolTimetable,
+  loadSchoolTimetableReleases,
+  activateSchoolTimetableRelease,
   toggleScript,
   removeAllowlist,
 });

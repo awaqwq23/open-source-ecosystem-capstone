@@ -9,6 +9,7 @@ import (
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
+	schooldomain "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
 )
 
 type SyncChecker interface {
@@ -17,20 +18,26 @@ type SyncChecker interface {
 }
 
 type Service struct {
-	weatherSvc   *weatherapp.Service
-	notifcSvc    *notiapp.Service
-	hotUpdateSvc *hotapp.Service
-	syncChecker  SyncChecker
-	statsSvc     *statsapp.Service
+	weatherSvc         *weatherapp.Service
+	notifcSvc          *notiapp.Service
+	hotUpdateSvc       *hotapp.Service
+	syncChecker        SyncChecker
+	statsSvc           *statsapp.Service
+	schoolTimetableSvc SchoolTimetableProvider
 }
 
-func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker, statsSvc *statsapp.Service) *Service {
+type SchoolTimetableProvider interface {
+	ListActiveTerms(ctx context.Context) ([]schooldomain.Term, error)
+}
+
+func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker, statsSvc *statsapp.Service, schoolTimetableSvc SchoolTimetableProvider) *Service {
 	return &Service{
-		weatherSvc:   weatherSvc,
-		notifcSvc:    notifcSvc,
-		hotUpdateSvc: hotUpdateSvc,
-		syncChecker:  syncChecker,
-		statsSvc:     statsSvc,
+		weatherSvc:         weatherSvc,
+		notifcSvc:          notifcSvc,
+		hotUpdateSvc:       hotUpdateSvc,
+		syncChecker:        syncChecker,
+		statsSvc:           statsSvc,
+		schoolTimetableSvc: schoolTimetableSvc,
 	}
 }
 
@@ -108,6 +115,30 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 		}
 	}
 
+	if s.schoolTimetableSvc != nil && scopeEnabled(req.Scopes, "school_timetable") {
+		terms, err := s.schoolTimetableSvc.ListActiveTerms(ctx)
+		if err == nil {
+			block := &domain.SchoolTimetableBlock{Terms: []domain.SchoolTimetableTerm{}}
+			for _, term := range terms {
+				client := domain.ClientTermState{}
+				if req.ClientState.SchoolTimetableTerms != nil {
+					client = req.ClientState.SchoolTimetableTerms[term.TermKey]
+				}
+				changed := client.Version != term.Version || client.Checksum != term.Checksum
+				if changed {
+					block.Changed = true
+					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
+						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
+						Version: term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
+						DownloadURL: "/api/v1/school-timetable/snapshots/" + term.TermKey + "/" + itoa(term.Version) + ".ndjson.gz",
+						PublishedAt: term.PublishedAt.Format(time.RFC3339),
+					})
+				}
+			}
+			resp.SchoolTimetable = block
+		}
+	}
+
 	return resp
 }
 
@@ -130,4 +161,18 @@ func valueIf[T any](ok bool, value T) any {
 		return nil
 	}
 	return value
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [12]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
 }

@@ -13,6 +13,7 @@ type PullClientState struct {
 	NotificationLatestID string                       `json:"notification_latest_id,omitempty"`
 	HotUpdateScripts     map[string]ClientScriptState `json:"hot_update_scripts,omitempty"`
 	SyncCursor           *int64                       `json:"sync_cursor,omitempty"`
+	SchoolTimetableTerms map[string]ClientTermState   `json:"school_timetable_terms,omitempty"`
 }
 
 type ClientScriptState struct {
@@ -20,13 +21,19 @@ type ClientScriptState struct {
 	Checksum string `json:"checksum"`
 }
 
+type ClientTermState struct {
+	Version  int    `json:"version"`
+	Checksum string `json:"checksum"`
+}
+
 type PullResponse struct {
-	ServerTime   time.Time          `json:"server_time"`
-	Weather      *WeatherBlock      `json:"weather,omitempty"`
-	Notification *NotificationBlock `json:"notification,omitempty"`
-	HotUpdate    *HotUpdateBlock    `json:"hot_update,omitempty"`
-	Sync         *SyncBlock         `json:"sync,omitempty"`
-	Stats        *StatsBlock        `json:"stats,omitempty"`
+	ServerTime      time.Time             `json:"server_time"`
+	Weather         *WeatherBlock         `json:"weather,omitempty"`
+	Notification    *NotificationBlock    `json:"notification,omitempty"`
+	HotUpdate       *HotUpdateBlock       `json:"hot_update,omitempty"`
+	Sync            *SyncBlock            `json:"sync,omitempty"`
+	Stats           *StatsBlock           `json:"stats,omitempty"`
+	SchoolTimetable *SchoolTimetableBlock `json:"school_timetable,omitempty"`
 }
 
 type StatsBlock struct {
@@ -59,6 +66,22 @@ type ScriptVersion struct {
 	LatestVersion int    `json:"latest_version"`
 	Checksum      string `json:"checksum"`
 	DownloadURL   string `json:"download_url,omitempty"`
+}
+
+type SchoolTimetableBlock struct {
+	Changed bool                  `json:"changed"`
+	Terms   []SchoolTimetableTerm `json:"terms"`
+}
+
+type SchoolTimetableTerm struct {
+	TermKey     string `json:"term_key"`
+	SchoolYear  string `json:"school_year"`
+	Term        string `json:"term"`
+	Version     int    `json:"version"`
+	Checksum    string `json:"checksum"`
+	RowCount    int    `json:"row_count"`
+	DownloadURL string `json:"download_url"`
+	PublishedAt string `json:"published_at"`
 }
 
 type SyncBlock struct {

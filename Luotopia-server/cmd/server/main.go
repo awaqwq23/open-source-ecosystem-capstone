@@ -30,6 +30,9 @@ import (
 	statsinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/infra"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 	weatherinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/infra"
+	schoolapp "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
+	schoolinfra "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/infra"
+	schooltransport "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/transport"
 	weathercache "github.com/openwhu/luotopia/server/internal/platform/cache"
 	"github.com/openwhu/luotopia/server/internal/platform/config"
 	"github.com/openwhu/luotopia/server/internal/platform/database"
@@ -54,11 +57,13 @@ func main() {
 	db := openDB(cfg, log)
 	rdb := openRedis(cfg, log)
 	weatherSvc := newWeatherService(cfg, rdb)
+	schoolTimetableSvc := newSchoolTimetableService(cfg, db)
 
 	registerAuth(server, cfg, log, db, rdb)
 	registerSync(server, cfg, db)
-	registerPull(server, cfg, db, weatherSvc)
-	registerAdmin(server, cfg, db, weatherSvc)
+	registerPull(server, cfg, db, weatherSvc, schoolTimetableSvc)
+	registerAdmin(server, cfg, db, weatherSvc, schoolTimetableSvc)
+	registerSchoolTimetableAPI(server, schoolTimetableSvc)
 	registerNotificationAPI(server, cfg, db)
 	registerHotUpdateAPI(server, cfg, db)
 	registerWeatherRefresh(ctx, cfg, weatherSvc, log)
@@ -144,7 +149,7 @@ func registerAuth(server *httpserver.Server, cfg config.Config, log *slog.Logger
 	authtransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
-func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service) {
+func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service, schoolTimetableSvc *schoolapp.Service) {
 	if db == nil {
 		return
 	}
@@ -158,10 +163,13 @@ func registerAdmin(server *httpserver.Server, cfg config.Config, db *gorm.DB, we
 	identityRepo := authinfra.NewGormUserRepository(db)
 	service := adminapp.NewService("0.1.0", db, adminRepo, identityRepo, cfg.Admin.Phone, cfg.Admin.Email, notiSvc, hotSvc, weatherSvc, "scripts")
 	admintransport.NewHandler(service, cfg.Auth.AccessTokenSecret).Register(server.AdminAPI())
+	if schoolTimetableSvc != nil {
+		schooltransport.NewHandler(schoolTimetableSvc).RegisterAdmin(server.AdminAPI())
+	}
 	admintransport.NewWebHandler().Register(server.AdminWeb())
 }
 
-func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service) {
+func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, weatherSvc *weatherapp.Service, schoolTimetableSvc *schoolapp.Service) {
 	if db == nil {
 		return
 	}
@@ -180,9 +188,16 @@ func registerPull(server *httpserver.Server, cfg config.Config, db *gorm.DB, wea
 	statsSvc := statsapp.NewService(statsinfra.NewGormRepository(db))
 
 	// Pull orchestrator
-	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker, statsSvc)
+	svc := pullapp.NewService(weatherSvc, notiSvc, hotSvc, syncChecker, statsSvc, schoolTimetableSvc)
 	authMW := httpserver.AuthMiddleware(cfg.Auth.AccessTokenSecret)
 	pulltransport.NewHandler(svc, authMW).Register(server.ClientAPI())
+}
+
+func registerSchoolTimetableAPI(server *httpserver.Server, schoolTimetableSvc *schoolapp.Service) {
+	if schoolTimetableSvc == nil {
+		return
+	}
+	schooltransport.NewHandler(schoolTimetableSvc).RegisterClient(server.ClientAPI())
 }
 
 func registerNotificationAPI(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
@@ -207,6 +222,13 @@ func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service
 	}
 	apiClient := weatherinfra.NewQWeatherClient(cfg.Weather.APIKey, cfg.Weather.APIHost, cfg.Weather.Location)
 	return weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
+}
+
+func newSchoolTimetableService(cfg config.Config, db *gorm.DB) *schoolapp.Service {
+	if db == nil {
+		return nil
+	}
+	return schoolapp.NewService(schoolinfra.NewGormRepository(db), cfg.SchoolTimetable.SnapshotDir)
 }
 
 func registerWeatherRefresh(ctx context.Context, cfg config.Config, weatherSvc *weatherapp.Service, log *slog.Logger) {

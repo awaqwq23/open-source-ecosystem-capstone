@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:crypto/crypto.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
 import 'package:luotopia/features/hot_update/data/hot_update_cache.dart';
 import 'package:luotopia/features/unified_pull/data/pull_client.dart';
 import 'package:luotopia/features/unified_pull/data/pull_request.dart';
@@ -13,17 +15,20 @@ class UnifiedPullService {
     required PullStateStore stateStore,
     required HotUpdateCache hotUpdateCache,
     required SyncCursorStore syncCursorStore,
+    required AllSchoolTimetableRepository allSchoolTimetableRepository,
     this.coldStartCooldown = const Duration(seconds: 30),
     this.foregroundCooldown = const Duration(seconds: 10),
   }) : _pullClient = pullClient,
        _stateStore = stateStore,
        _hotUpdateCache = hotUpdateCache,
-       _syncCursorStore = syncCursorStore;
+       _syncCursorStore = syncCursorStore,
+       _allSchoolTimetableRepository = allSchoolTimetableRepository;
 
   final PullClient _pullClient;
   final PullStateStore _stateStore;
   final HotUpdateCache _hotUpdateCache;
   final SyncCursorStore _syncCursorStore;
+  final AllSchoolTimetableRepository _allSchoolTimetableRepository;
   final Duration coldStartCooldown;
   final Duration foregroundCooldown;
 
@@ -64,7 +69,7 @@ class UnifiedPullService {
   }
 
   Future<PullResult> pullPublicColdStart({
-    List<String> scopes = const ['weather', 'notification'],
+    List<String> scopes = const ['weather', 'notification', 'school_timetable'],
   }) async {
     if (_isColdStartCooldown) {
       return PullResult(throttled: true);
@@ -74,7 +79,7 @@ class UnifiedPullService {
   }
 
   Future<PullResult?> pullPublicSilent({
-    List<String> scopes = const ['weather', 'notification'],
+    List<String> scopes = const ['weather', 'notification', 'school_timetable'],
   }) async {
     if (_isForegroundCooldown) {
       return null;
@@ -108,9 +113,11 @@ class UnifiedPullService {
                 ? null
                 : _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
+            schoolTimetableTerms: _stateStore.readSchoolTimetableTerms(),
           ),
         ),
       );
+      await _cacheChangedSchoolTimetableTerms(response);
       await _stateStore.apply(response);
       return PullResult(response: response);
     } catch (e) {
@@ -135,15 +142,37 @@ class UnifiedPullService {
             weatherCachedAt: _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
             hotUpdateScripts: _hotUpdateCache.readClientState(),
+            schoolTimetableTerms: _stateStore.readSchoolTimetableTerms(),
             syncCursor: _syncCursorStore.read(),
           ),
         ),
       );
-      await _stateStore.apply(response);
       await _cacheChangedScripts(response);
+      await _cacheChangedSchoolTimetableTerms(response);
+      await _stateStore.apply(response);
       return PullResult(response: response);
     } catch (e) {
       return PullResult(error: e);
+    }
+  }
+
+  Future<void> _cacheChangedSchoolTimetableTerms(PullResponse response) async {
+    final terms = response.schoolTimetable?.terms ?? const [];
+    for (final term in terms) {
+      if (term.downloadUrl.isEmpty || term.checksum.isEmpty) {
+        continue;
+      }
+      final bytes = await _pullClient.downloadSchoolTimetableSnapshot(
+        term.downloadUrl,
+      );
+      final checksum = 'sha256:${sha256.convert(bytes)}';
+      if (checksum != term.checksum) {
+        throw StateError('全校课表 ${term.termKey} 快照校验失败');
+      }
+      await _allSchoolTimetableRepository.replaceTermFromPackageBytes(
+        bytes: bytes,
+        sourceVersion: '${term.version}:${term.checksum}',
+      );
     }
   }
 

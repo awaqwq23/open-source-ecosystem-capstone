@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,52 @@ class DriftAllSchoolTimetableRepository
 
   @override
   Future<void> ensureLocalDataReady() async {}
+
+  @override
+  Future<void> replaceTermFromPackageBytes({
+    required List<int> bytes,
+    required String sourceVersion,
+  }) async {
+    final decoded = gzip.decode(bytes);
+    final lines = utf8.decode(decoded).split(RegExp(r'\r?\n'));
+    if (lines.isEmpty || lines.first.trim().isEmpty) {
+      throw const FormatException('全校课表数据包为空');
+    }
+
+    final manifest = jsonDecode(lines.first) as Map<String, dynamic>;
+    final termKey = manifest['term_key'] as String? ?? '';
+    final schoolYear = manifest['school_year'] as String? ?? '';
+    final term = manifest['term'] as String? ?? '';
+    final rows = <Map<String, String>>[];
+    for (final line in lines.skip(1)) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) {
+        continue;
+      }
+      final item = jsonDecode(trimmed) as Map<String, dynamic>;
+      if (item['type'] != 'row') {
+        continue;
+      }
+      final fields = item['fields'];
+      if (fields is! Map<String, dynamic>) {
+        continue;
+      }
+      rows.add({
+        for (final entry in fields.entries)
+          entry.key.toString(): entry.value?.toString() ?? '',
+      });
+    }
+    if (termKey.isEmpty) {
+      throw const FormatException('全校课表包缺少 term_key');
+    }
+    await replaceTermFromHtmlRows(
+      termKey: termKey,
+      schoolYear: schoolYear,
+      term: term,
+      sourceVersion: sourceVersion,
+      rows: rows,
+    );
+  }
 
   @override
   Future<void> replaceTermFromHtmlRows({

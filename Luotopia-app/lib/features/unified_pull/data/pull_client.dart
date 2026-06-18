@@ -24,4 +24,8 @@ class PullClient {
   Future<String> downloadScript(String path) {
     return _apiClient.getText(path);
   }
+
+  Future<List<int>> downloadSchoolTimetableSnapshot(String path) {
+    return _apiClient.getBytes(path);
+  }
 }

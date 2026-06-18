@@ -11,16 +11,17 @@ import (
 )
 
 type Config struct {
-	Environment string
-	HTTP        HTTPConfig
-	Database    DatabaseConfig
-	Redis       RedisConfig
-	Storage     StorageConfig
-	Auth        AuthConfig
-	Admin       AdminConfig
-	Weather     WeatherConfig
-	SMS         SMSConfig
-	Email       EmailConfig
+	Environment     string
+	HTTP            HTTPConfig
+	Database        DatabaseConfig
+	Redis           RedisConfig
+	Storage         StorageConfig
+	Auth            AuthConfig
+	Admin           AdminConfig
+	Weather         WeatherConfig
+	SchoolTimetable SchoolTimetableConfig
+	SMS             SMSConfig
+	Email           EmailConfig
 }
 
 type WeatherConfig struct {
@@ -28,6 +29,10 @@ type WeatherConfig struct {
 	APIHost  string
 	Location string
 	CacheTTL time.Duration
+}
+
+type SchoolTimetableConfig struct {
+	SnapshotDir string
 }
 
 type HTTPConfig struct {
@@ -110,6 +115,9 @@ func Load() Config {
 			Location: declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
 			CacheTTL: requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
 		},
+		SchoolTimetable: SchoolTimetableConfig{
+			SnapshotDir: optionalEnv("LUOTOPIA_SCHOOL_TIMETABLE_SNAPSHOT_DIR", "school_timetable_snapshots"),
+		},
 		SMS: SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
@@ -150,6 +158,14 @@ func requiredEnv(key string) string {
 	value := declaredEnv(key)
 	if value == "" {
 		panic(fmt.Sprintf("环境变量 %s 不能为空", key))
+	}
+	return value
+}
+
+func optionalEnv(key string, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
 	}
 	return value
 }

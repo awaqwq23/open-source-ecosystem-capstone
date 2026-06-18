@@ -4,6 +4,7 @@ class PullResponse {
   final NotificationBlock? notification;
   final HotUpdateBlock? hotUpdate;
   final SyncBlock? sync;
+  final SchoolTimetableBlock? schoolTimetable;
 
   const PullResponse({
     this.serverTime,
@@ -11,6 +12,7 @@ class PullResponse {
     this.notification,
     this.hotUpdate,
     this.sync,
+    this.schoolTimetable,
   });
 
   factory PullResponse.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,11 @@ class PullResponse {
           : null,
       sync: json['sync'] != null
           ? SyncBlock.fromJson(json['sync'] as Map<String, dynamic>)
+          : null,
+      schoolTimetable: json['school_timetable'] != null
+          ? SchoolTimetableBlock.fromJson(
+              json['school_timetable'] as Map<String, dynamic>,
+            )
           : null,
     );
   }
@@ -150,6 +157,60 @@ class SyncBlock {
       enabled: json['enabled'] as bool? ?? false,
       hasChanges: json['has_changes'] as bool? ?? false,
       latestCursor: (json['latest_cursor'] as num?)?.toInt(),
+    );
+  }
+}
+
+class SchoolTimetableBlock {
+  final bool changed;
+  final List<SchoolTimetableTermUpdate> terms;
+
+  const SchoolTimetableBlock({this.changed = false, this.terms = const []});
+
+  factory SchoolTimetableBlock.fromJson(Map<String, dynamic> json) {
+    final rawTerms = json['terms'] as List? ?? const [];
+    return SchoolTimetableBlock(
+      changed: json['changed'] as bool? ?? false,
+      terms: [
+        for (final item in rawTerms)
+          if (item is Map<String, dynamic>)
+            SchoolTimetableTermUpdate.fromJson(item),
+      ],
+    );
+  }
+}
+
+class SchoolTimetableTermUpdate {
+  final String termKey;
+  final String schoolYear;
+  final String term;
+  final int version;
+  final String checksum;
+  final int rowCount;
+  final String downloadUrl;
+  final DateTime? publishedAt;
+
+  const SchoolTimetableTermUpdate({
+    required this.termKey,
+    required this.schoolYear,
+    required this.term,
+    required this.version,
+    required this.checksum,
+    required this.rowCount,
+    required this.downloadUrl,
+    this.publishedAt,
+  });
+
+  factory SchoolTimetableTermUpdate.fromJson(Map<String, dynamic> json) {
+    return SchoolTimetableTermUpdate(
+      termKey: json['term_key'] as String? ?? '',
+      schoolYear: json['school_year'] as String? ?? '',
+      term: json['term'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 0,
+      checksum: json['checksum'] as String? ?? '',
+      rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
+      downloadUrl: json['download_url'] as String? ?? '',
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
     );
   }
 }
