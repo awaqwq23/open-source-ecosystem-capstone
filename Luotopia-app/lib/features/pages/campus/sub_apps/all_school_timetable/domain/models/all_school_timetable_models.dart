@@ -109,6 +109,7 @@ class SchoolTeachingClass {
   const SchoolTeachingClass({
     required this.id,
     required this.termKey,
+    required this.sourceKey,
     required this.courseHeadId,
     required this.teachingClassName,
     required this.courseNo,
@@ -141,6 +142,7 @@ class SchoolTeachingClass {
 
   final String id;
   final String termKey;
+  final String sourceKey;
   final String courseHeadId;
   final String teachingClassName;
   final String courseNo;
@@ -174,7 +176,7 @@ class SchoolTeachingClass {
 class SchoolClassMeeting {
   const SchoolClassMeeting({
     required this.id,
-    required this.teachingClassId,
+    required this.rawRowId,
     required this.weekday,
     required this.weekdayLabel,
     required this.rawText,
@@ -184,7 +186,7 @@ class SchoolClassMeeting {
   });
 
   final String id;
-  final String teachingClassId;
+  final String rawRowId;
   final int weekday;
   final String weekdayLabel;
   final String rawText;

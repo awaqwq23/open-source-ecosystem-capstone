@@ -142,7 +142,9 @@ class _AllSchoolTimetablePageState
               child: Center(child: CircularProgressIndicator()),
             )
           else if (state.courseHeads.isEmpty)
-            const _StatusCard(text: '没有找到符合条件的课程')
+            _StatusCard(
+              text: state.terms.isEmpty ? '暂无全校课表数据，等待更新' : '没有找到符合条件的课程',
+            )
           else
             ...state.courseHeads.map(
               (head) => _CourseHeadTile(
@@ -169,7 +171,7 @@ class _TermStatus extends StatelessWidget {
     final term = state.selectedTerm;
     final colors = Theme.of(context).colorScheme;
     final text = term == null
-        ? '准备本地课表数据'
+        ? '暂无本地全校课表数据'
         : '${term.schoolYear} 第${term.term}学期 · ${term.rowCount} 条教学班';
     return Text(
       text,

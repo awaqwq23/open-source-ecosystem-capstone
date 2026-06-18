@@ -1,7 +1,15 @@
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 
 abstract class AllSchoolTimetableRepository {
-  Future<void> ensureMockDataLoaded();
+  Future<void> ensureLocalDataReady();
+
+  Future<void> replaceTermFromHtmlRows({
+    required String termKey,
+    required String schoolYear,
+    required String term,
+    required String sourceVersion,
+    required List<Map<String, String>> rows,
+  });
 
   Future<List<SchoolTimetableTerm>> loadTerms();
 

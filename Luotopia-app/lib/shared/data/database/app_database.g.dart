@@ -4833,12 +4833,12 @@ class SchoolCourseHeadRowsCompanion
   }
 }
 
-class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
-    with TableInfo<$SchoolTeachingClassRowsTable, SchoolTeachingClassRow> {
+class $SchoolTimetableRawRowsTable extends SchoolTimetableRawRows
+    with TableInfo<$SchoolTimetableRawRowsTable, SchoolTimetableRawRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SchoolTeachingClassRowsTable(this.attachedDatabase, [this._alias]);
+  $SchoolTimetableRawRowsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -4875,6 +4875,37 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'REFERENCES school_course_head_rows (id)',
     ),
+  );
+  static const VerificationMeta _sourceKeyMeta = const VerificationMeta(
+    'sourceKey',
+  );
+  @override
+  late final GeneratedColumn<String> sourceKey = GeneratedColumn<String>(
+    'source_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _schoolYearMeta = const VerificationMeta(
+    'schoolYear',
+  );
+  @override
+  late final GeneratedColumn<String> schoolYear = GeneratedColumn<String>(
+    'school_year',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _termMeta = const VerificationMeta('term');
+  @override
+  late final GeneratedColumn<String> term = GeneratedColumn<String>(
+    'term',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _teachingClassNameMeta = const VerificationMeta(
     'teachingClassName',
@@ -5023,28 +5054,6 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
-  static const VerificationMeta _capacityMeta = const VerificationMeta(
-    'capacity',
-  );
-  @override
-  late final GeneratedColumn<int> capacity = GeneratedColumn<int>(
-    'capacity',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _selectedCountMeta = const VerificationMeta(
-    'selectedCount',
-  );
-  @override
-  late final GeneratedColumn<int> selectedCount = GeneratedColumn<int>(
-    'selected_count',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _peopleRawMeta = const VerificationMeta(
     'peopleRaw',
   );
@@ -5101,6 +5110,90 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sundayRawMeta = const VerificationMeta(
+    'sundayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> sundayRaw = GeneratedColumn<String>(
+    'sunday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _mondayRawMeta = const VerificationMeta(
+    'mondayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> mondayRaw = GeneratedColumn<String>(
+    'monday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _tuesdayRawMeta = const VerificationMeta(
+    'tuesdayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> tuesdayRaw = GeneratedColumn<String>(
+    'tuesday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _wednesdayRawMeta = const VerificationMeta(
+    'wednesdayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> wednesdayRaw = GeneratedColumn<String>(
+    'wednesday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _thursdayRawMeta = const VerificationMeta(
+    'thursdayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> thursdayRaw = GeneratedColumn<String>(
+    'thursday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _fridayRawMeta = const VerificationMeta(
+    'fridayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> fridayRaw = GeneratedColumn<String>(
+    'friday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _saturdayRawMeta = const VerificationMeta(
+    'saturdayRaw',
+  );
+  @override
+  late final GeneratedColumn<String> saturdayRaw = GeneratedColumn<String>(
+    'saturday_raw',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _remarkMeta = const VerificationMeta('remark');
   @override
   late final GeneratedColumn<String> remark = GeneratedColumn<String>(
@@ -5141,6 +5234,136 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
   @override
   late final GeneratedColumn<String> publisher = GeneratedColumn<String>(
     'publisher',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _openDepartmentCodeMeta =
+      const VerificationMeta('openDepartmentCode');
+  @override
+  late final GeneratedColumn<String> openDepartmentCode =
+      GeneratedColumn<String>(
+        'open_department_code',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _collegeCodeMeta = const VerificationMeta(
+    'collegeCode',
+  );
+  @override
+  late final GeneratedColumn<String> collegeCode = GeneratedColumn<String>(
+    'college_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _majorCodeMeta = const VerificationMeta(
+    'majorCode',
+  );
+  @override
+  late final GeneratedColumn<String> majorCode = GeneratedColumn<String>(
+    'major_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _gradeCodeMeta = const VerificationMeta(
+    'gradeCode',
+  );
+  @override
+  late final GeneratedColumn<String> gradeCode = GeneratedColumn<String>(
+    'grade_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _schoolYearCodeMeta = const VerificationMeta(
+    'schoolYearCode',
+  );
+  @override
+  late final GeneratedColumn<String> schoolYearCode = GeneratedColumn<String>(
+    'school_year_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _termCodeMeta = const VerificationMeta(
+    'termCode',
+  );
+  @override
+  late final GeneratedColumn<String> termCode = GeneratedColumn<String>(
+    'term_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _courseCategoryCodeMeta =
+      const VerificationMeta('courseCategoryCode');
+  @override
+  late final GeneratedColumn<String> courseCategoryCode =
+      GeneratedColumn<String>(
+        'course_category_code',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _conditionCodeMeta = const VerificationMeta(
+    'conditionCode',
+  );
+  @override
+  late final GeneratedColumn<String> conditionCode = GeneratedColumn<String>(
+    'condition_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _openTypeCodeMeta = const VerificationMeta(
+    'openTypeCode',
+  );
+  @override
+  late final GeneratedColumn<String> openTypeCode = GeneratedColumn<String>(
+    'open_type_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _courseNatureCodeMeta = const VerificationMeta(
+    'courseNatureCode',
+  );
+  @override
+  late final GeneratedColumn<String> courseNatureCode = GeneratedColumn<String>(
+    'course_nature_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -5200,6 +5423,9 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
     id,
     termKey,
     courseHeadId,
+    sourceKey,
+    schoolYear,
+    term,
     teachingClassName,
     courseNo,
     courseName,
@@ -5213,17 +5439,33 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
     major,
     instructor,
     title,
-    capacity,
-    selectedCount,
     peopleRaw,
     theoryHours,
     computerHours,
     experimentHours,
     practiceHours,
+    sundayRaw,
+    mondayRaw,
+    tuesdayRaw,
+    wednesdayRaw,
+    thursdayRaw,
+    fridayRaw,
+    saturdayRaw,
     remark,
     otherTeachers,
     textbook,
     publisher,
+    openDepartmentCode,
+    collegeCode,
+    majorCode,
+    gradeCode,
+    schoolYearCode,
+    termCode,
+    courseCategoryCode,
+    conditionCode,
+    openTypeCode,
+    courseNatureCode,
+    note,
     scheduleSummary,
     weekdaySummary,
     searchText,
@@ -5233,10 +5475,10 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'school_teaching_class_rows';
+  static const String $name = 'school_timetable_raw_rows';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SchoolTeachingClassRow> instance, {
+    Insertable<SchoolTimetableRawRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -5264,6 +5506,30 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
       );
     } else if (isInserting) {
       context.missing(_courseHeadIdMeta);
+    }
+    if (data.containsKey('source_key')) {
+      context.handle(
+        _sourceKeyMeta,
+        sourceKey.isAcceptableOrUnknown(data['source_key']!, _sourceKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceKeyMeta);
+    }
+    if (data.containsKey('school_year')) {
+      context.handle(
+        _schoolYearMeta,
+        schoolYear.isAcceptableOrUnknown(data['school_year']!, _schoolYearMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_schoolYearMeta);
+    }
+    if (data.containsKey('term')) {
+      context.handle(
+        _termMeta,
+        term.isAcceptableOrUnknown(data['term']!, _termMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_termMeta);
     }
     if (data.containsKey('teaching_class_name')) {
       context.handle(
@@ -5364,21 +5630,6 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
         title.isAcceptableOrUnknown(data['title']!, _titleMeta),
       );
     }
-    if (data.containsKey('capacity')) {
-      context.handle(
-        _capacityMeta,
-        capacity.isAcceptableOrUnknown(data['capacity']!, _capacityMeta),
-      );
-    }
-    if (data.containsKey('selected_count')) {
-      context.handle(
-        _selectedCountMeta,
-        selectedCount.isAcceptableOrUnknown(
-          data['selected_count']!,
-          _selectedCountMeta,
-        ),
-      );
-    }
     if (data.containsKey('people_raw')) {
       context.handle(
         _peopleRawMeta,
@@ -5421,6 +5672,57 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
         ),
       );
     }
+    if (data.containsKey('sunday_raw')) {
+      context.handle(
+        _sundayRawMeta,
+        sundayRaw.isAcceptableOrUnknown(data['sunday_raw']!, _sundayRawMeta),
+      );
+    }
+    if (data.containsKey('monday_raw')) {
+      context.handle(
+        _mondayRawMeta,
+        mondayRaw.isAcceptableOrUnknown(data['monday_raw']!, _mondayRawMeta),
+      );
+    }
+    if (data.containsKey('tuesday_raw')) {
+      context.handle(
+        _tuesdayRawMeta,
+        tuesdayRaw.isAcceptableOrUnknown(data['tuesday_raw']!, _tuesdayRawMeta),
+      );
+    }
+    if (data.containsKey('wednesday_raw')) {
+      context.handle(
+        _wednesdayRawMeta,
+        wednesdayRaw.isAcceptableOrUnknown(
+          data['wednesday_raw']!,
+          _wednesdayRawMeta,
+        ),
+      );
+    }
+    if (data.containsKey('thursday_raw')) {
+      context.handle(
+        _thursdayRawMeta,
+        thursdayRaw.isAcceptableOrUnknown(
+          data['thursday_raw']!,
+          _thursdayRawMeta,
+        ),
+      );
+    }
+    if (data.containsKey('friday_raw')) {
+      context.handle(
+        _fridayRawMeta,
+        fridayRaw.isAcceptableOrUnknown(data['friday_raw']!, _fridayRawMeta),
+      );
+    }
+    if (data.containsKey('saturday_raw')) {
+      context.handle(
+        _saturdayRawMeta,
+        saturdayRaw.isAcceptableOrUnknown(
+          data['saturday_raw']!,
+          _saturdayRawMeta,
+        ),
+      );
+    }
     if (data.containsKey('remark')) {
       context.handle(
         _remarkMeta,
@@ -5446,6 +5748,93 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
       context.handle(
         _publisherMeta,
         publisher.isAcceptableOrUnknown(data['publisher']!, _publisherMeta),
+      );
+    }
+    if (data.containsKey('open_department_code')) {
+      context.handle(
+        _openDepartmentCodeMeta,
+        openDepartmentCode.isAcceptableOrUnknown(
+          data['open_department_code']!,
+          _openDepartmentCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('college_code')) {
+      context.handle(
+        _collegeCodeMeta,
+        collegeCode.isAcceptableOrUnknown(
+          data['college_code']!,
+          _collegeCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('major_code')) {
+      context.handle(
+        _majorCodeMeta,
+        majorCode.isAcceptableOrUnknown(data['major_code']!, _majorCodeMeta),
+      );
+    }
+    if (data.containsKey('grade_code')) {
+      context.handle(
+        _gradeCodeMeta,
+        gradeCode.isAcceptableOrUnknown(data['grade_code']!, _gradeCodeMeta),
+      );
+    }
+    if (data.containsKey('school_year_code')) {
+      context.handle(
+        _schoolYearCodeMeta,
+        schoolYearCode.isAcceptableOrUnknown(
+          data['school_year_code']!,
+          _schoolYearCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('term_code')) {
+      context.handle(
+        _termCodeMeta,
+        termCode.isAcceptableOrUnknown(data['term_code']!, _termCodeMeta),
+      );
+    }
+    if (data.containsKey('course_category_code')) {
+      context.handle(
+        _courseCategoryCodeMeta,
+        courseCategoryCode.isAcceptableOrUnknown(
+          data['course_category_code']!,
+          _courseCategoryCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('condition_code')) {
+      context.handle(
+        _conditionCodeMeta,
+        conditionCode.isAcceptableOrUnknown(
+          data['condition_code']!,
+          _conditionCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('open_type_code')) {
+      context.handle(
+        _openTypeCodeMeta,
+        openTypeCode.isAcceptableOrUnknown(
+          data['open_type_code']!,
+          _openTypeCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('course_nature_code')) {
+      context.handle(
+        _courseNatureCodeMeta,
+        courseNatureCode.isAcceptableOrUnknown(
+          data['course_nature_code']!,
+          _courseNatureCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
     if (data.containsKey('schedule_summary')) {
@@ -5487,9 +5876,9 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SchoolTeachingClassRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SchoolTimetableRawRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SchoolTeachingClassRow(
+    return SchoolTimetableRawRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -5501,6 +5890,18 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
       courseHeadId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}course_head_id'],
+      )!,
+      sourceKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_key'],
+      )!,
+      schoolYear: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}school_year'],
+      )!,
+      term: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}term'],
       )!,
       teachingClassName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -5554,14 +5955,6 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
         DriftSqlType.string,
         data['${effectivePrefix}title'],
       )!,
-      capacity: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}capacity'],
-      ),
-      selectedCount: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}selected_count'],
-      ),
       peopleRaw: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}people_raw'],
@@ -5582,6 +5975,34 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
         DriftSqlType.int,
         data['${effectivePrefix}practice_hours'],
       ),
+      sundayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sunday_raw'],
+      )!,
+      mondayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}monday_raw'],
+      )!,
+      tuesdayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tuesday_raw'],
+      )!,
+      wednesdayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wednesday_raw'],
+      )!,
+      thursdayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}thursday_raw'],
+      )!,
+      fridayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}friday_raw'],
+      )!,
+      saturdayRaw: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}saturday_raw'],
+      )!,
       remark: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}remark'],
@@ -5597,6 +6018,50 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
       publisher: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}publisher'],
+      )!,
+      openDepartmentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}open_department_code'],
+      )!,
+      collegeCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}college_code'],
+      )!,
+      majorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}major_code'],
+      )!,
+      gradeCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}grade_code'],
+      )!,
+      schoolYearCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}school_year_code'],
+      )!,
+      termCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}term_code'],
+      )!,
+      courseCategoryCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}course_category_code'],
+      )!,
+      conditionCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}condition_code'],
+      )!,
+      openTypeCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}open_type_code'],
+      )!,
+      courseNatureCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}course_nature_code'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
       )!,
       scheduleSummary: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -5618,16 +6083,19 @@ class $SchoolTeachingClassRowsTable extends SchoolTeachingClassRows
   }
 
   @override
-  $SchoolTeachingClassRowsTable createAlias(String alias) {
-    return $SchoolTeachingClassRowsTable(attachedDatabase, alias);
+  $SchoolTimetableRawRowsTable createAlias(String alias) {
+    return $SchoolTimetableRawRowsTable(attachedDatabase, alias);
   }
 }
 
-class SchoolTeachingClassRow extends DataClass
-    implements Insertable<SchoolTeachingClassRow> {
+class SchoolTimetableRawRow extends DataClass
+    implements Insertable<SchoolTimetableRawRow> {
   final String id;
   final String termKey;
   final String courseHeadId;
+  final String sourceKey;
+  final String schoolYear;
+  final String term;
   final String teachingClassName;
   final String courseNo;
   final String courseName;
@@ -5641,25 +6109,44 @@ class SchoolTeachingClassRow extends DataClass
   final String major;
   final String instructor;
   final String title;
-  final int? capacity;
-  final int? selectedCount;
   final String peopleRaw;
   final int? theoryHours;
   final int? computerHours;
   final int? experimentHours;
   final int? practiceHours;
+  final String sundayRaw;
+  final String mondayRaw;
+  final String tuesdayRaw;
+  final String wednesdayRaw;
+  final String thursdayRaw;
+  final String fridayRaw;
+  final String saturdayRaw;
   final String remark;
   final String otherTeachers;
   final String textbook;
   final String publisher;
+  final String openDepartmentCode;
+  final String collegeCode;
+  final String majorCode;
+  final String gradeCode;
+  final String schoolYearCode;
+  final String termCode;
+  final String courseCategoryCode;
+  final String conditionCode;
+  final String openTypeCode;
+  final String courseNatureCode;
+  final String note;
   final String scheduleSummary;
   final String weekdaySummary;
   final String searchText;
   final String originalFieldsJson;
-  const SchoolTeachingClassRow({
+  const SchoolTimetableRawRow({
     required this.id,
     required this.termKey,
     required this.courseHeadId,
+    required this.sourceKey,
+    required this.schoolYear,
+    required this.term,
     required this.teachingClassName,
     required this.courseNo,
     required this.courseName,
@@ -5673,17 +6160,33 @@ class SchoolTeachingClassRow extends DataClass
     required this.major,
     required this.instructor,
     required this.title,
-    this.capacity,
-    this.selectedCount,
     required this.peopleRaw,
     this.theoryHours,
     this.computerHours,
     this.experimentHours,
     this.practiceHours,
+    required this.sundayRaw,
+    required this.mondayRaw,
+    required this.tuesdayRaw,
+    required this.wednesdayRaw,
+    required this.thursdayRaw,
+    required this.fridayRaw,
+    required this.saturdayRaw,
     required this.remark,
     required this.otherTeachers,
     required this.textbook,
     required this.publisher,
+    required this.openDepartmentCode,
+    required this.collegeCode,
+    required this.majorCode,
+    required this.gradeCode,
+    required this.schoolYearCode,
+    required this.termCode,
+    required this.courseCategoryCode,
+    required this.conditionCode,
+    required this.openTypeCode,
+    required this.courseNatureCode,
+    required this.note,
     required this.scheduleSummary,
     required this.weekdaySummary,
     required this.searchText,
@@ -5695,6 +6198,9 @@ class SchoolTeachingClassRow extends DataClass
     map['id'] = Variable<String>(id);
     map['term_key'] = Variable<String>(termKey);
     map['course_head_id'] = Variable<String>(courseHeadId);
+    map['source_key'] = Variable<String>(sourceKey);
+    map['school_year'] = Variable<String>(schoolYear);
+    map['term'] = Variable<String>(term);
     map['teaching_class_name'] = Variable<String>(teachingClassName);
     map['course_no'] = Variable<String>(courseNo);
     map['course_name'] = Variable<String>(courseName);
@@ -5710,12 +6216,6 @@ class SchoolTeachingClassRow extends DataClass
     map['major'] = Variable<String>(major);
     map['instructor'] = Variable<String>(instructor);
     map['title'] = Variable<String>(title);
-    if (!nullToAbsent || capacity != null) {
-      map['capacity'] = Variable<int>(capacity);
-    }
-    if (!nullToAbsent || selectedCount != null) {
-      map['selected_count'] = Variable<int>(selectedCount);
-    }
     map['people_raw'] = Variable<String>(peopleRaw);
     if (!nullToAbsent || theoryHours != null) {
       map['theory_hours'] = Variable<int>(theoryHours);
@@ -5729,10 +6229,28 @@ class SchoolTeachingClassRow extends DataClass
     if (!nullToAbsent || practiceHours != null) {
       map['practice_hours'] = Variable<int>(practiceHours);
     }
+    map['sunday_raw'] = Variable<String>(sundayRaw);
+    map['monday_raw'] = Variable<String>(mondayRaw);
+    map['tuesday_raw'] = Variable<String>(tuesdayRaw);
+    map['wednesday_raw'] = Variable<String>(wednesdayRaw);
+    map['thursday_raw'] = Variable<String>(thursdayRaw);
+    map['friday_raw'] = Variable<String>(fridayRaw);
+    map['saturday_raw'] = Variable<String>(saturdayRaw);
     map['remark'] = Variable<String>(remark);
     map['other_teachers'] = Variable<String>(otherTeachers);
     map['textbook'] = Variable<String>(textbook);
     map['publisher'] = Variable<String>(publisher);
+    map['open_department_code'] = Variable<String>(openDepartmentCode);
+    map['college_code'] = Variable<String>(collegeCode);
+    map['major_code'] = Variable<String>(majorCode);
+    map['grade_code'] = Variable<String>(gradeCode);
+    map['school_year_code'] = Variable<String>(schoolYearCode);
+    map['term_code'] = Variable<String>(termCode);
+    map['course_category_code'] = Variable<String>(courseCategoryCode);
+    map['condition_code'] = Variable<String>(conditionCode);
+    map['open_type_code'] = Variable<String>(openTypeCode);
+    map['course_nature_code'] = Variable<String>(courseNatureCode);
+    map['note'] = Variable<String>(note);
     map['schedule_summary'] = Variable<String>(scheduleSummary);
     map['weekday_summary'] = Variable<String>(weekdaySummary);
     map['search_text'] = Variable<String>(searchText);
@@ -5740,11 +6258,14 @@ class SchoolTeachingClassRow extends DataClass
     return map;
   }
 
-  SchoolTeachingClassRowsCompanion toCompanion(bool nullToAbsent) {
-    return SchoolTeachingClassRowsCompanion(
+  SchoolTimetableRawRowsCompanion toCompanion(bool nullToAbsent) {
+    return SchoolTimetableRawRowsCompanion(
       id: Value(id),
       termKey: Value(termKey),
       courseHeadId: Value(courseHeadId),
+      sourceKey: Value(sourceKey),
+      schoolYear: Value(schoolYear),
+      term: Value(term),
       teachingClassName: Value(teachingClassName),
       courseNo: Value(courseNo),
       courseName: Value(courseName),
@@ -5760,12 +6281,6 @@ class SchoolTeachingClassRow extends DataClass
       major: Value(major),
       instructor: Value(instructor),
       title: Value(title),
-      capacity: capacity == null && nullToAbsent
-          ? const Value.absent()
-          : Value(capacity),
-      selectedCount: selectedCount == null && nullToAbsent
-          ? const Value.absent()
-          : Value(selectedCount),
       peopleRaw: Value(peopleRaw),
       theoryHours: theoryHours == null && nullToAbsent
           ? const Value.absent()
@@ -5779,10 +6294,28 @@ class SchoolTeachingClassRow extends DataClass
       practiceHours: practiceHours == null && nullToAbsent
           ? const Value.absent()
           : Value(practiceHours),
+      sundayRaw: Value(sundayRaw),
+      mondayRaw: Value(mondayRaw),
+      tuesdayRaw: Value(tuesdayRaw),
+      wednesdayRaw: Value(wednesdayRaw),
+      thursdayRaw: Value(thursdayRaw),
+      fridayRaw: Value(fridayRaw),
+      saturdayRaw: Value(saturdayRaw),
       remark: Value(remark),
       otherTeachers: Value(otherTeachers),
       textbook: Value(textbook),
       publisher: Value(publisher),
+      openDepartmentCode: Value(openDepartmentCode),
+      collegeCode: Value(collegeCode),
+      majorCode: Value(majorCode),
+      gradeCode: Value(gradeCode),
+      schoolYearCode: Value(schoolYearCode),
+      termCode: Value(termCode),
+      courseCategoryCode: Value(courseCategoryCode),
+      conditionCode: Value(conditionCode),
+      openTypeCode: Value(openTypeCode),
+      courseNatureCode: Value(courseNatureCode),
+      note: Value(note),
       scheduleSummary: Value(scheduleSummary),
       weekdaySummary: Value(weekdaySummary),
       searchText: Value(searchText),
@@ -5790,15 +6323,18 @@ class SchoolTeachingClassRow extends DataClass
     );
   }
 
-  factory SchoolTeachingClassRow.fromJson(
+  factory SchoolTimetableRawRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SchoolTeachingClassRow(
+    return SchoolTimetableRawRow(
       id: serializer.fromJson<String>(json['id']),
       termKey: serializer.fromJson<String>(json['termKey']),
       courseHeadId: serializer.fromJson<String>(json['courseHeadId']),
+      sourceKey: serializer.fromJson<String>(json['sourceKey']),
+      schoolYear: serializer.fromJson<String>(json['schoolYear']),
+      term: serializer.fromJson<String>(json['term']),
       teachingClassName: serializer.fromJson<String>(json['teachingClassName']),
       courseNo: serializer.fromJson<String>(json['courseNo']),
       courseName: serializer.fromJson<String>(json['courseName']),
@@ -5812,17 +6348,37 @@ class SchoolTeachingClassRow extends DataClass
       major: serializer.fromJson<String>(json['major']),
       instructor: serializer.fromJson<String>(json['instructor']),
       title: serializer.fromJson<String>(json['title']),
-      capacity: serializer.fromJson<int?>(json['capacity']),
-      selectedCount: serializer.fromJson<int?>(json['selectedCount']),
       peopleRaw: serializer.fromJson<String>(json['peopleRaw']),
       theoryHours: serializer.fromJson<int?>(json['theoryHours']),
       computerHours: serializer.fromJson<int?>(json['computerHours']),
       experimentHours: serializer.fromJson<int?>(json['experimentHours']),
       practiceHours: serializer.fromJson<int?>(json['practiceHours']),
+      sundayRaw: serializer.fromJson<String>(json['sundayRaw']),
+      mondayRaw: serializer.fromJson<String>(json['mondayRaw']),
+      tuesdayRaw: serializer.fromJson<String>(json['tuesdayRaw']),
+      wednesdayRaw: serializer.fromJson<String>(json['wednesdayRaw']),
+      thursdayRaw: serializer.fromJson<String>(json['thursdayRaw']),
+      fridayRaw: serializer.fromJson<String>(json['fridayRaw']),
+      saturdayRaw: serializer.fromJson<String>(json['saturdayRaw']),
       remark: serializer.fromJson<String>(json['remark']),
       otherTeachers: serializer.fromJson<String>(json['otherTeachers']),
       textbook: serializer.fromJson<String>(json['textbook']),
       publisher: serializer.fromJson<String>(json['publisher']),
+      openDepartmentCode: serializer.fromJson<String>(
+        json['openDepartmentCode'],
+      ),
+      collegeCode: serializer.fromJson<String>(json['collegeCode']),
+      majorCode: serializer.fromJson<String>(json['majorCode']),
+      gradeCode: serializer.fromJson<String>(json['gradeCode']),
+      schoolYearCode: serializer.fromJson<String>(json['schoolYearCode']),
+      termCode: serializer.fromJson<String>(json['termCode']),
+      courseCategoryCode: serializer.fromJson<String>(
+        json['courseCategoryCode'],
+      ),
+      conditionCode: serializer.fromJson<String>(json['conditionCode']),
+      openTypeCode: serializer.fromJson<String>(json['openTypeCode']),
+      courseNatureCode: serializer.fromJson<String>(json['courseNatureCode']),
+      note: serializer.fromJson<String>(json['note']),
       scheduleSummary: serializer.fromJson<String>(json['scheduleSummary']),
       weekdaySummary: serializer.fromJson<String>(json['weekdaySummary']),
       searchText: serializer.fromJson<String>(json['searchText']),
@@ -5838,6 +6394,9 @@ class SchoolTeachingClassRow extends DataClass
       'id': serializer.toJson<String>(id),
       'termKey': serializer.toJson<String>(termKey),
       'courseHeadId': serializer.toJson<String>(courseHeadId),
+      'sourceKey': serializer.toJson<String>(sourceKey),
+      'schoolYear': serializer.toJson<String>(schoolYear),
+      'term': serializer.toJson<String>(term),
       'teachingClassName': serializer.toJson<String>(teachingClassName),
       'courseNo': serializer.toJson<String>(courseNo),
       'courseName': serializer.toJson<String>(courseName),
@@ -5851,17 +6410,33 @@ class SchoolTeachingClassRow extends DataClass
       'major': serializer.toJson<String>(major),
       'instructor': serializer.toJson<String>(instructor),
       'title': serializer.toJson<String>(title),
-      'capacity': serializer.toJson<int?>(capacity),
-      'selectedCount': serializer.toJson<int?>(selectedCount),
       'peopleRaw': serializer.toJson<String>(peopleRaw),
       'theoryHours': serializer.toJson<int?>(theoryHours),
       'computerHours': serializer.toJson<int?>(computerHours),
       'experimentHours': serializer.toJson<int?>(experimentHours),
       'practiceHours': serializer.toJson<int?>(practiceHours),
+      'sundayRaw': serializer.toJson<String>(sundayRaw),
+      'mondayRaw': serializer.toJson<String>(mondayRaw),
+      'tuesdayRaw': serializer.toJson<String>(tuesdayRaw),
+      'wednesdayRaw': serializer.toJson<String>(wednesdayRaw),
+      'thursdayRaw': serializer.toJson<String>(thursdayRaw),
+      'fridayRaw': serializer.toJson<String>(fridayRaw),
+      'saturdayRaw': serializer.toJson<String>(saturdayRaw),
       'remark': serializer.toJson<String>(remark),
       'otherTeachers': serializer.toJson<String>(otherTeachers),
       'textbook': serializer.toJson<String>(textbook),
       'publisher': serializer.toJson<String>(publisher),
+      'openDepartmentCode': serializer.toJson<String>(openDepartmentCode),
+      'collegeCode': serializer.toJson<String>(collegeCode),
+      'majorCode': serializer.toJson<String>(majorCode),
+      'gradeCode': serializer.toJson<String>(gradeCode),
+      'schoolYearCode': serializer.toJson<String>(schoolYearCode),
+      'termCode': serializer.toJson<String>(termCode),
+      'courseCategoryCode': serializer.toJson<String>(courseCategoryCode),
+      'conditionCode': serializer.toJson<String>(conditionCode),
+      'openTypeCode': serializer.toJson<String>(openTypeCode),
+      'courseNatureCode': serializer.toJson<String>(courseNatureCode),
+      'note': serializer.toJson<String>(note),
       'scheduleSummary': serializer.toJson<String>(scheduleSummary),
       'weekdaySummary': serializer.toJson<String>(weekdaySummary),
       'searchText': serializer.toJson<String>(searchText),
@@ -5869,10 +6444,13 @@ class SchoolTeachingClassRow extends DataClass
     };
   }
 
-  SchoolTeachingClassRow copyWith({
+  SchoolTimetableRawRow copyWith({
     String? id,
     String? termKey,
     String? courseHeadId,
+    String? sourceKey,
+    String? schoolYear,
+    String? term,
     String? teachingClassName,
     String? courseNo,
     String? courseName,
@@ -5886,25 +6464,44 @@ class SchoolTeachingClassRow extends DataClass
     String? major,
     String? instructor,
     String? title,
-    Value<int?> capacity = const Value.absent(),
-    Value<int?> selectedCount = const Value.absent(),
     String? peopleRaw,
     Value<int?> theoryHours = const Value.absent(),
     Value<int?> computerHours = const Value.absent(),
     Value<int?> experimentHours = const Value.absent(),
     Value<int?> practiceHours = const Value.absent(),
+    String? sundayRaw,
+    String? mondayRaw,
+    String? tuesdayRaw,
+    String? wednesdayRaw,
+    String? thursdayRaw,
+    String? fridayRaw,
+    String? saturdayRaw,
     String? remark,
     String? otherTeachers,
     String? textbook,
     String? publisher,
+    String? openDepartmentCode,
+    String? collegeCode,
+    String? majorCode,
+    String? gradeCode,
+    String? schoolYearCode,
+    String? termCode,
+    String? courseCategoryCode,
+    String? conditionCode,
+    String? openTypeCode,
+    String? courseNatureCode,
+    String? note,
     String? scheduleSummary,
     String? weekdaySummary,
     String? searchText,
     String? originalFieldsJson,
-  }) => SchoolTeachingClassRow(
+  }) => SchoolTimetableRawRow(
     id: id ?? this.id,
     termKey: termKey ?? this.termKey,
     courseHeadId: courseHeadId ?? this.courseHeadId,
+    sourceKey: sourceKey ?? this.sourceKey,
+    schoolYear: schoolYear ?? this.schoolYear,
+    term: term ?? this.term,
     teachingClassName: teachingClassName ?? this.teachingClassName,
     courseNo: courseNo ?? this.courseNo,
     courseName: courseName ?? this.courseName,
@@ -5918,10 +6515,6 @@ class SchoolTeachingClassRow extends DataClass
     major: major ?? this.major,
     instructor: instructor ?? this.instructor,
     title: title ?? this.title,
-    capacity: capacity.present ? capacity.value : this.capacity,
-    selectedCount: selectedCount.present
-        ? selectedCount.value
-        : this.selectedCount,
     peopleRaw: peopleRaw ?? this.peopleRaw,
     theoryHours: theoryHours.present ? theoryHours.value : this.theoryHours,
     computerHours: computerHours.present
@@ -5933,24 +6526,47 @@ class SchoolTeachingClassRow extends DataClass
     practiceHours: practiceHours.present
         ? practiceHours.value
         : this.practiceHours,
+    sundayRaw: sundayRaw ?? this.sundayRaw,
+    mondayRaw: mondayRaw ?? this.mondayRaw,
+    tuesdayRaw: tuesdayRaw ?? this.tuesdayRaw,
+    wednesdayRaw: wednesdayRaw ?? this.wednesdayRaw,
+    thursdayRaw: thursdayRaw ?? this.thursdayRaw,
+    fridayRaw: fridayRaw ?? this.fridayRaw,
+    saturdayRaw: saturdayRaw ?? this.saturdayRaw,
     remark: remark ?? this.remark,
     otherTeachers: otherTeachers ?? this.otherTeachers,
     textbook: textbook ?? this.textbook,
     publisher: publisher ?? this.publisher,
+    openDepartmentCode: openDepartmentCode ?? this.openDepartmentCode,
+    collegeCode: collegeCode ?? this.collegeCode,
+    majorCode: majorCode ?? this.majorCode,
+    gradeCode: gradeCode ?? this.gradeCode,
+    schoolYearCode: schoolYearCode ?? this.schoolYearCode,
+    termCode: termCode ?? this.termCode,
+    courseCategoryCode: courseCategoryCode ?? this.courseCategoryCode,
+    conditionCode: conditionCode ?? this.conditionCode,
+    openTypeCode: openTypeCode ?? this.openTypeCode,
+    courseNatureCode: courseNatureCode ?? this.courseNatureCode,
+    note: note ?? this.note,
     scheduleSummary: scheduleSummary ?? this.scheduleSummary,
     weekdaySummary: weekdaySummary ?? this.weekdaySummary,
     searchText: searchText ?? this.searchText,
     originalFieldsJson: originalFieldsJson ?? this.originalFieldsJson,
   );
-  SchoolTeachingClassRow copyWithCompanion(
-    SchoolTeachingClassRowsCompanion data,
+  SchoolTimetableRawRow copyWithCompanion(
+    SchoolTimetableRawRowsCompanion data,
   ) {
-    return SchoolTeachingClassRow(
+    return SchoolTimetableRawRow(
       id: data.id.present ? data.id.value : this.id,
       termKey: data.termKey.present ? data.termKey.value : this.termKey,
       courseHeadId: data.courseHeadId.present
           ? data.courseHeadId.value
           : this.courseHeadId,
+      sourceKey: data.sourceKey.present ? data.sourceKey.value : this.sourceKey,
+      schoolYear: data.schoolYear.present
+          ? data.schoolYear.value
+          : this.schoolYear,
+      term: data.term.present ? data.term.value : this.term,
       teachingClassName: data.teachingClassName.present
           ? data.teachingClassName.value
           : this.teachingClassName,
@@ -5978,10 +6594,6 @@ class SchoolTeachingClassRow extends DataClass
           ? data.instructor.value
           : this.instructor,
       title: data.title.present ? data.title.value : this.title,
-      capacity: data.capacity.present ? data.capacity.value : this.capacity,
-      selectedCount: data.selectedCount.present
-          ? data.selectedCount.value
-          : this.selectedCount,
       peopleRaw: data.peopleRaw.present ? data.peopleRaw.value : this.peopleRaw,
       theoryHours: data.theoryHours.present
           ? data.theoryHours.value
@@ -5995,12 +6607,52 @@ class SchoolTeachingClassRow extends DataClass
       practiceHours: data.practiceHours.present
           ? data.practiceHours.value
           : this.practiceHours,
+      sundayRaw: data.sundayRaw.present ? data.sundayRaw.value : this.sundayRaw,
+      mondayRaw: data.mondayRaw.present ? data.mondayRaw.value : this.mondayRaw,
+      tuesdayRaw: data.tuesdayRaw.present
+          ? data.tuesdayRaw.value
+          : this.tuesdayRaw,
+      wednesdayRaw: data.wednesdayRaw.present
+          ? data.wednesdayRaw.value
+          : this.wednesdayRaw,
+      thursdayRaw: data.thursdayRaw.present
+          ? data.thursdayRaw.value
+          : this.thursdayRaw,
+      fridayRaw: data.fridayRaw.present ? data.fridayRaw.value : this.fridayRaw,
+      saturdayRaw: data.saturdayRaw.present
+          ? data.saturdayRaw.value
+          : this.saturdayRaw,
       remark: data.remark.present ? data.remark.value : this.remark,
       otherTeachers: data.otherTeachers.present
           ? data.otherTeachers.value
           : this.otherTeachers,
       textbook: data.textbook.present ? data.textbook.value : this.textbook,
       publisher: data.publisher.present ? data.publisher.value : this.publisher,
+      openDepartmentCode: data.openDepartmentCode.present
+          ? data.openDepartmentCode.value
+          : this.openDepartmentCode,
+      collegeCode: data.collegeCode.present
+          ? data.collegeCode.value
+          : this.collegeCode,
+      majorCode: data.majorCode.present ? data.majorCode.value : this.majorCode,
+      gradeCode: data.gradeCode.present ? data.gradeCode.value : this.gradeCode,
+      schoolYearCode: data.schoolYearCode.present
+          ? data.schoolYearCode.value
+          : this.schoolYearCode,
+      termCode: data.termCode.present ? data.termCode.value : this.termCode,
+      courseCategoryCode: data.courseCategoryCode.present
+          ? data.courseCategoryCode.value
+          : this.courseCategoryCode,
+      conditionCode: data.conditionCode.present
+          ? data.conditionCode.value
+          : this.conditionCode,
+      openTypeCode: data.openTypeCode.present
+          ? data.openTypeCode.value
+          : this.openTypeCode,
+      courseNatureCode: data.courseNatureCode.present
+          ? data.courseNatureCode.value
+          : this.courseNatureCode,
+      note: data.note.present ? data.note.value : this.note,
       scheduleSummary: data.scheduleSummary.present
           ? data.scheduleSummary.value
           : this.scheduleSummary,
@@ -6018,10 +6670,13 @@ class SchoolTeachingClassRow extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('SchoolTeachingClassRow(')
+    return (StringBuffer('SchoolTimetableRawRow(')
           ..write('id: $id, ')
           ..write('termKey: $termKey, ')
           ..write('courseHeadId: $courseHeadId, ')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('schoolYear: $schoolYear, ')
+          ..write('term: $term, ')
           ..write('teachingClassName: $teachingClassName, ')
           ..write('courseNo: $courseNo, ')
           ..write('courseName: $courseName, ')
@@ -6035,17 +6690,33 @@ class SchoolTeachingClassRow extends DataClass
           ..write('major: $major, ')
           ..write('instructor: $instructor, ')
           ..write('title: $title, ')
-          ..write('capacity: $capacity, ')
-          ..write('selectedCount: $selectedCount, ')
           ..write('peopleRaw: $peopleRaw, ')
           ..write('theoryHours: $theoryHours, ')
           ..write('computerHours: $computerHours, ')
           ..write('experimentHours: $experimentHours, ')
           ..write('practiceHours: $practiceHours, ')
+          ..write('sundayRaw: $sundayRaw, ')
+          ..write('mondayRaw: $mondayRaw, ')
+          ..write('tuesdayRaw: $tuesdayRaw, ')
+          ..write('wednesdayRaw: $wednesdayRaw, ')
+          ..write('thursdayRaw: $thursdayRaw, ')
+          ..write('fridayRaw: $fridayRaw, ')
+          ..write('saturdayRaw: $saturdayRaw, ')
           ..write('remark: $remark, ')
           ..write('otherTeachers: $otherTeachers, ')
           ..write('textbook: $textbook, ')
           ..write('publisher: $publisher, ')
+          ..write('openDepartmentCode: $openDepartmentCode, ')
+          ..write('collegeCode: $collegeCode, ')
+          ..write('majorCode: $majorCode, ')
+          ..write('gradeCode: $gradeCode, ')
+          ..write('schoolYearCode: $schoolYearCode, ')
+          ..write('termCode: $termCode, ')
+          ..write('courseCategoryCode: $courseCategoryCode, ')
+          ..write('conditionCode: $conditionCode, ')
+          ..write('openTypeCode: $openTypeCode, ')
+          ..write('courseNatureCode: $courseNatureCode, ')
+          ..write('note: $note, ')
           ..write('scheduleSummary: $scheduleSummary, ')
           ..write('weekdaySummary: $weekdaySummary, ')
           ..write('searchText: $searchText, ')
@@ -6059,6 +6730,9 @@ class SchoolTeachingClassRow extends DataClass
     id,
     termKey,
     courseHeadId,
+    sourceKey,
+    schoolYear,
+    term,
     teachingClassName,
     courseNo,
     courseName,
@@ -6072,17 +6746,33 @@ class SchoolTeachingClassRow extends DataClass
     major,
     instructor,
     title,
-    capacity,
-    selectedCount,
     peopleRaw,
     theoryHours,
     computerHours,
     experimentHours,
     practiceHours,
+    sundayRaw,
+    mondayRaw,
+    tuesdayRaw,
+    wednesdayRaw,
+    thursdayRaw,
+    fridayRaw,
+    saturdayRaw,
     remark,
     otherTeachers,
     textbook,
     publisher,
+    openDepartmentCode,
+    collegeCode,
+    majorCode,
+    gradeCode,
+    schoolYearCode,
+    termCode,
+    courseCategoryCode,
+    conditionCode,
+    openTypeCode,
+    courseNatureCode,
+    note,
     scheduleSummary,
     weekdaySummary,
     searchText,
@@ -6091,10 +6781,13 @@ class SchoolTeachingClassRow extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SchoolTeachingClassRow &&
+      (other is SchoolTimetableRawRow &&
           other.id == this.id &&
           other.termKey == this.termKey &&
           other.courseHeadId == this.courseHeadId &&
+          other.sourceKey == this.sourceKey &&
+          other.schoolYear == this.schoolYear &&
+          other.term == this.term &&
           other.teachingClassName == this.teachingClassName &&
           other.courseNo == this.courseNo &&
           other.courseName == this.courseName &&
@@ -6108,28 +6801,47 @@ class SchoolTeachingClassRow extends DataClass
           other.major == this.major &&
           other.instructor == this.instructor &&
           other.title == this.title &&
-          other.capacity == this.capacity &&
-          other.selectedCount == this.selectedCount &&
           other.peopleRaw == this.peopleRaw &&
           other.theoryHours == this.theoryHours &&
           other.computerHours == this.computerHours &&
           other.experimentHours == this.experimentHours &&
           other.practiceHours == this.practiceHours &&
+          other.sundayRaw == this.sundayRaw &&
+          other.mondayRaw == this.mondayRaw &&
+          other.tuesdayRaw == this.tuesdayRaw &&
+          other.wednesdayRaw == this.wednesdayRaw &&
+          other.thursdayRaw == this.thursdayRaw &&
+          other.fridayRaw == this.fridayRaw &&
+          other.saturdayRaw == this.saturdayRaw &&
           other.remark == this.remark &&
           other.otherTeachers == this.otherTeachers &&
           other.textbook == this.textbook &&
           other.publisher == this.publisher &&
+          other.openDepartmentCode == this.openDepartmentCode &&
+          other.collegeCode == this.collegeCode &&
+          other.majorCode == this.majorCode &&
+          other.gradeCode == this.gradeCode &&
+          other.schoolYearCode == this.schoolYearCode &&
+          other.termCode == this.termCode &&
+          other.courseCategoryCode == this.courseCategoryCode &&
+          other.conditionCode == this.conditionCode &&
+          other.openTypeCode == this.openTypeCode &&
+          other.courseNatureCode == this.courseNatureCode &&
+          other.note == this.note &&
           other.scheduleSummary == this.scheduleSummary &&
           other.weekdaySummary == this.weekdaySummary &&
           other.searchText == this.searchText &&
           other.originalFieldsJson == this.originalFieldsJson);
 }
 
-class SchoolTeachingClassRowsCompanion
-    extends UpdateCompanion<SchoolTeachingClassRow> {
+class SchoolTimetableRawRowsCompanion
+    extends UpdateCompanion<SchoolTimetableRawRow> {
   final Value<String> id;
   final Value<String> termKey;
   final Value<String> courseHeadId;
+  final Value<String> sourceKey;
+  final Value<String> schoolYear;
+  final Value<String> term;
   final Value<String> teachingClassName;
   final Value<String> courseNo;
   final Value<String> courseName;
@@ -6143,26 +6855,45 @@ class SchoolTeachingClassRowsCompanion
   final Value<String> major;
   final Value<String> instructor;
   final Value<String> title;
-  final Value<int?> capacity;
-  final Value<int?> selectedCount;
   final Value<String> peopleRaw;
   final Value<int?> theoryHours;
   final Value<int?> computerHours;
   final Value<int?> experimentHours;
   final Value<int?> practiceHours;
+  final Value<String> sundayRaw;
+  final Value<String> mondayRaw;
+  final Value<String> tuesdayRaw;
+  final Value<String> wednesdayRaw;
+  final Value<String> thursdayRaw;
+  final Value<String> fridayRaw;
+  final Value<String> saturdayRaw;
   final Value<String> remark;
   final Value<String> otherTeachers;
   final Value<String> textbook;
   final Value<String> publisher;
+  final Value<String> openDepartmentCode;
+  final Value<String> collegeCode;
+  final Value<String> majorCode;
+  final Value<String> gradeCode;
+  final Value<String> schoolYearCode;
+  final Value<String> termCode;
+  final Value<String> courseCategoryCode;
+  final Value<String> conditionCode;
+  final Value<String> openTypeCode;
+  final Value<String> courseNatureCode;
+  final Value<String> note;
   final Value<String> scheduleSummary;
   final Value<String> weekdaySummary;
   final Value<String> searchText;
   final Value<String> originalFieldsJson;
   final Value<int> rowid;
-  const SchoolTeachingClassRowsCompanion({
+  const SchoolTimetableRawRowsCompanion({
     this.id = const Value.absent(),
     this.termKey = const Value.absent(),
     this.courseHeadId = const Value.absent(),
+    this.sourceKey = const Value.absent(),
+    this.schoolYear = const Value.absent(),
+    this.term = const Value.absent(),
     this.teachingClassName = const Value.absent(),
     this.courseNo = const Value.absent(),
     this.courseName = const Value.absent(),
@@ -6176,27 +6907,46 @@ class SchoolTeachingClassRowsCompanion
     this.major = const Value.absent(),
     this.instructor = const Value.absent(),
     this.title = const Value.absent(),
-    this.capacity = const Value.absent(),
-    this.selectedCount = const Value.absent(),
     this.peopleRaw = const Value.absent(),
     this.theoryHours = const Value.absent(),
     this.computerHours = const Value.absent(),
     this.experimentHours = const Value.absent(),
     this.practiceHours = const Value.absent(),
+    this.sundayRaw = const Value.absent(),
+    this.mondayRaw = const Value.absent(),
+    this.tuesdayRaw = const Value.absent(),
+    this.wednesdayRaw = const Value.absent(),
+    this.thursdayRaw = const Value.absent(),
+    this.fridayRaw = const Value.absent(),
+    this.saturdayRaw = const Value.absent(),
     this.remark = const Value.absent(),
     this.otherTeachers = const Value.absent(),
     this.textbook = const Value.absent(),
     this.publisher = const Value.absent(),
+    this.openDepartmentCode = const Value.absent(),
+    this.collegeCode = const Value.absent(),
+    this.majorCode = const Value.absent(),
+    this.gradeCode = const Value.absent(),
+    this.schoolYearCode = const Value.absent(),
+    this.termCode = const Value.absent(),
+    this.courseCategoryCode = const Value.absent(),
+    this.conditionCode = const Value.absent(),
+    this.openTypeCode = const Value.absent(),
+    this.courseNatureCode = const Value.absent(),
+    this.note = const Value.absent(),
     this.scheduleSummary = const Value.absent(),
     this.weekdaySummary = const Value.absent(),
     this.searchText = const Value.absent(),
     this.originalFieldsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SchoolTeachingClassRowsCompanion.insert({
+  SchoolTimetableRawRowsCompanion.insert({
     required String id,
     required String termKey,
     required String courseHeadId,
+    required String sourceKey,
+    required String schoolYear,
+    required String term,
     required String teachingClassName,
     required String courseNo,
     required String courseName,
@@ -6210,17 +6960,33 @@ class SchoolTeachingClassRowsCompanion
     this.major = const Value.absent(),
     this.instructor = const Value.absent(),
     this.title = const Value.absent(),
-    this.capacity = const Value.absent(),
-    this.selectedCount = const Value.absent(),
     this.peopleRaw = const Value.absent(),
     this.theoryHours = const Value.absent(),
     this.computerHours = const Value.absent(),
     this.experimentHours = const Value.absent(),
     this.practiceHours = const Value.absent(),
+    this.sundayRaw = const Value.absent(),
+    this.mondayRaw = const Value.absent(),
+    this.tuesdayRaw = const Value.absent(),
+    this.wednesdayRaw = const Value.absent(),
+    this.thursdayRaw = const Value.absent(),
+    this.fridayRaw = const Value.absent(),
+    this.saturdayRaw = const Value.absent(),
     this.remark = const Value.absent(),
     this.otherTeachers = const Value.absent(),
     this.textbook = const Value.absent(),
     this.publisher = const Value.absent(),
+    this.openDepartmentCode = const Value.absent(),
+    this.collegeCode = const Value.absent(),
+    this.majorCode = const Value.absent(),
+    this.gradeCode = const Value.absent(),
+    this.schoolYearCode = const Value.absent(),
+    this.termCode = const Value.absent(),
+    this.courseCategoryCode = const Value.absent(),
+    this.conditionCode = const Value.absent(),
+    this.openTypeCode = const Value.absent(),
+    this.courseNatureCode = const Value.absent(),
+    this.note = const Value.absent(),
     this.scheduleSummary = const Value.absent(),
     this.weekdaySummary = const Value.absent(),
     this.searchText = const Value.absent(),
@@ -6229,13 +6995,19 @@ class SchoolTeachingClassRowsCompanion
   }) : id = Value(id),
        termKey = Value(termKey),
        courseHeadId = Value(courseHeadId),
+       sourceKey = Value(sourceKey),
+       schoolYear = Value(schoolYear),
+       term = Value(term),
        teachingClassName = Value(teachingClassName),
        courseNo = Value(courseNo),
        courseName = Value(courseName);
-  static Insertable<SchoolTeachingClassRow> custom({
+  static Insertable<SchoolTimetableRawRow> custom({
     Expression<String>? id,
     Expression<String>? termKey,
     Expression<String>? courseHeadId,
+    Expression<String>? sourceKey,
+    Expression<String>? schoolYear,
+    Expression<String>? term,
     Expression<String>? teachingClassName,
     Expression<String>? courseNo,
     Expression<String>? courseName,
@@ -6249,17 +7021,33 @@ class SchoolTeachingClassRowsCompanion
     Expression<String>? major,
     Expression<String>? instructor,
     Expression<String>? title,
-    Expression<int>? capacity,
-    Expression<int>? selectedCount,
     Expression<String>? peopleRaw,
     Expression<int>? theoryHours,
     Expression<int>? computerHours,
     Expression<int>? experimentHours,
     Expression<int>? practiceHours,
+    Expression<String>? sundayRaw,
+    Expression<String>? mondayRaw,
+    Expression<String>? tuesdayRaw,
+    Expression<String>? wednesdayRaw,
+    Expression<String>? thursdayRaw,
+    Expression<String>? fridayRaw,
+    Expression<String>? saturdayRaw,
     Expression<String>? remark,
     Expression<String>? otherTeachers,
     Expression<String>? textbook,
     Expression<String>? publisher,
+    Expression<String>? openDepartmentCode,
+    Expression<String>? collegeCode,
+    Expression<String>? majorCode,
+    Expression<String>? gradeCode,
+    Expression<String>? schoolYearCode,
+    Expression<String>? termCode,
+    Expression<String>? courseCategoryCode,
+    Expression<String>? conditionCode,
+    Expression<String>? openTypeCode,
+    Expression<String>? courseNatureCode,
+    Expression<String>? note,
     Expression<String>? scheduleSummary,
     Expression<String>? weekdaySummary,
     Expression<String>? searchText,
@@ -6270,6 +7058,9 @@ class SchoolTeachingClassRowsCompanion
       if (id != null) 'id': id,
       if (termKey != null) 'term_key': termKey,
       if (courseHeadId != null) 'course_head_id': courseHeadId,
+      if (sourceKey != null) 'source_key': sourceKey,
+      if (schoolYear != null) 'school_year': schoolYear,
+      if (term != null) 'term': term,
       if (teachingClassName != null) 'teaching_class_name': teachingClassName,
       if (courseNo != null) 'course_no': courseNo,
       if (courseName != null) 'course_name': courseName,
@@ -6283,17 +7074,35 @@ class SchoolTeachingClassRowsCompanion
       if (major != null) 'major': major,
       if (instructor != null) 'instructor': instructor,
       if (title != null) 'title': title,
-      if (capacity != null) 'capacity': capacity,
-      if (selectedCount != null) 'selected_count': selectedCount,
       if (peopleRaw != null) 'people_raw': peopleRaw,
       if (theoryHours != null) 'theory_hours': theoryHours,
       if (computerHours != null) 'computer_hours': computerHours,
       if (experimentHours != null) 'experiment_hours': experimentHours,
       if (practiceHours != null) 'practice_hours': practiceHours,
+      if (sundayRaw != null) 'sunday_raw': sundayRaw,
+      if (mondayRaw != null) 'monday_raw': mondayRaw,
+      if (tuesdayRaw != null) 'tuesday_raw': tuesdayRaw,
+      if (wednesdayRaw != null) 'wednesday_raw': wednesdayRaw,
+      if (thursdayRaw != null) 'thursday_raw': thursdayRaw,
+      if (fridayRaw != null) 'friday_raw': fridayRaw,
+      if (saturdayRaw != null) 'saturday_raw': saturdayRaw,
       if (remark != null) 'remark': remark,
       if (otherTeachers != null) 'other_teachers': otherTeachers,
       if (textbook != null) 'textbook': textbook,
       if (publisher != null) 'publisher': publisher,
+      if (openDepartmentCode != null)
+        'open_department_code': openDepartmentCode,
+      if (collegeCode != null) 'college_code': collegeCode,
+      if (majorCode != null) 'major_code': majorCode,
+      if (gradeCode != null) 'grade_code': gradeCode,
+      if (schoolYearCode != null) 'school_year_code': schoolYearCode,
+      if (termCode != null) 'term_code': termCode,
+      if (courseCategoryCode != null)
+        'course_category_code': courseCategoryCode,
+      if (conditionCode != null) 'condition_code': conditionCode,
+      if (openTypeCode != null) 'open_type_code': openTypeCode,
+      if (courseNatureCode != null) 'course_nature_code': courseNatureCode,
+      if (note != null) 'note': note,
       if (scheduleSummary != null) 'schedule_summary': scheduleSummary,
       if (weekdaySummary != null) 'weekday_summary': weekdaySummary,
       if (searchText != null) 'search_text': searchText,
@@ -6303,10 +7112,13 @@ class SchoolTeachingClassRowsCompanion
     });
   }
 
-  SchoolTeachingClassRowsCompanion copyWith({
+  SchoolTimetableRawRowsCompanion copyWith({
     Value<String>? id,
     Value<String>? termKey,
     Value<String>? courseHeadId,
+    Value<String>? sourceKey,
+    Value<String>? schoolYear,
+    Value<String>? term,
     Value<String>? teachingClassName,
     Value<String>? courseNo,
     Value<String>? courseName,
@@ -6320,27 +7132,46 @@ class SchoolTeachingClassRowsCompanion
     Value<String>? major,
     Value<String>? instructor,
     Value<String>? title,
-    Value<int?>? capacity,
-    Value<int?>? selectedCount,
     Value<String>? peopleRaw,
     Value<int?>? theoryHours,
     Value<int?>? computerHours,
     Value<int?>? experimentHours,
     Value<int?>? practiceHours,
+    Value<String>? sundayRaw,
+    Value<String>? mondayRaw,
+    Value<String>? tuesdayRaw,
+    Value<String>? wednesdayRaw,
+    Value<String>? thursdayRaw,
+    Value<String>? fridayRaw,
+    Value<String>? saturdayRaw,
     Value<String>? remark,
     Value<String>? otherTeachers,
     Value<String>? textbook,
     Value<String>? publisher,
+    Value<String>? openDepartmentCode,
+    Value<String>? collegeCode,
+    Value<String>? majorCode,
+    Value<String>? gradeCode,
+    Value<String>? schoolYearCode,
+    Value<String>? termCode,
+    Value<String>? courseCategoryCode,
+    Value<String>? conditionCode,
+    Value<String>? openTypeCode,
+    Value<String>? courseNatureCode,
+    Value<String>? note,
     Value<String>? scheduleSummary,
     Value<String>? weekdaySummary,
     Value<String>? searchText,
     Value<String>? originalFieldsJson,
     Value<int>? rowid,
   }) {
-    return SchoolTeachingClassRowsCompanion(
+    return SchoolTimetableRawRowsCompanion(
       id: id ?? this.id,
       termKey: termKey ?? this.termKey,
       courseHeadId: courseHeadId ?? this.courseHeadId,
+      sourceKey: sourceKey ?? this.sourceKey,
+      schoolYear: schoolYear ?? this.schoolYear,
+      term: term ?? this.term,
       teachingClassName: teachingClassName ?? this.teachingClassName,
       courseNo: courseNo ?? this.courseNo,
       courseName: courseName ?? this.courseName,
@@ -6354,17 +7185,33 @@ class SchoolTeachingClassRowsCompanion
       major: major ?? this.major,
       instructor: instructor ?? this.instructor,
       title: title ?? this.title,
-      capacity: capacity ?? this.capacity,
-      selectedCount: selectedCount ?? this.selectedCount,
       peopleRaw: peopleRaw ?? this.peopleRaw,
       theoryHours: theoryHours ?? this.theoryHours,
       computerHours: computerHours ?? this.computerHours,
       experimentHours: experimentHours ?? this.experimentHours,
       practiceHours: practiceHours ?? this.practiceHours,
+      sundayRaw: sundayRaw ?? this.sundayRaw,
+      mondayRaw: mondayRaw ?? this.mondayRaw,
+      tuesdayRaw: tuesdayRaw ?? this.tuesdayRaw,
+      wednesdayRaw: wednesdayRaw ?? this.wednesdayRaw,
+      thursdayRaw: thursdayRaw ?? this.thursdayRaw,
+      fridayRaw: fridayRaw ?? this.fridayRaw,
+      saturdayRaw: saturdayRaw ?? this.saturdayRaw,
       remark: remark ?? this.remark,
       otherTeachers: otherTeachers ?? this.otherTeachers,
       textbook: textbook ?? this.textbook,
       publisher: publisher ?? this.publisher,
+      openDepartmentCode: openDepartmentCode ?? this.openDepartmentCode,
+      collegeCode: collegeCode ?? this.collegeCode,
+      majorCode: majorCode ?? this.majorCode,
+      gradeCode: gradeCode ?? this.gradeCode,
+      schoolYearCode: schoolYearCode ?? this.schoolYearCode,
+      termCode: termCode ?? this.termCode,
+      courseCategoryCode: courseCategoryCode ?? this.courseCategoryCode,
+      conditionCode: conditionCode ?? this.conditionCode,
+      openTypeCode: openTypeCode ?? this.openTypeCode,
+      courseNatureCode: courseNatureCode ?? this.courseNatureCode,
+      note: note ?? this.note,
       scheduleSummary: scheduleSummary ?? this.scheduleSummary,
       weekdaySummary: weekdaySummary ?? this.weekdaySummary,
       searchText: searchText ?? this.searchText,
@@ -6384,6 +7231,15 @@ class SchoolTeachingClassRowsCompanion
     }
     if (courseHeadId.present) {
       map['course_head_id'] = Variable<String>(courseHeadId.value);
+    }
+    if (sourceKey.present) {
+      map['source_key'] = Variable<String>(sourceKey.value);
+    }
+    if (schoolYear.present) {
+      map['school_year'] = Variable<String>(schoolYear.value);
+    }
+    if (term.present) {
+      map['term'] = Variable<String>(term.value);
     }
     if (teachingClassName.present) {
       map['teaching_class_name'] = Variable<String>(teachingClassName.value);
@@ -6424,12 +7280,6 @@ class SchoolTeachingClassRowsCompanion
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (capacity.present) {
-      map['capacity'] = Variable<int>(capacity.value);
-    }
-    if (selectedCount.present) {
-      map['selected_count'] = Variable<int>(selectedCount.value);
-    }
     if (peopleRaw.present) {
       map['people_raw'] = Variable<String>(peopleRaw.value);
     }
@@ -6445,6 +7295,27 @@ class SchoolTeachingClassRowsCompanion
     if (practiceHours.present) {
       map['practice_hours'] = Variable<int>(practiceHours.value);
     }
+    if (sundayRaw.present) {
+      map['sunday_raw'] = Variable<String>(sundayRaw.value);
+    }
+    if (mondayRaw.present) {
+      map['monday_raw'] = Variable<String>(mondayRaw.value);
+    }
+    if (tuesdayRaw.present) {
+      map['tuesday_raw'] = Variable<String>(tuesdayRaw.value);
+    }
+    if (wednesdayRaw.present) {
+      map['wednesday_raw'] = Variable<String>(wednesdayRaw.value);
+    }
+    if (thursdayRaw.present) {
+      map['thursday_raw'] = Variable<String>(thursdayRaw.value);
+    }
+    if (fridayRaw.present) {
+      map['friday_raw'] = Variable<String>(fridayRaw.value);
+    }
+    if (saturdayRaw.present) {
+      map['saturday_raw'] = Variable<String>(saturdayRaw.value);
+    }
     if (remark.present) {
       map['remark'] = Variable<String>(remark.value);
     }
@@ -6456,6 +7327,39 @@ class SchoolTeachingClassRowsCompanion
     }
     if (publisher.present) {
       map['publisher'] = Variable<String>(publisher.value);
+    }
+    if (openDepartmentCode.present) {
+      map['open_department_code'] = Variable<String>(openDepartmentCode.value);
+    }
+    if (collegeCode.present) {
+      map['college_code'] = Variable<String>(collegeCode.value);
+    }
+    if (majorCode.present) {
+      map['major_code'] = Variable<String>(majorCode.value);
+    }
+    if (gradeCode.present) {
+      map['grade_code'] = Variable<String>(gradeCode.value);
+    }
+    if (schoolYearCode.present) {
+      map['school_year_code'] = Variable<String>(schoolYearCode.value);
+    }
+    if (termCode.present) {
+      map['term_code'] = Variable<String>(termCode.value);
+    }
+    if (courseCategoryCode.present) {
+      map['course_category_code'] = Variable<String>(courseCategoryCode.value);
+    }
+    if (conditionCode.present) {
+      map['condition_code'] = Variable<String>(conditionCode.value);
+    }
+    if (openTypeCode.present) {
+      map['open_type_code'] = Variable<String>(openTypeCode.value);
+    }
+    if (courseNatureCode.present) {
+      map['course_nature_code'] = Variable<String>(courseNatureCode.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
     }
     if (scheduleSummary.present) {
       map['schedule_summary'] = Variable<String>(scheduleSummary.value);
@@ -6477,10 +7381,13 @@ class SchoolTeachingClassRowsCompanion
 
   @override
   String toString() {
-    return (StringBuffer('SchoolTeachingClassRowsCompanion(')
+    return (StringBuffer('SchoolTimetableRawRowsCompanion(')
           ..write('id: $id, ')
           ..write('termKey: $termKey, ')
           ..write('courseHeadId: $courseHeadId, ')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('schoolYear: $schoolYear, ')
+          ..write('term: $term, ')
           ..write('teachingClassName: $teachingClassName, ')
           ..write('courseNo: $courseNo, ')
           ..write('courseName: $courseName, ')
@@ -6494,17 +7401,33 @@ class SchoolTeachingClassRowsCompanion
           ..write('major: $major, ')
           ..write('instructor: $instructor, ')
           ..write('title: $title, ')
-          ..write('capacity: $capacity, ')
-          ..write('selectedCount: $selectedCount, ')
           ..write('peopleRaw: $peopleRaw, ')
           ..write('theoryHours: $theoryHours, ')
           ..write('computerHours: $computerHours, ')
           ..write('experimentHours: $experimentHours, ')
           ..write('practiceHours: $practiceHours, ')
+          ..write('sundayRaw: $sundayRaw, ')
+          ..write('mondayRaw: $mondayRaw, ')
+          ..write('tuesdayRaw: $tuesdayRaw, ')
+          ..write('wednesdayRaw: $wednesdayRaw, ')
+          ..write('thursdayRaw: $thursdayRaw, ')
+          ..write('fridayRaw: $fridayRaw, ')
+          ..write('saturdayRaw: $saturdayRaw, ')
           ..write('remark: $remark, ')
           ..write('otherTeachers: $otherTeachers, ')
           ..write('textbook: $textbook, ')
           ..write('publisher: $publisher, ')
+          ..write('openDepartmentCode: $openDepartmentCode, ')
+          ..write('collegeCode: $collegeCode, ')
+          ..write('majorCode: $majorCode, ')
+          ..write('gradeCode: $gradeCode, ')
+          ..write('schoolYearCode: $schoolYearCode, ')
+          ..write('termCode: $termCode, ')
+          ..write('courseCategoryCode: $courseCategoryCode, ')
+          ..write('conditionCode: $conditionCode, ')
+          ..write('openTypeCode: $openTypeCode, ')
+          ..write('courseNatureCode: $courseNatureCode, ')
+          ..write('note: $note, ')
           ..write('scheduleSummary: $scheduleSummary, ')
           ..write('weekdaySummary: $weekdaySummary, ')
           ..write('searchText: $searchText, ')
@@ -6530,18 +7453,46 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _teachingClassIdMeta = const VerificationMeta(
-    'teachingClassId',
+  static const VerificationMeta _rawRowIdMeta = const VerificationMeta(
+    'rawRowId',
   );
   @override
-  late final GeneratedColumn<String> teachingClassId = GeneratedColumn<String>(
-    'teaching_class_id',
+  late final GeneratedColumn<String> rawRowId = GeneratedColumn<String>(
+    'raw_row_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES school_teaching_class_rows (id)',
+      'REFERENCES school_timetable_raw_rows (id)',
+    ),
+  );
+  static const VerificationMeta _termKeyMeta = const VerificationMeta(
+    'termKey',
+  );
+  @override
+  late final GeneratedColumn<String> termKey = GeneratedColumn<String>(
+    'term_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES school_timetable_term_rows (term_key)',
+    ),
+  );
+  static const VerificationMeta _courseHeadIdMeta = const VerificationMeta(
+    'courseHeadId',
+  );
+  @override
+  late final GeneratedColumn<String> courseHeadId = GeneratedColumn<String>(
+    'course_head_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES school_course_head_rows (id)',
     ),
   );
   static const VerificationMeta _weekdayMeta = const VerificationMeta(
@@ -6550,6 +7501,17 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
   @override
   late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
     'weekday',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _segmentIndexMeta = const VerificationMeta(
+    'segmentIndex',
+  );
+  @override
+  late final GeneratedColumn<int> segmentIndex = GeneratedColumn<int>(
+    'segment_index',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -6616,8 +7578,11 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    teachingClassId,
+    rawRowId,
+    termKey,
+    courseHeadId,
     weekday,
+    segmentIndex,
     weekdayLabel,
     rawText,
     locationText,
@@ -6641,16 +7606,32 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('teaching_class_id')) {
+    if (data.containsKey('raw_row_id')) {
       context.handle(
-        _teachingClassIdMeta,
-        teachingClassId.isAcceptableOrUnknown(
-          data['teaching_class_id']!,
-          _teachingClassIdMeta,
+        _rawRowIdMeta,
+        rawRowId.isAcceptableOrUnknown(data['raw_row_id']!, _rawRowIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_rawRowIdMeta);
+    }
+    if (data.containsKey('term_key')) {
+      context.handle(
+        _termKeyMeta,
+        termKey.isAcceptableOrUnknown(data['term_key']!, _termKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_termKeyMeta);
+    }
+    if (data.containsKey('course_head_id')) {
+      context.handle(
+        _courseHeadIdMeta,
+        courseHeadId.isAcceptableOrUnknown(
+          data['course_head_id']!,
+          _courseHeadIdMeta,
         ),
       );
     } else if (isInserting) {
-      context.missing(_teachingClassIdMeta);
+      context.missing(_courseHeadIdMeta);
     }
     if (data.containsKey('weekday')) {
       context.handle(
@@ -6659,6 +7640,17 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
       );
     } else if (isInserting) {
       context.missing(_weekdayMeta);
+    }
+    if (data.containsKey('segment_index')) {
+      context.handle(
+        _segmentIndexMeta,
+        segmentIndex.isAcceptableOrUnknown(
+          data['segment_index']!,
+          _segmentIndexMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_segmentIndexMeta);
     }
     if (data.containsKey('weekday_label')) {
       context.handle(
@@ -6709,13 +7701,25 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      teachingClassId: attachedDatabase.typeMapping.read(
+      rawRowId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}teaching_class_id'],
+        data['${effectivePrefix}raw_row_id'],
+      )!,
+      termKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}term_key'],
+      )!,
+      courseHeadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}course_head_id'],
       )!,
       weekday: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}weekday'],
+      )!,
+      segmentIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}segment_index'],
       )!,
       weekdayLabel: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -6749,8 +7753,11 @@ class $SchoolClassMeetingRowsTable extends SchoolClassMeetingRows
 class SchoolClassMeetingRow extends DataClass
     implements Insertable<SchoolClassMeetingRow> {
   final String id;
-  final String teachingClassId;
+  final String rawRowId;
+  final String termKey;
+  final String courseHeadId;
   final int weekday;
+  final int segmentIndex;
   final String weekdayLabel;
   final String rawText;
   final String locationText;
@@ -6758,8 +7765,11 @@ class SchoolClassMeetingRow extends DataClass
   final String room;
   const SchoolClassMeetingRow({
     required this.id,
-    required this.teachingClassId,
+    required this.rawRowId,
+    required this.termKey,
+    required this.courseHeadId,
     required this.weekday,
+    required this.segmentIndex,
     required this.weekdayLabel,
     required this.rawText,
     required this.locationText,
@@ -6770,8 +7780,11 @@ class SchoolClassMeetingRow extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['teaching_class_id'] = Variable<String>(teachingClassId);
+    map['raw_row_id'] = Variable<String>(rawRowId);
+    map['term_key'] = Variable<String>(termKey);
+    map['course_head_id'] = Variable<String>(courseHeadId);
     map['weekday'] = Variable<int>(weekday);
+    map['segment_index'] = Variable<int>(segmentIndex);
     map['weekday_label'] = Variable<String>(weekdayLabel);
     map['raw_text'] = Variable<String>(rawText);
     map['location_text'] = Variable<String>(locationText);
@@ -6783,8 +7796,11 @@ class SchoolClassMeetingRow extends DataClass
   SchoolClassMeetingRowsCompanion toCompanion(bool nullToAbsent) {
     return SchoolClassMeetingRowsCompanion(
       id: Value(id),
-      teachingClassId: Value(teachingClassId),
+      rawRowId: Value(rawRowId),
+      termKey: Value(termKey),
+      courseHeadId: Value(courseHeadId),
       weekday: Value(weekday),
+      segmentIndex: Value(segmentIndex),
       weekdayLabel: Value(weekdayLabel),
       rawText: Value(rawText),
       locationText: Value(locationText),
@@ -6800,8 +7816,11 @@ class SchoolClassMeetingRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SchoolClassMeetingRow(
       id: serializer.fromJson<String>(json['id']),
-      teachingClassId: serializer.fromJson<String>(json['teachingClassId']),
+      rawRowId: serializer.fromJson<String>(json['rawRowId']),
+      termKey: serializer.fromJson<String>(json['termKey']),
+      courseHeadId: serializer.fromJson<String>(json['courseHeadId']),
       weekday: serializer.fromJson<int>(json['weekday']),
+      segmentIndex: serializer.fromJson<int>(json['segmentIndex']),
       weekdayLabel: serializer.fromJson<String>(json['weekdayLabel']),
       rawText: serializer.fromJson<String>(json['rawText']),
       locationText: serializer.fromJson<String>(json['locationText']),
@@ -6814,8 +7833,11 @@ class SchoolClassMeetingRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'teachingClassId': serializer.toJson<String>(teachingClassId),
+      'rawRowId': serializer.toJson<String>(rawRowId),
+      'termKey': serializer.toJson<String>(termKey),
+      'courseHeadId': serializer.toJson<String>(courseHeadId),
       'weekday': serializer.toJson<int>(weekday),
+      'segmentIndex': serializer.toJson<int>(segmentIndex),
       'weekdayLabel': serializer.toJson<String>(weekdayLabel),
       'rawText': serializer.toJson<String>(rawText),
       'locationText': serializer.toJson<String>(locationText),
@@ -6826,8 +7848,11 @@ class SchoolClassMeetingRow extends DataClass
 
   SchoolClassMeetingRow copyWith({
     String? id,
-    String? teachingClassId,
+    String? rawRowId,
+    String? termKey,
+    String? courseHeadId,
     int? weekday,
+    int? segmentIndex,
     String? weekdayLabel,
     String? rawText,
     String? locationText,
@@ -6835,8 +7860,11 @@ class SchoolClassMeetingRow extends DataClass
     String? room,
   }) => SchoolClassMeetingRow(
     id: id ?? this.id,
-    teachingClassId: teachingClassId ?? this.teachingClassId,
+    rawRowId: rawRowId ?? this.rawRowId,
+    termKey: termKey ?? this.termKey,
+    courseHeadId: courseHeadId ?? this.courseHeadId,
     weekday: weekday ?? this.weekday,
+    segmentIndex: segmentIndex ?? this.segmentIndex,
     weekdayLabel: weekdayLabel ?? this.weekdayLabel,
     rawText: rawText ?? this.rawText,
     locationText: locationText ?? this.locationText,
@@ -6848,10 +7876,15 @@ class SchoolClassMeetingRow extends DataClass
   ) {
     return SchoolClassMeetingRow(
       id: data.id.present ? data.id.value : this.id,
-      teachingClassId: data.teachingClassId.present
-          ? data.teachingClassId.value
-          : this.teachingClassId,
+      rawRowId: data.rawRowId.present ? data.rawRowId.value : this.rawRowId,
+      termKey: data.termKey.present ? data.termKey.value : this.termKey,
+      courseHeadId: data.courseHeadId.present
+          ? data.courseHeadId.value
+          : this.courseHeadId,
       weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      segmentIndex: data.segmentIndex.present
+          ? data.segmentIndex.value
+          : this.segmentIndex,
       weekdayLabel: data.weekdayLabel.present
           ? data.weekdayLabel.value
           : this.weekdayLabel,
@@ -6868,8 +7901,11 @@ class SchoolClassMeetingRow extends DataClass
   String toString() {
     return (StringBuffer('SchoolClassMeetingRow(')
           ..write('id: $id, ')
-          ..write('teachingClassId: $teachingClassId, ')
+          ..write('rawRowId: $rawRowId, ')
+          ..write('termKey: $termKey, ')
+          ..write('courseHeadId: $courseHeadId, ')
           ..write('weekday: $weekday, ')
+          ..write('segmentIndex: $segmentIndex, ')
           ..write('weekdayLabel: $weekdayLabel, ')
           ..write('rawText: $rawText, ')
           ..write('locationText: $locationText, ')
@@ -6882,8 +7918,11 @@ class SchoolClassMeetingRow extends DataClass
   @override
   int get hashCode => Object.hash(
     id,
-    teachingClassId,
+    rawRowId,
+    termKey,
+    courseHeadId,
     weekday,
+    segmentIndex,
     weekdayLabel,
     rawText,
     locationText,
@@ -6895,8 +7934,11 @@ class SchoolClassMeetingRow extends DataClass
       identical(this, other) ||
       (other is SchoolClassMeetingRow &&
           other.id == this.id &&
-          other.teachingClassId == this.teachingClassId &&
+          other.rawRowId == this.rawRowId &&
+          other.termKey == this.termKey &&
+          other.courseHeadId == this.courseHeadId &&
           other.weekday == this.weekday &&
+          other.segmentIndex == this.segmentIndex &&
           other.weekdayLabel == this.weekdayLabel &&
           other.rawText == this.rawText &&
           other.locationText == this.locationText &&
@@ -6907,8 +7949,11 @@ class SchoolClassMeetingRow extends DataClass
 class SchoolClassMeetingRowsCompanion
     extends UpdateCompanion<SchoolClassMeetingRow> {
   final Value<String> id;
-  final Value<String> teachingClassId;
+  final Value<String> rawRowId;
+  final Value<String> termKey;
+  final Value<String> courseHeadId;
   final Value<int> weekday;
+  final Value<int> segmentIndex;
   final Value<String> weekdayLabel;
   final Value<String> rawText;
   final Value<String> locationText;
@@ -6917,8 +7962,11 @@ class SchoolClassMeetingRowsCompanion
   final Value<int> rowid;
   const SchoolClassMeetingRowsCompanion({
     this.id = const Value.absent(),
-    this.teachingClassId = const Value.absent(),
+    this.rawRowId = const Value.absent(),
+    this.termKey = const Value.absent(),
+    this.courseHeadId = const Value.absent(),
     this.weekday = const Value.absent(),
+    this.segmentIndex = const Value.absent(),
     this.weekdayLabel = const Value.absent(),
     this.rawText = const Value.absent(),
     this.locationText = const Value.absent(),
@@ -6928,8 +7976,11 @@ class SchoolClassMeetingRowsCompanion
   });
   SchoolClassMeetingRowsCompanion.insert({
     required String id,
-    required String teachingClassId,
+    required String rawRowId,
+    required String termKey,
+    required String courseHeadId,
     required int weekday,
+    required int segmentIndex,
     this.weekdayLabel = const Value.absent(),
     this.rawText = const Value.absent(),
     this.locationText = const Value.absent(),
@@ -6937,12 +7988,18 @@ class SchoolClassMeetingRowsCompanion
     this.room = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       teachingClassId = Value(teachingClassId),
-       weekday = Value(weekday);
+       rawRowId = Value(rawRowId),
+       termKey = Value(termKey),
+       courseHeadId = Value(courseHeadId),
+       weekday = Value(weekday),
+       segmentIndex = Value(segmentIndex);
   static Insertable<SchoolClassMeetingRow> custom({
     Expression<String>? id,
-    Expression<String>? teachingClassId,
+    Expression<String>? rawRowId,
+    Expression<String>? termKey,
+    Expression<String>? courseHeadId,
     Expression<int>? weekday,
+    Expression<int>? segmentIndex,
     Expression<String>? weekdayLabel,
     Expression<String>? rawText,
     Expression<String>? locationText,
@@ -6952,8 +8009,11 @@ class SchoolClassMeetingRowsCompanion
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (teachingClassId != null) 'teaching_class_id': teachingClassId,
+      if (rawRowId != null) 'raw_row_id': rawRowId,
+      if (termKey != null) 'term_key': termKey,
+      if (courseHeadId != null) 'course_head_id': courseHeadId,
       if (weekday != null) 'weekday': weekday,
+      if (segmentIndex != null) 'segment_index': segmentIndex,
       if (weekdayLabel != null) 'weekday_label': weekdayLabel,
       if (rawText != null) 'raw_text': rawText,
       if (locationText != null) 'location_text': locationText,
@@ -6965,8 +8025,11 @@ class SchoolClassMeetingRowsCompanion
 
   SchoolClassMeetingRowsCompanion copyWith({
     Value<String>? id,
-    Value<String>? teachingClassId,
+    Value<String>? rawRowId,
+    Value<String>? termKey,
+    Value<String>? courseHeadId,
     Value<int>? weekday,
+    Value<int>? segmentIndex,
     Value<String>? weekdayLabel,
     Value<String>? rawText,
     Value<String>? locationText,
@@ -6976,8 +8039,11 @@ class SchoolClassMeetingRowsCompanion
   }) {
     return SchoolClassMeetingRowsCompanion(
       id: id ?? this.id,
-      teachingClassId: teachingClassId ?? this.teachingClassId,
+      rawRowId: rawRowId ?? this.rawRowId,
+      termKey: termKey ?? this.termKey,
+      courseHeadId: courseHeadId ?? this.courseHeadId,
       weekday: weekday ?? this.weekday,
+      segmentIndex: segmentIndex ?? this.segmentIndex,
       weekdayLabel: weekdayLabel ?? this.weekdayLabel,
       rawText: rawText ?? this.rawText,
       locationText: locationText ?? this.locationText,
@@ -6993,11 +8059,20 @@ class SchoolClassMeetingRowsCompanion
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (teachingClassId.present) {
-      map['teaching_class_id'] = Variable<String>(teachingClassId.value);
+    if (rawRowId.present) {
+      map['raw_row_id'] = Variable<String>(rawRowId.value);
+    }
+    if (termKey.present) {
+      map['term_key'] = Variable<String>(termKey.value);
+    }
+    if (courseHeadId.present) {
+      map['course_head_id'] = Variable<String>(courseHeadId.value);
     }
     if (weekday.present) {
       map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (segmentIndex.present) {
+      map['segment_index'] = Variable<int>(segmentIndex.value);
     }
     if (weekdayLabel.present) {
       map['weekday_label'] = Variable<String>(weekdayLabel.value);
@@ -7024,8 +8099,11 @@ class SchoolClassMeetingRowsCompanion
   String toString() {
     return (StringBuffer('SchoolClassMeetingRowsCompanion(')
           ..write('id: $id, ')
-          ..write('teachingClassId: $teachingClassId, ')
+          ..write('rawRowId: $rawRowId, ')
+          ..write('termKey: $termKey, ')
+          ..write('courseHeadId: $courseHeadId, ')
           ..write('weekday: $weekday, ')
+          ..write('segmentIndex: $segmentIndex, ')
           ..write('weekdayLabel: $weekdayLabel, ')
           ..write('rawText: $rawText, ')
           ..write('locationText: $locationText, ')
@@ -7423,8 +8501,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $SchoolTimetableTermRowsTable(this);
   late final $SchoolCourseHeadRowsTable schoolCourseHeadRows =
       $SchoolCourseHeadRowsTable(this);
-  late final $SchoolTeachingClassRowsTable schoolTeachingClassRows =
-      $SchoolTeachingClassRowsTable(this);
+  late final $SchoolTimetableRawRowsTable schoolTimetableRawRows =
+      $SchoolTimetableRawRowsTable(this);
   late final $SchoolClassMeetingRowsTable schoolClassMeetingRows =
       $SchoolClassMeetingRowsTable(this);
   late final $SyncTombstoneRowsTable syncTombstoneRows =
@@ -7442,7 +8520,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     selectedCourseTimetableRows,
     schoolTimetableTermRows,
     schoolCourseHeadRows,
-    schoolTeachingClassRows,
+    schoolTimetableRawRows,
     schoolClassMeetingRows,
     syncTombstoneRows,
   ];
@@ -10274,30 +11352,61 @@ final class $$SchoolTimetableTermRowsTableReferences
   }
 
   static MultiTypedResultKey<
-    $SchoolTeachingClassRowsTable,
-    List<SchoolTeachingClassRow>
+    $SchoolTimetableRawRowsTable,
+    List<SchoolTimetableRawRow>
   >
-  _schoolTeachingClassRowsRefsTable(_$AppDatabase db) =>
+  _schoolTimetableRawRowsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
-        db.schoolTeachingClassRows,
+        db.schoolTimetableRawRows,
         aliasName: $_aliasNameGenerator(
           db.schoolTimetableTermRows.termKey,
-          db.schoolTeachingClassRows.termKey,
+          db.schoolTimetableRawRows.termKey,
         ),
       );
 
-  $$SchoolTeachingClassRowsTableProcessedTableManager
-  get schoolTeachingClassRowsRefs {
+  $$SchoolTimetableRawRowsTableProcessedTableManager
+  get schoolTimetableRawRowsRefs {
     final manager =
-        $$SchoolTeachingClassRowsTableTableManager(
+        $$SchoolTimetableRawRowsTableTableManager(
           $_db,
-          $_db.schoolTeachingClassRows,
+          $_db.schoolTimetableRawRows,
         ).filter(
           (f) => f.termKey.termKey.sqlEquals($_itemColumn<String>('term_key')!),
         );
 
     final cache = $_typedResult.readTableOrNull(
-      _schoolTeachingClassRowsRefsTable($_db),
+      _schoolTimetableRawRowsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $SchoolClassMeetingRowsTable,
+    List<SchoolClassMeetingRow>
+  >
+  _schoolClassMeetingRowsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.schoolClassMeetingRows,
+        aliasName: $_aliasNameGenerator(
+          db.schoolTimetableTermRows.termKey,
+          db.schoolClassMeetingRows.termKey,
+        ),
+      );
+
+  $$SchoolClassMeetingRowsTableProcessedTableManager
+  get schoolClassMeetingRowsRefs {
+    final manager =
+        $$SchoolClassMeetingRowsTableTableManager(
+          $_db,
+          $_db.schoolClassMeetingRows,
+        ).filter(
+          (f) => f.termKey.termKey.sqlEquals($_itemColumn<String>('term_key')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _schoolClassMeetingRowsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -10374,23 +11483,49 @@ class $$SchoolTimetableTermRowsTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> schoolTeachingClassRowsRefs(
-    Expression<bool> Function($$SchoolTeachingClassRowsTableFilterComposer f) f,
+  Expression<bool> schoolTimetableRawRowsRefs(
+    Expression<bool> Function($$SchoolTimetableRawRowsTableFilterComposer f) f,
   ) {
-    final $$SchoolTeachingClassRowsTableFilterComposer composer =
+    final $$SchoolTimetableRawRowsTableFilterComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.termKey,
-          referencedTable: $db.schoolTeachingClassRows,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.termKey,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableFilterComposer(
+              }) => $$SchoolTimetableRawRowsTableFilterComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> schoolClassMeetingRowsRefs(
+    Expression<bool> Function($$SchoolClassMeetingRowsTableFilterComposer f) f,
+  ) {
+    final $$SchoolClassMeetingRowsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.termKey,
+          referencedTable: $db.schoolClassMeetingRows,
+          getReferencedColumn: (t) => t.termKey,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolClassMeetingRowsTableFilterComposer(
+                $db: $db,
+                $table: $db.schoolClassMeetingRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -10508,24 +11643,49 @@ class $$SchoolTimetableTermRowsTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> schoolTeachingClassRowsRefs<T extends Object>(
-    Expression<T> Function($$SchoolTeachingClassRowsTableAnnotationComposer a)
-    f,
+  Expression<T> schoolTimetableRawRowsRefs<T extends Object>(
+    Expression<T> Function($$SchoolTimetableRawRowsTableAnnotationComposer a) f,
   ) {
-    final $$SchoolTeachingClassRowsTableAnnotationComposer composer =
+    final $$SchoolTimetableRawRowsTableAnnotationComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.termKey,
-          referencedTable: $db.schoolTeachingClassRows,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.termKey,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableAnnotationComposer(
+              }) => $$SchoolTimetableRawRowsTableAnnotationComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> schoolClassMeetingRowsRefs<T extends Object>(
+    Expression<T> Function($$SchoolClassMeetingRowsTableAnnotationComposer a) f,
+  ) {
+    final $$SchoolClassMeetingRowsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.termKey,
+          referencedTable: $db.schoolClassMeetingRows,
+          getReferencedColumn: (t) => t.termKey,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolClassMeetingRowsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.schoolClassMeetingRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -10551,7 +11711,8 @@ class $$SchoolTimetableTermRowsTableTableManager
           SchoolTimetableTermRow,
           PrefetchHooks Function({
             bool schoolCourseHeadRowsRefs,
-            bool schoolTeachingClassRowsRefs,
+            bool schoolTimetableRawRowsRefs,
+            bool schoolClassMeetingRowsRefs,
           })
         > {
   $$SchoolTimetableTermRowsTableTableManager(
@@ -10627,13 +11788,15 @@ class $$SchoolTimetableTermRowsTableTableManager
           prefetchHooksCallback:
               ({
                 schoolCourseHeadRowsRefs = false,
-                schoolTeachingClassRowsRefs = false,
+                schoolTimetableRawRowsRefs = false,
+                schoolClassMeetingRowsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (schoolCourseHeadRowsRefs) db.schoolCourseHeadRows,
-                    if (schoolTeachingClassRowsRefs) db.schoolTeachingClassRows,
+                    if (schoolTimetableRawRowsRefs) db.schoolTimetableRawRows,
+                    if (schoolClassMeetingRowsRefs) db.schoolClassMeetingRows,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -10656,18 +11819,36 @@ class $$SchoolTimetableTermRowsTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (schoolTeachingClassRowsRefs)
+                      if (schoolTimetableRawRowsRefs)
                         await $_getPrefetchedData(
                           currentTable: table,
                           referencedTable:
                               $$SchoolTimetableTermRowsTableReferences
-                                  ._schoolTeachingClassRowsRefsTable(db),
+                                  ._schoolTimetableRawRowsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$SchoolTimetableTermRowsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).schoolTeachingClassRowsRefs,
+                              ).schoolTimetableRawRowsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.termKey == item.termKey,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (schoolClassMeetingRowsRefs)
+                        await $_getPrefetchedData(
+                          currentTable: table,
+                          referencedTable:
+                              $$SchoolTimetableTermRowsTableReferences
+                                  ._schoolClassMeetingRowsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SchoolTimetableTermRowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).schoolClassMeetingRowsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.termKey == item.termKey,
@@ -10696,7 +11877,8 @@ typedef $$SchoolTimetableTermRowsTableProcessedTableManager =
       SchoolTimetableTermRow,
       PrefetchHooks Function({
         bool schoolCourseHeadRowsRefs,
-        bool schoolTeachingClassRowsRefs,
+        bool schoolTimetableRawRowsRefs,
+        bool schoolClassMeetingRowsRefs,
       })
     >;
 typedef $$SchoolCourseHeadRowsTableCreateCompanionBuilder =
@@ -10772,27 +11954,55 @@ final class $$SchoolCourseHeadRowsTableReferences
   }
 
   static MultiTypedResultKey<
-    $SchoolTeachingClassRowsTable,
-    List<SchoolTeachingClassRow>
+    $SchoolTimetableRawRowsTable,
+    List<SchoolTimetableRawRow>
   >
-  _schoolTeachingClassRowsRefsTable(_$AppDatabase db) =>
+  _schoolTimetableRawRowsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
-        db.schoolTeachingClassRows,
+        db.schoolTimetableRawRows,
         aliasName: $_aliasNameGenerator(
           db.schoolCourseHeadRows.id,
-          db.schoolTeachingClassRows.courseHeadId,
+          db.schoolTimetableRawRows.courseHeadId,
         ),
       );
 
-  $$SchoolTeachingClassRowsTableProcessedTableManager
-  get schoolTeachingClassRowsRefs {
-    final manager = $$SchoolTeachingClassRowsTableTableManager(
+  $$SchoolTimetableRawRowsTableProcessedTableManager
+  get schoolTimetableRawRowsRefs {
+    final manager = $$SchoolTimetableRawRowsTableTableManager(
       $_db,
-      $_db.schoolTeachingClassRows,
+      $_db.schoolTimetableRawRows,
     ).filter((f) => f.courseHeadId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(
-      _schoolTeachingClassRowsRefsTable($_db),
+      _schoolTimetableRawRowsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $SchoolClassMeetingRowsTable,
+    List<SchoolClassMeetingRow>
+  >
+  _schoolClassMeetingRowsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.schoolClassMeetingRows,
+        aliasName: $_aliasNameGenerator(
+          db.schoolCourseHeadRows.id,
+          db.schoolClassMeetingRows.courseHeadId,
+        ),
+      );
+
+  $$SchoolClassMeetingRowsTableProcessedTableManager
+  get schoolClassMeetingRowsRefs {
+    final manager = $$SchoolClassMeetingRowsTableTableManager(
+      $_db,
+      $_db.schoolClassMeetingRows,
+    ).filter((f) => f.courseHeadId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _schoolClassMeetingRowsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -10898,23 +12108,49 @@ class $$SchoolCourseHeadRowsTableFilterComposer
     return composer;
   }
 
-  Expression<bool> schoolTeachingClassRowsRefs(
-    Expression<bool> Function($$SchoolTeachingClassRowsTableFilterComposer f) f,
+  Expression<bool> schoolTimetableRawRowsRefs(
+    Expression<bool> Function($$SchoolTimetableRawRowsTableFilterComposer f) f,
   ) {
-    final $$SchoolTeachingClassRowsTableFilterComposer composer =
+    final $$SchoolTimetableRawRowsTableFilterComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.id,
-          referencedTable: $db.schoolTeachingClassRows,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.courseHeadId,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableFilterComposer(
+              }) => $$SchoolTimetableRawRowsTableFilterComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> schoolClassMeetingRowsRefs(
+    Expression<bool> Function($$SchoolClassMeetingRowsTableFilterComposer f) f,
+  ) {
+    final $$SchoolClassMeetingRowsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.schoolClassMeetingRows,
+          getReferencedColumn: (t) => t.courseHeadId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolClassMeetingRowsTableFilterComposer(
+                $db: $db,
+                $table: $db.schoolClassMeetingRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -11114,24 +12350,49 @@ class $$SchoolCourseHeadRowsTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> schoolTeachingClassRowsRefs<T extends Object>(
-    Expression<T> Function($$SchoolTeachingClassRowsTableAnnotationComposer a)
-    f,
+  Expression<T> schoolTimetableRawRowsRefs<T extends Object>(
+    Expression<T> Function($$SchoolTimetableRawRowsTableAnnotationComposer a) f,
   ) {
-    final $$SchoolTeachingClassRowsTableAnnotationComposer composer =
+    final $$SchoolTimetableRawRowsTableAnnotationComposer composer =
         $composerBuilder(
           composer: this,
           getCurrentColumn: (t) => t.id,
-          referencedTable: $db.schoolTeachingClassRows,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.courseHeadId,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableAnnotationComposer(
+              }) => $$SchoolTimetableRawRowsTableAnnotationComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> schoolClassMeetingRowsRefs<T extends Object>(
+    Expression<T> Function($$SchoolClassMeetingRowsTableAnnotationComposer a) f,
+  ) {
+    final $$SchoolClassMeetingRowsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.schoolClassMeetingRows,
+          getReferencedColumn: (t) => t.courseHeadId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolClassMeetingRowsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.schoolClassMeetingRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -11157,7 +12418,8 @@ class $$SchoolCourseHeadRowsTableTableManager
           SchoolCourseHeadRow,
           PrefetchHooks Function({
             bool termKey,
-            bool schoolTeachingClassRowsRefs,
+            bool schoolTimetableRawRowsRefs,
+            bool schoolClassMeetingRowsRefs,
           })
         > {
   $$SchoolCourseHeadRowsTableTableManager(
@@ -11256,11 +12518,16 @@ class $$SchoolCourseHeadRowsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({termKey = false, schoolTeachingClassRowsRefs = false}) {
+              ({
+                termKey = false,
+                schoolTimetableRawRowsRefs = false,
+                schoolClassMeetingRowsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
-                    if (schoolTeachingClassRowsRefs) db.schoolTeachingClassRows,
+                    if (schoolTimetableRawRowsRefs) db.schoolTimetableRawRows,
+                    if (schoolClassMeetingRowsRefs) db.schoolClassMeetingRows,
                   ],
                   addJoins:
                       <
@@ -11298,17 +12565,34 @@ class $$SchoolCourseHeadRowsTableTableManager
                       },
                   getPrefetchedDataCallback: (items) async {
                     return [
-                      if (schoolTeachingClassRowsRefs)
+                      if (schoolTimetableRawRowsRefs)
                         await $_getPrefetchedData(
                           currentTable: table,
                           referencedTable: $$SchoolCourseHeadRowsTableReferences
-                              ._schoolTeachingClassRowsRefsTable(db),
+                              ._schoolTimetableRawRowsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$SchoolCourseHeadRowsTableReferences(
                                 db,
                                 table,
                                 p0,
-                              ).schoolTeachingClassRowsRefs,
+                              ).schoolTimetableRawRowsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.courseHeadId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (schoolClassMeetingRowsRefs)
+                        await $_getPrefetchedData(
+                          currentTable: table,
+                          referencedTable: $$SchoolCourseHeadRowsTableReferences
+                              ._schoolClassMeetingRowsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SchoolCourseHeadRowsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).schoolClassMeetingRowsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.courseHeadId == item.id,
@@ -11335,13 +12619,20 @@ typedef $$SchoolCourseHeadRowsTableProcessedTableManager =
       $$SchoolCourseHeadRowsTableUpdateCompanionBuilder,
       (SchoolCourseHeadRow, $$SchoolCourseHeadRowsTableReferences),
       SchoolCourseHeadRow,
-      PrefetchHooks Function({bool termKey, bool schoolTeachingClassRowsRefs})
+      PrefetchHooks Function({
+        bool termKey,
+        bool schoolTimetableRawRowsRefs,
+        bool schoolClassMeetingRowsRefs,
+      })
     >;
-typedef $$SchoolTeachingClassRowsTableCreateCompanionBuilder =
-    SchoolTeachingClassRowsCompanion Function({
+typedef $$SchoolTimetableRawRowsTableCreateCompanionBuilder =
+    SchoolTimetableRawRowsCompanion Function({
       required String id,
       required String termKey,
       required String courseHeadId,
+      required String sourceKey,
+      required String schoolYear,
+      required String term,
       required String teachingClassName,
       required String courseNo,
       required String courseName,
@@ -11355,28 +12646,47 @@ typedef $$SchoolTeachingClassRowsTableCreateCompanionBuilder =
       Value<String> major,
       Value<String> instructor,
       Value<String> title,
-      Value<int?> capacity,
-      Value<int?> selectedCount,
       Value<String> peopleRaw,
       Value<int?> theoryHours,
       Value<int?> computerHours,
       Value<int?> experimentHours,
       Value<int?> practiceHours,
+      Value<String> sundayRaw,
+      Value<String> mondayRaw,
+      Value<String> tuesdayRaw,
+      Value<String> wednesdayRaw,
+      Value<String> thursdayRaw,
+      Value<String> fridayRaw,
+      Value<String> saturdayRaw,
       Value<String> remark,
       Value<String> otherTeachers,
       Value<String> textbook,
       Value<String> publisher,
+      Value<String> openDepartmentCode,
+      Value<String> collegeCode,
+      Value<String> majorCode,
+      Value<String> gradeCode,
+      Value<String> schoolYearCode,
+      Value<String> termCode,
+      Value<String> courseCategoryCode,
+      Value<String> conditionCode,
+      Value<String> openTypeCode,
+      Value<String> courseNatureCode,
+      Value<String> note,
       Value<String> scheduleSummary,
       Value<String> weekdaySummary,
       Value<String> searchText,
       Value<String> originalFieldsJson,
       Value<int> rowid,
     });
-typedef $$SchoolTeachingClassRowsTableUpdateCompanionBuilder =
-    SchoolTeachingClassRowsCompanion Function({
+typedef $$SchoolTimetableRawRowsTableUpdateCompanionBuilder =
+    SchoolTimetableRawRowsCompanion Function({
       Value<String> id,
       Value<String> termKey,
       Value<String> courseHeadId,
+      Value<String> sourceKey,
+      Value<String> schoolYear,
+      Value<String> term,
       Value<String> teachingClassName,
       Value<String> courseNo,
       Value<String> courseName,
@@ -11390,17 +12700,33 @@ typedef $$SchoolTeachingClassRowsTableUpdateCompanionBuilder =
       Value<String> major,
       Value<String> instructor,
       Value<String> title,
-      Value<int?> capacity,
-      Value<int?> selectedCount,
       Value<String> peopleRaw,
       Value<int?> theoryHours,
       Value<int?> computerHours,
       Value<int?> experimentHours,
       Value<int?> practiceHours,
+      Value<String> sundayRaw,
+      Value<String> mondayRaw,
+      Value<String> tuesdayRaw,
+      Value<String> wednesdayRaw,
+      Value<String> thursdayRaw,
+      Value<String> fridayRaw,
+      Value<String> saturdayRaw,
       Value<String> remark,
       Value<String> otherTeachers,
       Value<String> textbook,
       Value<String> publisher,
+      Value<String> openDepartmentCode,
+      Value<String> collegeCode,
+      Value<String> majorCode,
+      Value<String> gradeCode,
+      Value<String> schoolYearCode,
+      Value<String> termCode,
+      Value<String> courseCategoryCode,
+      Value<String> conditionCode,
+      Value<String> openTypeCode,
+      Value<String> courseNatureCode,
+      Value<String> note,
       Value<String> scheduleSummary,
       Value<String> weekdaySummary,
       Value<String> searchText,
@@ -11408,14 +12734,14 @@ typedef $$SchoolTeachingClassRowsTableUpdateCompanionBuilder =
       Value<int> rowid,
     });
 
-final class $$SchoolTeachingClassRowsTableReferences
+final class $$SchoolTimetableRawRowsTableReferences
     extends
         BaseReferences<
           _$AppDatabase,
-          $SchoolTeachingClassRowsTable,
-          SchoolTeachingClassRow
+          $SchoolTimetableRawRowsTable,
+          SchoolTimetableRawRow
         > {
-  $$SchoolTeachingClassRowsTableReferences(
+  $$SchoolTimetableRawRowsTableReferences(
     super.$_db,
     super.$_table,
     super.$_typedResult,
@@ -11424,7 +12750,7 @@ final class $$SchoolTeachingClassRowsTableReferences
   static $SchoolTimetableTermRowsTable _termKeyTable(_$AppDatabase db) =>
       db.schoolTimetableTermRows.createAlias(
         $_aliasNameGenerator(
-          db.schoolTeachingClassRows.termKey,
+          db.schoolTimetableRawRows.termKey,
           db.schoolTimetableTermRows.termKey,
         ),
       );
@@ -11446,7 +12772,7 @@ final class $$SchoolTeachingClassRowsTableReferences
   static $SchoolCourseHeadRowsTable _courseHeadIdTable(_$AppDatabase db) =>
       db.schoolCourseHeadRows.createAlias(
         $_aliasNameGenerator(
-          db.schoolTeachingClassRows.courseHeadId,
+          db.schoolTimetableRawRows.courseHeadId,
           db.schoolCourseHeadRows.id,
         ),
       );
@@ -11473,20 +12799,17 @@ final class $$SchoolTeachingClassRowsTableReferences
       MultiTypedResultKey.fromTable(
         db.schoolClassMeetingRows,
         aliasName: $_aliasNameGenerator(
-          db.schoolTeachingClassRows.id,
-          db.schoolClassMeetingRows.teachingClassId,
+          db.schoolTimetableRawRows.id,
+          db.schoolClassMeetingRows.rawRowId,
         ),
       );
 
   $$SchoolClassMeetingRowsTableProcessedTableManager
   get schoolClassMeetingRowsRefs {
-    final manager =
-        $$SchoolClassMeetingRowsTableTableManager(
-          $_db,
-          $_db.schoolClassMeetingRows,
-        ).filter(
-          (f) => f.teachingClassId.id.sqlEquals($_itemColumn<String>('id')!),
-        );
+    final manager = $$SchoolClassMeetingRowsTableTableManager(
+      $_db,
+      $_db.schoolClassMeetingRows,
+    ).filter((f) => f.rawRowId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(
       _schoolClassMeetingRowsRefsTable($_db),
@@ -11497,9 +12820,9 @@ final class $$SchoolTeachingClassRowsTableReferences
   }
 }
 
-class $$SchoolTeachingClassRowsTableFilterComposer
-    extends Composer<_$AppDatabase, $SchoolTeachingClassRowsTable> {
-  $$SchoolTeachingClassRowsTableFilterComposer({
+class $$SchoolTimetableRawRowsTableFilterComposer
+    extends Composer<_$AppDatabase, $SchoolTimetableRawRowsTable> {
+  $$SchoolTimetableRawRowsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -11508,6 +12831,21 @@ class $$SchoolTeachingClassRowsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceKey => $composableBuilder(
+    column: $table.sourceKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get schoolYear => $composableBuilder(
+    column: $table.schoolYear,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get term => $composableBuilder(
+    column: $table.term,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11576,16 +12914,6 @@ class $$SchoolTeachingClassRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get capacity => $composableBuilder(
-    column: $table.capacity,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get selectedCount => $composableBuilder(
-    column: $table.selectedCount,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get peopleRaw => $composableBuilder(
     column: $table.peopleRaw,
     builder: (column) => ColumnFilters(column),
@@ -11611,6 +12939,41 @@ class $$SchoolTeachingClassRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get sundayRaw => $composableBuilder(
+    column: $table.sundayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mondayRaw => $composableBuilder(
+    column: $table.mondayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tuesdayRaw => $composableBuilder(
+    column: $table.tuesdayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wednesdayRaw => $composableBuilder(
+    column: $table.wednesdayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get thursdayRaw => $composableBuilder(
+    column: $table.thursdayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fridayRaw => $composableBuilder(
+    column: $table.fridayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get saturdayRaw => $composableBuilder(
+    column: $table.saturdayRaw,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get remark => $composableBuilder(
     column: $table.remark,
     builder: (column) => ColumnFilters(column),
@@ -11628,6 +12991,61 @@ class $$SchoolTeachingClassRowsTableFilterComposer
 
   ColumnFilters<String> get publisher => $composableBuilder(
     column: $table.publisher,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get openDepartmentCode => $composableBuilder(
+    column: $table.openDepartmentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get collegeCode => $composableBuilder(
+    column: $table.collegeCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get majorCode => $composableBuilder(
+    column: $table.majorCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gradeCode => $composableBuilder(
+    column: $table.gradeCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get schoolYearCode => $composableBuilder(
+    column: $table.schoolYearCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get termCode => $composableBuilder(
+    column: $table.termCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get courseCategoryCode => $composableBuilder(
+    column: $table.courseCategoryCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get conditionCode => $composableBuilder(
+    column: $table.conditionCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get openTypeCode => $composableBuilder(
+    column: $table.openTypeCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get courseNatureCode => $composableBuilder(
+    column: $table.courseNatureCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11706,7 +13124,7 @@ class $$SchoolTeachingClassRowsTableFilterComposer
           composer: this,
           getCurrentColumn: (t) => t.id,
           referencedTable: $db.schoolClassMeetingRows,
-          getReferencedColumn: (t) => t.teachingClassId,
+          getReferencedColumn: (t) => t.rawRowId,
           builder:
               (
                 joinBuilder, {
@@ -11725,9 +13143,9 @@ class $$SchoolTeachingClassRowsTableFilterComposer
   }
 }
 
-class $$SchoolTeachingClassRowsTableOrderingComposer
-    extends Composer<_$AppDatabase, $SchoolTeachingClassRowsTable> {
-  $$SchoolTeachingClassRowsTableOrderingComposer({
+class $$SchoolTimetableRawRowsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SchoolTimetableRawRowsTable> {
+  $$SchoolTimetableRawRowsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -11736,6 +13154,21 @@ class $$SchoolTeachingClassRowsTableOrderingComposer
   });
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceKey => $composableBuilder(
+    column: $table.sourceKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get schoolYear => $composableBuilder(
+    column: $table.schoolYear,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get term => $composableBuilder(
+    column: $table.term,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11804,16 +13237,6 @@ class $$SchoolTeachingClassRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get capacity => $composableBuilder(
-    column: $table.capacity,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get selectedCount => $composableBuilder(
-    column: $table.selectedCount,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get peopleRaw => $composableBuilder(
     column: $table.peopleRaw,
     builder: (column) => ColumnOrderings(column),
@@ -11839,6 +13262,41 @@ class $$SchoolTeachingClassRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get sundayRaw => $composableBuilder(
+    column: $table.sundayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mondayRaw => $composableBuilder(
+    column: $table.mondayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tuesdayRaw => $composableBuilder(
+    column: $table.tuesdayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get wednesdayRaw => $composableBuilder(
+    column: $table.wednesdayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get thursdayRaw => $composableBuilder(
+    column: $table.thursdayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fridayRaw => $composableBuilder(
+    column: $table.fridayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get saturdayRaw => $composableBuilder(
+    column: $table.saturdayRaw,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get remark => $composableBuilder(
     column: $table.remark,
     builder: (column) => ColumnOrderings(column),
@@ -11856,6 +13314,61 @@ class $$SchoolTeachingClassRowsTableOrderingComposer
 
   ColumnOrderings<String> get publisher => $composableBuilder(
     column: $table.publisher,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get openDepartmentCode => $composableBuilder(
+    column: $table.openDepartmentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get collegeCode => $composableBuilder(
+    column: $table.collegeCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get majorCode => $composableBuilder(
+    column: $table.majorCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gradeCode => $composableBuilder(
+    column: $table.gradeCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get schoolYearCode => $composableBuilder(
+    column: $table.schoolYearCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get termCode => $composableBuilder(
+    column: $table.termCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get courseCategoryCode => $composableBuilder(
+    column: $table.courseCategoryCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get conditionCode => $composableBuilder(
+    column: $table.conditionCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get openTypeCode => $composableBuilder(
+    column: $table.openTypeCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get courseNatureCode => $composableBuilder(
+    column: $table.courseNatureCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11928,9 +13441,9 @@ class $$SchoolTeachingClassRowsTableOrderingComposer
   }
 }
 
-class $$SchoolTeachingClassRowsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SchoolTeachingClassRowsTable> {
-  $$SchoolTeachingClassRowsTableAnnotationComposer({
+class $$SchoolTimetableRawRowsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SchoolTimetableRawRowsTable> {
+  $$SchoolTimetableRawRowsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -11939,6 +13452,17 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceKey =>
+      $composableBuilder(column: $table.sourceKey, builder: (column) => column);
+
+  GeneratedColumn<String> get schoolYear => $composableBuilder(
+    column: $table.schoolYear,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get term =>
+      $composableBuilder(column: $table.term, builder: (column) => column);
 
   GeneratedColumn<String> get teachingClassName => $composableBuilder(
     column: $table.teachingClassName,
@@ -11993,14 +13517,6 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<int> get capacity =>
-      $composableBuilder(column: $table.capacity, builder: (column) => column);
-
-  GeneratedColumn<int> get selectedCount => $composableBuilder(
-    column: $table.selectedCount,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<String> get peopleRaw =>
       $composableBuilder(column: $table.peopleRaw, builder: (column) => column);
 
@@ -12024,6 +13540,35 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get sundayRaw =>
+      $composableBuilder(column: $table.sundayRaw, builder: (column) => column);
+
+  GeneratedColumn<String> get mondayRaw =>
+      $composableBuilder(column: $table.mondayRaw, builder: (column) => column);
+
+  GeneratedColumn<String> get tuesdayRaw => $composableBuilder(
+    column: $table.tuesdayRaw,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get wednesdayRaw => $composableBuilder(
+    column: $table.wednesdayRaw,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get thursdayRaw => $composableBuilder(
+    column: $table.thursdayRaw,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fridayRaw =>
+      $composableBuilder(column: $table.fridayRaw, builder: (column) => column);
+
+  GeneratedColumn<String> get saturdayRaw => $composableBuilder(
+    column: $table.saturdayRaw,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get remark =>
       $composableBuilder(column: $table.remark, builder: (column) => column);
 
@@ -12037,6 +13582,53 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
 
   GeneratedColumn<String> get publisher =>
       $composableBuilder(column: $table.publisher, builder: (column) => column);
+
+  GeneratedColumn<String> get openDepartmentCode => $composableBuilder(
+    column: $table.openDepartmentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get collegeCode => $composableBuilder(
+    column: $table.collegeCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get majorCode =>
+      $composableBuilder(column: $table.majorCode, builder: (column) => column);
+
+  GeneratedColumn<String> get gradeCode =>
+      $composableBuilder(column: $table.gradeCode, builder: (column) => column);
+
+  GeneratedColumn<String> get schoolYearCode => $composableBuilder(
+    column: $table.schoolYearCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get termCode =>
+      $composableBuilder(column: $table.termCode, builder: (column) => column);
+
+  GeneratedColumn<String> get courseCategoryCode => $composableBuilder(
+    column: $table.courseCategoryCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get conditionCode => $composableBuilder(
+    column: $table.conditionCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get openTypeCode => $composableBuilder(
+    column: $table.openTypeCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get courseNatureCode => $composableBuilder(
+    column: $table.courseNatureCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
 
   GeneratedColumn<String> get scheduleSummary => $composableBuilder(
     column: $table.scheduleSummary,
@@ -12114,7 +13706,7 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
           composer: this,
           getCurrentColumn: (t) => t.id,
           referencedTable: $db.schoolClassMeetingRows,
-          getReferencedColumn: (t) => t.teachingClassId,
+          getReferencedColumn: (t) => t.rawRowId,
           builder:
               (
                 joinBuilder, {
@@ -12133,44 +13725,44 @@ class $$SchoolTeachingClassRowsTableAnnotationComposer
   }
 }
 
-class $$SchoolTeachingClassRowsTableTableManager
+class $$SchoolTimetableRawRowsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $SchoolTeachingClassRowsTable,
-          SchoolTeachingClassRow,
-          $$SchoolTeachingClassRowsTableFilterComposer,
-          $$SchoolTeachingClassRowsTableOrderingComposer,
-          $$SchoolTeachingClassRowsTableAnnotationComposer,
-          $$SchoolTeachingClassRowsTableCreateCompanionBuilder,
-          $$SchoolTeachingClassRowsTableUpdateCompanionBuilder,
-          (SchoolTeachingClassRow, $$SchoolTeachingClassRowsTableReferences),
-          SchoolTeachingClassRow,
+          $SchoolTimetableRawRowsTable,
+          SchoolTimetableRawRow,
+          $$SchoolTimetableRawRowsTableFilterComposer,
+          $$SchoolTimetableRawRowsTableOrderingComposer,
+          $$SchoolTimetableRawRowsTableAnnotationComposer,
+          $$SchoolTimetableRawRowsTableCreateCompanionBuilder,
+          $$SchoolTimetableRawRowsTableUpdateCompanionBuilder,
+          (SchoolTimetableRawRow, $$SchoolTimetableRawRowsTableReferences),
+          SchoolTimetableRawRow,
           PrefetchHooks Function({
             bool termKey,
             bool courseHeadId,
             bool schoolClassMeetingRowsRefs,
           })
         > {
-  $$SchoolTeachingClassRowsTableTableManager(
+  $$SchoolTimetableRawRowsTableTableManager(
     _$AppDatabase db,
-    $SchoolTeachingClassRowsTable table,
+    $SchoolTimetableRawRowsTable table,
   ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SchoolTeachingClassRowsTableFilterComposer(
+              $$SchoolTimetableRawRowsTableFilterComposer(
                 $db: db,
                 $table: table,
               ),
           createOrderingComposer: () =>
-              $$SchoolTeachingClassRowsTableOrderingComposer(
+              $$SchoolTimetableRawRowsTableOrderingComposer(
                 $db: db,
                 $table: table,
               ),
           createComputedFieldComposer: () =>
-              $$SchoolTeachingClassRowsTableAnnotationComposer(
+              $$SchoolTimetableRawRowsTableAnnotationComposer(
                 $db: db,
                 $table: table,
               ),
@@ -12179,6 +13771,9 @@ class $$SchoolTeachingClassRowsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> termKey = const Value.absent(),
                 Value<String> courseHeadId = const Value.absent(),
+                Value<String> sourceKey = const Value.absent(),
+                Value<String> schoolYear = const Value.absent(),
+                Value<String> term = const Value.absent(),
                 Value<String> teachingClassName = const Value.absent(),
                 Value<String> courseNo = const Value.absent(),
                 Value<String> courseName = const Value.absent(),
@@ -12192,26 +13787,45 @@ class $$SchoolTeachingClassRowsTableTableManager
                 Value<String> major = const Value.absent(),
                 Value<String> instructor = const Value.absent(),
                 Value<String> title = const Value.absent(),
-                Value<int?> capacity = const Value.absent(),
-                Value<int?> selectedCount = const Value.absent(),
                 Value<String> peopleRaw = const Value.absent(),
                 Value<int?> theoryHours = const Value.absent(),
                 Value<int?> computerHours = const Value.absent(),
                 Value<int?> experimentHours = const Value.absent(),
                 Value<int?> practiceHours = const Value.absent(),
+                Value<String> sundayRaw = const Value.absent(),
+                Value<String> mondayRaw = const Value.absent(),
+                Value<String> tuesdayRaw = const Value.absent(),
+                Value<String> wednesdayRaw = const Value.absent(),
+                Value<String> thursdayRaw = const Value.absent(),
+                Value<String> fridayRaw = const Value.absent(),
+                Value<String> saturdayRaw = const Value.absent(),
                 Value<String> remark = const Value.absent(),
                 Value<String> otherTeachers = const Value.absent(),
                 Value<String> textbook = const Value.absent(),
                 Value<String> publisher = const Value.absent(),
+                Value<String> openDepartmentCode = const Value.absent(),
+                Value<String> collegeCode = const Value.absent(),
+                Value<String> majorCode = const Value.absent(),
+                Value<String> gradeCode = const Value.absent(),
+                Value<String> schoolYearCode = const Value.absent(),
+                Value<String> termCode = const Value.absent(),
+                Value<String> courseCategoryCode = const Value.absent(),
+                Value<String> conditionCode = const Value.absent(),
+                Value<String> openTypeCode = const Value.absent(),
+                Value<String> courseNatureCode = const Value.absent(),
+                Value<String> note = const Value.absent(),
                 Value<String> scheduleSummary = const Value.absent(),
                 Value<String> weekdaySummary = const Value.absent(),
                 Value<String> searchText = const Value.absent(),
                 Value<String> originalFieldsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SchoolTeachingClassRowsCompanion(
+              }) => SchoolTimetableRawRowsCompanion(
                 id: id,
                 termKey: termKey,
                 courseHeadId: courseHeadId,
+                sourceKey: sourceKey,
+                schoolYear: schoolYear,
+                term: term,
                 teachingClassName: teachingClassName,
                 courseNo: courseNo,
                 courseName: courseName,
@@ -12225,17 +13839,33 @@ class $$SchoolTeachingClassRowsTableTableManager
                 major: major,
                 instructor: instructor,
                 title: title,
-                capacity: capacity,
-                selectedCount: selectedCount,
                 peopleRaw: peopleRaw,
                 theoryHours: theoryHours,
                 computerHours: computerHours,
                 experimentHours: experimentHours,
                 practiceHours: practiceHours,
+                sundayRaw: sundayRaw,
+                mondayRaw: mondayRaw,
+                tuesdayRaw: tuesdayRaw,
+                wednesdayRaw: wednesdayRaw,
+                thursdayRaw: thursdayRaw,
+                fridayRaw: fridayRaw,
+                saturdayRaw: saturdayRaw,
                 remark: remark,
                 otherTeachers: otherTeachers,
                 textbook: textbook,
                 publisher: publisher,
+                openDepartmentCode: openDepartmentCode,
+                collegeCode: collegeCode,
+                majorCode: majorCode,
+                gradeCode: gradeCode,
+                schoolYearCode: schoolYearCode,
+                termCode: termCode,
+                courseCategoryCode: courseCategoryCode,
+                conditionCode: conditionCode,
+                openTypeCode: openTypeCode,
+                courseNatureCode: courseNatureCode,
+                note: note,
                 scheduleSummary: scheduleSummary,
                 weekdaySummary: weekdaySummary,
                 searchText: searchText,
@@ -12247,6 +13877,9 @@ class $$SchoolTeachingClassRowsTableTableManager
                 required String id,
                 required String termKey,
                 required String courseHeadId,
+                required String sourceKey,
+                required String schoolYear,
+                required String term,
                 required String teachingClassName,
                 required String courseNo,
                 required String courseName,
@@ -12260,26 +13893,45 @@ class $$SchoolTeachingClassRowsTableTableManager
                 Value<String> major = const Value.absent(),
                 Value<String> instructor = const Value.absent(),
                 Value<String> title = const Value.absent(),
-                Value<int?> capacity = const Value.absent(),
-                Value<int?> selectedCount = const Value.absent(),
                 Value<String> peopleRaw = const Value.absent(),
                 Value<int?> theoryHours = const Value.absent(),
                 Value<int?> computerHours = const Value.absent(),
                 Value<int?> experimentHours = const Value.absent(),
                 Value<int?> practiceHours = const Value.absent(),
+                Value<String> sundayRaw = const Value.absent(),
+                Value<String> mondayRaw = const Value.absent(),
+                Value<String> tuesdayRaw = const Value.absent(),
+                Value<String> wednesdayRaw = const Value.absent(),
+                Value<String> thursdayRaw = const Value.absent(),
+                Value<String> fridayRaw = const Value.absent(),
+                Value<String> saturdayRaw = const Value.absent(),
                 Value<String> remark = const Value.absent(),
                 Value<String> otherTeachers = const Value.absent(),
                 Value<String> textbook = const Value.absent(),
                 Value<String> publisher = const Value.absent(),
+                Value<String> openDepartmentCode = const Value.absent(),
+                Value<String> collegeCode = const Value.absent(),
+                Value<String> majorCode = const Value.absent(),
+                Value<String> gradeCode = const Value.absent(),
+                Value<String> schoolYearCode = const Value.absent(),
+                Value<String> termCode = const Value.absent(),
+                Value<String> courseCategoryCode = const Value.absent(),
+                Value<String> conditionCode = const Value.absent(),
+                Value<String> openTypeCode = const Value.absent(),
+                Value<String> courseNatureCode = const Value.absent(),
+                Value<String> note = const Value.absent(),
                 Value<String> scheduleSummary = const Value.absent(),
                 Value<String> weekdaySummary = const Value.absent(),
                 Value<String> searchText = const Value.absent(),
                 Value<String> originalFieldsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => SchoolTeachingClassRowsCompanion.insert(
+              }) => SchoolTimetableRawRowsCompanion.insert(
                 id: id,
                 termKey: termKey,
                 courseHeadId: courseHeadId,
+                sourceKey: sourceKey,
+                schoolYear: schoolYear,
+                term: term,
                 teachingClassName: teachingClassName,
                 courseNo: courseNo,
                 courseName: courseName,
@@ -12293,17 +13945,33 @@ class $$SchoolTeachingClassRowsTableTableManager
                 major: major,
                 instructor: instructor,
                 title: title,
-                capacity: capacity,
-                selectedCount: selectedCount,
                 peopleRaw: peopleRaw,
                 theoryHours: theoryHours,
                 computerHours: computerHours,
                 experimentHours: experimentHours,
                 practiceHours: practiceHours,
+                sundayRaw: sundayRaw,
+                mondayRaw: mondayRaw,
+                tuesdayRaw: tuesdayRaw,
+                wednesdayRaw: wednesdayRaw,
+                thursdayRaw: thursdayRaw,
+                fridayRaw: fridayRaw,
+                saturdayRaw: saturdayRaw,
                 remark: remark,
                 otherTeachers: otherTeachers,
                 textbook: textbook,
                 publisher: publisher,
+                openDepartmentCode: openDepartmentCode,
+                collegeCode: collegeCode,
+                majorCode: majorCode,
+                gradeCode: gradeCode,
+                schoolYearCode: schoolYearCode,
+                termCode: termCode,
+                courseCategoryCode: courseCategoryCode,
+                conditionCode: conditionCode,
+                openTypeCode: openTypeCode,
+                courseNatureCode: courseNatureCode,
+                note: note,
                 scheduleSummary: scheduleSummary,
                 weekdaySummary: weekdaySummary,
                 searchText: searchText,
@@ -12314,7 +13982,7 @@ class $$SchoolTeachingClassRowsTableTableManager
               .map(
                 (e) => (
                   e.readTable(table),
-                  $$SchoolTeachingClassRowsTableReferences(db, table, e),
+                  $$SchoolTimetableRawRowsTableReferences(db, table, e),
                 ),
               )
               .toList(),
@@ -12351,10 +14019,10 @@ class $$SchoolTeachingClassRowsTableTableManager
                                     currentTable: table,
                                     currentColumn: table.termKey,
                                     referencedTable:
-                                        $$SchoolTeachingClassRowsTableReferences
+                                        $$SchoolTimetableRawRowsTableReferences
                                             ._termKeyTable(db),
                                     referencedColumn:
-                                        $$SchoolTeachingClassRowsTableReferences
+                                        $$SchoolTimetableRawRowsTableReferences
                                             ._termKeyTable(db)
                                             .termKey,
                                   )
@@ -12366,10 +14034,10 @@ class $$SchoolTeachingClassRowsTableTableManager
                                     currentTable: table,
                                     currentColumn: table.courseHeadId,
                                     referencedTable:
-                                        $$SchoolTeachingClassRowsTableReferences
+                                        $$SchoolTimetableRawRowsTableReferences
                                             ._courseHeadIdTable(db),
                                     referencedColumn:
-                                        $$SchoolTeachingClassRowsTableReferences
+                                        $$SchoolTimetableRawRowsTableReferences
                                             ._courseHeadIdTable(db)
                                             .id,
                                   )
@@ -12384,17 +14052,17 @@ class $$SchoolTeachingClassRowsTableTableManager
                         await $_getPrefetchedData(
                           currentTable: table,
                           referencedTable:
-                              $$SchoolTeachingClassRowsTableReferences
+                              $$SchoolTimetableRawRowsTableReferences
                                   ._schoolClassMeetingRowsRefsTable(db),
                           managerFromTypedResult: (p0) =>
-                              $$SchoolTeachingClassRowsTableReferences(
+                              $$SchoolTimetableRawRowsTableReferences(
                                 db,
                                 table,
                                 p0,
                               ).schoolClassMeetingRowsRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
-                                (e) => e.teachingClassId == item.id,
+                                (e) => e.rawRowId == item.id,
                               ),
                           typedResults: items,
                         ),
@@ -12406,18 +14074,18 @@ class $$SchoolTeachingClassRowsTableTableManager
       );
 }
 
-typedef $$SchoolTeachingClassRowsTableProcessedTableManager =
+typedef $$SchoolTimetableRawRowsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $SchoolTeachingClassRowsTable,
-      SchoolTeachingClassRow,
-      $$SchoolTeachingClassRowsTableFilterComposer,
-      $$SchoolTeachingClassRowsTableOrderingComposer,
-      $$SchoolTeachingClassRowsTableAnnotationComposer,
-      $$SchoolTeachingClassRowsTableCreateCompanionBuilder,
-      $$SchoolTeachingClassRowsTableUpdateCompanionBuilder,
-      (SchoolTeachingClassRow, $$SchoolTeachingClassRowsTableReferences),
-      SchoolTeachingClassRow,
+      $SchoolTimetableRawRowsTable,
+      SchoolTimetableRawRow,
+      $$SchoolTimetableRawRowsTableFilterComposer,
+      $$SchoolTimetableRawRowsTableOrderingComposer,
+      $$SchoolTimetableRawRowsTableAnnotationComposer,
+      $$SchoolTimetableRawRowsTableCreateCompanionBuilder,
+      $$SchoolTimetableRawRowsTableUpdateCompanionBuilder,
+      (SchoolTimetableRawRow, $$SchoolTimetableRawRowsTableReferences),
+      SchoolTimetableRawRow,
       PrefetchHooks Function({
         bool termKey,
         bool courseHeadId,
@@ -12427,8 +14095,11 @@ typedef $$SchoolTeachingClassRowsTableProcessedTableManager =
 typedef $$SchoolClassMeetingRowsTableCreateCompanionBuilder =
     SchoolClassMeetingRowsCompanion Function({
       required String id,
-      required String teachingClassId,
+      required String rawRowId,
+      required String termKey,
+      required String courseHeadId,
       required int weekday,
+      required int segmentIndex,
       Value<String> weekdayLabel,
       Value<String> rawText,
       Value<String> locationText,
@@ -12439,8 +14110,11 @@ typedef $$SchoolClassMeetingRowsTableCreateCompanionBuilder =
 typedef $$SchoolClassMeetingRowsTableUpdateCompanionBuilder =
     SchoolClassMeetingRowsCompanion Function({
       Value<String> id,
-      Value<String> teachingClassId,
+      Value<String> rawRowId,
+      Value<String> termKey,
+      Value<String> courseHeadId,
       Value<int> weekday,
+      Value<int> segmentIndex,
       Value<String> weekdayLabel,
       Value<String> rawText,
       Value<String> locationText,
@@ -12462,23 +14136,66 @@ final class $$SchoolClassMeetingRowsTableReferences
     super.$_typedResult,
   );
 
-  static $SchoolTeachingClassRowsTable _teachingClassIdTable(
-    _$AppDatabase db,
-  ) => db.schoolTeachingClassRows.createAlias(
-    $_aliasNameGenerator(
-      db.schoolClassMeetingRows.teachingClassId,
-      db.schoolTeachingClassRows.id,
-    ),
-  );
+  static $SchoolTimetableRawRowsTable _rawRowIdTable(_$AppDatabase db) =>
+      db.schoolTimetableRawRows.createAlias(
+        $_aliasNameGenerator(
+          db.schoolClassMeetingRows.rawRowId,
+          db.schoolTimetableRawRows.id,
+        ),
+      );
 
-  $$SchoolTeachingClassRowsTableProcessedTableManager get teachingClassId {
-    final $_column = $_itemColumn<String>('teaching_class_id')!;
+  $$SchoolTimetableRawRowsTableProcessedTableManager get rawRowId {
+    final $_column = $_itemColumn<String>('raw_row_id')!;
 
-    final manager = $$SchoolTeachingClassRowsTableTableManager(
+    final manager = $$SchoolTimetableRawRowsTableTableManager(
       $_db,
-      $_db.schoolTeachingClassRows,
+      $_db.schoolTimetableRawRows,
     ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_teachingClassIdTable($_db));
+    final item = $_typedResult.readTableOrNull(_rawRowIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SchoolTimetableTermRowsTable _termKeyTable(_$AppDatabase db) =>
+      db.schoolTimetableTermRows.createAlias(
+        $_aliasNameGenerator(
+          db.schoolClassMeetingRows.termKey,
+          db.schoolTimetableTermRows.termKey,
+        ),
+      );
+
+  $$SchoolTimetableTermRowsTableProcessedTableManager get termKey {
+    final $_column = $_itemColumn<String>('term_key')!;
+
+    final manager = $$SchoolTimetableTermRowsTableTableManager(
+      $_db,
+      $_db.schoolTimetableTermRows,
+    ).filter((f) => f.termKey.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_termKeyTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SchoolCourseHeadRowsTable _courseHeadIdTable(_$AppDatabase db) =>
+      db.schoolCourseHeadRows.createAlias(
+        $_aliasNameGenerator(
+          db.schoolClassMeetingRows.courseHeadId,
+          db.schoolCourseHeadRows.id,
+        ),
+      );
+
+  $$SchoolCourseHeadRowsTableProcessedTableManager get courseHeadId {
+    final $_column = $_itemColumn<String>('course_head_id')!;
+
+    final manager = $$SchoolCourseHeadRowsTableTableManager(
+      $_db,
+      $_db.schoolCourseHeadRows,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_courseHeadIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -12502,6 +14219,11 @@ class $$SchoolClassMeetingRowsTableFilterComposer
 
   ColumnFilters<int> get weekday => $composableBuilder(
     column: $table.weekday,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get segmentIndex => $composableBuilder(
+    column: $table.segmentIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12530,27 +14252,74 @@ class $$SchoolClassMeetingRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  $$SchoolTeachingClassRowsTableFilterComposer get teachingClassId {
-    final $$SchoolTeachingClassRowsTableFilterComposer composer =
+  $$SchoolTimetableRawRowsTableFilterComposer get rawRowId {
+    final $$SchoolTimetableRawRowsTableFilterComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.teachingClassId,
-          referencedTable: $db.schoolTeachingClassRows,
+          getCurrentColumn: (t) => t.rawRowId,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.id,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableFilterComposer(
+              }) => $$SchoolTimetableRawRowsTableFilterComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return composer;
+  }
+
+  $$SchoolTimetableTermRowsTableFilterComposer get termKey {
+    final $$SchoolTimetableTermRowsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.termKey,
+          referencedTable: $db.schoolTimetableTermRows,
+          getReferencedColumn: (t) => t.termKey,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolTimetableTermRowsTableFilterComposer(
+                $db: $db,
+                $table: $db.schoolTimetableTermRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$SchoolCourseHeadRowsTableFilterComposer get courseHeadId {
+    final $$SchoolCourseHeadRowsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.courseHeadId,
+      referencedTable: $db.schoolCourseHeadRows,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SchoolCourseHeadRowsTableFilterComposer(
+            $db: $db,
+            $table: $db.schoolCourseHeadRows,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -12571,6 +14340,11 @@ class $$SchoolClassMeetingRowsTableOrderingComposer
 
   ColumnOrderings<int> get weekday => $composableBuilder(
     column: $table.weekday,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get segmentIndex => $composableBuilder(
+    column: $table.segmentIndex,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12599,21 +14373,69 @@ class $$SchoolClassMeetingRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$SchoolTeachingClassRowsTableOrderingComposer get teachingClassId {
-    final $$SchoolTeachingClassRowsTableOrderingComposer composer =
+  $$SchoolTimetableRawRowsTableOrderingComposer get rawRowId {
+    final $$SchoolTimetableRawRowsTableOrderingComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.teachingClassId,
-          referencedTable: $db.schoolTeachingClassRows,
+          getCurrentColumn: (t) => t.rawRowId,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.id,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableOrderingComposer(
+              }) => $$SchoolTimetableRawRowsTableOrderingComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$SchoolTimetableTermRowsTableOrderingComposer get termKey {
+    final $$SchoolTimetableTermRowsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.termKey,
+          referencedTable: $db.schoolTimetableTermRows,
+          getReferencedColumn: (t) => t.termKey,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolTimetableTermRowsTableOrderingComposer(
+                $db: $db,
+                $table: $db.schoolTimetableTermRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$SchoolCourseHeadRowsTableOrderingComposer get courseHeadId {
+    final $$SchoolCourseHeadRowsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.courseHeadId,
+          referencedTable: $db.schoolCourseHeadRows,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolCourseHeadRowsTableOrderingComposer(
+                $db: $db,
+                $table: $db.schoolCourseHeadRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -12639,6 +14461,11 @@ class $$SchoolClassMeetingRowsTableAnnotationComposer
   GeneratedColumn<int> get weekday =>
       $composableBuilder(column: $table.weekday, builder: (column) => column);
 
+  GeneratedColumn<int> get segmentIndex => $composableBuilder(
+    column: $table.segmentIndex,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get weekdayLabel => $composableBuilder(
     column: $table.weekdayLabel,
     builder: (column) => column,
@@ -12658,21 +14485,69 @@ class $$SchoolClassMeetingRowsTableAnnotationComposer
   GeneratedColumn<String> get room =>
       $composableBuilder(column: $table.room, builder: (column) => column);
 
-  $$SchoolTeachingClassRowsTableAnnotationComposer get teachingClassId {
-    final $$SchoolTeachingClassRowsTableAnnotationComposer composer =
+  $$SchoolTimetableRawRowsTableAnnotationComposer get rawRowId {
+    final $$SchoolTimetableRawRowsTableAnnotationComposer composer =
         $composerBuilder(
           composer: this,
-          getCurrentColumn: (t) => t.teachingClassId,
-          referencedTable: $db.schoolTeachingClassRows,
+          getCurrentColumn: (t) => t.rawRowId,
+          referencedTable: $db.schoolTimetableRawRows,
           getReferencedColumn: (t) => t.id,
           builder:
               (
                 joinBuilder, {
                 $addJoinBuilderToRootComposer,
                 $removeJoinBuilderFromRootComposer,
-              }) => $$SchoolTeachingClassRowsTableAnnotationComposer(
+              }) => $$SchoolTimetableRawRowsTableAnnotationComposer(
                 $db: $db,
-                $table: $db.schoolTeachingClassRows,
+                $table: $db.schoolTimetableRawRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$SchoolTimetableTermRowsTableAnnotationComposer get termKey {
+    final $$SchoolTimetableTermRowsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.termKey,
+          referencedTable: $db.schoolTimetableTermRows,
+          getReferencedColumn: (t) => t.termKey,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolTimetableTermRowsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.schoolTimetableTermRows,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$SchoolCourseHeadRowsTableAnnotationComposer get courseHeadId {
+    final $$SchoolCourseHeadRowsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.courseHeadId,
+          referencedTable: $db.schoolCourseHeadRows,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SchoolCourseHeadRowsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.schoolCourseHeadRows,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -12696,7 +14571,11 @@ class $$SchoolClassMeetingRowsTableTableManager
           $$SchoolClassMeetingRowsTableUpdateCompanionBuilder,
           (SchoolClassMeetingRow, $$SchoolClassMeetingRowsTableReferences),
           SchoolClassMeetingRow,
-          PrefetchHooks Function({bool teachingClassId})
+          PrefetchHooks Function({
+            bool rawRowId,
+            bool termKey,
+            bool courseHeadId,
+          })
         > {
   $$SchoolClassMeetingRowsTableTableManager(
     _$AppDatabase db,
@@ -12723,8 +14602,11 @@ class $$SchoolClassMeetingRowsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> teachingClassId = const Value.absent(),
+                Value<String> rawRowId = const Value.absent(),
+                Value<String> termKey = const Value.absent(),
+                Value<String> courseHeadId = const Value.absent(),
                 Value<int> weekday = const Value.absent(),
+                Value<int> segmentIndex = const Value.absent(),
                 Value<String> weekdayLabel = const Value.absent(),
                 Value<String> rawText = const Value.absent(),
                 Value<String> locationText = const Value.absent(),
@@ -12733,8 +14615,11 @@ class $$SchoolClassMeetingRowsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => SchoolClassMeetingRowsCompanion(
                 id: id,
-                teachingClassId: teachingClassId,
+                rawRowId: rawRowId,
+                termKey: termKey,
+                courseHeadId: courseHeadId,
                 weekday: weekday,
+                segmentIndex: segmentIndex,
                 weekdayLabel: weekdayLabel,
                 rawText: rawText,
                 locationText: locationText,
@@ -12745,8 +14630,11 @@ class $$SchoolClassMeetingRowsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required String teachingClassId,
+                required String rawRowId,
+                required String termKey,
+                required String courseHeadId,
                 required int weekday,
+                required int segmentIndex,
                 Value<String> weekdayLabel = const Value.absent(),
                 Value<String> rawText = const Value.absent(),
                 Value<String> locationText = const Value.absent(),
@@ -12755,8 +14643,11 @@ class $$SchoolClassMeetingRowsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => SchoolClassMeetingRowsCompanion.insert(
                 id: id,
-                teachingClassId: teachingClassId,
+                rawRowId: rawRowId,
+                termKey: termKey,
+                courseHeadId: courseHeadId,
                 weekday: weekday,
+                segmentIndex: segmentIndex,
                 weekdayLabel: weekdayLabel,
                 rawText: rawText,
                 locationText: locationText,
@@ -12772,49 +14663,80 @@ class $$SchoolClassMeetingRowsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({teachingClassId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (teachingClassId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.teachingClassId,
-                                referencedTable:
-                                    $$SchoolClassMeetingRowsTableReferences
-                                        ._teachingClassIdTable(db),
-                                referencedColumn:
-                                    $$SchoolClassMeetingRowsTableReferences
-                                        ._teachingClassIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({rawRowId = false, termKey = false, courseHeadId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (rawRowId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.rawRowId,
+                                    referencedTable:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._rawRowIdTable(db),
+                                    referencedColumn:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._rawRowIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (termKey) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.termKey,
+                                    referencedTable:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._termKeyTable(db),
+                                    referencedColumn:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._termKeyTable(db)
+                                            .termKey,
+                                  )
+                                  as T;
+                        }
+                        if (courseHeadId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.courseHeadId,
+                                    referencedTable:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._courseHeadIdTable(db),
+                                    referencedColumn:
+                                        $$SchoolClassMeetingRowsTableReferences
+                                            ._courseHeadIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -12831,7 +14753,7 @@ typedef $$SchoolClassMeetingRowsTableProcessedTableManager =
       $$SchoolClassMeetingRowsTableUpdateCompanionBuilder,
       (SchoolClassMeetingRow, $$SchoolClassMeetingRowsTableReferences),
       SchoolClassMeetingRow,
-      PrefetchHooks Function({bool teachingClassId})
+      PrefetchHooks Function({bool rawRowId, bool termKey, bool courseHeadId})
     >;
 typedef $$SyncTombstoneRowsTableCreateCompanionBuilder =
     SyncTombstoneRowsCompanion Function({
@@ -13078,10 +15000,10 @@ class $AppDatabaseManager {
       );
   $$SchoolCourseHeadRowsTableTableManager get schoolCourseHeadRows =>
       $$SchoolCourseHeadRowsTableTableManager(_db, _db.schoolCourseHeadRows);
-  $$SchoolTeachingClassRowsTableTableManager get schoolTeachingClassRows =>
-      $$SchoolTeachingClassRowsTableTableManager(
+  $$SchoolTimetableRawRowsTableTableManager get schoolTimetableRawRows =>
+      $$SchoolTimetableRawRowsTableTableManager(
         _db,
-        _db.schoolTeachingClassRows,
+        _db.schoolTimetableRawRows,
       );
   $$SchoolClassMeetingRowsTableTableManager get schoolClassMeetingRows =>
       $$SchoolClassMeetingRowsTableTableManager(

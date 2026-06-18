@@ -66,7 +66,7 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
     }
     state = state.copyWith(isLoading: true, clearErrorMessage: true);
     try {
-      await _repository.ensureMockDataLoaded();
+      await _repository.ensureLocalDataReady();
       final terms = await _repository.loadTerms();
       final selectedTermKey = terms.isEmpty ? null : terms.first.termKey;
       final query = state.query.copyWith(termKey: selectedTermKey);
@@ -194,7 +194,7 @@ class CourseHeadState {
 final courseHeadDetailProvider = FutureProvider.family<CourseHeadState, String>(
   (ref, courseHeadId) async {
     final repository = ref.read(allSchoolTimetableRepositoryProvider);
-    await repository.ensureMockDataLoaded();
+    await repository.ensureLocalDataReady();
     final head = await repository.findCourseHead(courseHeadId);
     if (head == null) {
       return const CourseHeadState(isLoading: false, errorMessage: '未找到课程');
@@ -220,7 +220,7 @@ final teachingClassDetailProvider =
       teachingClassId,
     ) async {
       final repository = ref.read(allSchoolTimetableRepositoryProvider);
-      await repository.ensureMockDataLoaded();
+      await repository.ensureLocalDataReady();
       final teachingClass = await repository.findTeachingClass(teachingClassId);
       if (teachingClass == null) {
         return null;

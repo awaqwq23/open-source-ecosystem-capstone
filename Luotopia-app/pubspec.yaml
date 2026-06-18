@@ -94,5 +94,4 @@ flutter:
 
   assets:
     - .env
-    - assets/all_school_timetable/
     - assets/qweather_icons/icons/

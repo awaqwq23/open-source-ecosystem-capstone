@@ -20,7 +20,7 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
     SelectedCourseTimetableRows,
     SchoolTimetableTermRows,
     SchoolCourseHeadRows,
-    SchoolTeachingClassRows,
+    SchoolTimetableRawRows,
     SchoolClassMeetingRows,
     SyncTombstoneRows,
   ],
@@ -29,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,7 +112,15 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await m.createTable(schoolTimetableTermRows);
         await m.createTable(schoolCourseHeadRows);
-        await m.createTable(schoolTeachingClassRows);
+        await m.createTable(schoolTimetableRawRows);
+        await m.createTable(schoolClassMeetingRows);
+        await _createSchoolTimetableIndexes();
+      }
+      if (from >= 5 && from < 6) {
+        await _dropSchoolTimetableTables();
+        await m.createTable(schoolTimetableTermRows);
+        await m.createTable(schoolCourseHeadRows);
+        await m.createTable(schoolTimetableRawRows);
         await m.createTable(schoolClassMeetingRows);
         await _createSchoolTimetableIndexes();
       }
@@ -121,6 +129,14 @@ class AppDatabase extends _$AppDatabase {
       await _createSchoolTimetableIndexes();
     },
   );
+
+  Future<void> _dropSchoolTimetableTables() async {
+    await customStatement('DROP TABLE IF EXISTS school_class_meeting_rows');
+    await customStatement('DROP TABLE IF EXISTS school_teaching_class_rows');
+    await customStatement('DROP TABLE IF EXISTS school_timetable_raw_rows');
+    await customStatement('DROP TABLE IF EXISTS school_course_head_rows');
+    await customStatement('DROP TABLE IF EXISTS school_timetable_term_rows');
+  }
 
   Future<void> _createSchoolTimetableIndexes() async {
     await customStatement('''
@@ -136,20 +152,32 @@ class AppDatabase extends _$AppDatabase {
       ON school_course_head_rows(open_college)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_school_teaching_classes_head
-      ON school_teaching_class_rows(course_head_id)
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_school_raw_rows_term_source_key
+      ON school_timetable_raw_rows(term_key, source_key)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_school_teaching_classes_instructor
-      ON school_teaching_class_rows(instructor)
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_head
+      ON school_timetable_raw_rows(course_head_id)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_school_teaching_classes_grade_major
-      ON school_teaching_class_rows(grade, major)
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_course_no
+      ON school_timetable_raw_rows(course_no)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_instructor
+      ON school_timetable_raw_rows(instructor)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_grade_major
+      ON school_timetable_raw_rows(grade, major)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_open_college
+      ON school_timetable_raw_rows(open_college)
     ''');
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_school_class_meetings_class
-      ON school_class_meeting_rows(teaching_class_id)
+      ON school_class_meeting_rows(raw_row_id)
     ''');
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_school_class_meetings_weekday
@@ -294,11 +322,14 @@ class SchoolCourseHeadRows extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-class SchoolTeachingClassRows extends Table {
+class SchoolTimetableRawRows extends Table {
   TextColumn get id => text()();
   TextColumn get termKey =>
       text().references(SchoolTimetableTermRows, #termKey)();
   TextColumn get courseHeadId => text().references(SchoolCourseHeadRows, #id)();
+  TextColumn get sourceKey => text()();
+  TextColumn get schoolYear => text()();
+  TextColumn get term => text()();
   TextColumn get teachingClassName => text()();
   TextColumn get courseNo => text()();
   TextColumn get courseName => text()();
@@ -312,17 +343,33 @@ class SchoolTeachingClassRows extends Table {
   TextColumn get major => text().withDefault(const Constant(''))();
   TextColumn get instructor => text().withDefault(const Constant(''))();
   TextColumn get title => text().withDefault(const Constant(''))();
-  IntColumn get capacity => integer().nullable()();
-  IntColumn get selectedCount => integer().nullable()();
   TextColumn get peopleRaw => text().withDefault(const Constant(''))();
   IntColumn get theoryHours => integer().nullable()();
   IntColumn get computerHours => integer().nullable()();
   IntColumn get experimentHours => integer().nullable()();
   IntColumn get practiceHours => integer().nullable()();
+  TextColumn get sundayRaw => text().withDefault(const Constant(''))();
+  TextColumn get mondayRaw => text().withDefault(const Constant(''))();
+  TextColumn get tuesdayRaw => text().withDefault(const Constant(''))();
+  TextColumn get wednesdayRaw => text().withDefault(const Constant(''))();
+  TextColumn get thursdayRaw => text().withDefault(const Constant(''))();
+  TextColumn get fridayRaw => text().withDefault(const Constant(''))();
+  TextColumn get saturdayRaw => text().withDefault(const Constant(''))();
   TextColumn get remark => text().withDefault(const Constant(''))();
   TextColumn get otherTeachers => text().withDefault(const Constant(''))();
   TextColumn get textbook => text().withDefault(const Constant(''))();
   TextColumn get publisher => text().withDefault(const Constant(''))();
+  TextColumn get openDepartmentCode => text().withDefault(const Constant(''))();
+  TextColumn get collegeCode => text().withDefault(const Constant(''))();
+  TextColumn get majorCode => text().withDefault(const Constant(''))();
+  TextColumn get gradeCode => text().withDefault(const Constant(''))();
+  TextColumn get schoolYearCode => text().withDefault(const Constant(''))();
+  TextColumn get termCode => text().withDefault(const Constant(''))();
+  TextColumn get courseCategoryCode => text().withDefault(const Constant(''))();
+  TextColumn get conditionCode => text().withDefault(const Constant(''))();
+  TextColumn get openTypeCode => text().withDefault(const Constant(''))();
+  TextColumn get courseNatureCode => text().withDefault(const Constant(''))();
+  TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get scheduleSummary => text().withDefault(const Constant(''))();
   TextColumn get weekdaySummary => text().withDefault(const Constant(''))();
   TextColumn get searchText => text().withDefault(const Constant(''))();
@@ -335,9 +382,12 @@ class SchoolTeachingClassRows extends Table {
 
 class SchoolClassMeetingRows extends Table {
   TextColumn get id => text()();
-  TextColumn get teachingClassId =>
-      text().references(SchoolTeachingClassRows, #id)();
+  TextColumn get rawRowId => text().references(SchoolTimetableRawRows, #id)();
+  TextColumn get termKey =>
+      text().references(SchoolTimetableTermRows, #termKey)();
+  TextColumn get courseHeadId => text().references(SchoolCourseHeadRows, #id)();
   IntColumn get weekday => integer()();
+  IntColumn get segmentIndex => integer()();
   TextColumn get weekdayLabel => text().withDefault(const Constant(''))();
   TextColumn get rawText => text().withDefault(const Constant(''))();
   TextColumn get locationText => text().withDefault(const Constant(''))();
