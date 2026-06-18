@@ -291,6 +291,7 @@ Future<void> _probeEmptyRoom({
     final campuses = _extractCampusNames(floorJson);
     final campus = campuses.isEmpty ? '工学部' : campuses.first;
     final firstBuildingCode = _extractFirstBuildingCode(floorJson, campus);
+    final firstBuildingName = _extractFirstBuildingName(floorJson, campus);
     final termData = _extractTermData(_jsonMap(termResponse.body));
     final schoolYear = '${termData['xnmc'] ?? '2025-2026'}';
     final schoolYearStart = schoolYear.split('-').first;
@@ -303,6 +304,12 @@ Future<void> _probeEmptyRoom({
       'section': null,
       'teachingBuilding': firstBuildingCode,
     };
+    await _probeEmptyRoomListVariant(
+      client: client,
+      label: 'empty room list API app-default-all-buildings',
+      body: {...baseBody, 'teachingBuilding': ''},
+      timeout: timeout,
+    );
     await _probeEmptyRoomListVariant(
       client: client,
       label: 'empty room list API app-current',
@@ -346,6 +353,36 @@ Future<void> _probeEmptyRoom({
         client: client,
         label: 'empty room list API building-code',
         body: {...baseBody, 'teachingBuilding': firstBuildingCode},
+        timeout: timeout,
+      );
+    }
+    if (firstBuildingName.isNotEmpty) {
+      await _probeEmptyRoomListVariant(
+        client: client,
+        label: 'empty room list API building-name',
+        body: {...baseBody, 'teachingBuilding': firstBuildingName},
+        timeout: timeout,
+      );
+    }
+    for (final sample in _extractFirstBuildingSamples(floorJson)) {
+      await _probeEmptyRoomListVariant(
+        client: client,
+        label: 'empty room sample ${sample.campus} code',
+        body: {
+          ...baseBody,
+          'campus': sample.campus,
+          'teachingBuilding': sample.code,
+        },
+        timeout: timeout,
+      );
+      await _probeEmptyRoomListVariant(
+        client: client,
+        label: 'empty room sample ${sample.campus} name',
+        body: {
+          ...baseBody,
+          'campus': sample.campus,
+          'teachingBuilding': sample.name,
+        },
         timeout: timeout,
       );
     }
@@ -461,6 +498,66 @@ String _extractFirstBuildingCode(
     }
   }
   return '';
+}
+
+String _extractFirstBuildingName(
+  Map<String, dynamic> floorJson,
+  String campus,
+) {
+  final data = floorJson['data'];
+  if (data is! List) {
+    return '';
+  }
+  for (final item in data) {
+    if (item is! Map || '${item['campus'] ?? ''}' != campus) {
+      continue;
+    }
+    final floors = item['floors'];
+    if (floors is! List) {
+      return '';
+    }
+    for (final floor in floors) {
+      if (floor is Map && '${floor['jxlmc'] ?? ''}'.isNotEmpty) {
+        return '${floor['jxlmc']}';
+      }
+    }
+  }
+  return '';
+}
+
+List<_BuildingSample> _extractFirstBuildingSamples(
+  Map<String, dynamic> floorJson,
+) {
+  final data = floorJson['data'];
+  if (data is! List) {
+    return const <_BuildingSample>[];
+  }
+  final samples = <_BuildingSample>[];
+  for (final item in data) {
+    if (item is! Map) {
+      continue;
+    }
+    final campus = '${item['campus'] ?? ''}';
+    if (campus.isEmpty) {
+      continue;
+    }
+    final floors = item['floors'];
+    if (floors is! List) {
+      continue;
+    }
+    for (final floor in floors) {
+      if (floor is! Map) {
+        continue;
+      }
+      final code = '${floor['jxldm'] ?? ''}';
+      final name = '${floor['jxlmc'] ?? ''}';
+      if (code.isNotEmpty && name.isNotEmpty) {
+        samples.add(_BuildingSample(campus: campus, code: code, name: name));
+        break;
+      }
+    }
+  }
+  return samples;
 }
 
 Map<String, dynamic> _extractTermData(Map<String, dynamic> termJson) {
@@ -945,6 +1042,18 @@ class _ServiceRequest {
   final Uri? entryUrl;
   final bool Function(http.Response response) isSuccess;
   final String? Function(http.Response response)? parseFailure;
+}
+
+class _BuildingSample {
+  const _BuildingSample({
+    required this.campus,
+    required this.code,
+    required this.name,
+  });
+
+  final String campus;
+  final String code;
+  final String name;
 }
 
 class _ProbeClient extends http.BaseClient {

@@ -151,11 +151,13 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
         selectedCampus,
         savedFilters?.building,
       );
+      final normalizedSelectedBuilding =
+          selectedBuilding ?? _firstBuilding(selectedCampus);
       state = state.copyWith(
         termInfo: filters.termInfo,
         campuses: filters.campuses,
         selectedCampus: selectedCampus,
-        selectedBuilding: selectedBuilding,
+        selectedBuilding: normalizedSelectedBuilding,
         selectedWeek: _savedWeek(savedFilters?.week, filters.termInfo),
         selectedWeekDay: _savedWeekDay(savedFilters?.weekDay, filters.termInfo),
         isInitialLoading: false,
@@ -191,7 +193,6 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
               week: state.selectedWeek,
               weekDay: state.selectedWeekDay,
               teachingBuilding: state.selectedBuilding?.name,
-              teachingBuildingCode: state.selectedBuilding?.code,
             ),
           );
       state = state.copyWith(
@@ -298,6 +299,13 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       }
     }
     return null;
+  }
+
+  Building? _firstBuilding(CampusBuilding? campus) {
+    if (campus == null || campus.buildings.isEmpty) {
+      return null;
+    }
+    return campus.buildings.first;
   }
 
   String _savedWeek(String? savedWeek, TermInfo termInfo) {

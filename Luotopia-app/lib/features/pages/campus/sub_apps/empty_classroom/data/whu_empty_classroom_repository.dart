@@ -53,7 +53,7 @@ class WhuEmptyClassroomRepository implements EmptyClassroomRepository {
         term: query.term,
         week: query.week,
         weekDay: query.weekDay,
-        teachingBuilding: query.teachingBuildingCode,
+        teachingBuilding: query.teachingBuilding,
       );
     } finally {
       client.close();

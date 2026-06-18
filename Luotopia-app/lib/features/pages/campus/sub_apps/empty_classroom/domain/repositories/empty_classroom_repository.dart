@@ -15,7 +15,6 @@ class EmptyClassroomQuery {
     required this.week,
     required this.weekDay,
     this.teachingBuilding,
-    this.teachingBuildingCode,
   });
 
   final String campus;
@@ -24,7 +23,6 @@ class EmptyClassroomQuery {
   final String week;
   final String weekDay;
   final String? teachingBuilding;
-  final String? teachingBuildingCode;
 }
 
 abstract class EmptyClassroomRepository {
