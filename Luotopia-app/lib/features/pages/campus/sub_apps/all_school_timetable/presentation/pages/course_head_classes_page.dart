@@ -29,7 +29,7 @@ class CourseHeadClassesPage extends ConsumerWidget {
         ),
       ],
       child: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: ui.CircularProgressIndicator()),
         error: (error, _) => _CenteredMessage(text: error.toString()),
         data: (data) {
           final head = data.head;

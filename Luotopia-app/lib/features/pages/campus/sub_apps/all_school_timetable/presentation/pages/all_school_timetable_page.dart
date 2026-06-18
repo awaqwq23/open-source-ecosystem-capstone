@@ -73,41 +73,30 @@ class _AllSchoolTimetablePageState
         children: [
           _TermStatus(state: state),
           const SizedBox(height: 12),
-          SegmentedButton<AllSchoolTimetableQueryMode>(
-            segments: const [
-              ButtonSegment(
-                value: AllSchoolTimetableQueryMode.lightweight,
-                label: Text('轻量'),
-              ),
-              ButtonSegment(
-                value: AllSchoolTimetableQueryMode.professional,
-                label: Text('专业'),
-              ),
-            ],
-            selected: {state.query.mode},
-            onSelectionChanged: (values) => notifier.setMode(values.first),
+          _QueryModeControl(
+            mode: state.query.mode,
+            onChanged: notifier.setMode,
           ),
           const SizedBox(height: 12),
-          TextField(
+          ui.TextField(
             controller: _searchController,
             textInputAction: TextInputAction.search,
             onChanged: _onKeywordChanged,
             onSubmitted: notifier.setKeyword,
-            decoration: InputDecoration(
-              hintText: '搜课程、老师、课程号、教室',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: state.query.keyword.isEmpty
-                  ? null
-                  : IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                        notifier.clearKeyword();
-                      },
-                      icon: const Icon(Icons.close),
-                    ),
-              border: const OutlineInputBorder(),
-              isDense: true,
-            ),
+            hintText: '搜课程、老师、课程号、教室',
+            features: [
+              const ui.InputLeadingFeature(Icon(Icons.search, size: 16)),
+              if (state.query.keyword.isNotEmpty)
+                ui.InputTrailingFeature(
+                  ui.IconButton.ghost(
+                    onPressed: () {
+                      _searchController.clear();
+                      notifier.clearKeyword();
+                    },
+                    icon: const Icon(Icons.close, size: 16),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 10),
           _FilterStrip(state: state, notifier: notifier),
@@ -128,7 +117,7 @@ class _AllSchoolTimetablePageState
                 const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: ui.CircularProgressIndicator(size: 16),
                 ),
             ],
           ),
@@ -139,7 +128,7 @@ class _AllSchoolTimetablePageState
               state.isLoading && state.courseHeads.isEmpty)
             const Padding(
               padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: ui.CircularProgressIndicator()),
             )
           else if (state.courseHeads.isEmpty)
             _StatusCard(
@@ -157,6 +146,33 @@ class _AllSchoolTimetablePageState
             ),
         ],
       ),
+    );
+  }
+}
+
+class _QueryModeControl extends StatelessWidget {
+  const _QueryModeControl({required this.mode, required this.onChanged});
+
+  final AllSchoolTimetableQueryMode mode;
+  final ValueChanged<AllSchoolTimetableQueryMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ui.ButtonGroup.horizontal(
+      expands: true,
+      children: [
+        ui.SelectedButton(
+          value: mode == AllSchoolTimetableQueryMode.lightweight,
+          onChanged: (_) => onChanged(AllSchoolTimetableQueryMode.lightweight),
+          child: const Text('轻量'),
+        ),
+        ui.SelectedButton(
+          value: mode == AllSchoolTimetableQueryMode.professional,
+          onChanged: (_) =>
+              onChanged(AllSchoolTimetableQueryMode.professional),
+          child: const Text('专业'),
+        ),
+      ],
     );
   }
 }
@@ -201,9 +217,9 @@ class _FilterStrip extends StatelessWidget {
             onTap: () => _showTermPicker(context),
           ),
           if (query.mode == AllSchoolTimetableQueryMode.lightweight) ...[
-            _FilterChip(label: '本学期', icon: Icons.auto_awesome, onTap: () {}),
-            _FilterChip(label: '时间', icon: Icons.schedule, onTap: () {}),
-            _FilterChip(label: '地点', icon: Icons.place, onTap: () {}),
+            const _FilterChip(label: '本学期', icon: Icons.auto_awesome),
+            const _FilterChip(label: '时间', icon: Icons.schedule),
+            const _FilterChip(label: '地点', icon: Icons.place),
           ] else ...[
             _FilterChip(
               label: '筛选',
@@ -212,15 +228,15 @@ class _FilterStrip extends StatelessWidget {
               onTap: () => _showProfessionalFilters(context),
             ),
             if (query.openCollege.isNotEmpty)
-              _FilterChip(label: query.openCollege, onTap: () {}),
+              _FilterChip(label: query.openCollege),
             if (query.grade.isNotEmpty)
-              _FilterChip(label: '${query.grade}级', onTap: () {}),
+              _FilterChip(label: '${query.grade}级'),
             if (query.major.isNotEmpty)
-              _FilterChip(label: query.major, onTap: () {}),
+              _FilterChip(label: query.major),
             if (query.weekday != null)
-              _FilterChip(label: _weekdayLabel(query.weekday!), onTap: () {}),
+              _FilterChip(label: _weekdayLabel(query.weekday!)),
             if (query.building.isNotEmpty)
-              _FilterChip(label: query.building, onTap: () {}),
+              _FilterChip(label: query.building),
           ],
         ],
       ),
@@ -276,52 +292,44 @@ class _FilterStrip extends StatelessWidget {
               children: [
                 Text('专业筛选', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 12),
-                TextField(
+                ui.TextField(
                   controller: openCollege,
-                  decoration: const InputDecoration(
-                    labelText: '开课学院',
-                    isDense: true,
-                  ),
+                  placeholder: const Text('开课学院'),
                 ),
-                TextField(
+                const SizedBox(height: 8),
+                ui.TextField(
                   controller: grade,
-                  decoration: const InputDecoration(
-                    labelText: '年级',
-                    isDense: true,
-                  ),
+                  placeholder: const Text('年级'),
                 ),
-                TextField(
+                const SizedBox(height: 8),
+                ui.TextField(
                   controller: major,
-                  decoration: const InputDecoration(
-                    labelText: '专业',
-                    isDense: true,
-                  ),
+                  placeholder: const Text('专业'),
                 ),
-                TextField(
+                const SizedBox(height: 8),
+                ui.TextField(
                   controller: building,
-                  decoration: const InputDecoration(
-                    labelText: '教学楼',
-                    isDense: true,
-                  ),
+                  placeholder: const Text('教学楼'),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: [
                     for (var i = 0; i < 7; i++)
-                      ChoiceChip(
-                        label: Text(_weekdayLabel(i)),
-                        selected: weekday == i,
-                        onSelected: (selected) {
+                      ui.SelectedButton(
+                        value: weekday == i,
+                        onChanged: (selected) {
                           setSheetState(() => weekday = selected ? i : null);
                         },
+                        child: Text(_weekdayLabel(i)),
                       ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    TextButton(
+                    ui.TextButton(
                       onPressed: () {
                         notifier.clearProfessionalFilters();
                         Navigator.of(context).pop();
@@ -329,7 +337,7 @@ class _FilterStrip extends StatelessWidget {
                       child: const Text('清空'),
                     ),
                     const Spacer(),
-                    FilledButton(
+                    ui.PrimaryButton(
                       onPressed: () {
                         notifier.applyProfessionalFilters(
                           openCollege: openCollege.text.trim(),
@@ -356,7 +364,7 @@ class _FilterStrip extends StatelessWidget {
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
-    required this.onTap,
+    this.onTap,
     this.icon,
     this.active = false,
   });
@@ -364,19 +372,17 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final IconData? icon;
   final bool active;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        avatar: icon == null ? null : Icon(icon, size: 16),
-        label: Text(label),
+      child: ui.Chip(
+        leading: icon == null ? null : Icon(icon, size: 16),
+        style: active ? const ui.ButtonStyle.primary() : null,
         onPressed: onTap,
-        backgroundColor: active
-            ? Theme.of(context).colorScheme.primaryContainer
-            : null,
+        child: Text(label),
       ),
     );
   }
