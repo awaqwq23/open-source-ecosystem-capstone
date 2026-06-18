@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/viewmodels/all_school_timetable_view_model.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/widgets/timetable_list_button.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class AllSchoolTimetablePage extends ConsumerStatefulWidget {
@@ -168,8 +170,7 @@ class _QueryModeControl extends StatelessWidget {
         ),
         ui.SelectedButton(
           value: mode == AllSchoolTimetableQueryMode.professional,
-          onChanged: (_) =>
-              onChanged(AllSchoolTimetableQueryMode.professional),
+          onChanged: (_) => onChanged(AllSchoolTimetableQueryMode.professional),
           child: const Text('专业'),
         ),
       ],
@@ -229,14 +230,11 @@ class _FilterStrip extends StatelessWidget {
             ),
             if (query.openCollege.isNotEmpty)
               _FilterChip(label: query.openCollege),
-            if (query.grade.isNotEmpty)
-              _FilterChip(label: '${query.grade}级'),
-            if (query.major.isNotEmpty)
-              _FilterChip(label: query.major),
+            if (query.grade.isNotEmpty) _FilterChip(label: '${query.grade}级'),
+            if (query.major.isNotEmpty) _FilterChip(label: query.major),
             if (query.weekday != null)
               _FilterChip(label: _weekdayLabel(query.weekday!)),
-            if (query.building.isNotEmpty)
-              _FilterChip(label: query.building),
+            if (query.building.isNotEmpty) _FilterChip(label: query.building),
           ],
         ],
       ),
@@ -244,25 +242,58 @@ class _FilterStrip extends StatelessWidget {
   }
 
   Future<void> _showTermPicker(BuildContext context) {
-    return showModalBottomSheet<void>(
+    return ui.openSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final term in state.terms)
-              ListTile(
-                title: Text('${term.schoolYear} 第${term.term}学期'),
-                subtitle: Text('${term.rowCount} 条教学班'),
-                trailing: state.query.termKey == term.termKey
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  notifier.setTerm(term.termKey);
-                  Navigator.of(context).pop();
-                },
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) => AppSheetEntrance(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '选择学期',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
-          ],
+              const SizedBox(height: 16),
+              for (final term in state.terms)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ui.CardButton(
+                    alignment: Alignment.centerLeft,
+                    onPressed: () {
+                      notifier.setTerm(term.termKey);
+                      ui.closeSheet(sheetContext);
+                    },
+                    trailing: state.query.termKey == term.termKey
+                        ? const Icon(Icons.check)
+                        : null,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${term.schoolYear} 第${term.term}学期'),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${term.rowCount} 条教学班',
+                            style: Theme.of(sheetContext).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    sheetContext,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -274,90 +305,102 @@ class _FilterStrip extends StatelessWidget {
     final major = TextEditingController(text: state.query.major);
     final building = TextEditingController(text: state.query.building);
     var weekday = state.query.weekday;
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('专业筛选', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                ui.TextField(
-                  controller: openCollege,
-                  placeholder: const Text('开课学院'),
+    return ui
+        .openSheet<void>(
+          context: context,
+          position: ui.OverlayPosition.bottom,
+          builder: (sheetContext) => StatefulBuilder(
+            builder: (sheetContext, setSheetState) => AppSheetEntrance(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 12,
+                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
                 ),
-                const SizedBox(height: 8),
-                ui.TextField(
-                  controller: grade,
-                  placeholder: const Text('年级'),
-                ),
-                const SizedBox(height: 8),
-                ui.TextField(
-                  controller: major,
-                  placeholder: const Text('专业'),
-                ),
-                const SizedBox(height: 8),
-                ui.TextField(
-                  controller: building,
-                  placeholder: const Text('教学楼'),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var i = 0; i < 7; i++)
-                      ui.SelectedButton(
-                        value: weekday == i,
-                        onChanged: (selected) {
-                          setSheetState(() => weekday = selected ? i : null);
-                        },
-                        child: Text(_weekdayLabel(i)),
-                      ),
+                    Text(
+                      '专业筛选',
+                      style: Theme.of(sheetContext).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    ui.TextField(
+                      controller: openCollege,
+                      placeholder: const Text('开课学院'),
+                    ),
+                    const SizedBox(height: 8),
+                    ui.TextField(
+                      controller: grade,
+                      placeholder: const Text('年级'),
+                    ),
+                    const SizedBox(height: 8),
+                    ui.TextField(
+                      controller: major,
+                      placeholder: const Text('专业'),
+                    ),
+                    const SizedBox(height: 8),
+                    ui.TextField(
+                      controller: building,
+                      placeholder: const Text('教学楼'),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (var i = 0; i < 7; i++)
+                          ui.SelectedButton(
+                            value: weekday == i,
+                            onChanged: (selected) {
+                              setSheetState(
+                                () => weekday = selected ? i : null,
+                              );
+                            },
+                            child: Text(_weekdayLabel(i)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        ui.TextButton(
+                          onPressed: () {
+                            notifier.clearProfessionalFilters();
+                            ui.closeSheet(sheetContext);
+                          },
+                          child: const Text('清空'),
+                        ),
+                        const Spacer(),
+                        ui.PrimaryButton(
+                          onPressed: () {
+                            notifier.applyProfessionalFilters(
+                              openCollege: openCollege.text.trim(),
+                              grade: grade.text.trim(),
+                              major: major.text.trim(),
+                              building: building.text.trim(),
+                              weekday: weekday,
+                            );
+                            ui.closeSheet(sheetContext);
+                          },
+                          child: const Text('查看结果'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    ui.TextButton(
-                      onPressed: () {
-                        notifier.clearProfessionalFilters();
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('清空'),
-                    ),
-                    const Spacer(),
-                    ui.PrimaryButton(
-                      onPressed: () {
-                        notifier.applyProfessionalFilters(
-                          openCollege: openCollege.text.trim(),
-                          grade: grade.text.trim(),
-                          major: major.text.trim(),
-                          building: building.text.trim(),
-                          weekday: weekday,
-                        );
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('查看结果'),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        )
+        .whenComplete(() {
+          openCollege.dispose();
+          grade.dispose();
+          major.dispose();
+          building.dispose();
+        });
   }
 }
 
@@ -396,70 +439,17 @@ class _CourseHeadTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final credits = head.credits == null ? '' : '${head.credits} 学分';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            head.courseName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (credits.isNotEmpty)
-                          Text(
-                            credits,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${head.courseNo} · ${head.openCollege} · ${head.teachingClassCount} 个教学班',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      [
-                        if (head.teacherSummary.isNotEmpty) head.teacherSummary,
-                        if (head.weekdaySummary.isNotEmpty) head.weekdaySummary,
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ),
-      ),
+    return TimetableListButton(
+      title: head.courseName,
+      meta:
+          '${head.courseNo} · ${head.openCollege} · ${head.teachingClassCount} 个教学班',
+      detail: [
+        if (head.teacherSummary.isNotEmpty) head.teacherSummary,
+        if (head.weekdaySummary.isNotEmpty) head.weekdaySummary,
+      ].join(' · '),
+      trailingLabel: credits,
+      onPressed: onTap,
     );
   }
 }

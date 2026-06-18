@@ -6,6 +6,7 @@ import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/all_school_timetable_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/viewmodels/all_school_timetable_view_model.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/widgets/timetable_list_button.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 class CourseHeadClassesPage extends ConsumerWidget {
@@ -119,8 +120,6 @@ class _TeachingClassTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final teacher = [
       item.instructor,
       if (item.title.isNotEmpty) item.title,
@@ -129,57 +128,17 @@ class _TeachingClassTile extends StatelessWidget {
       if (item.grade.isNotEmpty) '${item.grade}级',
       if (item.major.isNotEmpty) item.major,
     ].join(' · ');
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.teachingClassName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      [
-                        if (teacher.isNotEmpty) teacher,
-                        if (item.peopleRaw.isNotEmpty) item.peopleRaw,
-                        if (target.isNotEmpty) target,
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.scheduleSummary.isEmpty
-                          ? item.weekdaySummary
-                          : item.scheduleSummary,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ),
-      ),
+    return TimetableListButton(
+      title: item.teachingClassName,
+      meta: [
+        if (teacher.isNotEmpty) teacher,
+        if (item.peopleRaw.isNotEmpty) item.peopleRaw,
+        if (target.isNotEmpty) target,
+      ].join(' · '),
+      detail: item.scheduleSummary.isEmpty
+          ? item.weekdaySummary
+          : item.scheduleSummary,
+      onPressed: onTap,
     );
   }
 }
