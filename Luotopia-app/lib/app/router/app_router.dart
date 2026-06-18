@@ -14,9 +14,6 @@ import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_logi
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/course_schedule/presentation/pages/course_schedule_search_page.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/course_schedule/presentation/pages/teaching_class_detail_page.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/course_schedule/presentation/pages/teaching_class_list_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/pages/empty_classroom_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/presentation/pages/score_page.dart';
@@ -259,47 +256,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           state,
                           const EmptyClassroomPage(),
                         ),
-                  ),
-                  GoRoute(
-                    path: 'course-schedule',
-                    pageBuilder: (context, state) =>
-                        AppRouteTransitions.sharedAxisPage<void>(
-                          context,
-                          state,
-                          const CourseScheduleSearchPage(),
-                        ),
-                    routes: [
-                      GoRoute(
-                        path: 'teaching-classes',
-                        pageBuilder: (context, state) {
-                          final extra = state.extra as Map<String, dynamic>?;
-                          return AppRouteTransitions.sharedAxisPage<void>(
-                            context,
-                            state,
-                            TeachingClassListPage(
-                              courseCode: extra?['courseCode'] as String? ?? '',
-                              courseName: extra?['courseName'] as String? ?? '',
-                              academicYear:
-                                  extra?['academicYear'] as String? ?? '',
-                              semester: extra?['semester'] as int? ?? 0,
-                            ),
-                          );
-                        },
-                      ),
-                      GoRoute(
-                        path: 'detail/:id',
-                        pageBuilder: (context, state) {
-                          final id =
-                              int.tryParse(state.pathParameters['id'] ?? '') ??
-                                  0;
-                          return AppRouteTransitions.sharedAxisPage<void>(
-                            context,
-                            state,
-                            TeachingClassDetailPage(id: id),
-                          );
-                        },
-                      ),
-                    ],
                   ),
                 ],
               ),

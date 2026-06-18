@@ -95,4 +95,3 @@ flutter:
   assets:
     - .env
     - assets/qweather_icons/icons/
-    - assets/course_schedule/

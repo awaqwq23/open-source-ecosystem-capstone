@@ -597,9 +597,6 @@ class _AppGrid extends StatelessWidget {
       case '空闲教室':
         context.openSecondary(AppRoutePaths.campusEmptyClassroom);
         return;
-      case '全校课表':
-        context.openSecondary(AppRoutePaths.campusCourseSchedule);
-        return;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
