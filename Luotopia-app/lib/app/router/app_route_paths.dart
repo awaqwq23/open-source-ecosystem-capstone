@@ -19,6 +19,11 @@ abstract final class AppRoutePaths {
   static const campusLuojiaEcard = '/campus/luojia-ecard';
   static const campusEcardPaymentCode = '/campus/ecard-payment-code';
   static const campusEmptyClassroom = '/campus/empty-classroom';
+  static const campusAllSchoolTimetable = '/campus/all-school-timetable';
+  static const campusAllSchoolTimetableHead =
+      '/campus/all-school-timetable/head';
+  static const campusAllSchoolTimetableClass =
+      '/campus/all-school-timetable/class';
   static const campusTimetableManage = '/campus/timetable/manage';
   static const campusTimetableImportWhu = '/campus/timetable/import/whu';
   static const campusTimetableImportWakeup = '/campus/timetable/import/wakeup';

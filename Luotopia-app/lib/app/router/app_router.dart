@@ -14,6 +14,9 @@ import 'package:luotopia/features/luotopia_auth/presentation/pages/luotopia_logi
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_account_detail_page.dart';
 import 'package:luotopia/features/whu_auth/presentation/pages/whu_login_webview_page.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/all_school_timetable_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/course_head_classes_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/teaching_class_detail_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/pages/empty_classroom_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/presentation/pages/score_page.dart';
@@ -257,6 +260,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           const EmptyClassroomPage(),
                         ),
                   ),
+                  GoRoute(
+                    path: 'all-school-timetable',
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const AllSchoolTimetablePage(),
+                        ),
+                  ),
+                  GoRoute(
+                    path: 'all-school-timetable/head',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<void>(
+                        context,
+                        state,
+                        args is CourseHeadPageArgs
+                            ? CourseHeadClassesPage(args: args)
+                            : const _MissingAllSchoolTimetableArgsPage(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'all-school-timetable/class',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<void>(
+                        context,
+                        state,
+                        args is TeachingClassDetailPageArgs
+                            ? TeachingClassDetailPage(args: args)
+                            : const _MissingAllSchoolTimetableArgsPage(),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -342,7 +380,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const WhuAccountDetailPage(),            ),
+              const WhuAccountDetailPage(),
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.whuAccountLogin,
@@ -350,7 +389,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const WhuLoginWebViewPage(),            ),
+              const WhuLoginWebViewPage(),
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.luotopiaLogin,
@@ -358,7 +398,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const LuotopiaLoginPage(),            ),
+              const LuotopiaLoginPage(),
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.luotopiaAccount,
@@ -366,7 +407,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AppRouteTransitions.sharedAxisPage<void>(
               context,
               state,
-              const LuotopiaAccountPage(),            ),
+              const LuotopiaAccountPage(),
+            ),
         routes: [
           GoRoute(
             path: 'settings',
@@ -456,7 +498,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   args: _resolveItemEditorArgs(state),
                   autoPopOnSubmit: true,
                 ),
-              ),            ),
+              ),
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.itemDetail,
@@ -482,7 +525,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 initialRule: state.extra is RepeatRule
                     ? state.extra! as RepeatRule
                     : RepeatRule.none,
-              ),            ),
+              ),
+            ),
       ),
       GoRoute(
         path: AppRoutePaths.reminderSettings,
@@ -494,7 +538,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 initialReminder: state.extra is ReminderOption
                     ? state.extra! as ReminderOption
                     : ReminderOption.none,
-              ),            ),
+              ),
+            ),
       ),
     ],
   );
@@ -550,5 +595,14 @@ class _MissingSportsOrderArgsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(child: Text('订单参数缺失，请返回重新选择。'));
+  }
+}
+
+class _MissingAllSchoolTimetableArgsPage extends StatelessWidget {
+  const _MissingAllSchoolTimetableArgsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('课表参数缺失，请返回重新选择。'));
   }
 }
