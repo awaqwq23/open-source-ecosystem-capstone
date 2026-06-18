@@ -37,6 +37,10 @@ class DriftAllSchoolTimetableRepository
     final meetings = (decoded['meetings'] as List).cast<Map<String, dynamic>>();
     final now = DateTime.now();
     final heads = _buildHeads(classes);
+    final meetingRows = <SchoolClassMeetingRowsCompanion>[
+      for (var i = 0; i < meetings.length; i++)
+        _meetingCompanion(meetings[i], i),
+    ];
 
     await _db.transaction(() async {
       await (_db.delete(_db.schoolClassMeetingRows)).go();
@@ -67,10 +71,7 @@ class DriftAllSchoolTimetableRepository
           _db.schoolTeachingClassRows,
           classes.map(_classCompanion).toList(growable: false),
         );
-        batch.insertAll(
-          _db.schoolClassMeetingRows,
-          meetings.map(_meetingCompanion).toList(growable: false),
-        );
+        batch.insertAll(_db.schoolClassMeetingRows, meetingRows);
       });
     });
   }
@@ -298,9 +299,12 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  SchoolClassMeetingRowsCompanion _meetingCompanion(Map<String, dynamic> item) {
+  SchoolClassMeetingRowsCompanion _meetingCompanion(
+    Map<String, dynamic> item,
+    int importIndex,
+  ) {
     return SchoolClassMeetingRowsCompanion.insert(
-      id: item['id'] as String,
+      id: '${item['id']}_$importIndex',
       teachingClassId: item['teachingClassId'] as String,
       weekday: item['weekday'] as int,
       weekdayLabel: Value(item['weekdayLabel'] as String? ?? ''),
