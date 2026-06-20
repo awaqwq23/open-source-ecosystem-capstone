@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS sync_schedule_item_details (
   FOREIGN KEY (user_id, item_id) REFERENCES sync_agenda_items(user_id, id) ON DELETE CASCADE
 );
 
+ALTER TABLE sync_schedule_item_details
+  ADD COLUMN IF NOT EXISTS countdown_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS auto_completed_once_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS sync_task_item_details (
   user_id TEXT NOT NULL,
   item_id TEXT NOT NULL,
