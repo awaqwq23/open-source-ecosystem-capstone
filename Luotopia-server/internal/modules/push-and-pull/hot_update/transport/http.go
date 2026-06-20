@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
+	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/contract"
 )
 
 type Handler struct {
@@ -20,9 +21,9 @@ func NewHandler(service *app.Service, storageDir string) Handler {
 }
 
 func (h Handler) Register(router gin.IRouter) {
-	hu := router.Group("/hot-update/scripts")
+	hu := router.Group(contract.ClientBase)
 	hu.GET("", h.listScripts)
-	hu.GET("/:name/content", h.downloadContent)
+	hu.GET(contract.ContentRoute, h.downloadContent)
 }
 
 func (h Handler) listScripts(c *gin.Context) {
@@ -108,4 +109,3 @@ func itoa(n int) string {
 	}
 	return string(buf[i:])
 }
-

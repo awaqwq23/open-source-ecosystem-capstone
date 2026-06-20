@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
+	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/contract"
 )
 
 type Handler struct {
@@ -19,12 +20,12 @@ func NewHandler(service *app.Service) Handler {
 }
 
 func (h Handler) RegisterClient(router gin.IRouter) {
-	group := router.Group("/school-timetable")
-	group.GET("/snapshots/:termKey/files/:version.ndjson.gz", h.downloadSnapshot)
+	group := router.Group(contract.ClientBase)
+	group.GET(contract.SnapshotRoute, h.downloadSnapshot)
 }
 
 func (h Handler) RegisterAdmin(router gin.IRouter) {
-	group := router.Group("/school-timetable")
+	group := router.Group(contract.ClientBase)
 	group.GET("/terms", h.listTerms)
 	group.GET("/terms/:termKey/releases", h.listReleases)
 	group.POST("/imports/validate", h.validateImport)

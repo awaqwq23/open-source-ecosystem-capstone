@@ -159,11 +159,12 @@ class UnifiedPullService {
   Future<void> _cacheChangedSchoolTimetableTerms(PullResponse response) async {
     final terms = response.schoolTimetable?.terms ?? const [];
     for (final term in terms) {
-      if (term.downloadUrl.isEmpty || term.checksum.isEmpty) {
+      final snapshotHref = term.links['snapshot']?.href ?? '';
+      if (snapshotHref.isEmpty || term.checksum.isEmpty) {
         continue;
       }
       final bytes = await _pullClient.downloadSchoolTimetableSnapshot(
-        term.downloadUrl,
+        snapshotHref,
       );
       final checksum = 'sha256:${sha256.convert(bytes)}';
       if (checksum != term.checksum) {
@@ -180,11 +181,12 @@ class UnifiedPullService {
     final scripts = response.hotUpdate?.scripts ?? const {};
     for (final entry in scripts.entries) {
       final script = entry.value;
-      if (!script.changed || script.downloadUrl.isEmpty) {
+      final contentHref = script.links['content']?.href ?? '';
+      if (!script.changed || contentHref.isEmpty) {
         continue;
       }
       try {
-        final content = await _pullClient.downloadScript(script.downloadUrl);
+        final content = await _pullClient.downloadScript(contentHref);
         await _hotUpdateCache.cacheScript(
           name: entry.key,
           version: script.latestVersion,

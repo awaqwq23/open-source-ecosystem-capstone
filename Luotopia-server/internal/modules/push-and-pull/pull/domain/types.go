@@ -61,11 +61,15 @@ type HotUpdateBlock struct {
 	Scripts map[string]ScriptVersion `json:"scripts"`
 }
 
+type Link struct {
+	Href string `json:"href"`
+}
+
 type ScriptVersion struct {
-	Changed       bool   `json:"changed"`
-	LatestVersion int    `json:"latest_version"`
-	Checksum      string `json:"checksum"`
-	DownloadURL   string `json:"download_url,omitempty"`
+	Changed       bool            `json:"changed"`
+	LatestVersion int             `json:"latest_version"`
+	Checksum      string          `json:"checksum"`
+	Links         map[string]Link `json:"links,omitempty"`
 }
 
 type SchoolTimetableBlock struct {
@@ -74,14 +78,14 @@ type SchoolTimetableBlock struct {
 }
 
 type SchoolTimetableTerm struct {
-	TermKey     string `json:"term_key"`
-	SchoolYear  string `json:"school_year"`
-	Term        string `json:"term"`
-	Version     int    `json:"version"`
-	Checksum    string `json:"checksum"`
-	RowCount    int    `json:"row_count"`
-	DownloadURL string `json:"download_url"`
-	PublishedAt string `json:"published_at"`
+	TermKey     string          `json:"term_key"`
+	SchoolYear  string          `json:"school_year"`
+	Term        string          `json:"term"`
+	Version     int             `json:"version"`
+	Checksum    string          `json:"checksum"`
+	RowCount    int             `json:"row_count"`
+	Links       map[string]Link `json:"links"`
+	PublishedAt string          `json:"published_at"`
 }
 
 type SyncBlock struct {

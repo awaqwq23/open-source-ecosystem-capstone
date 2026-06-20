@@ -1,0 +1,139 @@
+openapi: 3.1.0
+info:
+  title: Luotopia Client API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /pull:
+    post:
+      summary: Authenticated unified pull
+      responses:
+        "200":
+          description: Unified pull response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+  /pull/public:
+    post:
+      summary: Public unified pull
+      responses:
+        "200":
+          description: Public unified pull response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+  /hot-update/scripts/{name}/content:
+    get:
+      summary: Download current enabled hot-update script content
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: JavaScript content.
+          content:
+            application/javascript:
+              schema:
+                type: string
+  /school-timetable/terms/{termKey}/releases/{version}/snapshot:
+    get:
+      summary: Download a school timetable release snapshot
+      parameters:
+        - name: termKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: gzip-compressed NDJSON snapshot.
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+components:
+  schemas:
+    ApiLink:
+      type: object
+      required:
+        - href
+      properties:
+        href:
+          type: string
+          description: Relative API path owned by the resource producer module.
+    PullResponse:
+      type: object
+      properties:
+        hot_update:
+          type: object
+          properties:
+            scripts:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/ScriptVersion"
+        school_timetable:
+          type: object
+          properties:
+            changed:
+              type: boolean
+            terms:
+              type: array
+              items:
+                $ref: "#/components/schemas/SchoolTimetableTerm"
+    ScriptVersion:
+      type: object
+      required:
+        - latest_version
+        - checksum
+      properties:
+        changed:
+          type: boolean
+        latest_version:
+          type: integer
+        checksum:
+          type: string
+        links:
+          type: object
+          properties:
+            content:
+              $ref: "#/components/schemas/ApiLink"
+    SchoolTimetableTerm:
+      type: object
+      required:
+        - term_key
+        - version
+        - checksum
+        - links
+      properties:
+        term_key:
+          type: string
+        school_year:
+          type: string
+        term:
+          type: string
+        version:
+          type: integer
+        checksum:
+          type: string
+        row_count:
+          type: integer
+        published_at:
+          type: string
+          format: date-time
+        links:
+          type: object
+          properties:
+            snapshot:
+              $ref: "#/components/schemas/ApiLink"

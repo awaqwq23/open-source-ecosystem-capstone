@@ -118,17 +118,38 @@ class HotUpdateBlock {
   }
 }
 
+class ApiLink {
+  final String href;
+
+  const ApiLink({required this.href});
+
+  factory ApiLink.fromJson(Map<String, dynamic> json) {
+    return ApiLink(href: json['href'] as String? ?? '');
+  }
+}
+
+Map<String, ApiLink> _linksFromJson(Object? raw) {
+  if (raw is! Map<String, dynamic>) {
+    return const {};
+  }
+  return {
+    for (final entry in raw.entries)
+      if (entry.value is Map<String, dynamic>)
+        entry.key: ApiLink.fromJson(entry.value as Map<String, dynamic>),
+  };
+}
+
 class ScriptVersion {
   final bool changed;
   final int latestVersion;
   final String checksum;
-  final String downloadUrl;
+  final Map<String, ApiLink> links;
 
   const ScriptVersion({
     this.changed = false,
     required this.latestVersion,
     required this.checksum,
-    this.downloadUrl = '',
+    this.links = const {},
   });
 
   factory ScriptVersion.fromJson(Map<String, dynamic> json) {
@@ -136,7 +157,7 @@ class ScriptVersion {
       changed: json['changed'] as bool? ?? false,
       latestVersion: json['latest_version'] as int? ?? 0,
       checksum: json['checksum'] as String? ?? '',
-      downloadUrl: json['download_url'] as String? ?? '',
+      links: _linksFromJson(json['links']),
     );
   }
 }
@@ -187,7 +208,7 @@ class SchoolTimetableTermUpdate {
   final int version;
   final String checksum;
   final int rowCount;
-  final String downloadUrl;
+  final Map<String, ApiLink> links;
   final DateTime? publishedAt;
 
   const SchoolTimetableTermUpdate({
@@ -197,7 +218,7 @@ class SchoolTimetableTermUpdate {
     required this.version,
     required this.checksum,
     required this.rowCount,
-    required this.downloadUrl,
+    required this.links,
     this.publishedAt,
   });
 
@@ -209,7 +230,7 @@ class SchoolTimetableTermUpdate {
       version: (json['version'] as num?)?.toInt() ?? 0,
       checksum: json['checksum'] as String? ?? '',
       rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
-      downloadUrl: json['download_url'] as String? ?? '',
+      links: _linksFromJson(json['links']),
       publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
     );
   }

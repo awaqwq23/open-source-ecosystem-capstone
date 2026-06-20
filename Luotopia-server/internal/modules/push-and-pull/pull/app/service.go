@@ -5,10 +5,12 @@ import (
 	"time"
 
 	hotapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/app"
+	hotcontract "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/hot_update/contract"
 	notiapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/notification/app"
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
+	schoolcontract "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/contract"
 	schooldomain "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
 )
 
@@ -87,7 +89,9 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 				Changed:       changed,
 				LatestVersion: info.LatestVersion,
 				Checksum:      info.Checksum,
-				DownloadURL:   "/api/v1/hot-update/scripts/" + name + "/content",
+				Links: map[string]domain.Link{
+					"content": {Href: hotcontract.ScriptContentPath(name)},
+				},
 			}
 		}
 		resp.HotUpdate = &domain.HotUpdateBlock{Scripts: scripts}
@@ -130,7 +134,9 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
 						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
 						Version: term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
-						DownloadURL: "/api/v1/school-timetable/snapshots/" + term.TermKey + "/files/" + itoa(term.Version) + ".ndjson.gz",
+						Links: map[string]domain.Link{
+							"snapshot": {Href: schoolcontract.SnapshotPath(term.TermKey, term.Version)},
+						},
 						PublishedAt: term.PublishedAt.Format(time.RFC3339),
 					})
 				}
@@ -161,18 +167,4 @@ func valueIf[T any](ok bool, value T) any {
 		return nil
 	}
 	return value
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [12]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[i:])
 }
