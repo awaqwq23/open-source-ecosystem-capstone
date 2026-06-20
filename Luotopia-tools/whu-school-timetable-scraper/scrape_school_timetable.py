@@ -22,9 +22,15 @@ class TermSpec:
 
 
 def setup_driver(headless: bool) -> webdriver.Chrome:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.chrome.service import Service
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
+    except ImportError as err:
+        raise RuntimeError(
+            "无法导入 Selenium。请先在当前 Python 环境运行："
+            "python -m pip install -r requirements.txt"
+        ) from err
 
     options = Options()
     if headless:
@@ -394,4 +400,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except RuntimeError as err:
+        print(f"错误：{err}")
+        raise SystemExit(1)
