@@ -74,3 +74,4 @@ app.*.map.json
 /.tmp/*
 行数统计.ps1
 /deploy-dev.ps1
+/Luotopia-tools/whu-school-timetable-scraper/output/*
