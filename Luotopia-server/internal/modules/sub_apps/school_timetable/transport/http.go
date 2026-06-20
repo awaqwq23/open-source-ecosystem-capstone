@@ -20,8 +20,7 @@ func NewHandler(service *app.Service) Handler {
 
 func (h Handler) RegisterClient(router gin.IRouter) {
 	group := router.Group("/school-timetable")
-	group.GET("/snapshots/:termKey/:version", h.downloadSnapshot)
-	group.GET("/snapshots/:termKey/:version.ndjson.gz", h.downloadSnapshot)
+	group.GET("/snapshots/:termKey/files/:version.ndjson.gz", h.downloadSnapshot)
 }
 
 func (h Handler) RegisterAdmin(router gin.IRouter) {

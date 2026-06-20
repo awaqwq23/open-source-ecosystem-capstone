@@ -130,7 +130,7 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
 						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
 						Version: term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
-						DownloadURL: "/api/v1/school-timetable/snapshots/" + term.TermKey + "/" + itoa(term.Version) + ".ndjson.gz",
+						DownloadURL: "/api/v1/school-timetable/snapshots/" + term.TermKey + "/files/" + itoa(term.Version) + ".ndjson.gz",
 						PublishedAt: term.PublishedAt.Format(time.RFC3339),
 					})
 				}
