@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 TARGET_URL = "https://jwgl.whu.edu.cn/design/viewFunc_cxDesignFuncPageIndex.html?gnmkdm=N214599&layout=default"
-REQUIRED_FIELDS = {"key", "xn", "xq", "jxbmc", "yskch", "kcmc"}
+REQUIRED_FIELDS = {"key", "xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs"}
 
 
 @dataclass(frozen=True)
@@ -280,20 +280,14 @@ def extract_current_page(driver: webdriver.Chrome, grid_id: str) -> list[dict[st
 
 def validate_rows(rows: list[dict[str, str]]) -> list[str]:
     errors = []
-    seen = set()
     for index, row in enumerate(rows, 1):
         missing = sorted(field for field in REQUIRED_FIELDS if not row.get(field))
         if missing:
             errors.append(f"第 {index} 行缺少字段：{', '.join(missing)}")
-        key = row.get("key", "")
-        if key in seen:
-            errors.append(f"第 {index} 行 key 重复：{key}")
-        if key:
-            seen.add(key)
     return errors
 
 
-def write_package(spec: TermSpec, rows: list[dict[str, str]]) -> None:
+def write_package(spec: TermSpec, rows: list[dict[str, str]], source: str = "jwgl_N214599_dom") -> None:
     field_codes = sorted({code for row in rows for code in row.keys()})
     canonical_rows = [
         {"type": "row", "fields": {code: row.get(code, "") for code in field_codes}}
@@ -310,7 +304,7 @@ def write_package(spec: TermSpec, rows: list[dict[str, str]]) -> None:
         "field_codes": field_codes,
         "row_count": len(rows),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source": "jwgl_N214599_dom",
+        "source": source,
         "source_checksum": source_checksum,
     }
     Path(spec.output).parent.mkdir(parents=True, exist_ok=True)

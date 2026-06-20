@@ -68,8 +68,7 @@ CREATE TABLE IF NOT EXISTS school_timetable_raw_rows (
   instructor TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
   people_raw TEXT NOT NULL DEFAULT '',
-  fields_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  UNIQUE (term_key, source_key)
+  fields_json JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE INDEX IF NOT EXISTS idx_school_timetable_raw_rows_head
@@ -77,6 +76,9 @@ CREATE INDEX IF NOT EXISTS idx_school_timetable_raw_rows_head
 
 CREATE INDEX IF NOT EXISTS idx_school_timetable_raw_rows_instructor
   ON school_timetable_raw_rows(instructor);
+
+CREATE INDEX IF NOT EXISTS idx_school_timetable_raw_rows_source_key
+  ON school_timetable_raw_rows(term_key, source_key);
 
 CREATE TABLE IF NOT EXISTS school_timetable_meetings (
   id TEXT PRIMARY KEY,

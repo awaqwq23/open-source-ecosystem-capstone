@@ -50,7 +50,6 @@ func ParsePackage(ctx context.Context, reader io.Reader) (domain.Package, error)
 	}
 
 	rows := make([]map[string]string, 0, manifest.RowCount)
-	seenKeys := make(map[string]struct{}, manifest.RowCount)
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
@@ -72,7 +71,7 @@ func ParsePackage(ctx context.Context, reader io.Reader) (domain.Package, error)
 			return domain.Package{}, fmt.Errorf("%w: row type", ErrInvalidPackage)
 		}
 		row := normalizeRow(wrapper.Fields)
-		if err := validateRow(manifest, len(rows)+1, row, seenKeys); err != nil {
+		if err := validateRow(manifest, len(rows)+1, row); err != nil {
 			return domain.Package{}, err
 		}
 		rows = append(rows, row)
@@ -137,7 +136,7 @@ func validateManifest(manifest domain.Manifest) error {
 	return nil
 }
 
-func validateRow(manifest domain.Manifest, index int, row map[string]string, seenKeys map[string]struct{}) error {
+func validateRow(manifest domain.Manifest, index int, row map[string]string) error {
 	for _, required := range requiredFields {
 		if strings.TrimSpace(row[required]) == "" {
 			return fmt.Errorf("%w: row %d missing %s", ErrInvalidPackage, index, required)
@@ -146,11 +145,6 @@ func validateRow(manifest domain.Manifest, index int, row map[string]string, see
 	if row["xn"] != manifest.SchoolYear || row["xq"] != manifest.Term {
 		return fmt.Errorf("%w: row %d term mismatch", ErrInvalidPackage, index)
 	}
-	sourceKey := row["key"]
-	if _, ok := seenKeys[sourceKey]; ok {
-		return fmt.Errorf("%w: duplicate key %s", ErrInvalidPackage, sourceKey)
-	}
-	seenKeys[sourceKey] = struct{}{}
 	if !hasSchedule(row) {
 		return fmt.Errorf("%w: row %d missing schedule", ErrInvalidPackage, index)
 	}

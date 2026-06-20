@@ -118,9 +118,9 @@ func BuildRecords(pkg domain.Package) ([]domain.CourseHead, []domain.RawRow, []d
 	rowRecords := make([]domain.RawRow, 0, len(pkg.Rows))
 	meetingRecords := make([]domain.Meeting, 0, len(pkg.Rows))
 	grouped := make(map[string][]map[string]string)
-	for _, row := range pkg.Rows {
+	for index, row := range pkg.Rows {
 		headID := courseHeadID(pkg.Manifest.TermKey, row)
-		rawID := rawRowID(pkg.Manifest.TermKey, row)
+		rawID := rawRowID(pkg.Manifest.TermKey, index)
 		grouped[headID] = append(grouped[headID], row)
 		rowRecords = append(rowRecords, domain.RawRow{
 			ID: rawID, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID, SourceKey: row["key"],
@@ -213,8 +213,8 @@ func meetingsForRow(termKey, headID, rawID string, row map[string]string) []doma
 	return result
 }
 
-func rawRowID(termKey string, row map[string]string) string {
-	return termKey + ":" + row["key"]
+func rawRowID(termKey string, index int) string {
+	return fmt.Sprintf("%s:row:%06d", termKey, index+1)
 }
 
 func courseHeadID(termKey string, row map[string]string) string {
