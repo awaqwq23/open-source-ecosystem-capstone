@@ -88,7 +88,12 @@ func (h Handler) publishImport(c *gin.Context) {
 		writeError(c, http.StatusBadRequest, "import_failed", err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, result)
+	c.JSON(http.StatusCreated, gin.H{
+		"term_key":  result.Manifest.TermKey,
+		"version":   result.Version,
+		"row_count": result.RowCount,
+		"checksum":  result.Checksum,
+	})
 }
 
 func (h Handler) activateRelease(c *gin.Context) {
