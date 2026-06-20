@@ -22,7 +22,7 @@ var (
 )
 
 var requiredFields = []string{
-	"key", "xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs",
+	"xn", "xq", "kcmc",
 }
 
 func ParsePackage(ctx context.Context, reader io.Reader) (domain.Package, error) {
@@ -145,9 +145,6 @@ func validateRow(manifest domain.Manifest, index int, row map[string]string) err
 	if row["xn"] != manifest.SchoolYear || row["xq"] != manifest.Term {
 		return fmt.Errorf("%w: row %d term mismatch", ErrInvalidPackage, index)
 	}
-	if !hasSchedule(row) {
-		return fmt.Errorf("%w: row %d missing schedule", ErrInvalidPackage, index)
-	}
 	return nil
 }
 
@@ -157,13 +154,4 @@ func normalizeRow(row map[string]string) map[string]string {
 		normalized[strings.TrimSpace(key)] = strings.TrimSpace(strings.ReplaceAll(value, "\u00a0", " "))
 	}
 	return normalized
-}
-
-func hasSchedule(row map[string]string) bool {
-	for _, code := range []string{"sun", "mon", "tue", "wen", "thu", "fri", "sat"} {
-		if strings.TrimSpace(row[code]) != "" {
-			return true
-		}
-	}
-	return false
 }

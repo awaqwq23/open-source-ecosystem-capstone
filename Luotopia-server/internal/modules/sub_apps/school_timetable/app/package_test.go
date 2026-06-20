@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 )
 
@@ -41,7 +40,7 @@ func TestParsePackageAcceptsValidRows(t *testing.T) {
 	}
 }
 
-func TestParsePackageRejectsMissingSourceKey(t *testing.T) {
+func TestParsePackageAcceptsMissingSourceKey(t *testing.T) {
 	data := packageBytes(t, map[string]any{
 		"type":           "manifest",
 		"schema_version": 1,
@@ -58,9 +57,12 @@ func TestParsePackageRejectsMissingSourceKey(t *testing.T) {
 		},
 	})
 
-	_, err := ParsePackage(context.Background(), bytes.NewReader(data))
-	if err == nil || !strings.Contains(err.Error(), "key") {
-		t.Fatalf("expected missing key error, got %v", err)
+	pkg, err := ParsePackage(context.Background(), bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("ParsePackage returned error: %v", err)
+	}
+	if len(pkg.Rows) != 1 || pkg.Rows[0]["key"] != "" {
+		t.Fatalf("missing key row not preserved: %#v", pkg.Rows)
 	}
 }
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -34,7 +35,8 @@ class GridParser(HTMLParser):
         described_by = values.get("aria-describedby", "")
         if not described_by:
             return
-        code = described_by.rsplit("_", 1)[-1].strip()
+        match = re.match(r"^tabGrid_[^_]+_(.+)$", described_by)
+        code = (match.group(1) if match else described_by.rsplit("_", 1)[-1]).strip()
         if not code or code == "cb":
             return
         self.current_code = code
@@ -122,7 +124,7 @@ def main() -> None:
     args = parser.parse_args()
 
     rows: list[dict[str, str]] = []
-    skipped = 0
+    incomplete = 0
     for page_index, raw_path in enumerate(args.html, 1):
         path = Path(raw_path)
         page_rows = parse_file(path)
@@ -131,8 +133,7 @@ def main() -> None:
             row["_source_page_index"] = str(page_index)
             row["_source_row_index"] = str(page_row_index)
             if not is_complete_course_row(row):
-                skipped += 1
-                continue
+                incomplete += 1
             row["_source_package_index"] = str(len(rows) + 1)
             rows.append(row)
         print(f"{path}：{len(page_rows)} 行")
@@ -145,8 +146,8 @@ def main() -> None:
     if errors:
         raise RuntimeError("\n".join(errors[:20]))
     write_package(spec, rows, source="jwgl_N214599_saved_html")
-    if skipped:
-        print(f"已跳过不完整行：{skipped} 行")
+    if incomplete:
+        print(f"包含不完整或无排课时间行：{incomplete} 行")
 
 
 if __name__ == "__main__":

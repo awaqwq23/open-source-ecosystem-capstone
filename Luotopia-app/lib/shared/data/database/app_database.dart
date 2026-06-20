@@ -21,6 +21,8 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
     SchoolTimetableTermRows,
     SchoolCourseHeadRows,
     SchoolTimetableRawRows,
+    SchoolTimetableAudienceRows,
+    SchoolTimetableSourceRows,
     SchoolClassMeetingRows,
     SyncTombstoneRows,
   ],
@@ -29,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +115,8 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(schoolTimetableTermRows);
         await m.createTable(schoolCourseHeadRows);
         await m.createTable(schoolTimetableRawRows);
+        await m.createTable(schoolTimetableAudienceRows);
+        await m.createTable(schoolTimetableSourceRows);
         await m.createTable(schoolClassMeetingRows);
         await _createSchoolTimetableIndexes();
       }
@@ -121,6 +125,18 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(schoolTimetableTermRows);
         await m.createTable(schoolCourseHeadRows);
         await m.createTable(schoolTimetableRawRows);
+        await m.createTable(schoolTimetableAudienceRows);
+        await m.createTable(schoolTimetableSourceRows);
+        await m.createTable(schoolClassMeetingRows);
+        await _createSchoolTimetableIndexes();
+      }
+      if (from >= 6 && from < 7) {
+        await _dropSchoolTimetableTables();
+        await m.createTable(schoolTimetableTermRows);
+        await m.createTable(schoolCourseHeadRows);
+        await m.createTable(schoolTimetableRawRows);
+        await m.createTable(schoolTimetableAudienceRows);
+        await m.createTable(schoolTimetableSourceRows);
         await m.createTable(schoolClassMeetingRows);
         await _createSchoolTimetableIndexes();
       }
@@ -132,6 +148,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _dropSchoolTimetableTables() async {
     await customStatement('DROP TABLE IF EXISTS school_class_meeting_rows');
+    await customStatement('DROP TABLE IF EXISTS school_timetable_source_rows');
+    await customStatement('DROP TABLE IF EXISTS school_timetable_audience_rows');
     await customStatement('DROP TABLE IF EXISTS school_teaching_class_rows');
     await customStatement('DROP TABLE IF EXISTS school_timetable_raw_rows');
     await customStatement('DROP TABLE IF EXISTS school_course_head_rows');
@@ -152,7 +170,7 @@ class AppDatabase extends _$AppDatabase {
       ON school_course_head_rows(open_college)
     ''');
     await customStatement('''
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_school_raw_rows_term_source_key
+      CREATE INDEX IF NOT EXISTS idx_school_raw_rows_term_source_key
       ON school_timetable_raw_rows(term_key, source_key)
     ''');
     await customStatement('''
@@ -174,6 +192,18 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_school_raw_rows_open_college
       ON school_timetable_raw_rows(open_college)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_audience_rows_class
+      ON school_timetable_audience_rows(teaching_class_id)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_audience_rows_filter
+      ON school_timetable_audience_rows(term_key, grade, major, plan_college)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_school_source_rows_term_status
+      ON school_timetable_source_rows(term_key, source_status)
     ''');
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_school_class_meetings_class
@@ -328,6 +358,8 @@ class SchoolTimetableRawRows extends Table {
       text().references(SchoolTimetableTermRows, #termKey)();
   TextColumn get courseHeadId => text().references(SchoolCourseHeadRows, #id)();
   TextColumn get sourceKey => text()();
+  IntColumn get packageIndex => integer().withDefault(const Constant(0))();
+  TextColumn get sourceStatus => text().withDefault(const Constant('active'))();
   TextColumn get schoolYear => text()();
   TextColumn get term => text()();
   TextColumn get teachingClassName => text()();
@@ -373,6 +405,44 @@ class SchoolTimetableRawRows extends Table {
   TextColumn get scheduleSummary => text().withDefault(const Constant(''))();
   TextColumn get weekdaySummary => text().withDefault(const Constant(''))();
   TextColumn get searchText => text().withDefault(const Constant(''))();
+  TextColumn get originalFieldsJson =>
+      text().withDefault(const Constant('{}'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class SchoolTimetableAudienceRows extends Table {
+  TextColumn get id => text()();
+  TextColumn get termKey =>
+      text().references(SchoolTimetableTermRows, #termKey)();
+  TextColumn get teachingClassId =>
+      text().references(SchoolTimetableRawRows, #id)();
+  TextColumn get courseHeadId => text().references(SchoolCourseHeadRows, #id)();
+  TextColumn get grade => text().withDefault(const Constant(''))();
+  TextColumn get major => text().withDefault(const Constant(''))();
+  TextColumn get planCollege => text().withDefault(const Constant(''))();
+  TextColumn get courseNature => text().withDefault(const Constant(''))();
+  TextColumn get courseNatureCode => text().withDefault(const Constant(''))();
+  TextColumn get courseCategory => text().withDefault(const Constant(''))();
+  TextColumn get courseCategoryCode => text().withDefault(const Constant(''))();
+  TextColumn get openType => text().withDefault(const Constant(''))();
+  TextColumn get openTypeCode => text().withDefault(const Constant(''))();
+  TextColumn get conditionCode => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class SchoolTimetableSourceRows extends Table {
+  TextColumn get id => text()();
+  TextColumn get termKey =>
+      text().references(SchoolTimetableTermRows, #termKey)();
+  TextColumn get teachingClassId => text().withDefault(const Constant(''))();
+  TextColumn get courseHeadId => text().withDefault(const Constant(''))();
+  TextColumn get sourceKey => text().withDefault(const Constant(''))();
+  IntColumn get packageIndex => integer().withDefault(const Constant(0))();
+  TextColumn get sourceStatus => text().withDefault(const Constant('active'))();
   TextColumn get originalFieldsJson =>
       text().withDefault(const Constant('{}'))();
 

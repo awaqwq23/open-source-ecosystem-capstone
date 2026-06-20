@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 TARGET_URL = "https://jwgl.whu.edu.cn/design/viewFunc_cxDesignFuncPageIndex.html?gnmkdm=N214599&layout=default"
-REQUIRED_FIELDS = {"key", "xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs"}
+REQUIRED_FIELDS = {"xn", "xq", "kcmc"}
 
 
 @dataclass(frozen=True)
@@ -263,7 +263,8 @@ def extract_current_page(driver: webdriver.Chrome, grid_id: str) -> list[dict[st
           const row = {};
           for (const td of tr.querySelectorAll('td[aria-describedby]')) {
             const describedBy = td.getAttribute('aria-describedby') || '';
-            const code = describedBy.substring(describedBy.lastIndexOf('_') + 1);
+            const match = describedBy.match(/^tabGrid_[^_]+_(.+)$/);
+            const code = match ? match[1] : describedBy.substring(describedBy.lastIndexOf('_') + 1);
             if (!code || code === 'cb') continue;
             const title = td.getAttribute('title');
             const text = (title == null || title === '') ? td.textContent : title;

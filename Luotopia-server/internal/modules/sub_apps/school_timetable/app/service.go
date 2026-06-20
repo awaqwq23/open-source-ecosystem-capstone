@@ -20,7 +20,7 @@ import (
 )
 
 type Repository interface {
-	Publish(ctx context.Context, pkg domain.Package, release domain.Release, heads []domain.CourseHead, rows []domain.RawRow, meetings []domain.Meeting) error
+	Publish(ctx context.Context, pkg domain.Package, release domain.Release, records Records) error
 	NextVersion(ctx context.Context, termKey string) (int, error)
 	ListActiveTerms(ctx context.Context) ([]domain.Term, error)
 	ListReleases(ctx context.Context, termKey string) ([]domain.Release, error)
@@ -82,8 +82,8 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: checksum,
 		FileKey: fileKey, RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
 	}
-	heads, rows, meetings := BuildRecords(pkg)
-	if err := s.repo.Publish(ctx, pkg, release, heads, rows, meetings); err != nil {
+	records := BuildRecords(pkg)
+	if err := s.repo.Publish(ctx, pkg, release, records); err != nil {
 		return domain.ImportResult{}, err
 	}
 	return domain.ImportResult{
@@ -114,16 +114,48 @@ func (s *Service) SnapshotPath(ctx context.Context, termKey string, version int)
 	return filepath.Join(s.snapshotDir, release.FileKey), release, nil
 }
 
-func BuildRecords(pkg domain.Package) ([]domain.CourseHead, []domain.RawRow, []domain.Meeting) {
+type Records struct {
+	Heads     []domain.CourseHead
+	Offerings []domain.CourseOffering
+	Audiences []domain.CourseAudience
+	RawRows   []domain.RawRow
+	Meetings  []domain.Meeting
+}
+
+func BuildRecords(pkg domain.Package) Records {
 	rowRecords := make([]domain.RawRow, 0, len(pkg.Rows))
 	meetingRecords := make([]domain.Meeting, 0, len(pkg.Rows))
-	grouped := make(map[string][]map[string]string)
+	headRows := make(map[string][]map[string]string)
+	offeringRows := make(map[string][]map[string]string)
+	offeringOrder := make([]string, 0, len(pkg.Rows))
+	sourceOrdinals := make(map[string]int, len(pkg.Rows))
 	for index, row := range pkg.Rows {
+		canonical := canonicalSourceRow(row)
+		sourceOrdinals[canonical]++
+		rawID := sourceRowID(pkg.Manifest.TermKey, canonical, sourceOrdinals[canonical])
+		if !canBuildEntity(row) {
+			rowRecords = append(rowRecords, domain.RawRow{
+				ID: rawID, TermKey: pkg.Manifest.TermKey, SourceKey: row["key"],
+				PackageIndex: index + 1, Status: "incomplete",
+				SchoolYear: row["xn"], Term: row["xq"], TeachingClassName: row["jxbmc"],
+				CourseNo: row["yskch"], CourseName: row["kcmc"], OpenCollege: row["skxy"],
+				PlanCollege: row["jhxy"], Credits: row["kcxf"], CourseNature: row["kcxzmc"],
+				CourseCategory: row["kclbmc"], OpenType: row["kklxmc"], Grade: row["nj"],
+				Major: row["jszy"], Instructor: row["jsxm"], Title: row["jszc"], PeopleRaw: row["skrs"],
+				Fields: row,
+			})
+			continue
+		}
 		headID := courseHeadID(pkg.Manifest.TermKey, row)
-		rawID := rawRowID(pkg.Manifest.TermKey, index)
-		grouped[headID] = append(grouped[headID], row)
+		offeringID := courseOfferingID(pkg.Manifest.TermKey, row)
+		headRows[headID] = append(headRows[headID], row)
+		if _, ok := offeringRows[offeringID]; !ok {
+			offeringOrder = append(offeringOrder, offeringID)
+		}
+		offeringRows[offeringID] = append(offeringRows[offeringID], row)
 		rowRecords = append(rowRecords, domain.RawRow{
-			ID: rawID, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID, SourceKey: row["key"],
+			ID: rawID, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID, OfferingID: offeringID, SourceKey: row["key"],
+			PackageIndex: index + 1, Status: "active",
 			SchoolYear: row["xn"], Term: row["xq"], TeachingClassName: row["jxbmc"],
 			CourseNo: row["yskch"], CourseName: row["kcmc"], OpenCollege: row["skxy"],
 			PlanCollege: row["jhxy"], Credits: row["kcxf"], CourseNature: row["kcxzmc"],
@@ -131,10 +163,50 @@ func BuildRecords(pkg domain.Package) ([]domain.CourseHead, []domain.RawRow, []d
 			Major: row["jszy"], Instructor: row["jsxm"], Title: row["jszc"], PeopleRaw: row["skrs"],
 			Fields: row,
 		})
-		meetingRecords = append(meetingRecords, meetingsForRow(pkg.Manifest.TermKey, headID, rawID, row)...)
 	}
-	heads := make([]domain.CourseHead, 0, len(grouped))
-	for id, rows := range grouped {
+	offerings := make([]domain.CourseOffering, 0, len(offeringRows))
+	audienceByID := make(map[string]domain.CourseAudience)
+	for _, id := range offeringOrder {
+		rows := offeringRows[id]
+		first := rows[0]
+		headID := courseHeadID(pkg.Manifest.TermKey, first)
+		teachers := uniqueSummary(mapValues(rows, "jsxm"), 3, "位教师")
+		audienceSummary := audienceSummary(rows)
+		searchText := strings.Join(nonEmpty([]string{
+			first["kcmc"], first["yskch"], first["jxbmc"], first["skxy"], teachers, audienceSummary,
+			first["xkbz"], first["qtjs"], first["jcmc"],
+		}), " ")
+		offerings = append(offerings, domain.CourseOffering{
+			ID: id, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID,
+			TeachingClassName: first["jxbmc"], CourseNo: first["yskch"], CourseName: first["kcmc"],
+			OpenCollege: first["skxy"], Credits: first["kcxf"], Instructor: teachers,
+			TeacherKey: normalizeKey(first["jsxm"]), Title: first["jszc"], PeopleRaw: first["skrs"],
+			TheoryHours: first["xsdm_01"], ComputerHours: first["xsdm_02"], ExperimentHours: first["xsdm_03"], PracticeHours: first["xsdm_04"],
+			Remark: first["xkbz"], OtherTeachers: first["qtjs"], Textbook: first["jcmc"], Publisher: first["cbs"],
+			ScheduleSignature: scheduleSignature(first), ScheduleSummary: scheduleSummary(first),
+			WeekdaySummary:  strings.Join(weekdaySummaries([]map[string]string{first}), "、"),
+			AudienceSummary: audienceSummary, SourceRowCount: len(rows), SearchText: searchText, Fields: first,
+		})
+		meetingRecords = append(meetingRecords, meetingsForRow(pkg.Manifest.TermKey, headID, id, first)...)
+		for _, row := range rows {
+			audience := domain.CourseAudience{
+				ID: courseAudienceID(pkg.Manifest.TermKey, id, row), TermKey: pkg.Manifest.TermKey,
+				OfferingID: id, CourseHeadID: headID, Grade: row["nj"], Major: row["jszy"],
+				PlanCollege: row["jhxy"], CourseNature: row["kcxzmc"], CourseNatureCode: row["kcxzdm"],
+				CourseCategory: row["kclbmc"], CourseCategoryCode: row["kclbdm"],
+				OpenType: row["kklxmc"], OpenTypeCode: row["kklxdm"], ConditionCode: row["kkbm_id2"],
+			}
+			audienceByID[audience.ID] = audience
+		}
+	}
+	audiences := make([]domain.CourseAudience, 0, len(audienceByID))
+	for _, item := range audienceByID {
+		audiences = append(audiences, item)
+	}
+	sort.Slice(audiences, func(i, j int) bool { return audiences[i].ID < audiences[j].ID })
+
+	heads := make([]domain.CourseHead, 0, len(headRows))
+	for id, rows := range headRows {
 		first := rows[0]
 		teachers := uniqueSummary(mapValues(rows, "jsxm"), 3, "位教师")
 		weekdays := uniqueSummary(weekdaySummaries(rows), 4, "组时间")
@@ -145,11 +217,11 @@ func BuildRecords(pkg domain.Package) ([]domain.CourseHead, []domain.RawRow, []d
 			ID: id, TermKey: pkg.Manifest.TermKey, CourseHeadKey: first["yskch"], CourseNo: first["yskch"],
 			CourseName: first["kcmc"], OpenCollege: first["skxy"], Credits: first["kcxf"],
 			CourseNature: first["kcxzmc"], CourseCategory: first["kclbmc"], OpenType: first["kklxmc"],
-			TeachingClassCount: len(rows), TeacherSummary: teachers, WeekdaySummary: weekdays, SearchText: searchText,
+			TeachingClassCount: countOfferingsForHead(offerings, id), TeacherSummary: teachers, WeekdaySummary: weekdays, SearchText: searchText,
 		})
 	}
 	sort.Slice(heads, func(i, j int) bool { return heads[i].ID < heads[j].ID })
-	return heads, rowRecords, meetingRecords
+	return Records{Heads: heads, Offerings: offerings, Audiences: audiences, RawRows: rowRecords, Meetings: meetingRecords}
 }
 
 func GzipPackage(pkg domain.Package) ([]byte, error) {
@@ -196,7 +268,7 @@ var weekdayFields = []struct {
 	{4, "thu", "周四"}, {5, "fri", "周五"}, {6, "sat", "周六"},
 }
 
-func meetingsForRow(termKey, headID, rawID string, row map[string]string) []domain.Meeting {
+func meetingsForRow(termKey, headID, offeringID string, row map[string]string) []domain.Meeting {
 	result := make([]domain.Meeting, 0, 2)
 	for _, field := range weekdayFields {
 		raw := strings.TrimSpace(row[field.code])
@@ -205,7 +277,7 @@ func meetingsForRow(termKey, headID, rawID string, row map[string]string) []doma
 		}
 		location, building, room := extractLocation(raw)
 		result = append(result, domain.Meeting{
-			ID: fmt.Sprintf("%s:%d:0", rawID, field.index), RawRowID: rawID, TermKey: termKey, CourseHeadID: headID,
+			ID: fmt.Sprintf("%s:%d:0", offeringID, field.index), OfferingID: offeringID, TermKey: termKey, CourseHeadID: headID,
 			Weekday: field.index, SegmentIndex: 0, WeekdayLabel: field.label, RawText: raw,
 			LocationText: location, Building: building, Room: room,
 		})
@@ -213,12 +285,93 @@ func meetingsForRow(termKey, headID, rawID string, row map[string]string) []doma
 	return result
 }
 
-func rawRowID(termKey string, index int) string {
-	return fmt.Sprintf("%s:row:%06d", termKey, index+1)
+func sourceRowID(termKey, canonical string, ordinal int) string {
+	return stableID("source", termKey, canonical, fmt.Sprintf("%d", ordinal))
+}
+
+func canonicalSourceRow(row map[string]string) string {
+	keys := make([]string, 0, len(row))
+	for key := range row {
+		if strings.HasPrefix(key, "_source_") {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	ordered := make(map[string]string, len(row))
+	for _, key := range keys {
+		ordered[key] = row[key]
+	}
+	data, _ := json.Marshal(ordered)
+	return string(data)
+}
+
+func canBuildEntity(row map[string]string) bool {
+	for _, field := range []string{"xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs"} {
+		if strings.TrimSpace(row[field]) == "" {
+			return false
+		}
+	}
+	return true
 }
 
 func courseHeadID(termKey string, row map[string]string) string {
-	return termKey + ":" + row["yskch"]
+	return stableID("head", termKey, row["yskch"])
+}
+
+func courseOfferingID(termKey string, row map[string]string) string {
+	return stableID("offering", termKey, row["jxbmc"], row["jsxm"], scheduleSignature(row))
+}
+
+func courseAudienceID(termKey, offeringID string, row map[string]string) string {
+	return stableID("audience", termKey, offeringID, row["nj"], row["jszy"], row["jhxy"], row["kcxzdm"], row["kclbdm"], row["kklxdm"], row["kkbm_id2"])
+}
+
+func stableID(parts ...string) string {
+	normalized := make([]string, len(parts))
+	for i, part := range parts {
+		normalized[i] = normalizeKey(part)
+	}
+	sum := sha256.Sum256([]byte(strings.Join(normalized, "\x1f")))
+	return hex.EncodeToString(sum[:16])
+}
+
+func normalizeKey(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+}
+
+func scheduleSignature(row map[string]string) string {
+	values := make([]string, 0, len(weekdayFields))
+	for _, field := range weekdayFields {
+		values = append(values, fmt.Sprintf("%s=%s", field.code, normalizeKey(row[field.code])))
+	}
+	return strings.Join(values, "|")
+}
+
+func scheduleSummary(row map[string]string) string {
+	parts := make([]string, 0, len(weekdayFields))
+	for _, field := range weekdayFields {
+		if value := strings.TrimSpace(row[field.code]); value != "" {
+			parts = append(parts, field.label+value)
+		}
+	}
+	return strings.Join(parts, "；")
+}
+
+func audienceSummary(rows []map[string]string) string {
+	grades := uniqueSummary(mapValues(rows, "nj"), 3, "个年级")
+	majors := uniqueSummary(mapValues(rows, "jszy"), 3, "个专业")
+	return strings.Join(nonEmpty([]string{grades, majors}), " / ")
+}
+
+func countOfferingsForHead(offerings []domain.CourseOffering, headID string) int {
+	count := 0
+	for _, offering := range offerings {
+		if offering.CourseHeadID == headID {
+			count++
+		}
+	}
+	return count
 }
 
 func weekdaySummaries(rows []map[string]string) []string {

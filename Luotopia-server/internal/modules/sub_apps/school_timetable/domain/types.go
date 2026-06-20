@@ -44,7 +44,10 @@ type RawRow struct {
 	ID                string
 	TermKey           string
 	CourseHeadID      string
+	OfferingID        string
 	SourceKey         string
+	PackageIndex      int
+	Status            string
 	SchoolYear        string
 	Term              string
 	TeachingClassName string
@@ -62,6 +65,53 @@ type RawRow struct {
 	Title             string
 	PeopleRaw         string
 	Fields            map[string]string
+}
+
+type CourseOffering struct {
+	ID                string
+	TermKey           string
+	CourseHeadID      string
+	TeachingClassName string
+	CourseNo          string
+	CourseName        string
+	OpenCollege       string
+	Credits           string
+	Instructor        string
+	TeacherKey        string
+	Title             string
+	PeopleRaw         string
+	TheoryHours       string
+	ComputerHours     string
+	ExperimentHours   string
+	PracticeHours     string
+	Remark            string
+	OtherTeachers     string
+	Textbook          string
+	Publisher         string
+	ScheduleSignature string
+	ScheduleSummary   string
+	WeekdaySummary    string
+	AudienceSummary   string
+	SourceRowCount    int
+	SearchText        string
+	Fields            map[string]string
+}
+
+type CourseAudience struct {
+	ID                 string
+	TermKey            string
+	OfferingID         string
+	CourseHeadID       string
+	Grade              string
+	Major              string
+	PlanCollege        string
+	CourseNature       string
+	CourseNatureCode   string
+	CourseCategory     string
+	CourseCategoryCode string
+	OpenType           string
+	OpenTypeCode       string
+	ConditionCode      string
 }
 
 type CourseHead struct {
@@ -83,7 +133,7 @@ type CourseHead struct {
 
 type Meeting struct {
 	ID           string
-	RawRowID     string
+	OfferingID   string
 	TermKey      string
 	CourseHeadID string
 	Weekday      int

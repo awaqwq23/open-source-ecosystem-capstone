@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
@@ -86,18 +87,34 @@ class DriftAllSchoolTimetableRepository
     required List<Map<String, String>> rows,
   }) async {
     final normalizedRows = rows.map(_normalizeHtmlRow).toList(growable: false);
-    for (final row in normalizedRows) {
-      _validateHtmlRow(row);
-    }
-    final heads = _buildHeads(termKey, normalizedRows);
+    final entityRows = normalizedRows.where(_canBuildEntity).toList();
+    final offerings = _buildOfferings(termKey, entityRows);
+    final heads = _buildHeads(termKey, entityRows, offerings);
+    final audiences = _buildAudiences(termKey, offerings);
+    final sourceOrdinals = <String, int>{};
+    final sourceRows = <SchoolTimetableSourceRowsCompanion>[
+      for (var index = 0; index < normalizedRows.length; index++)
+        _sourceRowCompanion(
+          termKey,
+          index + 1,
+          normalizedRows[index],
+          sourceOrdinals,
+        ),
+    ];
     final meetings = <SchoolClassMeetingRowsCompanion>[
-      for (final row in normalizedRows) ..._meetingCompanions(termKey, row),
+      for (final offering in offerings) ..._meetingCompanions(termKey, offering),
     ];
     final now = DateTime.now();
 
     await _db.transaction(() async {
       await (_db.delete(
         _db.schoolClassMeetingRows,
+      )..where((row) => row.termKey.equals(termKey))).go();
+      await (_db.delete(
+        _db.schoolTimetableSourceRows,
+      )..where((row) => row.termKey.equals(termKey))).go();
+      await (_db.delete(
+        _db.schoolTimetableAudienceRows,
       )..where((row) => row.termKey.equals(termKey))).go();
       await (_db.delete(
         _db.schoolTimetableRawRows,
@@ -130,8 +147,12 @@ class DriftAllSchoolTimetableRepository
         );
         batch.insertAll(
           _db.schoolTimetableRawRows,
-          normalizedRows.map((row) => _rawRowCompanion(termKey, row)).toList(),
+          offerings
+              .map((offering) => _rawRowCompanion(termKey, offering))
+              .toList(),
         );
+        batch.insertAll(_db.schoolTimetableAudienceRows, audiences);
+        batch.insertAll(_db.schoolTimetableSourceRows, sourceRows);
         batch.insertAll(_db.schoolClassMeetingRows, meetings);
       });
     });
@@ -250,8 +271,8 @@ class DriftAllSchoolTimetableRepository
     }
 
     addLike('c.open_college', query.openCollege);
-    addLike('c.grade', query.grade);
-    addLike('c.major', query.major);
+    addLike('a.grade', query.grade);
+    addLike('a.major', query.major);
     if (query.weekday != null) {
       conditions.add('m.weekday = ?');
       variables.add(Variable.withInt(query.weekday!));
@@ -263,12 +284,18 @@ class DriftAllSchoolTimetableRepository
           '''
           SELECT DISTINCT c.course_head_id
           FROM school_timetable_raw_rows c
+          LEFT JOIN school_timetable_audience_rows a
+            ON a.teaching_class_id = c.id
           LEFT JOIN school_class_meeting_rows m
             ON m.raw_row_id = c.id
           WHERE ${conditions.join(' AND ')}
           ''',
           variables: variables,
-          readsFrom: {_db.schoolTimetableRawRows, _db.schoolClassMeetingRows},
+          readsFrom: {
+            _db.schoolTimetableRawRows,
+            _db.schoolTimetableAudienceRows,
+            _db.schoolClassMeetingRows,
+          },
         )
         .get();
     return rows.map((row) => row.read<String>('course_head_id')).toSet();
@@ -289,17 +316,75 @@ class DriftAllSchoolTimetableRepository
     return score + row.teachingClassCount;
   }
 
-  List<_HeadSeed> _buildHeads(String termKey, List<Map<String, String>> rows) {
-    final grouped = <String, List<Map<String, String>>>{};
+  List<_HeadSeed> _buildHeads(
+    String termKey,
+    List<Map<String, String>> rows,
+    List<_OfferingSeed> offerings,
+  ) {
+    final groupedRows = <String, List<Map<String, String>>>{};
+    final groupedOfferings = <String, List<_OfferingSeed>>{};
     for (final row in rows) {
       final key = _courseHeadId(termKey, row);
-      grouped.putIfAbsent(key, () => []).add(row);
+      groupedRows.putIfAbsent(key, () => []).add(row);
+    }
+    for (final offering in offerings) {
+      groupedOfferings
+          .putIfAbsent(offering.courseHeadId, () => [])
+          .add(offering);
     }
 
     return [
-      for (final entry in grouped.entries)
-        _HeadSeed.fromRows(entry.key, entry.value),
+      for (final entry in groupedRows.entries)
+        _HeadSeed.fromRows(
+          entry.key,
+          entry.value,
+          groupedOfferings[entry.key] ?? const [],
+        ),
     ];
+  }
+
+  List<_OfferingSeed> _buildOfferings(
+    String termKey,
+    List<Map<String, String>> rows,
+  ) {
+    final grouped = <String, List<Map<String, String>>>{};
+    for (final row in rows) {
+      final key = _offeringId(termKey, row);
+      grouped.putIfAbsent(key, () => []).add(row);
+    }
+    return [
+      for (final entry in grouped.entries)
+        _OfferingSeed.fromRows(entry.key, termKey, entry.value),
+    ];
+  }
+
+  List<SchoolTimetableAudienceRowsCompanion> _buildAudiences(
+    String termKey,
+    List<_OfferingSeed> offerings,
+  ) {
+    final byId = <String, SchoolTimetableAudienceRowsCompanion>{};
+    for (final offering in offerings) {
+      for (final row in offering.rows) {
+        final id = _audienceId(termKey, offering.id, row);
+        byId[id] = SchoolTimetableAudienceRowsCompanion.insert(
+          id: id,
+          termKey: termKey,
+          teachingClassId: offering.id,
+          courseHeadId: offering.courseHeadId,
+          grade: Value(row['nj'] ?? ''),
+          major: Value(row['jszy'] ?? ''),
+          planCollege: Value(row['jhxy'] ?? ''),
+          courseNature: Value(row['kcxzmc'] ?? ''),
+          courseNatureCode: Value(row['kcxzdm'] ?? ''),
+          courseCategory: Value(row['kclbmc'] ?? ''),
+          courseCategoryCode: Value(row['kclbdm'] ?? ''),
+          openType: Value(row['kklxmc'] ?? ''),
+          openTypeCode: Value(row['kklxdm'] ?? ''),
+          conditionCode: Value(row['kkbm_id2'] ?? ''),
+        );
+      }
+    }
+    return byId.values.toList(growable: false);
   }
 
   SchoolCourseHeadRowsCompanion _headCompanion(String termKey, _HeadSeed seed) {
@@ -323,27 +408,30 @@ class DriftAllSchoolTimetableRepository
 
   SchoolTimetableRawRowsCompanion _rawRowCompanion(
     String termKey,
-    Map<String, String> row,
+    _OfferingSeed seed,
   ) {
+    final row = seed.row;
     return SchoolTimetableRawRowsCompanion.insert(
-      id: _rawRowId(termKey, row),
+      id: seed.id,
       termKey: termKey,
-      courseHeadId: _courseHeadId(termKey, row),
-      sourceKey: row['key']!,
+      courseHeadId: seed.courseHeadId,
+      sourceKey: row['key'] ?? '',
+      packageIndex: Value(int.tryParse(row['_source_package_index'] ?? '') ?? 0),
+      sourceStatus: const Value('active'),
       schoolYear: row['xn']!,
       term: row['xq']!,
       teachingClassName: row['jxbmc']!,
       courseNo: row['yskch']!,
       courseName: row['kcmc']!,
       openCollege: Value(row['skxy'] ?? ''),
-      planCollege: Value(row['jhxy'] ?? ''),
+      planCollege: Value(seed.audienceSummary),
       credits: Value(double.tryParse(row['kcxf'] ?? '')),
       courseNature: Value(row['kcxzmc'] ?? ''),
       courseCategory: Value(row['kclbmc'] ?? ''),
       openType: Value(row['kklxmc'] ?? ''),
-      grade: Value(row['nj'] ?? ''),
-      major: Value(row['jszy'] ?? ''),
-      instructor: Value(row['jsxm'] ?? ''),
+      grade: Value(seed.gradeSummary),
+      major: Value(seed.majorSummary),
+      instructor: Value(seed.instructorSummary),
       title: Value(row['jszc'] ?? ''),
       peopleRaw: Value(row['skrs'] ?? ''),
       theoryHours: Value(int.tryParse(row['xsdm_01'] ?? '')),
@@ -375,16 +463,39 @@ class DriftAllSchoolTimetableRepository
       scheduleSummary: Value(_scheduleSummary(row)),
       weekdaySummary: Value(_weekdaySummary(row)),
       searchText: Value(_searchText(row)),
+      originalFieldsJson: Value(jsonEncode(seed.originalFields)),
+    );
+  }
+
+  SchoolTimetableSourceRowsCompanion _sourceRowCompanion(
+    String termKey,
+    int packageIndex,
+    Map<String, String> row,
+    Map<String, int> sourceOrdinals,
+  ) {
+    final active = _canBuildEntity(row);
+    final canonical = _canonicalSourceRow(row);
+    final ordinal = (sourceOrdinals[canonical] ?? 0) + 1;
+    sourceOrdinals[canonical] = ordinal;
+    return SchoolTimetableSourceRowsCompanion.insert(
+      id: _stableId(['source', termKey, canonical, ordinal.toString()]),
+      termKey: termKey,
+      teachingClassId: Value(active ? _offeringId(termKey, row) : ''),
+      courseHeadId: Value(active ? _courseHeadId(termKey, row) : ''),
+      sourceKey: Value(row['key'] ?? ''),
+      packageIndex: Value(packageIndex),
+      sourceStatus: Value(active ? 'active' : 'incomplete'),
       originalFieldsJson: Value(jsonEncode(row)),
     );
   }
 
   List<SchoolClassMeetingRowsCompanion> _meetingCompanions(
     String termKey,
-    Map<String, String> row,
+    _OfferingSeed seed,
   ) {
-    final rawRowId = _rawRowId(termKey, row);
-    final courseHeadId = _courseHeadId(termKey, row);
+    final row = seed.row;
+    final rawRowId = seed.id;
+    final courseHeadId = seed.courseHeadId;
     final companions = <SchoolClassMeetingRowsCompanion>[];
     for (final field in _weekdayFields) {
       final rawText = row[field.code]?.trim() ?? '';
@@ -496,9 +607,8 @@ class DriftAllSchoolTimetableRepository
     };
   }
 
-  void _validateHtmlRow(Map<String, String> row) {
+  bool _canBuildEntity(Map<String, String> row) {
     const required = [
-      'key',
       'xn',
       'xq',
       'jxbmc',
@@ -509,17 +619,7 @@ class DriftAllSchoolTimetableRepository
       'jsxm',
       'skrs',
     ];
-    for (final field in required) {
-      if ((row[field] ?? '').trim().isEmpty) {
-        throw ArgumentError('全校课表原始行缺少必填字段 $field');
-      }
-    }
-    final hasSchedule = _weekdayFields.any(
-      (field) => (row[field.code] ?? '').trim().isNotEmpty,
-    );
-    if (!hasSchedule) {
-      throw ArgumentError('全校课表原始行 ${row['key']} 缺少星期安排');
-    }
+    return required.every((field) => (row[field] ?? '').trim().isNotEmpty);
   }
 
   Map<String, String> _originalFieldsFromRow(SchoolTimetableRawRow row) {
@@ -577,12 +677,66 @@ class DriftAllSchoolTimetableRepository
     };
   }
 
-  String _rawRowId(String termKey, Map<String, String> row) {
-    return '$termKey:${row['key']}';
+  String _courseHeadId(String termKey, Map<String, String> row) {
+    return _stableId(['head', termKey, row['yskch'] ?? '']);
   }
 
-  String _courseHeadId(String termKey, Map<String, String> row) {
-    return '$termKey:${row['yskch']}';
+  String _offeringId(String termKey, Map<String, String> row) {
+    return _stableId([
+      'offering',
+      termKey,
+      row['jxbmc'] ?? '',
+      row['jsxm'] ?? '',
+      _scheduleSignature(row),
+    ]);
+  }
+
+  String _audienceId(
+    String termKey,
+    String offeringId,
+    Map<String, String> row,
+  ) {
+    return _stableId([
+      'audience',
+      termKey,
+      offeringId,
+      row['nj'] ?? '',
+      row['jszy'] ?? '',
+      row['jhxy'] ?? '',
+      row['kcxzdm'] ?? '',
+      row['kclbdm'] ?? '',
+      row['kklxdm'] ?? '',
+      row['kkbm_id2'] ?? '',
+    ]);
+  }
+
+  String _stableId(List<String> parts) {
+    final normalized = parts
+        .map(
+          (part) => part
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((item) => item.isNotEmpty)
+              .join(' '),
+        )
+        .join('\x1f');
+    return sha256.convert(utf8.encode(normalized)).toString().substring(0, 32);
+  }
+
+  String _canonicalSourceRow(Map<String, String> row) {
+    final ordered = {
+      for (final key in row.keys.where((key) => !key.startsWith('_source_')).toList()
+        ..sort())
+        key: row[key] ?? '',
+    };
+    return jsonEncode(ordered);
+  }
+
+  String _scheduleSignature(Map<String, String> row) {
+    return [
+      for (final field in _weekdayFields)
+        '${field.code}=${(row[field.code] ?? '').trim()}',
+    ].join('|');
   }
 
   String _normalizeCell(String value) {
@@ -672,6 +826,7 @@ class _HeadSeed {
   factory _HeadSeed.fromRows(
     String courseHeadId,
     List<Map<String, String>> rows,
+    List<_OfferingSeed> offerings,
   ) {
     final first = rows.first;
     final teachers = _uniqueSummary(
@@ -703,7 +858,7 @@ class _HeadSeed {
       courseNature: first['kcxzmc'] ?? '',
       courseCategory: first['kclbmc'] ?? '',
       openType: first['kklxmc'] ?? '',
-      teachingClassCount: rows.length,
+      teachingClassCount: offerings.length,
       teacherSummary: teachers,
       weekdaySummary: weekdays,
       searchText: searchText,
@@ -746,11 +901,94 @@ class _HeadSeed {
   }
 }
 
+class _OfferingSeed {
+  const _OfferingSeed({
+    required this.id,
+    required this.termKey,
+    required this.courseHeadId,
+    required this.row,
+    required this.rows,
+    required this.instructorSummary,
+    required this.gradeSummary,
+    required this.majorSummary,
+    required this.audienceSummary,
+    required this.originalFields,
+  });
+
+  factory _OfferingSeed.fromRows(
+    String id,
+    String termKey,
+    List<Map<String, String>> rows,
+  ) {
+    final first = rows.first;
+    final grades = _uniqueSummary(rows.map((row) => row['nj'] ?? ''));
+    final majors = _uniqueSummary(rows.map((row) => row['jszy'] ?? ''));
+    final audienceSummary = [
+      grades,
+      majors,
+    ].where((item) => item.isNotEmpty).join(' / ');
+    return _OfferingSeed(
+      id: id,
+      termKey: termKey,
+      courseHeadId: _stableCourseHeadId(termKey, first),
+      row: first,
+      rows: rows,
+      instructorSummary: _uniqueSummary(rows.map((row) => row['jsxm'] ?? '')),
+      gradeSummary: grades,
+      majorSummary: majors,
+      audienceSummary: audienceSummary,
+      originalFields: {
+        ...first,
+        '_audience_summary': audienceSummary,
+        '_source_row_count': rows.length.toString(),
+      },
+    );
+  }
+
+  final String id;
+  final String termKey;
+  final String courseHeadId;
+  final Map<String, String> row;
+  final List<Map<String, String>> rows;
+  final String instructorSummary;
+  final String gradeSummary;
+  final String majorSummary;
+  final String audienceSummary;
+  final Map<String, String> originalFields;
+}
+
 String _weekdaySummary(Map<String, String> row) {
   return [
     for (final field in DriftAllSchoolTimetableRepository._weekdayFields)
       if ((row[field.code] ?? '').trim().isNotEmpty) field.label,
   ].join('、');
+}
+
+String _stableCourseHeadId(String termKey, Map<String, String> row) {
+  final normalized = ['head', termKey, row['yskch'] ?? '']
+      .map(
+        (part) => part
+            .trim()
+            .split(RegExp(r'\s+'))
+            .where((item) => item.isNotEmpty)
+            .join(' '),
+      )
+      .join('\x1f');
+  return sha256.convert(utf8.encode(normalized)).toString().substring(0, 32);
+}
+
+String _uniqueSummary(Iterable<String> values, {int maxItems = 3}) {
+  final unique = <String>[];
+  for (final value in values) {
+    final normalized = value.trim();
+    if (normalized.isNotEmpty && !unique.contains(normalized)) {
+      unique.add(normalized);
+    }
+  }
+  if (unique.length <= maxItems) {
+    return unique.join('、');
+  }
+  return '${unique.take(maxItems).join('、')}等 ${unique.length} 项';
 }
 
 class _WeekdayField {

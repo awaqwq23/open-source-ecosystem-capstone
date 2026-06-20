@@ -30,7 +30,7 @@ func (r *GormRepository) NextVersion(ctx context.Context, termKey string) (int, 
 	return maxVersion + 1, err
 }
 
-func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, release domain.Release, heads []domain.CourseHead, rows []domain.RawRow, meetings []domain.Meeting) error {
+func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, release domain.Release, records app.Records) error {
 	now := time.Now().UTC()
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		term := termModel{
@@ -53,30 +53,54 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 		if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(&rawRowModel{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(&audienceModel{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(&offeringModel{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(&courseHeadModel{}).Error; err != nil {
 			return err
 		}
-		if len(heads) > 0 {
-			models := make([]courseHeadModel, len(heads))
-			for i, item := range heads {
+		if len(records.Heads) > 0 {
+			models := make([]courseHeadModel, len(records.Heads))
+			for i, item := range records.Heads {
 				models[i] = courseHeadModelFromDomain(item)
 			}
 			if err := tx.CreateInBatches(models, 500).Error; err != nil {
 				return err
 			}
 		}
-		if len(rows) > 0 {
-			models := make([]rawRowModel, len(rows))
-			for i, item := range rows {
+		if len(records.Offerings) > 0 {
+			models := make([]offeringModel, len(records.Offerings))
+			for i, item := range records.Offerings {
+				models[i] = offeringModelFromDomain(item)
+			}
+			if err := tx.CreateInBatches(models, 500).Error; err != nil {
+				return err
+			}
+		}
+		if len(records.Audiences) > 0 {
+			models := make([]audienceModel, len(records.Audiences))
+			for i, item := range records.Audiences {
+				models[i] = audienceModelFromDomain(item)
+			}
+			if err := tx.CreateInBatches(models, 500).Error; err != nil {
+				return err
+			}
+		}
+		if len(records.RawRows) > 0 {
+			models := make([]rawRowModel, len(records.RawRows))
+			for i, item := range records.RawRows {
 				models[i] = rawRowModelFromDomain(item)
 			}
 			if err := tx.CreateInBatches(models, 500).Error; err != nil {
 				return err
 			}
 		}
-		if len(meetings) > 0 {
-			models := make([]meetingModel, len(meetings))
-			for i, item := range meetings {
+		if len(records.Meetings) > 0 {
+			models := make([]meetingModel, len(records.Meetings))
+			for i, item := range records.Meetings {
 				models[i] = meetingModelFromDomain(item)
 			}
 			if err := tx.CreateInBatches(models, 500).Error; err != nil {
@@ -229,7 +253,10 @@ type rawRowModel struct {
 	ID                string `gorm:"primaryKey;column:id"`
 	TermKey           string `gorm:"column:term_key"`
 	CourseHeadID      string `gorm:"column:course_head_id"`
+	OfferingID        string `gorm:"column:offering_id"`
 	SourceKey         string `gorm:"column:source_key"`
+	PackageIndex      int    `gorm:"column:package_index"`
+	Status            string `gorm:"column:status"`
 	SchoolYear        string `gorm:"column:school_year"`
 	Term              string `gorm:"column:term"`
 	TeachingClassName string `gorm:"column:teaching_class_name"`
@@ -255,6 +282,7 @@ func rawRowModelFromDomain(item domain.RawRow) rawRowModel {
 	data, _ := json.Marshal(item.Fields)
 	return rawRowModel{
 		ID: item.ID, TermKey: item.TermKey, CourseHeadID: item.CourseHeadID, SourceKey: item.SourceKey,
+		OfferingID: item.OfferingID, PackageIndex: item.PackageIndex, Status: item.Status,
 		SchoolYear: item.SchoolYear, Term: item.Term, TeachingClassName: item.TeachingClassName,
 		CourseNo: item.CourseNo, CourseName: item.CourseName, OpenCollege: item.OpenCollege,
 		PlanCollege: item.PlanCollege, Credits: item.Credits, CourseNature: item.CourseNature,
@@ -264,9 +292,85 @@ func rawRowModelFromDomain(item domain.RawRow) rawRowModel {
 	}
 }
 
+type offeringModel struct {
+	ID                string `gorm:"primaryKey;column:id"`
+	TermKey           string `gorm:"column:term_key"`
+	CourseHeadID      string `gorm:"column:course_head_id"`
+	TeachingClassName string `gorm:"column:teaching_class_name"`
+	CourseNo          string `gorm:"column:course_no"`
+	CourseName        string `gorm:"column:course_name"`
+	OpenCollege       string `gorm:"column:open_college"`
+	Credits           string `gorm:"column:credits"`
+	Instructor        string `gorm:"column:instructor"`
+	TeacherKey        string `gorm:"column:teacher_key"`
+	Title             string `gorm:"column:title"`
+	PeopleRaw         string `gorm:"column:people_raw"`
+	TheoryHours       string `gorm:"column:theory_hours"`
+	ComputerHours     string `gorm:"column:computer_hours"`
+	ExperimentHours   string `gorm:"column:experiment_hours"`
+	PracticeHours     string `gorm:"column:practice_hours"`
+	Remark            string `gorm:"column:remark"`
+	OtherTeachers     string `gorm:"column:other_teachers"`
+	Textbook          string `gorm:"column:textbook"`
+	Publisher         string `gorm:"column:publisher"`
+	ScheduleSignature string `gorm:"column:schedule_signature"`
+	ScheduleSummary   string `gorm:"column:schedule_summary"`
+	WeekdaySummary    string `gorm:"column:weekday_summary"`
+	AudienceSummary   string `gorm:"column:audience_summary"`
+	SourceRowCount    int    `gorm:"column:source_row_count"`
+	SearchText        string `gorm:"column:search_text"`
+	FieldsJSON        string `gorm:"column:fields_json"`
+}
+
+func (offeringModel) TableName() string { return "school_timetable_offerings" }
+
+func offeringModelFromDomain(item domain.CourseOffering) offeringModel {
+	data, _ := json.Marshal(item.Fields)
+	return offeringModel{
+		ID: item.ID, TermKey: item.TermKey, CourseHeadID: item.CourseHeadID,
+		TeachingClassName: item.TeachingClassName, CourseNo: item.CourseNo, CourseName: item.CourseName,
+		OpenCollege: item.OpenCollege, Credits: item.Credits, Instructor: item.Instructor, TeacherKey: item.TeacherKey,
+		Title: item.Title, PeopleRaw: item.PeopleRaw, TheoryHours: item.TheoryHours, ComputerHours: item.ComputerHours,
+		ExperimentHours: item.ExperimentHours, PracticeHours: item.PracticeHours, Remark: item.Remark,
+		OtherTeachers: item.OtherTeachers, Textbook: item.Textbook, Publisher: item.Publisher,
+		ScheduleSignature: item.ScheduleSignature, ScheduleSummary: item.ScheduleSummary, WeekdaySummary: item.WeekdaySummary,
+		AudienceSummary: item.AudienceSummary, SourceRowCount: item.SourceRowCount, SearchText: item.SearchText,
+		FieldsJSON: string(data),
+	}
+}
+
+type audienceModel struct {
+	ID                 string `gorm:"primaryKey;column:id"`
+	TermKey            string `gorm:"column:term_key"`
+	OfferingID         string `gorm:"column:offering_id"`
+	CourseHeadID       string `gorm:"column:course_head_id"`
+	Grade              string `gorm:"column:grade"`
+	Major              string `gorm:"column:major"`
+	PlanCollege        string `gorm:"column:plan_college"`
+	CourseNature       string `gorm:"column:course_nature"`
+	CourseNatureCode   string `gorm:"column:course_nature_code"`
+	CourseCategory     string `gorm:"column:course_category"`
+	CourseCategoryCode string `gorm:"column:course_category_code"`
+	OpenType           string `gorm:"column:open_type"`
+	OpenTypeCode       string `gorm:"column:open_type_code"`
+	ConditionCode      string `gorm:"column:condition_code"`
+}
+
+func (audienceModel) TableName() string { return "school_timetable_audiences" }
+
+func audienceModelFromDomain(item domain.CourseAudience) audienceModel {
+	return audienceModel{
+		ID: item.ID, TermKey: item.TermKey, OfferingID: item.OfferingID, CourseHeadID: item.CourseHeadID,
+		Grade: item.Grade, Major: item.Major, PlanCollege: item.PlanCollege,
+		CourseNature: item.CourseNature, CourseNatureCode: item.CourseNatureCode,
+		CourseCategory: item.CourseCategory, CourseCategoryCode: item.CourseCategoryCode,
+		OpenType: item.OpenType, OpenTypeCode: item.OpenTypeCode, ConditionCode: item.ConditionCode,
+	}
+}
+
 type meetingModel struct {
 	ID           string `gorm:"primaryKey;column:id"`
-	RawRowID     string `gorm:"column:raw_row_id"`
+	OfferingID   string `gorm:"column:offering_id"`
 	TermKey      string `gorm:"column:term_key"`
 	CourseHeadID string `gorm:"column:course_head_id"`
 	Weekday      int    `gorm:"column:weekday"`
@@ -282,7 +386,7 @@ func (meetingModel) TableName() string { return "school_timetable_meetings" }
 
 func meetingModelFromDomain(item domain.Meeting) meetingModel {
 	return meetingModel{
-		ID: item.ID, RawRowID: item.RawRowID, TermKey: item.TermKey, CourseHeadID: item.CourseHeadID,
+		ID: item.ID, OfferingID: item.OfferingID, TermKey: item.TermKey, CourseHeadID: item.CourseHeadID,
 		Weekday: item.Weekday, SegmentIndex: item.SegmentIndex, WeekdayLabel: item.WeekdayLabel,
 		RawText: item.RawText, LocationText: item.LocationText, Building: item.Building, Room: item.Room,
 	}
