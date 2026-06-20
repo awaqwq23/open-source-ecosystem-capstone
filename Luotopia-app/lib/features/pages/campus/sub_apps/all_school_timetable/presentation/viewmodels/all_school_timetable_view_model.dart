@@ -70,15 +70,25 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
       final terms = await _repository.loadTerms();
       final selectedTermKey = terms.isEmpty ? null : terms.first.termKey;
       final query = state.query.copyWith(termKey: selectedTermKey);
-      final heads = await _repository.searchCourseHeads(query);
-      state = state.copyWith(
-        terms: terms,
-        query: query,
-        courseHeads: heads,
-        isLoading: false,
-        hasLoaded: true,
-        clearErrorMessage: true,
-      );
+      if (_hasActiveFilter(query)) {
+        final heads = await _repository.searchCourseHeads(query);
+        state = state.copyWith(
+          terms: terms,
+          query: query,
+          courseHeads: heads,
+          isLoading: false,
+          hasLoaded: true,
+          clearErrorMessage: true,
+        );
+      } else {
+        state = state.copyWith(
+          terms: terms,
+          query: query,
+          isLoading: false,
+          hasLoaded: true,
+          clearErrorMessage: true,
+        );
+      }
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
@@ -160,15 +170,27 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
       clearErrorMessage: true,
     );
     try {
-      final heads = await _repository.searchCourseHeads(query);
-      state = state.copyWith(
-        courseHeads: heads,
-        isLoading: false,
-        clearErrorMessage: true,
-      );
+      if (_hasActiveFilter(query)) {
+        final heads = await _repository.searchCourseHeads(query);
+        state = state.copyWith(
+          courseHeads: heads,
+          isLoading: false,
+          clearErrorMessage: true,
+        );
+      } else {
+        state = state.copyWith(
+          courseHeads: const [],
+          isLoading: false,
+          clearErrorMessage: true,
+        );
+      }
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
     }
+  }
+
+  static bool _hasActiveFilter(AllSchoolTimetableQuery query) {
+    return query.keyword.isNotEmpty || query.hasProfessionalFilters;
   }
 }
 

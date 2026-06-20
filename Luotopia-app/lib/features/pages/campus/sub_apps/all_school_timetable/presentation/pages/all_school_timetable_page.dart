@@ -134,7 +134,11 @@ class _AllSchoolTimetablePageState
             )
           else if (state.courseHeads.isEmpty)
             _StatusCard(
-              text: state.terms.isEmpty ? '暂无全校课表数据，等待更新' : '没有找到符合条件的课程',
+              text: state.terms.isEmpty
+                  ? '暂无全校课表数据，等待更新'
+                  : state.query.keyword.isEmpty && !state.query.hasProfessionalFilters
+                      ? '以上是当前学期信息，搜索或筛选以查看课程'
+                      : '没有找到符合条件的课程',
             )
           else
             ...state.courseHeads.map(
