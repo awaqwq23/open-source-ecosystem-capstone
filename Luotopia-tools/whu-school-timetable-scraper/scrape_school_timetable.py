@@ -1,22 +1,31 @@
+from __future__ import annotations
+
 import argparse
 import gzip
 import hashlib
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from pathlib import Path
 
 
 TARGET_URL = "https://jwgl.whu.edu.cn/design/viewFunc_cxDesignFuncPageIndex.html?gnmkdm=N214599&layout=default"
 REQUIRED_FIELDS = {"key", "xn", "xq", "jxbmc", "yskch", "kcmc"}
 
 
+@dataclass(frozen=True)
+class TermSpec:
+    term_key: str
+    school_year: str
+    term: str
+    output: str
+
+
 def setup_driver(headless: bool) -> webdriver.Chrome:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+
     options = Options()
     if headless:
         options.add_argument("--headless=new")
@@ -26,7 +35,153 @@ def setup_driver(headless: bool) -> webdriver.Chrome:
     return webdriver.Chrome(service=Service(executable_path=None), options=options)
 
 
+def parse_school_year(value: str) -> int:
+    parts = value.strip().split("-")
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        raise ValueError("学年格式应为 YYYY-YYYY，例如 2025-2026")
+    start = int(parts[0])
+    end = int(parts[1])
+    if end != start + 1:
+        raise ValueError("学年结束年份必须是开始年份 + 1")
+    return start
+
+
+def school_year_label(start_year: int) -> str:
+    return f"{start_year}-{start_year + 1}"
+
+
+def parse_term_key(value: str) -> tuple[int, str]:
+    parts = value.strip().split("-")
+    if len(parts) != 3:
+        raise ValueError("学期 key 格式应为 YYYY-YYYY-N，例如 2025-2026-1")
+    school_year = f"{parts[0]}-{parts[1]}"
+    start_year = parse_school_year(school_year)
+    term = parts[2]
+    if term not in {"1", "2"}:
+        raise ValueError("学期只能是 1 或 2")
+    return start_year, term
+
+
+def term_key(start_year: int, term: str) -> str:
+    return f"{school_year_label(start_year)}-{term}"
+
+
+def default_latest_term_key() -> str:
+    now = datetime.now()
+    if now.month >= 9:
+        start_year = now.year
+        term = "1"
+    elif now.month >= 2:
+        start_year = now.year - 1
+        term = "2"
+    else:
+        start_year = now.year - 1
+        term = "1"
+    return term_key(start_year, term)
+
+
+def default_output(term: str, output_dir: str) -> str:
+    return str(Path(output_dir) / f"{term}.ndjson.gz")
+
+
+def spec_from_key(value: str, output_dir: str) -> TermSpec:
+    start_year, term = parse_term_key(value)
+    key = term_key(start_year, term)
+    return TermSpec(
+        term_key=key,
+        school_year=school_year_label(start_year),
+        term=term,
+        output=default_output(key, output_dir),
+    )
+
+
+def generate_year_range(start_school_year: str, end_school_year: str, descending: bool, output_dir: str) -> list[TermSpec]:
+    start = parse_school_year(start_school_year)
+    end = parse_school_year(end_school_year)
+    if start > end:
+        raise ValueError("起始学年不能晚于结束学年")
+    specs = [
+        spec_from_key(term_key(year, term), output_dir)
+        for year in range(start, end + 1)
+        for term in ("1", "2")
+    ]
+    if descending:
+        specs.reverse()
+    return specs
+
+
+def generate_descending_terms(latest: str, oldest: str, output_dir: str) -> list[TermSpec]:
+    latest_year, latest_term = parse_term_key(latest)
+    oldest_year, oldest_term = parse_term_key(oldest)
+    current = (latest_year, int(latest_term))
+    stop = (oldest_year, int(oldest_term))
+    if current < stop:
+        raise ValueError("最新学期不能早于最旧学期")
+    specs = []
+    while current >= stop:
+        year, term = current
+        specs.append(spec_from_key(term_key(year, str(term)), output_dir))
+        current = (year, 1) if term == 2 else (year - 1, 2)
+    return specs
+
+
+def prompt(text: str, default: str | None = None) -> str:
+    suffix = f" [{default}]" if default else ""
+    value = input(f"{text}{suffix}: ").strip()
+    return value or (default or "")
+
+
+def prompt_choice(text: str, choices: dict[str, str], default: str) -> str:
+    print(text)
+    for key, label in choices.items():
+        marker = "（默认）" if key == default else ""
+        print(f"  {key}. {label}{marker}")
+    while True:
+        value = prompt("请选择", default)
+        if value in choices:
+            return value
+        print("输入无效，请重新选择。")
+
+
+def build_tui_specs() -> list[TermSpec]:
+    print("WHU 全校课表抓取 TUI")
+    output_dir = prompt("输出目录", "output")
+    mode = prompt_choice(
+        "选择抓取模式",
+        {
+            "1": "单学期",
+            "2": "起止学年生成队列",
+            "3": "全量抓取：最新到最旧",
+        },
+        "3",
+    )
+    if mode == "1":
+        key = prompt("学期 key", default_latest_term_key())
+        specs = [spec_from_key(key, output_dir)]
+    elif mode == "2":
+        start = prompt("起始学年", "2025-2026")
+        end = prompt("结束学年", start)
+        order = prompt_choice("队列顺序", {"1": "从旧到新", "2": "从新到旧"}, "1")
+        specs = generate_year_range(start, end, order == "2", output_dir)
+    else:
+        latest = prompt("最新学期 key", default_latest_term_key())
+        oldest = prompt("最旧学期 key")
+        specs = generate_descending_terms(latest, oldest, output_dir)
+
+    print("\n将按以下队列抓取：")
+    for index, spec in enumerate(specs, 1):
+        print(f"  {index}. {spec.term_key} -> {spec.output}")
+    confirm = prompt("确认开始？输入 y 继续", "y").lower()
+    if confirm not in {"y", "yes"}:
+        raise RuntimeError("已取消")
+    return specs
+
+
 def login_and_wait(driver: webdriver.Chrome) -> None:
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
+
     driver.get(TARGET_URL)
     try:
         button = WebDriverWait(driver, 5).until(
@@ -36,7 +191,11 @@ def login_and_wait(driver: webdriver.Chrome) -> None:
     except Exception:
         pass
     driver.maximize_window()
-    input("请在浏览器中登录、选择筛选条件并等待表格加载完成，然后按 Enter 开始抓取...")
+    input("请在浏览器中完成登录并进入全校课表页面，然后按 Enter 继续...")
+
+
+def wait_for_term_ready(spec: TermSpec) -> None:
+    input(f"请在浏览器中切换到 {spec.term_key} 学期并等待表格加载完成，然后按 Enter 开始抓取...")
 
 
 def table_id(driver: webdriver.Chrome) -> str:
@@ -65,6 +224,8 @@ def total_pages(driver: webdriver.Chrome) -> int:
 
 
 def goto_page(driver: webdriver.Chrome, page: int) -> None:
+    from selenium.webdriver.support.ui import WebDriverWait
+
     ok = driver.execute_script(
         """
         const pageInputs = Array.from(document.querySelectorAll('.ui-pg-input'));
@@ -124,7 +285,7 @@ def validate_rows(rows: list[dict[str, str]]) -> list[str]:
     return errors
 
 
-def write_package(args: argparse.Namespace, rows: list[dict[str, str]]) -> None:
+def write_package(spec: TermSpec, rows: list[dict[str, str]]) -> None:
     field_codes = sorted({code for row in rows for code in row.keys()})
     canonical_rows = [
         {"type": "row", "fields": {code: row.get(code, "") for code in field_codes}}
@@ -135,50 +296,101 @@ def write_package(args: argparse.Namespace, rows: list[dict[str, str]]) -> None:
     manifest = {
         "type": "manifest",
         "schema_version": 1,
-        "term_key": args.term_key,
-        "school_year": args.school_year,
-        "term": args.term,
+        "term_key": spec.term_key,
+        "school_year": spec.school_year,
+        "term": spec.term,
         "field_codes": field_codes,
         "row_count": len(rows),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "jwgl_N214599_dom",
         "source_checksum": source_checksum,
     }
-    with gzip.open(args.output, "wt", encoding="utf-8", newline="\n") as file:
+    Path(spec.output).parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(spec.output, "wt", encoding="utf-8", newline="\n") as file:
         file.write(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")))
         file.write("\n")
         file.write(rows_payload)
         file.write("\n")
-    print(f"已写出 {args.output}，共 {len(rows)} 行，checksum={source_checksum}")
+    print(f"已写出 {spec.output}，共 {len(rows)} 行，checksum={source_checksum}")
+
+
+def scrape_one_term(driver: webdriver.Chrome, spec: TermSpec) -> None:
+    wait_for_term_ready(spec)
+    grid_id = table_id(driver)
+    pages = total_pages(driver)
+    rows = []
+    for page in range(1, pages + 1):
+        if page > 1:
+            goto_page(driver, page)
+        page_rows = extract_current_page(driver, grid_id)
+        print(f"{spec.term_key} 第 {page}/{pages} 页：{len(page_rows)} 行")
+        rows.extend(page_rows)
+    errors = validate_rows(rows)
+    if errors:
+        raise RuntimeError("\n".join(errors[:20]))
+    write_package(spec, rows)
+
+
+def scrape_specs(specs: list[TermSpec], headless: bool, interactive: bool) -> None:
+    driver = setup_driver(headless)
+    try:
+        login_and_wait(driver)
+        index = 0
+        while index < len(specs):
+            spec = specs[index]
+            print(f"\n[{index + 1}/{len(specs)}] 准备抓取 {spec.term_key}")
+            try:
+                scrape_one_term(driver, spec)
+                index += 1
+            except Exception as err:
+                if not interactive:
+                    raise
+                print(f"抓取 {spec.term_key} 失败：{err}")
+                action = prompt_choice("请选择后续动作", {"1": "重试", "2": "跳过", "3": "退出"}, "1")
+                if action == "2":
+                    index += 1
+                elif action == "3":
+                    raise RuntimeError("已退出") from err
+    finally:
+        driver.quit()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--term-key", required=True)
-    parser.add_argument("--school-year", required=True)
-    parser.add_argument("--term", required=True)
-    parser.add_argument("--output", required=True)
+    parser.add_argument("--term-key")
+    parser.add_argument("--school-year")
+    parser.add_argument("--term")
+    parser.add_argument("--output")
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--tui", action="store_true")
     args = parser.parse_args()
 
-    driver = setup_driver(args.headless)
-    try:
-        login_and_wait(driver)
-        grid_id = table_id(driver)
-        pages = total_pages(driver)
-        rows = []
-        for page in range(1, pages + 1):
-            if page > 1:
-                goto_page(driver, page)
-            page_rows = extract_current_page(driver, grid_id)
-            print(f"第 {page}/{pages} 页：{len(page_rows)} 行")
-            rows.extend(page_rows)
-        errors = validate_rows(rows)
-        if errors:
-            raise RuntimeError("\n".join(errors[:20]))
-        write_package(args, rows)
-    finally:
-        driver.quit()
+    if args.tui:
+        try:
+            specs = build_tui_specs()
+        except RuntimeError as err:
+            if str(err) == "已取消":
+                print("已取消。")
+                return
+            raise
+        scrape_specs(specs, args.headless, interactive=True)
+        return
+
+    missing = [name for name in ("term_key", "school_year", "term", "output") if not getattr(args, name)]
+    if missing:
+        parser.error("非 TUI 模式必须提供 --term-key、--school-year、--term 和 --output")
+    if args.term not in {"1", "2"}:
+        parser.error("--term 只能是 1 或 2")
+    expected_year = school_year_label(parse_school_year(args.school_year))
+    if args.school_year != expected_year:
+        parser.error("--school-year 格式应为 YYYY-YYYY")
+    spec = TermSpec(
+        term_key=args.term_key,
+        school_year=args.school_year,
+        term=args.term,
+        output=args.output,
+    )
+    scrape_specs([spec], args.headless, interactive=False)
 
 
 if __name__ == "__main__":
