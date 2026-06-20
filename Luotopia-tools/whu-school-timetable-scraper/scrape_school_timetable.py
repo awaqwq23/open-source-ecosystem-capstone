@@ -205,6 +205,8 @@ def wait_for_term_ready(spec: TermSpec) -> None:
 
 
 def table_id(driver: webdriver.Chrome) -> str:
+    from selenium.webdriver.common.by import By
+
     tables = driver.find_elements(By.CSS_SELECTOR, "table.ui-jqgrid-btable")
     if not tables:
         raise RuntimeError("未找到 jqGrid 表格")
