@@ -78,14 +78,15 @@ type SchoolTimetableBlock struct {
 }
 
 type SchoolTimetableTerm struct {
-	TermKey     string          `json:"term_key"`
-	SchoolYear  string          `json:"school_year"`
-	Term        string          `json:"term"`
-	Version     int             `json:"version"`
-	Checksum    string          `json:"checksum"`
-	RowCount    int             `json:"row_count"`
-	Links       map[string]Link `json:"links"`
-	PublishedAt string          `json:"published_at"`
+	TermKey         string          `json:"term_key"`
+	SchoolYear      string          `json:"school_year"`
+	Term            string          `json:"term"`
+	FirstWeekMonday string          `json:"first_week_monday"`
+	Version         int             `json:"version"`
+	Checksum        string          `json:"checksum"`
+	RowCount        int             `json:"row_count"`
+	Links           map[string]Link `json:"links"`
+	PublishedAt     string          `json:"published_at"`
 }
 
 type SyncBlock struct {

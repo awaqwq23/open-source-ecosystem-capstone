@@ -121,6 +121,9 @@ func validateManifest(manifest domain.Manifest) error {
 	if strings.TrimSpace(manifest.TermKey) == "" || strings.TrimSpace(manifest.SchoolYear) == "" || strings.TrimSpace(manifest.Term) == "" {
 		return fmt.Errorf("%w: term metadata", ErrInvalidPackage)
 	}
+	if strings.TrimSpace(manifest.FirstWeekMonday) == "" {
+		return fmt.Errorf("%w: first_week_monday", ErrInvalidPackage)
+	}
 	if manifest.RowCount <= 0 {
 		return fmt.Errorf("%w: row_count", ErrInvalidPackage)
 	}

@@ -3,6 +3,7 @@ class SchoolTimetableTerm {
     required this.termKey,
     required this.schoolYear,
     required this.term,
+    required this.firstWeekMonday,
     required this.sourceVersion,
     required this.rowCount,
     required this.importedAt,
@@ -12,6 +13,7 @@ class SchoolTimetableTerm {
   final String termKey;
   final String schoolYear;
   final String term;
+  final String firstWeekMonday;
   final String sourceVersion;
   final int rowCount;
   final DateTime importedAt;
@@ -77,7 +79,7 @@ class SchoolCourseHead {
   const SchoolCourseHead({
     required this.id,
     required this.termKey,
-    required this.courseHeadKey,
+    required this.catalogId,
     required this.courseNo,
     required this.courseName,
     required this.openCollege,
@@ -92,7 +94,7 @@ class SchoolCourseHead {
 
   final String id;
   final String termKey;
-  final String courseHeadKey;
+  final String catalogId;
   final String courseNo;
   final String courseName;
   final String openCollege;
@@ -110,7 +112,9 @@ class SchoolTeachingClass {
     required this.id,
     required this.termKey,
     required this.sourceKey,
-    required this.courseHeadId,
+    required this.termCourseId,
+    required this.catalogId,
+    required this.instructorCourseId,
     required this.teachingClassName,
     required this.courseNo,
     required this.courseName,
@@ -143,7 +147,9 @@ class SchoolTeachingClass {
   final String id;
   final String termKey;
   final String sourceKey;
-  final String courseHeadId;
+  final String termCourseId;
+  final String catalogId;
+  final String instructorCourseId;
   final String teachingClassName;
   final String courseNo;
   final String courseName;
@@ -176,20 +182,24 @@ class SchoolTeachingClass {
 class SchoolClassMeeting {
   const SchoolClassMeeting({
     required this.id,
-    required this.rawRowId,
+    required this.offeringId,
     required this.weekday,
     required this.weekdayLabel,
     required this.rawText,
+    required this.weekText,
+    required this.sectionText,
     required this.locationText,
     required this.building,
     required this.room,
   });
 
   final String id;
-  final String rawRowId;
+  final String offeringId;
   final int weekday;
   final String weekdayLabel;
   final String rawText;
+  final String weekText;
+  final String sectionText;
   final String locationText;
   final String building;
   final String room;

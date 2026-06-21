@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
@@ -17,66 +16,10 @@ class DriftAllSchoolTimetableRepository
     implements AllSchoolTimetableRepository {
   const DriftAllSchoolTimetableRepository(this._db);
 
-  static const _weekdayFields = [
-    _WeekdayField(0, 'sun', '周日'),
-    _WeekdayField(1, 'mon', '周一'),
-    _WeekdayField(2, 'tue', '周二'),
-    _WeekdayField(3, 'wen', '周三'),
-    _WeekdayField(4, 'thu', '周四'),
-    _WeekdayField(5, 'fri', '周五'),
-    _WeekdayField(6, 'sat', '周六'),
-  ];
-
   final AppDatabase _db;
 
   @override
   Future<void> ensureLocalDataReady() async {}
-
-  @override
-  Future<void> replaceTermFromPackageBytes({
-    required List<int> bytes,
-    required String sourceVersion,
-  }) async {
-    final decoded = gzip.decode(bytes);
-    final lines = utf8.decode(decoded).split(RegExp(r'\r?\n'));
-    if (lines.isEmpty || lines.first.trim().isEmpty) {
-      throw const FormatException('全校课表数据包为空');
-    }
-
-    final manifest = jsonDecode(lines.first) as Map<String, dynamic>;
-    final termKey = manifest['term_key'] as String? ?? '';
-    final schoolYear = manifest['school_year'] as String? ?? '';
-    final term = manifest['term'] as String? ?? '';
-    final rows = <Map<String, String>>[];
-    for (final line in lines.skip(1)) {
-      final trimmed = line.trim();
-      if (trimmed.isEmpty) {
-        continue;
-      }
-      final item = jsonDecode(trimmed) as Map<String, dynamic>;
-      if (item['type'] != 'row') {
-        continue;
-      }
-      final fields = item['fields'];
-      if (fields is! Map<String, dynamic>) {
-        continue;
-      }
-      rows.add({
-        for (final entry in fields.entries)
-          entry.key.toString(): entry.value?.toString() ?? '',
-      });
-    }
-    if (termKey.isEmpty) {
-      throw const FormatException('全校课表包缺少 term_key');
-    }
-    await replaceTermFromHtmlRows(
-      termKey: termKey,
-      schoolYear: schoolYear,
-      term: term,
-      sourceVersion: sourceVersion,
-      rows: rows,
-    );
-  }
 
   @override
   Future<void> replaceTermFromHtmlRows({
@@ -86,46 +29,27 @@ class DriftAllSchoolTimetableRepository
     required String sourceVersion,
     required List<Map<String, String>> rows,
   }) async {
-    final normalizedRows = rows.map(_normalizeHtmlRow).toList(growable: false);
-    final entityRows = normalizedRows.where(_canBuildEntity).toList();
-    final offerings = _buildOfferings(termKey, entityRows);
-    final heads = _buildHeads(termKey, entityRows, offerings);
-    final audiences = _buildAudiences(termKey, offerings);
-    final sourceOrdinals = <String, int>{};
-    final sourceRows = <SchoolTimetableSourceRowsCompanion>[
-      for (var index = 0; index < normalizedRows.length; index++)
-        _sourceRowCompanion(
-          termKey,
-          index + 1,
-          normalizedRows[index],
-          sourceOrdinals,
-        ),
-    ];
-    final meetings = <SchoolClassMeetingRowsCompanion>[
-      for (final offering in offerings) ..._meetingCompanions(termKey, offering),
-    ];
+    throw UnsupportedError('全校课表由服务端统一课程实体快照提供');
+  }
+
+  @override
+  Future<void> replaceTermFromPackageBytes({
+    required List<int> bytes,
+    required String sourceVersion,
+  }) async {
+    final decoded = utf8.decode(gzip.decode(bytes));
+    final snapshot = jsonDecode(decoded) as Map<String, dynamic>;
+    final manifest = snapshot['manifest'] as Map<String, dynamic>? ?? {};
+    final termKey = manifest['term_key'] as String? ?? '';
+    final schoolYear = manifest['school_year'] as String? ?? '';
+    final term = manifest['term'] as String? ?? '';
+    final firstWeekMonday = manifest['first_week_monday'] as String? ?? '';
+    if (termKey.isEmpty || firstWeekMonday.isEmpty) {
+      throw const FormatException('统一课程快照缺少学期或第一周周一');
+    }
     final now = DateTime.now();
-
     await _db.transaction(() async {
-      await (_db.delete(
-        _db.schoolClassMeetingRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-      await (_db.delete(
-        _db.schoolTimetableSourceRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-      await (_db.delete(
-        _db.schoolTimetableAudienceRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-      await (_db.delete(
-        _db.schoolTimetableRawRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-      await (_db.delete(
-        _db.schoolCourseHeadRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-      await (_db.delete(
-        _db.schoolTimetableTermRows,
-      )..where((row) => row.termKey.equals(termKey))).go();
-
+      await _deleteTerm(termKey);
       await _db
           .into(_db.schoolTimetableTermRows)
           .insert(
@@ -133,8 +57,9 @@ class DriftAllSchoolTimetableRepository
               termKey: termKey,
               schoolYear: schoolYear,
               term: term,
+              firstWeekMonday: firstWeekMonday,
               sourceVersion: Value(sourceVersion),
-              rowCount: Value(normalizedRows.length),
+              rowCount: Value((manifest['row_count'] as num?)?.toInt() ?? 0),
               importedAt: now,
               updatedAt: now,
             ),
@@ -142,20 +67,65 @@ class DriftAllSchoolTimetableRepository
 
       await _db.batch((batch) {
         batch.insertAll(
-          _db.schoolCourseHeadRows,
-          heads.map((head) => _headCompanion(termKey, head)).toList(),
+          _db.courseCatalogRows,
+          _catalogs(snapshot['catalogs']),
+          mode: InsertMode.insertOrReplace,
         );
         batch.insertAll(
-          _db.schoolTimetableRawRows,
-          offerings
-              .map((offering) => _rawRowCompanion(termKey, offering))
-              .toList(),
+          _db.courseTermCourseRows,
+          _termCourses(snapshot['term_courses']),
         );
-        batch.insertAll(_db.schoolTimetableAudienceRows, audiences);
-        batch.insertAll(_db.schoolTimetableSourceRows, sourceRows);
-        batch.insertAll(_db.schoolClassMeetingRows, meetings);
+        batch.insertAll(
+          _db.courseInstructorCourseRows,
+          _instructorCourses(snapshot['instructor_courses']),
+          mode: InsertMode.insertOrReplace,
+        );
+        batch.insertAll(
+          _db.courseOfferingRows,
+          _offerings(snapshot['offerings']),
+        );
+        batch.insertAll(
+          _db.courseAudienceRows,
+          _audiences(snapshot['audiences']),
+        );
+        batch.insertAll(
+          _db.courseSourceRows,
+          _sourceRows(snapshot['source_rows']),
+        );
+        batch.insertAll(
+          _db.courseMeetingRuleRows,
+          _meetingRules(snapshot['meeting_rules']),
+        );
+        batch.insertAll(
+          _db.courseOccurrenceRows,
+          _occurrences(snapshot['occurrences']),
+        );
       });
     });
+  }
+
+  Future<void> _deleteTerm(String termKey) async {
+    await (_db.delete(
+      _db.courseOccurrenceRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.courseMeetingRuleRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.courseSourceRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.courseAudienceRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.courseOfferingRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.courseTermCourseRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
+    await (_db.delete(
+      _db.schoolTimetableTermRows,
+    )..where((row) => row.termKey.equals(termKey))).go();
   }
 
   @override
@@ -179,15 +149,13 @@ class DriftAllSchoolTimetableRepository
     if (termKey == null || termKey.isEmpty) {
       return const [];
     }
-
-    final allowedHeadIds = query.hasProfessionalFilters
-        ? await _matchingCourseHeadIds(query)
+    final allowedTermCourseIds = query.hasProfessionalFilters
+        ? await _matchingTermCourseIds(query)
         : null;
-    if (allowedHeadIds != null && allowedHeadIds.isEmpty) {
+    if (allowedTermCourseIds != null && allowedTermCourseIds.isEmpty) {
       return const [];
     }
-
-    final selector = _db.select(_db.schoolCourseHeadRows)
+    final selector = _db.select(_db.courseTermCourseRows)
       ..where((row) => row.termKey.equals(termKey));
     final keyword = query.keyword.trim();
     if (keyword.isNotEmpty) {
@@ -199,24 +167,23 @@ class DriftAllSchoolTimetableRepository
             row.courseNo.like(pattern),
       );
     }
-    if (allowedHeadIds != null) {
-      selector.where((row) => row.id.isIn(allowedHeadIds));
+    if (allowedTermCourseIds != null) {
+      selector.where((row) => row.id.isIn(allowedTermCourseIds));
     }
-
     final rows = await selector.get();
     rows.sort(
       (a, b) =>
           _relevanceScore(b, keyword).compareTo(_relevanceScore(a, keyword)),
     );
-    return rows.take(80).map(_headFromRow).toList(growable: false);
+    return rows.take(80).map(_termCourseFromRow).toList(growable: false);
   }
 
   @override
   Future<SchoolCourseHead?> findCourseHead(String id) async {
     final row = await (_db.select(
-      _db.schoolCourseHeadRows,
+      _db.courseTermCourseRows,
     )..where((table) => table.id.equals(id))).getSingleOrNull();
-    return row == null ? null : _headFromRow(row);
+    return row == null ? null : _termCourseFromRow(row);
   }
 
   @override
@@ -224,41 +191,41 @@ class DriftAllSchoolTimetableRepository
     String courseHeadId,
   ) async {
     final rows =
-        await (_db.select(_db.schoolTimetableRawRows)
-              ..where((row) => row.courseHeadId.equals(courseHeadId))
+        await (_db.select(_db.courseOfferingRows)
+              ..where((row) => row.termCourseId.equals(courseHeadId))
               ..orderBy([
                 (row) => OrderingTerm(expression: row.instructor),
                 (row) => OrderingTerm(expression: row.teachingClassName),
               ]))
             .get();
-    return rows.map(_classFromRow).toList(growable: false);
+    return rows.map(_offeringFromRow).toList(growable: false);
   }
 
   @override
   Future<SchoolTeachingClass?> findTeachingClass(String id) async {
     final row = await (_db.select(
-      _db.schoolTimetableRawRows,
+      _db.courseOfferingRows,
     )..where((table) => table.id.equals(id))).getSingleOrNull();
-    return row == null ? null : _classFromRow(row);
+    return row == null ? null : _offeringFromRow(row);
   }
 
   @override
   Future<List<SchoolClassMeeting>> loadMeetings(String teachingClassId) async {
     final rows =
-        await (_db.select(_db.schoolClassMeetingRows)
-              ..where((row) => row.rawRowId.equals(teachingClassId))
+        await (_db.select(_db.courseMeetingRuleRows)
+              ..where((row) => row.offeringId.equals(teachingClassId))
               ..orderBy([
                 (row) => OrderingTerm(expression: row.weekday),
                 (row) => OrderingTerm(expression: row.segmentIndex),
               ]))
             .get();
-    return rows.map(_meetingFromRow).toList(growable: false);
+    return rows.map(_ruleFromRow).toList(growable: false);
   }
 
-  Future<Set<String>> _matchingCourseHeadIds(
+  Future<Set<String>> _matchingTermCourseIds(
     AllSchoolTimetableQuery query,
   ) async {
-    final conditions = <String>['c.term_key = ?'];
+    final conditions = <String>['o.term_key = ?'];
     final variables = <Variable>[Variable.withString(query.termKey!)];
 
     void addLike(String column, String value) {
@@ -270,38 +237,38 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withString('%$normalized%'));
     }
 
-    addLike('c.open_college', query.openCollege);
+    addLike('o.open_college', query.openCollege);
     addLike('a.grade', query.grade);
     addLike('a.major', query.major);
     if (query.weekday != null) {
-      conditions.add('m.weekday = ?');
+      conditions.add('r.weekday = ?');
       variables.add(Variable.withInt(query.weekday!));
     }
-    addLike('m.building', query.building);
+    addLike('r.building', query.building);
 
     final rows = await _db
         .customSelect(
           '''
-          SELECT DISTINCT c.course_head_id
-          FROM school_timetable_raw_rows c
-          LEFT JOIN school_timetable_audience_rows a
-            ON a.teaching_class_id = c.id
-          LEFT JOIN school_class_meeting_rows m
-            ON m.raw_row_id = c.id
+          SELECT DISTINCT o.term_course_id
+          FROM course_offering_rows o
+          LEFT JOIN course_audience_rows a
+            ON a.offering_id = o.id
+          LEFT JOIN course_meeting_rule_rows r
+            ON r.offering_id = o.id
           WHERE ${conditions.join(' AND ')}
           ''',
           variables: variables,
           readsFrom: {
-            _db.schoolTimetableRawRows,
-            _db.schoolTimetableAudienceRows,
-            _db.schoolClassMeetingRows,
+            _db.courseOfferingRows,
+            _db.courseAudienceRows,
+            _db.courseMeetingRuleRows,
           },
         )
         .get();
-    return rows.map((row) => row.read<String>('course_head_id')).toSet();
+    return rows.map((row) => row.read<String>('term_course_id')).toSet();
   }
 
-  int _relevanceScore(SchoolCourseHeadRow row, String keyword) {
+  int _relevanceScore(CourseTermCourseRow row, String keyword) {
     if (keyword.isEmpty) {
       return row.teachingClassCount;
     }
@@ -316,217 +283,12 @@ class DriftAllSchoolTimetableRepository
     return score + row.teachingClassCount;
   }
 
-  List<_HeadSeed> _buildHeads(
-    String termKey,
-    List<Map<String, String>> rows,
-    List<_OfferingSeed> offerings,
-  ) {
-    final groupedRows = <String, List<Map<String, String>>>{};
-    final groupedOfferings = <String, List<_OfferingSeed>>{};
-    for (final row in rows) {
-      final key = _courseHeadId(termKey, row);
-      groupedRows.putIfAbsent(key, () => []).add(row);
-    }
-    for (final offering in offerings) {
-      groupedOfferings
-          .putIfAbsent(offering.courseHeadId, () => [])
-          .add(offering);
-    }
-
-    return [
-      for (final entry in groupedRows.entries)
-        _HeadSeed.fromRows(
-          entry.key,
-          entry.value,
-          groupedOfferings[entry.key] ?? const [],
-        ),
-    ];
-  }
-
-  List<_OfferingSeed> _buildOfferings(
-    String termKey,
-    List<Map<String, String>> rows,
-  ) {
-    final grouped = <String, List<Map<String, String>>>{};
-    for (final row in rows) {
-      final key = _offeringId(termKey, row);
-      grouped.putIfAbsent(key, () => []).add(row);
-    }
-    return [
-      for (final entry in grouped.entries)
-        _OfferingSeed.fromRows(entry.key, termKey, entry.value),
-    ];
-  }
-
-  List<SchoolTimetableAudienceRowsCompanion> _buildAudiences(
-    String termKey,
-    List<_OfferingSeed> offerings,
-  ) {
-    final byId = <String, SchoolTimetableAudienceRowsCompanion>{};
-    for (final offering in offerings) {
-      for (final row in offering.rows) {
-        final id = _audienceId(termKey, offering.id, row);
-        byId[id] = SchoolTimetableAudienceRowsCompanion.insert(
-          id: id,
-          termKey: termKey,
-          teachingClassId: offering.id,
-          courseHeadId: offering.courseHeadId,
-          grade: Value(row['nj'] ?? ''),
-          major: Value(row['jszy'] ?? ''),
-          planCollege: Value(row['jhxy'] ?? ''),
-          courseNature: Value(row['kcxzmc'] ?? ''),
-          courseNatureCode: Value(row['kcxzdm'] ?? ''),
-          courseCategory: Value(row['kclbmc'] ?? ''),
-          courseCategoryCode: Value(row['kclbdm'] ?? ''),
-          openType: Value(row['kklxmc'] ?? ''),
-          openTypeCode: Value(row['kklxdm'] ?? ''),
-          conditionCode: Value(row['kkbm_id2'] ?? ''),
-        );
-      }
-    }
-    return byId.values.toList(growable: false);
-  }
-
-  SchoolCourseHeadRowsCompanion _headCompanion(String termKey, _HeadSeed seed) {
-    return SchoolCourseHeadRowsCompanion.insert(
-      id: seed.id,
-      termKey: termKey,
-      courseHeadKey: seed.courseHeadKey,
-      courseNo: seed.courseNo,
-      courseName: seed.courseName,
-      openCollege: Value(seed.openCollege),
-      credits: Value(seed.credits),
-      courseNature: Value(seed.courseNature),
-      courseCategory: Value(seed.courseCategory),
-      openType: Value(seed.openType),
-      teachingClassCount: Value(seed.teachingClassCount),
-      teacherSummary: Value(seed.teacherSummary),
-      weekdaySummary: Value(seed.weekdaySummary),
-      searchText: Value(seed.searchText),
-    );
-  }
-
-  SchoolTimetableRawRowsCompanion _rawRowCompanion(
-    String termKey,
-    _OfferingSeed seed,
-  ) {
-    final row = seed.row;
-    return SchoolTimetableRawRowsCompanion.insert(
-      id: seed.id,
-      termKey: termKey,
-      courseHeadId: seed.courseHeadId,
-      sourceKey: row['key'] ?? '',
-      packageIndex: Value(int.tryParse(row['_source_package_index'] ?? '') ?? 0),
-      sourceStatus: const Value('active'),
-      schoolYear: row['xn']!,
-      term: row['xq']!,
-      teachingClassName: row['jxbmc']!,
-      courseNo: row['yskch']!,
-      courseName: row['kcmc']!,
-      openCollege: Value(row['skxy'] ?? ''),
-      planCollege: Value(seed.audienceSummary),
-      credits: Value(double.tryParse(row['kcxf'] ?? '')),
-      courseNature: Value(row['kcxzmc'] ?? ''),
-      courseCategory: Value(row['kclbmc'] ?? ''),
-      openType: Value(row['kklxmc'] ?? ''),
-      grade: Value(seed.gradeSummary),
-      major: Value(seed.majorSummary),
-      instructor: Value(seed.instructorSummary),
-      title: Value(row['jszc'] ?? ''),
-      peopleRaw: Value(row['skrs'] ?? ''),
-      theoryHours: Value(int.tryParse(row['xsdm_01'] ?? '')),
-      computerHours: Value(int.tryParse(row['xsdm_02'] ?? '')),
-      experimentHours: Value(int.tryParse(row['xsdm_03'] ?? '')),
-      practiceHours: Value(int.tryParse(row['xsdm_04'] ?? '')),
-      sundayRaw: Value(row['sun'] ?? ''),
-      mondayRaw: Value(row['mon'] ?? ''),
-      tuesdayRaw: Value(row['tue'] ?? ''),
-      wednesdayRaw: Value(row['wen'] ?? ''),
-      thursdayRaw: Value(row['thu'] ?? ''),
-      fridayRaw: Value(row['fri'] ?? ''),
-      saturdayRaw: Value(row['sat'] ?? ''),
-      remark: Value(row['xkbz'] ?? ''),
-      otherTeachers: Value(row['qtjs'] ?? ''),
-      textbook: Value(row['jcmc'] ?? ''),
-      publisher: Value(row['cbs'] ?? ''),
-      openDepartmentCode: Value(row['kkbm_id'] ?? ''),
-      collegeCode: Value(row['jg_id'] ?? ''),
-      majorCode: Value(row['zyh_id'] ?? ''),
-      gradeCode: Value(row['njdm_id'] ?? ''),
-      schoolYearCode: Value(row['xnm'] ?? ''),
-      termCode: Value(row['xqm'] ?? ''),
-      courseCategoryCode: Value(row['kclbdm'] ?? ''),
-      conditionCode: Value(row['kkbm_id2'] ?? ''),
-      openTypeCode: Value(row['kklxdm'] ?? ''),
-      courseNatureCode: Value(row['kcxzdm'] ?? ''),
-      note: Value(row['bz'] ?? ''),
-      scheduleSummary: Value(_scheduleSummary(row)),
-      weekdaySummary: Value(_weekdaySummary(row)),
-      searchText: Value(_searchText(row)),
-      originalFieldsJson: Value(jsonEncode(seed.originalFields)),
-    );
-  }
-
-  SchoolTimetableSourceRowsCompanion _sourceRowCompanion(
-    String termKey,
-    int packageIndex,
-    Map<String, String> row,
-    Map<String, int> sourceOrdinals,
-  ) {
-    final active = _canBuildEntity(row);
-    final canonical = _canonicalSourceRow(row);
-    final ordinal = (sourceOrdinals[canonical] ?? 0) + 1;
-    sourceOrdinals[canonical] = ordinal;
-    return SchoolTimetableSourceRowsCompanion.insert(
-      id: _stableId(['source', termKey, canonical, ordinal.toString()]),
-      termKey: termKey,
-      teachingClassId: Value(active ? _offeringId(termKey, row) : ''),
-      courseHeadId: Value(active ? _courseHeadId(termKey, row) : ''),
-      sourceKey: Value(row['key'] ?? ''),
-      packageIndex: Value(packageIndex),
-      sourceStatus: Value(active ? 'active' : 'incomplete'),
-      originalFieldsJson: Value(jsonEncode(row)),
-    );
-  }
-
-  List<SchoolClassMeetingRowsCompanion> _meetingCompanions(
-    String termKey,
-    _OfferingSeed seed,
-  ) {
-    final row = seed.row;
-    final rawRowId = seed.id;
-    final courseHeadId = seed.courseHeadId;
-    final companions = <SchoolClassMeetingRowsCompanion>[];
-    for (final field in _weekdayFields) {
-      final rawText = row[field.code]?.trim() ?? '';
-      if (rawText.isEmpty) {
-        continue;
-      }
-      final location = _extractLocation(rawText);
-      companions.add(
-        SchoolClassMeetingRowsCompanion.insert(
-          id: '$rawRowId:${field.weekday}:0',
-          rawRowId: rawRowId,
-          termKey: termKey,
-          courseHeadId: courseHeadId,
-          weekday: field.weekday,
-          segmentIndex: 0,
-          weekdayLabel: Value(field.label),
-          rawText: Value(rawText),
-          locationText: Value(location.locationText),
-          building: Value(location.building),
-          room: Value(location.room),
-        ),
-      );
-    }
-    return companions;
-  }
-
   SchoolTimetableTerm _termFromRow(SchoolTimetableTermRow row) {
     return SchoolTimetableTerm(
       termKey: row.termKey,
       schoolYear: row.schoolYear,
       term: row.term,
+      firstWeekMonday: row.firstWeekMonday,
       sourceVersion: row.sourceVersion,
       rowCount: row.rowCount,
       importedAt: row.importedAt,
@@ -534,11 +296,11 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  SchoolCourseHead _headFromRow(SchoolCourseHeadRow row) {
+  SchoolCourseHead _termCourseFromRow(CourseTermCourseRow row) {
     return SchoolCourseHead(
       id: row.id,
       termKey: row.termKey,
-      courseHeadKey: row.courseHeadKey,
+      catalogId: row.catalogId,
       courseNo: row.courseNo,
       courseName: row.courseName,
       openCollege: row.openCollege,
@@ -552,12 +314,14 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  SchoolTeachingClass _classFromRow(SchoolTimetableRawRow row) {
+  SchoolTeachingClass _offeringFromRow(CourseOfferingRow row) {
     return SchoolTeachingClass(
       id: row.id,
       termKey: row.termKey,
       sourceKey: row.sourceKey,
-      courseHeadId: row.courseHeadId,
+      termCourseId: row.termCourseId,
+      catalogId: row.catalogId,
+      instructorCourseId: row.instructorCourseId,
       teachingClassName: row.teachingClassName,
       courseNo: row.courseNo,
       courseName: row.courseName,
@@ -584,196 +348,250 @@ class DriftAllSchoolTimetableRepository
       publisher: row.publisher,
       scheduleSummary: row.scheduleSummary,
       weekdaySummary: row.weekdaySummary,
-      originalFields: _originalFieldsFromRow(row),
+      originalFields: _decodeFields(row.originalFieldsJson),
     );
   }
 
-  SchoolClassMeeting _meetingFromRow(SchoolClassMeetingRow row) {
+  SchoolClassMeeting _ruleFromRow(CourseMeetingRuleRow row) {
     return SchoolClassMeeting(
       id: row.id,
-      rawRowId: row.rawRowId,
+      offeringId: row.offeringId,
       weekday: row.weekday,
       weekdayLabel: row.weekdayLabel,
       rawText: row.rawText,
+      weekText: row.weekText,
+      sectionText: row.sectionText,
       locationText: row.locationText,
       building: row.building,
       room: row.room,
     );
   }
 
-  Map<String, String> _normalizeHtmlRow(Map<String, String> row) {
-    return {
-      for (final entry in row.entries) entry.key: _normalizeCell(entry.value),
-    };
+  List<CourseCatalogRowsCompanion> _catalogs(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseCatalogRowsCompanion.insert(
+            id: _string(item, 'id'),
+            catalogKey: _string(item, 'catalog_key'),
+            courseNo: _string(item, 'course_no'),
+            courseName: _string(item, 'course_name'),
+            credits: Value(_doubleOrNull(item, 'credits')),
+            searchText: Value(_string(item, 'search_text')),
+          ),
+        )
+        .toList(growable: false);
   }
 
-  bool _canBuildEntity(Map<String, String> row) {
-    const required = [
-      'xn',
-      'xq',
-      'jxbmc',
-      'yskch',
-      'kcmc',
-      'skxy',
-      'kcxf',
-      'jsxm',
-      'skrs',
+  List<CourseTermCourseRowsCompanion> _termCourses(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseTermCourseRowsCompanion.insert(
+            id: _string(item, 'id'),
+            termKey: _string(item, 'term_key'),
+            catalogId: _string(item, 'catalog_id'),
+            courseNo: _string(item, 'course_no'),
+            courseName: _string(item, 'course_name'),
+            openCollege: Value(_string(item, 'open_college')),
+            credits: Value(_doubleOrNull(item, 'credits')),
+            courseNature: Value(_string(item, 'course_nature')),
+            courseCategory: Value(_string(item, 'course_category')),
+            openType: Value(_string(item, 'open_type')),
+            teachingClassCount: Value(_int(item, 'teaching_class_count')),
+            teacherSummary: Value(_string(item, 'teacher_summary')),
+            weekdaySummary: Value(_string(item, 'weekday_summary')),
+            searchText: Value(_string(item, 'search_text')),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseInstructorCourseRowsCompanion> _instructorCourses(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseInstructorCourseRowsCompanion.insert(
+            id: _string(item, 'id'),
+            catalogId: _string(item, 'catalog_id'),
+            courseNo: _string(item, 'course_no'),
+            courseName: _string(item, 'course_name'),
+            credits: Value(_doubleOrNull(item, 'credits')),
+            instructorName: Value(_string(item, 'instructor_name')),
+            instructorNameKey: Value(_string(item, 'instructor_name_key')),
+            offeringCount: Value(_int(item, 'offering_count')),
+            latestTermKey: Value(_string(item, 'latest_term_key')),
+            latestOpenCollege: Value(_string(item, 'latest_open_college')),
+            latestTeachingTitle: Value(_string(item, 'latest_teaching_title')),
+            searchText: Value(_string(item, 'search_text')),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseOfferingRowsCompanion> _offerings(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseOfferingRowsCompanion.insert(
+            id: _string(item, 'id'),
+            termKey: _string(item, 'term_key'),
+            termCourseId: _string(item, 'term_course_id'),
+            catalogId: _string(item, 'catalog_id'),
+            instructorCourseId: _string(item, 'instructor_course_id'),
+            sourceKey: _string(item, 'source_key'),
+            schoolYear: _string(item, 'school_year'),
+            term: _string(item, 'term'),
+            teachingClassName: _string(item, 'teaching_class_name'),
+            courseNo: _string(item, 'course_no'),
+            courseName: _string(item, 'course_name'),
+            openCollege: Value(_string(item, 'open_college')),
+            planCollege: Value(_string(item, 'audience_summary')),
+            credits: Value(_doubleOrNull(item, 'credits')),
+            courseNature: Value(_string(item, 'course_nature')),
+            courseCategory: Value(_string(item, 'course_category')),
+            openType: Value(_string(item, 'open_type')),
+            grade: Value(''),
+            major: Value(''),
+            instructor: Value(_string(item, 'instructor')),
+            title: Value(_string(item, 'title')),
+            peopleRaw: Value(_string(item, 'people_raw')),
+            theoryHours: Value(_intOrNull(item, 'theory_hours')),
+            computerHours: Value(_intOrNull(item, 'computer_hours')),
+            experimentHours: Value(_intOrNull(item, 'experiment_hours')),
+            practiceHours: Value(_intOrNull(item, 'practice_hours')),
+            remark: Value(_string(item, 'remark')),
+            otherTeachers: Value(_string(item, 'other_teachers')),
+            textbook: Value(_string(item, 'textbook')),
+            publisher: Value(_string(item, 'publisher')),
+            scheduleSummary: Value(_string(item, 'schedule_summary')),
+            weekdaySummary: Value(_string(item, 'weekday_summary')),
+            searchText: Value(_string(item, 'search_text')),
+            originalFieldsJson: Value(jsonEncode(item['fields'] ?? const {})),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseAudienceRowsCompanion> _audiences(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseAudienceRowsCompanion.insert(
+            id: _string(item, 'id'),
+            termKey: _string(item, 'term_key'),
+            offeringId: _string(item, 'offering_id'),
+            termCourseId: _string(item, 'term_course_id'),
+            catalogId: _string(item, 'catalog_id'),
+            grade: Value(_string(item, 'grade')),
+            major: Value(_string(item, 'major')),
+            planCollege: Value(_string(item, 'plan_college')),
+            courseNature: Value(_string(item, 'course_nature')),
+            courseNatureCode: Value(_string(item, 'course_nature_code')),
+            courseCategory: Value(_string(item, 'course_category')),
+            courseCategoryCode: Value(_string(item, 'course_category_code')),
+            openType: Value(_string(item, 'open_type')),
+            openTypeCode: Value(_string(item, 'open_type_code')),
+            conditionCode: Value(_string(item, 'condition_code')),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseSourceRowsCompanion> _sourceRows(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseSourceRowsCompanion.insert(
+            id: _string(item, 'id'),
+            termKey: _string(item, 'term_key'),
+            termCourseId: Value(_string(item, 'term_course_id')),
+            offeringId: Value(_string(item, 'offering_id')),
+            sourceKey: Value(_string(item, 'source_key')),
+            packageIndex: Value(_int(item, 'package_index')),
+            sourceStatus: Value(_string(item, 'status')),
+            originalFieldsJson: Value(jsonEncode(item['fields'] ?? const {})),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseMeetingRuleRowsCompanion> _meetingRules(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseMeetingRuleRowsCompanion.insert(
+            id: _string(item, 'id'),
+            offeringId: _string(item, 'offering_id'),
+            termKey: _string(item, 'term_key'),
+            termCourseId: _string(item, 'term_course_id'),
+            catalogId: _string(item, 'catalog_id'),
+            weekday: _int(item, 'weekday'),
+            segmentIndex: _int(item, 'segment_index'),
+            weekdayLabel: Value(_string(item, 'weekday_label')),
+            rawText: Value(_string(item, 'raw_text')),
+            weekText: Value(_string(item, 'week_text')),
+            sectionText: Value(_string(item, 'section_text')),
+            locationText: Value(_string(item, 'location_text')),
+            building: Value(_string(item, 'building')),
+            room: Value(_string(item, 'room')),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<CourseOccurrenceRowsCompanion> _occurrences(Object? raw) {
+    return _items(raw)
+        .map(
+          (item) => CourseOccurrenceRowsCompanion.insert(
+            id: _string(item, 'id'),
+            ruleId: _string(item, 'rule_id'),
+            offeringId: _string(item, 'offering_id'),
+            termKey: _string(item, 'term_key'),
+            termCourseId: _string(item, 'term_course_id'),
+            catalogId: _string(item, 'catalog_id'),
+            date: _string(item, 'date'),
+            weekIndex: _int(item, 'week_index'),
+            weekday: _int(item, 'weekday'),
+            sectionText: Value(_string(item, 'section_text')),
+            locationText: Value(_string(item, 'location_text')),
+            building: Value(_string(item, 'building')),
+            room: Value(_string(item, 'room')),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<Map<String, dynamic>> _items(Object? raw) {
+    if (raw is! List) return const [];
+    return [
+      for (final item in raw)
+        if (item is Map<String, dynamic>) item,
     ];
-    return required.every((field) => (row[field] ?? '').trim().isNotEmpty);
   }
 
-  Map<String, String> _originalFieldsFromRow(SchoolTimetableRawRow row) {
-    final decoded = jsonDecode(row.originalFieldsJson);
-    final extraFields = <String, String>{
+  String _string(Map<String, dynamic> item, String key) {
+    return item[key]?.toString() ?? '';
+  }
+
+  int _int(Map<String, dynamic> item, String key) {
+    return (item[key] as num?)?.toInt() ??
+        int.tryParse(_string(item, key)) ??
+        0;
+  }
+
+  int? _intOrNull(Map<String, dynamic> item, String key) {
+    final value = item[key];
+    if (value == null) return null;
+    return (value as num?)?.toInt() ?? int.tryParse(value.toString());
+  }
+
+  double? _doubleOrNull(Map<String, dynamic> item, String key) {
+    final value = item[key];
+    if (value == null) return null;
+    return (value as num?)?.toDouble() ?? double.tryParse(value.toString());
+  }
+
+  Map<String, String> _decodeFields(String raw) {
+    final decoded = jsonDecode(raw);
+    return {
       if (decoded is Map)
         for (final entry in decoded.entries)
           entry.key.toString(): entry.value?.toString() ?? '',
     };
-    return {
-      'xn': row.schoolYear,
-      'xq': row.term,
-      'jxbmc': row.teachingClassName,
-      'yskch': row.courseNo,
-      'kcmc': row.courseName,
-      'skxy': row.openCollege,
-      'jhxy': row.planCollege,
-      'kcxf': row.credits?.toString() ?? '',
-      'kcxzmc': row.courseNature,
-      'kclbmc': row.courseCategory,
-      'kklxmc': row.openType,
-      'nj': row.grade,
-      'jszy': row.major,
-      'jsxm': row.instructor,
-      'jszc': row.title,
-      'skrs': row.peopleRaw,
-      'xsdm_01': row.theoryHours?.toString() ?? '',
-      'xsdm_02': row.computerHours?.toString() ?? '',
-      'xsdm_03': row.experimentHours?.toString() ?? '',
-      'xsdm_04': row.practiceHours?.toString() ?? '',
-      'sun': row.sundayRaw,
-      'mon': row.mondayRaw,
-      'tue': row.tuesdayRaw,
-      'key': row.sourceKey,
-      'wen': row.wednesdayRaw,
-      'thu': row.thursdayRaw,
-      'kkbm_id': row.openDepartmentCode,
-      'jg_id': row.collegeCode,
-      'fri': row.fridayRaw,
-      'sat': row.saturdayRaw,
-      'zyh_id': row.majorCode,
-      'xkbz': row.remark,
-      'njdm_id': row.gradeCode,
-      'xnm': row.schoolYearCode,
-      'bz': row.note,
-      'xqm': row.termCode,
-      'kclbdm': row.courseCategoryCode,
-      'kkbm_id2': row.conditionCode,
-      'qtjs': row.otherTeachers,
-      'jcmc': row.textbook,
-      'cbs': row.publisher,
-      'kklxdm': row.openTypeCode,
-      'kcxzdm': row.courseNatureCode,
-      ...extraFields,
-    };
-  }
-
-  String _courseHeadId(String termKey, Map<String, String> row) {
-    return _stableId(['head', termKey, row['yskch'] ?? '']);
-  }
-
-  String _offeringId(String termKey, Map<String, String> row) {
-    return _stableId([
-      'offering',
-      termKey,
-      row['jxbmc'] ?? '',
-      row['jsxm'] ?? '',
-      _scheduleSignature(row),
-    ]);
-  }
-
-  String _audienceId(
-    String termKey,
-    String offeringId,
-    Map<String, String> row,
-  ) {
-    return _stableId([
-      'audience',
-      termKey,
-      offeringId,
-      row['nj'] ?? '',
-      row['jszy'] ?? '',
-      row['jhxy'] ?? '',
-      row['kcxzdm'] ?? '',
-      row['kclbdm'] ?? '',
-      row['kklxdm'] ?? '',
-      row['kkbm_id2'] ?? '',
-    ]);
-  }
-
-  String _stableId(List<String> parts) {
-    final normalized = parts
-        .map(
-          (part) => part
-              .trim()
-              .split(RegExp(r'\s+'))
-              .where((item) => item.isNotEmpty)
-              .join(' '),
-        )
-        .join('\x1f');
-    return sha256.convert(utf8.encode(normalized)).toString().substring(0, 32);
-  }
-
-  String _canonicalSourceRow(Map<String, String> row) {
-    final ordered = {
-      for (final key in row.keys.where((key) => !key.startsWith('_source_')).toList()
-        ..sort())
-        key: row[key] ?? '',
-    };
-    return jsonEncode(ordered);
-  }
-
-  String _scheduleSignature(Map<String, String> row) {
-    return [
-      for (final field in _weekdayFields)
-        '${field.code}=${(row[field.code] ?? '').trim()}',
-    ].join('|');
-  }
-
-  String _normalizeCell(String value) {
-    return value.replaceAll('\u00a0', ' ').trim();
-  }
-
-  String _scheduleSummary(Map<String, String> row) {
-    return [
-      for (final field in _weekdayFields)
-        if ((row[field.code] ?? '').trim().isNotEmpty)
-          '${field.label}${row[field.code]!.trim()}',
-    ].join('；');
-  }
-
-  String _weekdaySummary(Map<String, String> row) {
-    return [
-      for (final field in _weekdayFields)
-        if ((row[field.code] ?? '').trim().isNotEmpty) field.label,
-    ].join('、');
-  }
-
-  String _searchText(Map<String, String> row) {
-    return [
-      row['kcmc'],
-      row['yskch'],
-      row['jxbmc'],
-      row['skxy'],
-      row['jhxy'],
-      row['kcxzmc'],
-      row['kclbmc'],
-      row['kklxmc'],
-      row['nj'],
-      row['jszy'],
-      row['jsxm'],
-      row['jszc'],
-      _scheduleSummary(row),
-    ].whereType<String>().join(' ');
   }
 
   _PeopleCount _parsePeople(String raw) {
@@ -783,220 +601,6 @@ class DriftAllSchoolTimetableRepository
       selected: parts.length < 2 ? null : int.tryParse(parts[1].trim()),
     );
   }
-
-  _LocationParts _extractLocation(String rawText) {
-    final match = RegExp(
-      r'((?:\d区|虚拟教室)[^,，;；)]*)',
-    ).allMatches(rawText).lastOrNull;
-    final location = match?.group(1)?.trim() ?? '';
-    if (location.isEmpty || location == '虚拟教室') {
-      return _LocationParts(location, location, '');
-    }
-    final buildingMatch = RegExp(
-      r'^(\d区[^-－]*)[-－]?(.*)$',
-    ).firstMatch(location);
-    if (buildingMatch == null) {
-      return _LocationParts(location, location, '');
-    }
-    return _LocationParts(
-      location,
-      buildingMatch.group(1)?.trim() ?? '',
-      buildingMatch.group(2)?.trim() ?? '',
-    );
-  }
-}
-
-class _HeadSeed {
-  const _HeadSeed({
-    required this.id,
-    required this.courseHeadKey,
-    required this.courseNo,
-    required this.courseName,
-    required this.openCollege,
-    required this.credits,
-    required this.courseNature,
-    required this.courseCategory,
-    required this.openType,
-    required this.teachingClassCount,
-    required this.teacherSummary,
-    required this.weekdaySummary,
-    required this.searchText,
-  });
-
-  factory _HeadSeed.fromRows(
-    String courseHeadId,
-    List<Map<String, String>> rows,
-    List<_OfferingSeed> offerings,
-  ) {
-    final first = rows.first;
-    final teachers = _uniqueSummary(
-      rows.map((row) => row['jsxm'] ?? ''),
-      suffix: '位教师',
-    );
-    final weekdays = _uniqueSummary(
-      rows.map(_weekdaySummary),
-      maxItems: 4,
-      suffix: '组时间',
-    );
-    final searchText = [
-      first['kcmc'],
-      first['yskch'],
-      first['skxy'],
-      first['kcxzmc'],
-      first['kclbmc'],
-      first['kklxmc'],
-      teachers,
-      weekdays,
-    ].whereType<String>().join(' ');
-    return _HeadSeed(
-      id: courseHeadId,
-      courseHeadKey: first['yskch'] ?? '',
-      courseNo: first['yskch'] ?? '',
-      courseName: first['kcmc'] ?? '',
-      openCollege: first['skxy'] ?? '',
-      credits: double.tryParse(first['kcxf'] ?? ''),
-      courseNature: first['kcxzmc'] ?? '',
-      courseCategory: first['kclbmc'] ?? '',
-      openType: first['kklxmc'] ?? '',
-      teachingClassCount: offerings.length,
-      teacherSummary: teachers,
-      weekdaySummary: weekdays,
-      searchText: searchText,
-    );
-  }
-
-  final String id;
-  final String courseHeadKey;
-  final String courseNo;
-  final String courseName;
-  final String openCollege;
-  final double? credits;
-  final String courseNature;
-  final String courseCategory;
-  final String openType;
-  final int teachingClassCount;
-  final String teacherSummary;
-  final String weekdaySummary;
-  final String searchText;
-
-  static String _uniqueSummary(
-    Iterable<String> values, {
-    int maxItems = 3,
-    required String suffix,
-  }) {
-    final unique = <String>[];
-    for (final value in values) {
-      final normalized = value.trim();
-      if (normalized.isNotEmpty && !unique.contains(normalized)) {
-        unique.add(normalized);
-      }
-    }
-    if (unique.isEmpty) {
-      return '';
-    }
-    if (unique.length <= maxItems) {
-      return unique.join('、');
-    }
-    return '${unique.take(maxItems).join('、')}等 ${unique.length} $suffix';
-  }
-}
-
-class _OfferingSeed {
-  const _OfferingSeed({
-    required this.id,
-    required this.termKey,
-    required this.courseHeadId,
-    required this.row,
-    required this.rows,
-    required this.instructorSummary,
-    required this.gradeSummary,
-    required this.majorSummary,
-    required this.audienceSummary,
-    required this.originalFields,
-  });
-
-  factory _OfferingSeed.fromRows(
-    String id,
-    String termKey,
-    List<Map<String, String>> rows,
-  ) {
-    final first = rows.first;
-    final grades = _uniqueSummary(rows.map((row) => row['nj'] ?? ''));
-    final majors = _uniqueSummary(rows.map((row) => row['jszy'] ?? ''));
-    final audienceSummary = [
-      grades,
-      majors,
-    ].where((item) => item.isNotEmpty).join(' / ');
-    return _OfferingSeed(
-      id: id,
-      termKey: termKey,
-      courseHeadId: _stableCourseHeadId(termKey, first),
-      row: first,
-      rows: rows,
-      instructorSummary: _uniqueSummary(rows.map((row) => row['jsxm'] ?? '')),
-      gradeSummary: grades,
-      majorSummary: majors,
-      audienceSummary: audienceSummary,
-      originalFields: {
-        ...first,
-        '_audience_summary': audienceSummary,
-        '_source_row_count': rows.length.toString(),
-      },
-    );
-  }
-
-  final String id;
-  final String termKey;
-  final String courseHeadId;
-  final Map<String, String> row;
-  final List<Map<String, String>> rows;
-  final String instructorSummary;
-  final String gradeSummary;
-  final String majorSummary;
-  final String audienceSummary;
-  final Map<String, String> originalFields;
-}
-
-String _weekdaySummary(Map<String, String> row) {
-  return [
-    for (final field in DriftAllSchoolTimetableRepository._weekdayFields)
-      if ((row[field.code] ?? '').trim().isNotEmpty) field.label,
-  ].join('、');
-}
-
-String _stableCourseHeadId(String termKey, Map<String, String> row) {
-  final normalized = ['head', termKey, row['yskch'] ?? '']
-      .map(
-        (part) => part
-            .trim()
-            .split(RegExp(r'\s+'))
-            .where((item) => item.isNotEmpty)
-            .join(' '),
-      )
-      .join('\x1f');
-  return sha256.convert(utf8.encode(normalized)).toString().substring(0, 32);
-}
-
-String _uniqueSummary(Iterable<String> values, {int maxItems = 3}) {
-  final unique = <String>[];
-  for (final value in values) {
-    final normalized = value.trim();
-    if (normalized.isNotEmpty && !unique.contains(normalized)) {
-      unique.add(normalized);
-    }
-  }
-  if (unique.length <= maxItems) {
-    return unique.join('、');
-  }
-  return '${unique.take(maxItems).join('、')}等 ${unique.length} 项';
-}
-
-class _WeekdayField {
-  const _WeekdayField(this.weekday, this.code, this.label);
-
-  final int weekday;
-  final String code;
-  final String label;
 }
 
 class _PeopleCount {
@@ -1004,12 +608,4 @@ class _PeopleCount {
 
   final int? capacity;
   final int? selected;
-}
-
-class _LocationParts {
-  const _LocationParts(this.locationText, this.building, this.room);
-
-  final String locationText;
-  final String building;
-  final String room;
 }

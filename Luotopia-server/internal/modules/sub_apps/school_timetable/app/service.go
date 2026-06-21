@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,6 +50,9 @@ func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
+	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
+		return domain.ImportResult{}, err
+	}
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
 		Checksum: PackageChecksum(data),
@@ -65,30 +69,38 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
+	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
+		return domain.ImportResult{}, err
+	}
 	version, err := s.repo.NextVersion(ctx, pkg.Manifest.TermKey)
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
-	checksum := PackageChecksum(data)
-	fileKey := fmt.Sprintf("%s-v%d.ndjson.gz", sanitizeFilePart(pkg.Manifest.TermKey), version)
+	rawChecksum := PackageChecksum(data)
+	records := BuildRecords(pkg)
+	snapshotData, err := GzipSnapshot(pkg, records)
+	if err != nil {
+		return domain.ImportResult{}, err
+	}
+	snapshotChecksum := PackageChecksum(snapshotData)
+	fileKey := fmt.Sprintf("%s-v%d-unified.json.gz", sanitizeFilePart(pkg.Manifest.TermKey), version)
 	if err := os.MkdirAll(s.snapshotDir, 0755); err != nil {
 		return domain.ImportResult{}, err
 	}
-	if err := os.WriteFile(filepath.Join(s.snapshotDir, fileKey), data, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(s.snapshotDir, fileKey), snapshotData, 0644); err != nil {
 		return domain.ImportResult{}, err
 	}
 	now := time.Now().UTC()
 	release := domain.Release{
-		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: checksum,
+		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: snapshotChecksum,
 		FileKey: fileKey, RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
 	}
-	records := BuildRecords(pkg)
 	if err := s.repo.Publish(ctx, pkg, release, records); err != nil {
 		return domain.ImportResult{}, err
 	}
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
-		Checksum: checksum,
+		Checksum: rawChecksum,
 		RowCount: len(pkg.Rows),
 		Version:  version,
 	}, nil
@@ -115,83 +127,94 @@ func (s *Service) SnapshotPath(ctx context.Context, termKey string, version int)
 }
 
 type Records struct {
-	Heads     []domain.CourseHead
-	Offerings []domain.CourseOffering
-	Audiences []domain.CourseAudience
-	RawRows   []domain.RawRow
-	Meetings  []domain.Meeting
+	Catalogs          []domain.CourseCatalog
+	TermCourses       []domain.TermCourse
+	InstructorCourses []domain.InstructorCourse
+	Offerings         []domain.CourseOffering
+	Audiences         []domain.CourseAudience
+	SourceRows        []domain.SourceRow
+	MeetingRules      []domain.CourseMeetingRule
+	Occurrences       []domain.CourseOccurrence
 }
 
 func BuildRecords(pkg domain.Package) Records {
-	rowRecords := make([]domain.RawRow, 0, len(pkg.Rows))
-	meetingRecords := make([]domain.Meeting, 0, len(pkg.Rows))
-	headRows := make(map[string][]map[string]string)
+	weekOneMonday, _ := time.Parse("2006-01-02", pkg.Manifest.FirstWeekMonday)
+	sourceRows := make([]domain.SourceRow, 0, len(pkg.Rows))
+	ruleRecords := make([]domain.CourseMeetingRule, 0, len(pkg.Rows))
+	occurrenceRecords := make([]domain.CourseOccurrence, 0, len(pkg.Rows)*8)
+	termCourseRows := make(map[string][]map[string]string)
 	offeringRows := make(map[string][]map[string]string)
 	offeringOrder := make([]string, 0, len(pkg.Rows))
 	sourceOrdinals := make(map[string]int, len(pkg.Rows))
+
 	for index, row := range pkg.Rows {
 		canonical := canonicalSourceRow(row)
 		sourceOrdinals[canonical]++
-		rawID := sourceRowID(pkg.Manifest.TermKey, canonical, sourceOrdinals[canonical])
+		sourceID := sourceRowID(pkg.Manifest.TermKey, canonical, sourceOrdinals[canonical])
 		if !canBuildEntity(row) {
-			rowRecords = append(rowRecords, domain.RawRow{
-				ID: rawID, TermKey: pkg.Manifest.TermKey, SourceKey: row["key"],
-				PackageIndex: index + 1, Status: "incomplete",
-				SchoolYear: row["xn"], Term: row["xq"], TeachingClassName: row["jxbmc"],
-				CourseNo: row["yskch"], CourseName: row["kcmc"], OpenCollege: row["skxy"],
-				PlanCollege: row["jhxy"], Credits: row["kcxf"], CourseNature: row["kcxzmc"],
-				CourseCategory: row["kclbmc"], OpenType: row["kklxmc"], Grade: row["nj"],
-				Major: row["jszy"], Instructor: row["jsxm"], Title: row["jszc"], PeopleRaw: row["skrs"],
-				Fields: row,
+			sourceRows = append(sourceRows, domain.SourceRow{
+				ID: sourceID, TermKey: pkg.Manifest.TermKey, SourceKey: row["key"],
+				PackageIndex: index + 1, Status: "incomplete", Fields: row,
 			})
 			continue
 		}
-		headID := courseHeadID(pkg.Manifest.TermKey, row)
+		catalogID := courseCatalogID(row)
+		termCourseID := termCourseID(pkg.Manifest.TermKey, catalogID)
 		offeringID := courseOfferingID(pkg.Manifest.TermKey, row)
-		headRows[headID] = append(headRows[headID], row)
+		termCourseRows[termCourseID] = append(termCourseRows[termCourseID], row)
 		if _, ok := offeringRows[offeringID]; !ok {
 			offeringOrder = append(offeringOrder, offeringID)
 		}
 		offeringRows[offeringID] = append(offeringRows[offeringID], row)
-		rowRecords = append(rowRecords, domain.RawRow{
-			ID: rawID, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID, OfferingID: offeringID, SourceKey: row["key"],
-			PackageIndex: index + 1, Status: "active",
-			SchoolYear: row["xn"], Term: row["xq"], TeachingClassName: row["jxbmc"],
-			CourseNo: row["yskch"], CourseName: row["kcmc"], OpenCollege: row["skxy"],
-			PlanCollege: row["jhxy"], Credits: row["kcxf"], CourseNature: row["kcxzmc"],
-			CourseCategory: row["kclbmc"], OpenType: row["kklxmc"], Grade: row["nj"],
-			Major: row["jszy"], Instructor: row["jsxm"], Title: row["jszc"], PeopleRaw: row["skrs"],
-			Fields: row,
+		sourceRows = append(sourceRows, domain.SourceRow{
+			ID: sourceID, TermKey: pkg.Manifest.TermKey, TermCourseID: termCourseID, OfferingID: offeringID,
+			SourceKey: row["key"], PackageIndex: index + 1, Status: "active", Fields: row,
 		})
 	}
+
 	offerings := make([]domain.CourseOffering, 0, len(offeringRows))
 	audienceByID := make(map[string]domain.CourseAudience)
+	instructorByID := make(map[string]domain.InstructorCourse)
 	for _, id := range offeringOrder {
 		rows := offeringRows[id]
 		first := rows[0]
-		headID := courseHeadID(pkg.Manifest.TermKey, first)
-		teachers := uniqueSummary(mapValues(rows, "jsxm"), 3, "位教师")
+		catalogID := courseCatalogID(first)
+		termCourseID := termCourseID(pkg.Manifest.TermKey, catalogID)
+		instructorName := uniqueSummary(mapValues(rows, "jsxm"), 3, "位教师")
+		instructorID := instructorCourseID(catalogID, instructorName)
 		audienceSummary := audienceSummary(rows)
 		searchText := strings.Join(nonEmpty([]string{
-			first["kcmc"], first["yskch"], first["jxbmc"], first["skxy"], teachers, audienceSummary,
+			first["kcmc"], first["yskch"], first["jxbmc"], first["skxy"], instructorName, audienceSummary,
 			first["xkbz"], first["qtjs"], first["jcmc"],
 		}), " ")
 		offerings = append(offerings, domain.CourseOffering{
-			ID: id, TermKey: pkg.Manifest.TermKey, CourseHeadID: headID,
-			TeachingClassName: first["jxbmc"], CourseNo: first["yskch"], CourseName: first["kcmc"],
-			OpenCollege: first["skxy"], Credits: first["kcxf"], Instructor: teachers,
-			TeacherKey: normalizeKey(first["jsxm"]), Title: first["jszc"], PeopleRaw: first["skrs"],
-			TheoryHours: first["xsdm_01"], ComputerHours: first["xsdm_02"], ExperimentHours: first["xsdm_03"], PracticeHours: first["xsdm_04"],
-			Remark: first["xkbz"], OtherTeachers: first["qtjs"], Textbook: first["jcmc"], Publisher: first["cbs"],
+			ID: id, TermKey: pkg.Manifest.TermKey, SchoolYear: pkg.Manifest.SchoolYear, Term: pkg.Manifest.Term,
+			TermCourseID: termCourseID, CatalogID: catalogID, InstructorCourseID: instructorID,
+			SourceKey: first["key"], TeachingClassName: first["jxbmc"], CourseNo: first["yskch"],
+			CourseName: first["kcmc"], OpenCollege: first["skxy"], Credits: first["kcxf"],
+			Instructor: instructorName, InstructorKey: normalizeKey(instructorName), Title: first["jszc"],
+			PeopleRaw: first["skrs"], TheoryHours: first["xsdm_01"], ComputerHours: first["xsdm_02"],
+			ExperimentHours: first["xsdm_03"], PracticeHours: first["xsdm_04"], Remark: first["xkbz"],
+			OtherTeachers: first["qtjs"], Textbook: first["jcmc"], Publisher: first["cbs"],
 			ScheduleSignature: scheduleSignature(first), ScheduleSummary: scheduleSummary(first),
 			WeekdaySummary:  strings.Join(weekdaySummaries([]map[string]string{first}), "、"),
 			AudienceSummary: audienceSummary, SourceRowCount: len(rows), SearchText: searchText, Fields: first,
 		})
-		meetingRecords = append(meetingRecords, meetingsForRow(pkg.Manifest.TermKey, headID, id, first)...)
+		instructorByID[instructorID] = domain.InstructorCourse{
+			ID: instructorID, CatalogID: catalogID, CourseNo: first["yskch"], CourseName: first["kcmc"],
+			Credits: first["kcxf"], InstructorName: instructorName, InstructorNameKey: normalizeKey(instructorName),
+			LatestTermKey: pkg.Manifest.TermKey, LatestOpenCollege: first["skxy"], LatestTeachingTitle: first["jszc"],
+			SearchText: strings.Join(nonEmpty([]string{first["kcmc"], first["yskch"], instructorName, first["skxy"]}), " "),
+		}
+		rules := meetingRulesForRow(pkg.Manifest.TermKey, termCourseID, catalogID, id, first)
+		ruleRecords = append(ruleRecords, rules...)
+		for _, rule := range rules {
+			occurrenceRecords = append(occurrenceRecords, occurrencesForRule(weekOneMonday, rule)...)
+		}
 		for _, row := range rows {
 			audience := domain.CourseAudience{
-				ID: courseAudienceID(pkg.Manifest.TermKey, id, row), TermKey: pkg.Manifest.TermKey,
-				OfferingID: id, CourseHeadID: headID, Grade: row["nj"], Major: row["jszy"],
+				ID: courseAudienceID(id, row), TermKey: pkg.Manifest.TermKey,
+				OfferingID: id, TermCourseID: termCourseID, CatalogID: catalogID, Grade: row["nj"], Major: row["jszy"],
 				PlanCollege: row["jhxy"], CourseNature: row["kcxzmc"], CourseNatureCode: row["kcxzdm"],
 				CourseCategory: row["kclbmc"], CourseCategoryCode: row["kclbdm"],
 				OpenType: row["kklxmc"], OpenTypeCode: row["kklxdm"], ConditionCode: row["kkbm_id2"],
@@ -199,29 +222,43 @@ func BuildRecords(pkg domain.Package) Records {
 			audienceByID[audience.ID] = audience
 		}
 	}
-	audiences := make([]domain.CourseAudience, 0, len(audienceByID))
-	for _, item := range audienceByID {
-		audiences = append(audiences, item)
-	}
-	sort.Slice(audiences, func(i, j int) bool { return audiences[i].ID < audiences[j].ID })
 
-	heads := make([]domain.CourseHead, 0, len(headRows))
-	for id, rows := range headRows {
+	termCourses := make([]domain.TermCourse, 0, len(termCourseRows))
+	catalogByID := make(map[string]domain.CourseCatalog)
+	for id, rows := range termCourseRows {
 		first := rows[0]
+		catalogID := courseCatalogID(first)
+		catalogByID[catalogID] = domain.CourseCatalog{
+			ID: catalogID, CatalogKey: catalogKey(first), CourseNo: first["yskch"],
+			CourseName: first["kcmc"], Credits: first["kcxf"],
+			SearchText: strings.Join(nonEmpty([]string{first["kcmc"], first["yskch"], first["kcxf"]}), " "),
+		}
 		teachers := uniqueSummary(mapValues(rows, "jsxm"), 3, "位教师")
 		weekdays := uniqueSummary(weekdaySummaries(rows), 4, "组时间")
 		searchText := strings.Join(nonEmpty([]string{
 			first["kcmc"], first["yskch"], first["skxy"], first["kcxzmc"], first["kclbmc"], first["kklxmc"], teachers, weekdays,
 		}), " ")
-		heads = append(heads, domain.CourseHead{
-			ID: id, TermKey: pkg.Manifest.TermKey, CourseHeadKey: first["yskch"], CourseNo: first["yskch"],
+		termCourses = append(termCourses, domain.TermCourse{
+			ID: id, TermKey: pkg.Manifest.TermKey, CatalogID: catalogID, CourseNo: first["yskch"],
 			CourseName: first["kcmc"], OpenCollege: first["skxy"], Credits: first["kcxf"],
 			CourseNature: first["kcxzmc"], CourseCategory: first["kclbmc"], OpenType: first["kklxmc"],
-			TeachingClassCount: countOfferingsForHead(offerings, id), TeacherSummary: teachers, WeekdaySummary: weekdays, SearchText: searchText,
+			TeachingClassCount: countOfferingsForTermCourse(offerings, id), TeacherSummary: teachers,
+			WeekdaySummary: weekdays, SearchText: searchText,
 		})
 	}
-	sort.Slice(heads, func(i, j int) bool { return heads[i].ID < heads[j].ID })
-	return Records{Heads: heads, Offerings: offerings, Audiences: audiences, RawRows: rowRecords, Meetings: meetingRecords}
+	catalogs := sortedCatalogs(catalogByID)
+	audiences := sortedAudiences(audienceByID)
+	instructorCourses := sortedInstructorCourses(instructorByID)
+	countInstructorOfferings(instructorCourses, offerings)
+	sort.Slice(termCourses, func(i, j int) bool { return termCourses[i].ID < termCourses[j].ID })
+	sort.Slice(offerings, func(i, j int) bool { return offerings[i].ID < offerings[j].ID })
+	sort.Slice(ruleRecords, func(i, j int) bool { return ruleRecords[i].ID < ruleRecords[j].ID })
+	sort.Slice(occurrenceRecords, func(i, j int) bool { return occurrenceRecords[i].ID < occurrenceRecords[j].ID })
+	return Records{
+		Catalogs: catalogs, TermCourses: termCourses, InstructorCourses: instructorCourses,
+		Offerings: offerings, Audiences: audiences, SourceRows: sourceRows,
+		MeetingRules: ruleRecords, Occurrences: occurrenceRecords,
+	}
 }
 
 func GzipPackage(pkg domain.Package) ([]byte, error) {
@@ -259,6 +296,31 @@ func GzipPackage(pkg domain.Package) ([]byte, error) {
 	return compressed.Bytes(), nil
 }
 
+func GzipSnapshot(pkg domain.Package, records Records) ([]byte, error) {
+	manifest := pkg.Manifest
+	manifest.SchemaVersion = 2
+	manifest.RowCount = len(pkg.Rows)
+	snapshot := domain.Snapshot{
+		Manifest: manifest, Catalogs: records.Catalogs, TermCourses: records.TermCourses,
+		InstructorCourses: records.InstructorCourses, Offerings: records.Offerings,
+		Audiences: records.Audiences, MeetingRules: records.MeetingRules,
+		Occurrences: records.Occurrences, SourceRows: records.SourceRows,
+	}
+	data, err := json.Marshal(snapshot)
+	if err != nil {
+		return nil, err
+	}
+	var compressed bytes.Buffer
+	writer := gzip.NewWriter(&compressed)
+	if _, err := writer.Write(data); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return compressed.Bytes(), nil
+}
+
 var weekdayFields = []struct {
 	index int
 	code  string
@@ -268,21 +330,93 @@ var weekdayFields = []struct {
 	{4, "thu", "周四"}, {5, "fri", "周五"}, {6, "sat", "周六"},
 }
 
-func meetingsForRow(termKey, headID, offeringID string, row map[string]string) []domain.Meeting {
-	result := make([]domain.Meeting, 0, 2)
+func meetingRulesForRow(termKey, termCourseID, catalogID, offeringID string, row map[string]string) []domain.CourseMeetingRule {
+	result := make([]domain.CourseMeetingRule, 0, 2)
 	for _, field := range weekdayFields {
 		raw := strings.TrimSpace(row[field.code])
 		if raw == "" {
 			continue
 		}
 		location, building, room := extractLocation(raw)
-		result = append(result, domain.Meeting{
-			ID: fmt.Sprintf("%s:%d:0", offeringID, field.index), OfferingID: offeringID, TermKey: termKey, CourseHeadID: headID,
-			Weekday: field.index, SegmentIndex: 0, WeekdayLabel: field.label, RawText: raw,
-			LocationText: location, Building: building, Room: room,
+		weekText := extractFirst(raw, `\d+(?:-\d+)?周(?:\((?:单|双)\))?`)
+		sectionText := extractFirst(raw, `\d+(?:-\d+)?节`)
+		ruleID := stableID("meeting_rule", offeringID, fmt.Sprintf("%d", field.index), raw)
+		result = append(result, domain.CourseMeetingRule{
+			ID: ruleID, OfferingID: offeringID, TermKey: termKey, TermCourseID: termCourseID, CatalogID: catalogID,
+			Weekday: field.index, SegmentIndex: len(result), WeekdayLabel: field.label, RawText: raw,
+			WeekText: weekText, SectionText: sectionText, LocationText: location, Building: building, Room: room,
 		})
 	}
 	return result
+}
+
+func occurrencesForRule(firstMonday time.Time, rule domain.CourseMeetingRule) []domain.CourseOccurrence {
+	if firstMonday.IsZero() {
+		return nil
+	}
+	weeks := parseWeekSpans(rule.RawText)
+	if len(weeks) == 0 {
+		return nil
+	}
+	offset := rule.Weekday - 1
+	if rule.Weekday == 0 {
+		offset = 6
+	}
+	result := make([]domain.CourseOccurrence, 0, 16)
+	for _, week := range weeks {
+		for index := week.start; index <= week.end; index++ {
+			if week.parity == "单" && index%2 == 0 {
+				continue
+			}
+			if week.parity == "双" && index%2 != 0 {
+				continue
+			}
+			date := firstMonday.AddDate(0, 0, (index-1)*7+offset)
+			id := stableID("occurrence", rule.ID, date.Format("2006-01-02"), rule.SectionText, rule.LocationText)
+			result = append(result, domain.CourseOccurrence{
+				ID: id, RuleID: rule.ID, OfferingID: rule.OfferingID, TermKey: rule.TermKey,
+				TermCourseID: rule.TermCourseID, CatalogID: rule.CatalogID, Date: date.Format("2006-01-02"),
+				WeekIndex: index, Weekday: rule.Weekday, SectionText: rule.SectionText,
+				LocationText: rule.LocationText, Building: rule.Building, Room: rule.Room,
+			})
+		}
+	}
+	return result
+}
+
+type weekSpan struct {
+	start  int
+	end    int
+	parity string
+}
+
+func parseWeekSpans(raw string) []weekSpan {
+	re := regexp.MustCompile(`(\d+)(?:-(\d+))?周(?:\((单|双)\))?`)
+	matches := re.FindAllStringSubmatch(raw, -1)
+	result := make([]weekSpan, 0, len(matches))
+	for _, match := range matches {
+		start, _ := strconv.Atoi(match[1])
+		end := start
+		if match[2] != "" {
+			end, _ = strconv.Atoi(match[2])
+		}
+		if start <= 0 || end < start {
+			continue
+		}
+		result = append(result, weekSpan{start: start, end: end, parity: match[3]})
+	}
+	return result
+}
+
+func validateFirstWeekMonday(value string) error {
+	parsed, err := time.Parse("2006-01-02", strings.TrimSpace(value))
+	if err != nil {
+		return fmt.Errorf("%w: first_week_monday", ErrInvalidPackage)
+	}
+	if parsed.Weekday() != time.Monday {
+		return fmt.Errorf("%w: first_week_monday is not monday", ErrInvalidPackage)
+	}
+	return nil
 }
 
 func sourceRowID(termKey, canonical string, ordinal int) string {
@@ -315,16 +449,28 @@ func canBuildEntity(row map[string]string) bool {
 	return true
 }
 
-func courseHeadID(termKey string, row map[string]string) string {
-	return stableID("head", termKey, row["yskch"])
+func catalogKey(row map[string]string) string {
+	return strings.Join([]string{normalizeKey(row["yskch"]), normalizeKey(row["kcmc"]), normalizeKey(row["kcxf"])}, "\x1f")
+}
+
+func courseCatalogID(row map[string]string) string {
+	return stableID("catalog", row["yskch"], row["kcmc"], row["kcxf"])
+}
+
+func termCourseID(termKey, catalogID string) string {
+	return stableID("term_course", termKey, catalogID)
+}
+
+func instructorCourseID(catalogID, instructorName string) string {
+	return stableID("instructor_course", catalogID, instructorName)
 }
 
 func courseOfferingID(termKey string, row map[string]string) string {
 	return stableID("offering", termKey, row["jxbmc"], row["jsxm"], scheduleSignature(row))
 }
 
-func courseAudienceID(termKey, offeringID string, row map[string]string) string {
-	return stableID("audience", termKey, offeringID, row["nj"], row["jszy"], row["jhxy"], row["kcxzdm"], row["kclbdm"], row["kklxdm"], row["kkbm_id2"])
+func courseAudienceID(offeringID string, row map[string]string) string {
+	return stableID("audience", offeringID, row["nj"], row["jszy"], row["jhxy"], row["kcxzdm"], row["kclbdm"], row["kklxdm"], row["kkbm_id2"])
 }
 
 func stableID(parts ...string) string {
@@ -364,14 +510,24 @@ func audienceSummary(rows []map[string]string) string {
 	return strings.Join(nonEmpty([]string{grades, majors}), " / ")
 }
 
-func countOfferingsForHead(offerings []domain.CourseOffering, headID string) int {
+func countOfferingsForTermCourse(offerings []domain.CourseOffering, termCourseID string) int {
 	count := 0
 	for _, offering := range offerings {
-		if offering.CourseHeadID == headID {
+		if offering.TermCourseID == termCourseID {
 			count++
 		}
 	}
 	return count
+}
+
+func countInstructorOfferings(instructors []domain.InstructorCourse, offerings []domain.CourseOffering) {
+	counts := map[string]int{}
+	for _, offering := range offerings {
+		counts[offering.InstructorCourseID]++
+	}
+	for i := range instructors {
+		instructors[i].OfferingCount = counts[instructors[i].ID]
+	}
 }
 
 func weekdaySummaries(rows []map[string]string) []string {
@@ -426,6 +582,11 @@ func nonEmpty(values []string) []string {
 	return result
 }
 
+func extractFirst(raw string, pattern string) string {
+	match := regexp.MustCompile(pattern).FindString(raw)
+	return strings.TrimSpace(match)
+}
+
 func extractLocation(raw string) (string, string, string) {
 	matches := regexp.MustCompile(`((?:\d区|虚拟教室)[^,，;；)]*)`).FindAllStringSubmatch(raw, -1)
 	if len(matches) == 0 {
@@ -445,4 +606,31 @@ func extractLocation(raw string) (string, string, string) {
 func sanitizeFilePart(value string) string {
 	value = regexp.MustCompile(`[^A-Za-z0-9._-]+`).ReplaceAllString(value, "_")
 	return strings.Trim(value, "_")
+}
+
+func sortedCatalogs(input map[string]domain.CourseCatalog) []domain.CourseCatalog {
+	result := make([]domain.CourseCatalog, 0, len(input))
+	for _, item := range input {
+		result = append(result, item)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result
+}
+
+func sortedAudiences(input map[string]domain.CourseAudience) []domain.CourseAudience {
+	result := make([]domain.CourseAudience, 0, len(input))
+	for _, item := range input {
+		result = append(result, item)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result
+}
+
+func sortedInstructorCourses(input map[string]domain.InstructorCourse) []domain.InstructorCourse {
+	result := make([]domain.InstructorCourse, 0, len(input))
+	for _, item := range input {
+		result = append(result, item)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result
 }

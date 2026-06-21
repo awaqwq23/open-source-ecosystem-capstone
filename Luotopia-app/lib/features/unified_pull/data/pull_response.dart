@@ -205,6 +205,7 @@ class SchoolTimetableTermUpdate {
   final String termKey;
   final String schoolYear;
   final String term;
+  final String firstWeekMonday;
   final int version;
   final String checksum;
   final int rowCount;
@@ -215,6 +216,7 @@ class SchoolTimetableTermUpdate {
     required this.termKey,
     required this.schoolYear,
     required this.term,
+    required this.firstWeekMonday,
     required this.version,
     required this.checksum,
     required this.rowCount,
@@ -227,6 +229,7 @@ class SchoolTimetableTermUpdate {
       termKey: json['term_key'] as String? ?? '',
       schoolYear: json['school_year'] as String? ?? '',
       term: json['term'] as String? ?? '',
+      firstWeekMonday: json['first_week_monday'] as String? ?? '',
       version: (json['version'] as num?)?.toInt() ?? 0,
       checksum: json['checksum'] as String? ?? '',
       rowCount: (json['row_count'] as num?)?.toInt() ?? 0,

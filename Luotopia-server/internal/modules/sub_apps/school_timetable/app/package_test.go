@@ -10,16 +10,17 @@ import (
 
 func TestParsePackageAcceptsValidRows(t *testing.T) {
 	data := packageBytes(t, map[string]any{
-		"type":            "manifest",
-		"schema_version":  1,
-		"term_key":        "2025-2026-1",
-		"school_year":     "2025-2026",
-		"term":            "1",
-		"field_codes":     []string{"key", "xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs", "fri"},
-		"row_count":       1,
-		"generated_at":    "2026-06-18T00:00:00Z",
-		"source":          "test",
-		"source_checksum": "sha256:test",
+		"type":              "manifest",
+		"schema_version":    1,
+		"term_key":          "2025-2026-1",
+		"school_year":       "2025-2026",
+		"term":              "1",
+		"field_codes":       []string{"key", "xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs", "fri"},
+		"row_count":         1,
+		"first_week_monday": "2025-09-01",
+		"generated_at":      "2026-06-18T00:00:00Z",
+		"source":            "test",
+		"source_checksum":   "sha256:test",
 	}, []map[string]string{
 		{
 			"key": "K1", "xn": "2025-2026", "xq": "1", "jxbmc": "教学班",
@@ -42,13 +43,14 @@ func TestParsePackageAcceptsValidRows(t *testing.T) {
 
 func TestParsePackageAcceptsMissingSourceKey(t *testing.T) {
 	data := packageBytes(t, map[string]any{
-		"type":           "manifest",
-		"schema_version": 1,
-		"term_key":       "2025-2026-1",
-		"school_year":    "2025-2026",
-		"term":           "1",
-		"field_codes":    []string{"xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs", "fri"},
-		"row_count":      1,
+		"type":              "manifest",
+		"schema_version":    1,
+		"term_key":          "2025-2026-1",
+		"school_year":       "2025-2026",
+		"term":              "1",
+		"field_codes":       []string{"xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs", "fri"},
+		"row_count":         1,
+		"first_week_monday": "2025-09-01",
 	}, []map[string]string{
 		{
 			"xn": "2025-2026", "xq": "1", "jxbmc": "教学班", "yskch": "3200520011014",

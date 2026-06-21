@@ -133,7 +133,8 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 					block.Changed = true
 					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
 						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
-						Version: term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
+						FirstWeekMonday: term.FirstWeekMonday,
+						Version:         term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
 						Links: map[string]domain.Link{
 							"snapshot": {Href: schoolcontract.SnapshotPath(term.TermKey, term.Version)},
 						},
