@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/whu_auth/domain/repositories/whu_auth_gateway.dart';
 import 'package:luotopia/shared/domain/entities/agenda_item.dart';
 import 'package:luotopia/shared/domain/entities/item_draft.dart';
@@ -13,12 +14,22 @@ import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
 class WhuCourseImportPayload {
   const WhuCourseImportPayload({
-    required this.items,
+    required this.entries,
     required this.termLabel,
   });
 
-  final List<ItemDraft> items;
+  final List<WhuCourseImportEntry> entries;
   final String termLabel;
+
+  List<ItemDraft> get items =>
+      entries.map((entry) => entry.draft).toList(growable: false);
+}
+
+class WhuCourseImportEntry {
+  const WhuCourseImportEntry({required this.draft, required this.matchQuery});
+
+  final ItemDraft draft;
+  final PersonalCourseMatchQuery matchQuery;
 }
 
 class WhuCourseImportService {
@@ -94,11 +105,19 @@ class WhuCourseImportService {
         continue;
       }
 
-      final courseId = (item['jxbmc'] as String? ?? '').trim();
-      final courseNature = _pickFirstText(
-        item,
-        const ['kcxz', 'kcxzmc', 'kclbmc', 'kclb'],
-      );
+      final courseNo = _pickFirstText(item, const ['kch', 'kch_id']);
+      final teachingClassName = _pickFirstText(item, const ['jxbmc']);
+      final sourceCourseId = _pickFirstText(item, const [
+        'jxb_id',
+        'jxbmc',
+        'kch',
+      ]);
+      final courseNature = _pickFirstText(item, const [
+        'kcxz',
+        'kcxzmc',
+        'kclbmc',
+        'kclb',
+      ]);
       final instructor = (item['xm'] as String? ?? '').trim();
       final location = (item['cdmc'] as String? ?? '').trim();
       final weekMeta = (item['zcd'] as String? ?? '').trim();
@@ -108,23 +127,38 @@ class WhuCourseImportService {
           weekday: weekday,
           classPeriod: classPeriod,
           weeks: weeks,
-          courseId: courseId,
+          courseNo: courseNo,
+          teachingClassName: teachingClassName,
+          sourceCourseId: sourceCourseId,
           courseNature: courseNature,
           instructor: instructor,
           location: location,
           weekMeta: weekMeta,
-          startText: _pickFirstText(item, const ['kssj', 'sksj_kssj', 'kssj_hhmm']),
-          endText: _pickFirstText(item, const ['jssj', 'sksj_jssj', 'jssj_hhmm']),
+          startText: _pickFirstText(item, const [
+            'kssj',
+            'sksj_kssj',
+            'kssj_hhmm',
+          ]),
+          endText: _pickFirstText(item, const [
+            'jssj',
+            'sksj_jssj',
+            'jssj_hhmm',
+          ]),
         ),
       );
     }
 
-    final colorByTitle = _assignCourseColors(courses.map((course) => course.title));
-    final items = <ItemDraft>[];
+    final colorByTitle = _assignCourseColors(
+      courses.map((course) => course.title),
+    );
+    final entries = <WhuCourseImportEntry>[];
+    final termKey = '$year-${year + 1}-$semester';
     for (final course in courses) {
       final color = colorByTitle[course.title] ?? _pickColor(course.title);
       for (final week in course.weeks) {
-        final date = normalizedWeekOne.add(Duration(days: (week - 1) * 7 + (course.weekday - 1)));
+        final date = normalizedWeekOne.add(
+          Duration(days: (week - 1) * 7 + (course.weekday - 1)),
+        );
         final periodTime = _parsePeriodTime(
           startText: course.startText,
           endText: course.endText,
@@ -147,39 +181,52 @@ class WhuCourseImportService {
           endMinute ~/ 60,
           endMinute % 60,
         );
-        items.add(
-          ItemDraft(
-            type: ItemType.course,
-            title: course.title,
-            notes: '',
-            location: course.location,
-            color: color,
-            reminder: ReminderOption.none,
-            repeatRule: RepeatRule.none,
-            details: CourseAgendaItemDetails(
-              startAt: startAt,
-              endAt: endAt,
-              isAllDay: false,
-              course: ItemCourseDetails(
-                sourceKind: CourseItemSourceKind.whuJw,
-                sourceCourseId: course.courseId,
-                courseNature: course.courseNature,
-                instructor: course.instructor,
-                weekMeta: course.weekMeta,
-              ),
+        final sectionText =
+            '${course.classPeriod.classFrom}-${course.classPeriod.classTo}';
+        final draft = ItemDraft(
+          type: ItemType.course,
+          title: course.title,
+          notes: '',
+          location: course.location,
+          color: color,
+          reminder: ReminderOption.none,
+          repeatRule: RepeatRule.none,
+          details: CourseAgendaItemDetails(
+            startAt: startAt,
+            endAt: endAt,
+            isAllDay: false,
+            course: ItemCourseDetails(
+              sourceKind: CourseItemSourceKind.whuJw,
+              sourceCourseId: course.sourceCourseId,
+              courseNature: course.courseNature,
+              instructor: course.instructor,
+              weekMeta: course.weekMeta,
             ),
-            sourceKind: AgendaItemSourceKind.whuCourse,
-            sourceRef: course.courseId,
+          ),
+          sourceKind: AgendaItemSourceKind.whuCourse,
+          sourceRef: course.sourceCourseId,
+        );
+        entries.add(
+          WhuCourseImportEntry(
+            draft: draft,
+            matchQuery: PersonalCourseMatchQuery(
+              termKey: termKey,
+              courseNo: course.courseNo,
+              courseName: course.title,
+              teachingClassName: course.teachingClassName,
+              instructor: course.instructor,
+              weekday: course.weekday,
+              sectionText: sectionText,
+              locationText: course.location,
+              date: date,
+            ),
           ),
         );
       }
     }
 
     final termLabel = '$year-${year + 1} 学期$semester';
-    return WhuCourseImportPayload(
-      items: items,
-      termLabel: termLabel,
-    );
+    return WhuCourseImportPayload(entries: entries, termLabel: termLabel);
   }
 
   int _mapSemester(int semester) {
@@ -260,7 +307,9 @@ class WhuCourseImportService {
     if (text.contains('四')) return 4;
     if (text.contains('五')) return 5;
     if (text.contains('六')) return 6;
-    if (text.contains('日') || text.contains('天') || text.contains('七')) return 7;
+    if (text.contains('日') || text.contains('天') || text.contains('七')) {
+      return 7;
+    }
     return null;
   }
 
@@ -330,7 +379,9 @@ class WhuCourseImportService {
   }) {
     final startFromText = _parseClockMinute(startText);
     final endFromText = _parseClockMinute(endText);
-    if (startFromText != null && endFromText != null && endFromText > startFromText) {
+    if (startFromText != null &&
+        endFromText != null &&
+        endFromText > startFromText) {
       return _PeriodTime(startMinute: startFromText, endMinute: endFromText);
     }
     return _periodTimeFromClassRange(classFrom: classFrom, classTo: classTo);
@@ -365,7 +416,10 @@ class WhuCourseImportService {
     if (fallbackEnd > fallbackStart) {
       return _PeriodTime(startMinute: fallbackStart, endMinute: fallbackEnd);
     }
-    return _PeriodTime(startMinute: fallbackStart, endMinute: fallbackStart + 45);
+    return _PeriodTime(
+      startMinute: fallbackStart,
+      endMinute: fallbackStart + 45,
+    );
   }
 
   int _periodStartMinute(int period) {
@@ -414,9 +468,7 @@ class WhuCourseImportService {
   Map<String, ItemColorOption> _assignCourseColors(Iterable<String> titles) {
     final colors = ItemColorOption.values;
     final result = <String, ItemColorOption>{};
-    final useCounts = {
-      for (final color in colors) color: 0,
-    };
+    final useCounts = {for (final color in colors) color: 0};
 
     for (final title in titles) {
       if (result.containsKey(title)) {
@@ -425,7 +477,11 @@ class WhuCourseImportService {
       final seed = _stableHash(title);
       final color = result.length < colors.length
           ? _pickUnusedColor(colors: colors, useCounts: useCounts, seed: seed)
-          : _pickLeastUsedColor(colors: colors, useCounts: useCounts, seed: seed);
+          : _pickLeastUsedColor(
+              colors: colors,
+              useCounts: useCounts,
+              seed: seed,
+            );
       result[title] = color;
       useCounts[color] = (useCounts[color] ?? 0) + 1;
     }
@@ -481,7 +537,9 @@ class _ParsedWhuCourse {
     required this.weekday,
     required this.classPeriod,
     required this.weeks,
-    required this.courseId,
+    required this.courseNo,
+    required this.teachingClassName,
+    required this.sourceCourseId,
     required this.courseNature,
     required this.instructor,
     required this.location,
@@ -494,7 +552,9 @@ class _ParsedWhuCourse {
   final int weekday;
   final _ClassPeriod classPeriod;
   final List<int> weeks;
-  final String courseId;
+  final String courseNo;
+  final String teachingClassName;
+  final String sourceCourseId;
   final String courseNature;
   final String instructor;
   final String location;
@@ -504,20 +564,14 @@ class _ParsedWhuCourse {
 }
 
 class _ClassPeriod {
-  const _ClassPeriod({
-    required this.classFrom,
-    required this.classTo,
-  });
+  const _ClassPeriod({required this.classFrom, required this.classTo});
 
   final int classFrom;
   final int classTo;
 }
 
 class _PeriodTime {
-  const _PeriodTime({
-    required this.startMinute,
-    required this.endMinute,
-  });
+  const _PeriodTime({required this.startMinute, required this.endMinute});
 
   final int startMinute;
   final int endMinute;

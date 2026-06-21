@@ -214,6 +214,16 @@ class LocalSyncStore {
                   ),
                   instructor: Value(details['instructor'] as String? ?? ''),
                   weekMeta: Value(details['week_meta'] as String? ?? ''),
+                  termCourseId: Value(
+                    details['term_course_id'] as String? ?? '',
+                  ),
+                  offeringId: Value(details['offering_id'] as String? ?? ''),
+                  instructorCourseId: Value(
+                    details['instructor_course_id'] as String? ?? '',
+                  ),
+                  occurrenceId: Value(
+                    details['occurrence_id'] as String? ?? '',
+                  ),
                 ),
               );
       }

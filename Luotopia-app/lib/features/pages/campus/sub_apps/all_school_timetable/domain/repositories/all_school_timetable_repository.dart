@@ -29,4 +29,6 @@ abstract class AllSchoolTimetableRepository {
   Future<SchoolTeachingClass?> findTeachingClass(String id);
 
   Future<List<SchoolClassMeeting>> loadMeetings(String teachingClassId);
+
+  Future<CourseEntityLink> matchPersonalCourse(PersonalCourseMatchQuery query);
 }

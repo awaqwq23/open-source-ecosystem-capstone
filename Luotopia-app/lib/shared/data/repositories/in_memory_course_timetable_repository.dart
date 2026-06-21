@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/shared/data/database/app_database.dart';
 import 'package:luotopia/shared/data/mutations/user_data_mutation_service.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/domain/repositories/course_timetable_repository.dart';
 
 class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
@@ -30,26 +31,24 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
       );
     }
 
-    final timetableSub = (_db.select(_db.courseTimetableRows)
-          ..where((row) => row.deletedAt.isNull())
-          ..orderBy([
-            (row) => OrderingTerm(expression: row.createdAt),
-          ]))
-        .watch()
-        .listen((rows) {
-      timetableRows = rows;
-      publish();
-    });
-    final selectedSub = (_db.select(_db.selectedCourseTimetableRows)
-          ..where((row) => row.deletedAt.isNull())
-          ..orderBy([
-            (row) => OrderingTerm(expression: row.sortOrder),
-          ]))
-        .watch()
-        .listen((rows) {
-      selectedRows = rows;
-      publish();
-    });
+    final timetableSub =
+        (_db.select(_db.courseTimetableRows)
+              ..where((row) => row.deletedAt.isNull())
+              ..orderBy([(row) => OrderingTerm(expression: row.createdAt)]))
+            .watch()
+            .listen((rows) {
+              timetableRows = rows;
+              publish();
+            });
+    final selectedSub =
+        (_db.select(_db.selectedCourseTimetableRows)
+              ..where((row) => row.deletedAt.isNull())
+              ..orderBy([(row) => OrderingTerm(expression: row.sortOrder)]))
+            .watch()
+            .listen((rows) {
+              selectedRows = rows;
+              publish();
+            });
     ref.onDispose(() {
       timetableSub.cancel();
       selectedSub.cancel();
@@ -84,6 +83,21 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
   }
 
   @override
+  Future<CourseTimetable> importCourseTimetable({
+    required String name,
+    required CourseTimetableSource source,
+    String termLabel = '',
+    required List<ItemDraft> items,
+  }) async {
+    return _mutations.importCourseTimetable(
+      name: name,
+      source: source,
+      termLabel: termLabel,
+      items: items,
+    );
+  }
+
+  @override
   Future<void> renameTimetable(String id, String newName) async {
     await _mutations.renameTimetable(id, newName);
   }
@@ -102,7 +116,8 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     return CourseTimetable(
       id: row.id,
       name: row.name,
-      source: _enumByName(CourseTimetableSource.values, row.source) ??
+      source:
+          _enumByName(CourseTimetableSource.values, row.source) ??
           CourseTimetableSource.manual,
       termLabel: row.termLabel,
       createdAt: row.createdAt,
@@ -122,10 +137,10 @@ class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
 
 final courseTimetableRepositoryProvider =
     NotifierProvider<InMemoryCourseTimetableRepository, CourseTimetableStore>(
-  InMemoryCourseTimetableRepository.new,
-);
+      InMemoryCourseTimetableRepository.new,
+    );
 
 final courseTimetableRepositoryNotifierProvider =
     Provider<CourseTimetableRepository>((ref) {
-  return ref.read(courseTimetableRepositoryProvider.notifier);
-});
+      return ref.read(courseTimetableRepositoryProvider.notifier);
+    });

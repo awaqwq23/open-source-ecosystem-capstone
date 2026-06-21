@@ -1,4 +1,5 @@
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 
 abstract class CourseTimetableRepository {
   CourseTimetableStore get store;
@@ -9,6 +10,13 @@ abstract class CourseTimetableRepository {
     required String name,
     required CourseTimetableSource source,
     String termLabel,
+  });
+
+  Future<CourseTimetable> importCourseTimetable({
+    required String name,
+    required CourseTimetableSource source,
+    String termLabel,
+    required List<ItemDraft> items,
   });
 
   Future<void> renameTimetable(String id, String newName);

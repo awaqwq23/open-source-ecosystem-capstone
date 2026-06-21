@@ -5,11 +5,12 @@ import 'package:gap/gap.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/data/drift_all_school_timetable_repository.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/timetable/course_import/data/whu_course_import_service.dart';
 import 'package:luotopia/features/whu_auth/whu_auth.dart';
-import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/domain/entities/course_timetable.dart';
+import 'package:luotopia/shared/domain/entities/item_draft.dart';
 import 'package:luotopia/shared/presentation/widgets/app_date_time_pickers.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -274,23 +275,53 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
           ? '${_selectedTerm.label(isZh)} ${_formatNow()}'
           : '$baseName ${_formatNow()}';
       final termLabel = _selectedTerm.termLabel();
-      final timetable = await ref
+      setState(() {
+        _statusText = isZh ? '正在关联统一课程实体...' : 'Linking course entities...';
+      });
+      final allSchoolRepo = ref.read(allSchoolTimetableRepositoryProvider);
+      await allSchoolRepo.ensureLocalDataReady();
+      final terms = await allSchoolRepo.loadTerms();
+      final hasSnapshot = terms.any((term) => term.termKey == termLabel);
+      final importItems = <ItemDraft>[];
+      var matchedCourseCount = 0;
+      var matchedOfferingCount = 0;
+      var matchedOccurrenceCount = 0;
+      if (hasSnapshot) {
+        for (final entry in payload.entries) {
+          final link = await allSchoolRepo.matchPersonalCourse(
+            entry.matchQuery,
+          );
+          if (link.hasCourse) {
+            matchedCourseCount++;
+          }
+          if (link.hasOffering) {
+            matchedOfferingCount++;
+          }
+          if (link.hasOccurrence) {
+            matchedOccurrenceCount++;
+          }
+          importItems.add(
+            entry.draft.copyWith(
+              courseDetails: entry.draft.courseDetails.copyWith(
+                termCourseId: link.termCourseId,
+                offeringId: link.offeringId,
+                instructorCourseId: link.instructorCourseId,
+                occurrenceId: link.occurrenceId,
+              ),
+            ),
+          );
+        }
+      } else {
+        importItems.addAll(payload.items);
+      }
+      await ref
           .read(courseTimetableRepositoryProvider.notifier)
-          .createTimetable(
+          .importCourseTimetable(
             name: tableName,
             source: CourseTimetableSource.whuJw,
             termLabel: termLabel,
+            items: importItems,
           );
-      final agendaRepo = ref.read(agendaItemRepositoryProvider.notifier);
-      for (final draft in payload.items) {
-        await agendaRepo.createItem(
-          draft.copyWith(
-            courseDetails: draft.courseDetails.copyWith(
-              timetableId: timetable.id,
-            ),
-          ),
-        );
-      }
 
       if (!mounted) {
         return;
@@ -300,7 +331,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         Duration(days: today.weekday - DateTime.monday),
       );
       final currentWeekEnd = currentWeekStart.add(const Duration(days: 7));
-      final currentWeekCount = payload.items.where((item) {
+      final currentWeekCount = importItems.where((item) {
         final startAt = item.timelineStartAt;
         final endAt = item.timelineEndAt;
         if (startAt == null || endAt == null) {
@@ -309,16 +340,23 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
         return endAt.isAfter(currentWeekStart) &&
             startAt.isBefore(currentWeekEnd);
       }).length;
+      final linkSummary = hasSnapshot
+          ? (isZh
+                ? '统一课程关联：课程 $matchedCourseCount，教学班 $matchedOfferingCount，课次 $matchedOccurrenceCount。'
+                : 'Linked entities: courses $matchedCourseCount, offerings $matchedOfferingCount, occurrences $matchedOccurrenceCount.')
+          : (isZh
+                ? '未找到 $termLabel 全校课表快照，本次仅导入个人课表。'
+                : 'No all-school timetable snapshot for $termLabel; imported personal timetable only.');
 
       setState(() {
         _statusText = isZh
-            ? '导入完成：新增 ${payload.items.length} 条，当前周 $currentWeekCount 条。'
-            : 'Import finished: ${payload.items.length} items, $currentWeekCount in current week.';
+            ? '导入完成：新增 ${importItems.length} 条，当前周 $currentWeekCount 条。$linkSummary'
+            : 'Import finished: ${importItems.length} items, $currentWeekCount in current week. $linkSummary';
       });
       _showMessage(
         isZh
-            ? '导入完成：新增 ${payload.items.length} 条课程事项，课程表「$tableName」。'
-            : 'Imported ${payload.items.length} items to "$tableName".',
+            ? '导入完成：新增 ${importItems.length} 条课程事项，课程表「$tableName」。'
+            : 'Imported ${importItems.length} items to "$tableName".',
       );
     } catch (error) {
       if (!mounted) {

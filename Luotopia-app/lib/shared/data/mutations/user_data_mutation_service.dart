@@ -228,6 +228,71 @@ class UserDataMutationService {
     return timetable;
   }
 
+  Future<CourseTimetable> importCourseTimetable({
+    required String name,
+    required CourseTimetableSource source,
+    String termLabel = '',
+    required List<ItemDraft> items,
+  }) async {
+    final now = DateTime.now();
+    final timetableRows = await (_db.select(
+      _db.courseTimetableRows,
+    )..where((row) => row.deletedAt.isNull())).get();
+    final itemRows = await (_db.select(
+      _db.agendaItemRows,
+    )..where((row) => row.deletedAt.isNull())).get();
+    var nextOrder = itemRows.isEmpty
+        ? 0.0
+        : itemRows.map((row) => row.sortOrder).reduce((a, b) => a > b ? a : b) +
+              1;
+    final timetable = CourseTimetable(
+      id: await _createUniqueCourseTimetableId(),
+      name: name.trim().isEmpty
+          ? '课程表 ${timetableRows.length + 1}'
+          : name.trim(),
+      source: source,
+      termLabel: termLabel.trim(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    final agendaItems = <AgendaItem>[];
+    final usedItemIds = itemRows.map((row) => row.id).toSet();
+    for (final draft in items) {
+      final normalizedDraft = draft.type == ItemType.course
+          ? draft.copyWith(
+              courseDetails: draft.courseDetails.copyWith(
+                timetableId: timetable.id,
+              ),
+            )
+          : draft;
+      agendaItems.add(
+        AgendaItem.fromDraft(
+          id: _createUniqueAgendaItemIdFrom(usedItemIds),
+          draft: normalizedDraft,
+          createdAt: now,
+          updatedAt: now,
+          sortOrder: nextOrder,
+        ),
+      );
+      nextOrder += 1;
+    }
+    await _db.transaction(() async {
+      await _db
+          .into(_db.courseTimetableRows)
+          .insert(_courseTimetableCompanion(timetable));
+      await _upsertSelectedTimetable(
+        timetableId: timetable.id,
+        sortOrder: await _nextSelectedSortOrder(),
+        updatedAt: now,
+      );
+      for (final item in agendaItems) {
+        await _db.into(_db.agendaItemRows).insert(_agendaItemCompanion(item));
+        await _upsertDetails(item);
+      }
+    });
+    return timetable;
+  }
+
   Future<void> renameTimetable(String id, String newName) async {
     final normalized = newName.trim();
     if (normalized.isEmpty) {
@@ -402,6 +467,15 @@ class UserDataMutationService {
     return id;
   }
 
+  String _createUniqueAgendaItemIdFrom(Set<String> usedIds) {
+    var id = _idGenerator.newAgendaItemId();
+    while (usedIds.contains(id)) {
+      id = _idGenerator.newAgendaItemId();
+    }
+    usedIds.add(id);
+    return id;
+  }
+
   Future<String> _createUniqueCourseTimetableId() async {
     final rows = await _db.select(_db.courseTimetableRows).get();
     final existingIds = rows.map((row) => row.id).toSet();
@@ -489,6 +563,10 @@ class UserDataMutationService {
                 courseNature: Value(course.courseNature),
                 instructor: Value(course.instructor),
                 weekMeta: Value(course.weekMeta),
+                termCourseId: Value(course.termCourseId),
+                offeringId: Value(course.offeringId),
+                instructorCourseId: Value(course.instructorCourseId),
+                occurrenceId: Value(course.occurrenceId),
               ),
             );
     }
@@ -583,6 +661,10 @@ class UserDataMutationService {
         courseNature: row.courseNature,
         instructor: row.instructor,
         weekMeta: row.weekMeta,
+        termCourseId: row.termCourseId,
+        offeringId: row.offeringId,
+        instructorCourseId: row.instructorCourseId,
+        occurrenceId: row.occurrenceId,
       ),
     );
   }

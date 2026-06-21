@@ -1,8 +1,4 @@
-enum CourseItemSourceKind {
-  manual,
-  whuJw,
-  wakeup,
-}
+enum CourseItemSourceKind { manual, whuJw, wakeup }
 
 class ItemCourseDetails {
   const ItemCourseDetails({
@@ -12,6 +8,10 @@ class ItemCourseDetails {
     this.courseNature = '',
     this.instructor = '',
     this.weekMeta = '',
+    this.termCourseId = '',
+    this.offeringId = '',
+    this.instructorCourseId = '',
+    this.occurrenceId = '',
   });
 
   final String timetableId;
@@ -20,6 +20,10 @@ class ItemCourseDetails {
   final String courseNature;
   final String instructor;
   final String weekMeta;
+  final String termCourseId;
+  final String offeringId;
+  final String instructorCourseId;
+  final String occurrenceId;
 
   ItemCourseDetails copyWith({
     String? timetableId,
@@ -28,6 +32,10 @@ class ItemCourseDetails {
     String? courseNature,
     String? instructor,
     String? weekMeta,
+    String? termCourseId,
+    String? offeringId,
+    String? instructorCourseId,
+    String? occurrenceId,
   }) {
     return ItemCourseDetails(
       timetableId: timetableId ?? this.timetableId,
@@ -36,6 +44,10 @@ class ItemCourseDetails {
       courseNature: courseNature ?? this.courseNature,
       instructor: instructor ?? this.instructor,
       weekMeta: weekMeta ?? this.weekMeta,
+      termCourseId: termCourseId ?? this.termCourseId,
+      offeringId: offeringId ?? this.offeringId,
+      instructorCourseId: instructorCourseId ?? this.instructorCourseId,
+      occurrenceId: occurrenceId ?? this.occurrenceId,
     );
   }
 }

@@ -182,6 +182,10 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         courseNature: row.courseNature,
         instructor: row.instructor,
         weekMeta: row.weekMeta,
+        termCourseId: row.termCourseId,
+        offeringId: row.offeringId,
+        instructorCourseId: row.instructorCourseId,
+        occurrenceId: row.occurrenceId,
       ),
     );
   }

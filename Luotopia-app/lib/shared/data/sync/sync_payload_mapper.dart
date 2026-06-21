@@ -63,6 +63,10 @@ class SyncPayloadMapper {
           'course_nature': detail.courseNature,
           'instructor': detail.instructor,
           'week_meta': detail.weekMeta,
+          'term_course_id': detail.termCourseId,
+          'offering_id': detail.offeringId,
+          'instructor_course_id': detail.instructorCourseId,
+          'occurrence_id': detail.occurrenceId,
         };
       case 'memo':
         return const {};

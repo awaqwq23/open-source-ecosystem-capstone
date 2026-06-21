@@ -222,6 +222,135 @@ class DriftAllSchoolTimetableRepository
     return rows.map(_ruleFromRow).toList(growable: false);
   }
 
+  @override
+  Future<CourseEntityLink> matchPersonalCourse(
+    PersonalCourseMatchQuery query,
+  ) async {
+    final termKey = query.termKey.trim();
+    final courseNo = query.courseNo.trim();
+    if (termKey.isEmpty || courseNo.isEmpty) {
+      return const CourseEntityLink();
+    }
+
+    final termCourseId = await _matchTermCourse(query);
+    final offering = await _matchOffering(query);
+    if (offering == null) {
+      return CourseEntityLink(termCourseId: termCourseId);
+    }
+
+    final occurrenceId = await _matchOccurrence(
+      query: query,
+      offeringId: offering.id,
+    );
+    return CourseEntityLink(
+      termCourseId: offering.termCourseId.isNotEmpty
+          ? offering.termCourseId
+          : termCourseId,
+      offeringId: offering.id,
+      instructorCourseId: offering.instructorCourseId,
+      occurrenceId: occurrenceId,
+    );
+  }
+
+  Future<String> _matchTermCourse(PersonalCourseMatchQuery query) async {
+    final rows =
+        await (_db.select(_db.courseTermCourseRows)
+              ..where((row) => row.termKey.equals(query.termKey.trim()))
+              ..where((row) => row.courseNo.equals(query.courseNo.trim())))
+            .get();
+    if (rows.length == 1) {
+      return rows.single.id;
+    }
+    final courseName = _normalizeName(query.courseName);
+    final sameName = [
+      for (final row in rows)
+        if (_normalizeName(row.courseName) == courseName) row,
+    ];
+    return sameName.length == 1 ? sameName.single.id : '';
+  }
+
+  Future<CourseOfferingRow?> _matchOffering(
+    PersonalCourseMatchQuery query,
+  ) async {
+    final rows =
+        await (_db.select(_db.courseOfferingRows)
+              ..where((row) => row.termKey.equals(query.termKey.trim()))
+              ..where((row) => row.courseNo.equals(query.courseNo.trim())))
+            .get();
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    final className = _normalizeName(query.teachingClassName);
+    var candidates = rows;
+    if (className.isNotEmpty) {
+      candidates = [
+        for (final row in candidates)
+          if (_normalizeName(row.teachingClassName) == className) row,
+      ];
+    }
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    final instructor = _normalizeName(query.instructor);
+    if (instructor.isNotEmpty) {
+      final teacherMatches = [
+        for (final row in candidates)
+          if (_teacherMatches(row, instructor)) row,
+      ];
+      if (teacherMatches.isNotEmpty) {
+        candidates = teacherMatches;
+      }
+    }
+
+    final ruleMatches = <CourseOfferingRow>[];
+    for (final row in candidates) {
+      final rules = await (_db.select(
+        _db.courseMeetingRuleRows,
+      )..where((rule) => rule.offeringId.equals(row.id))).get();
+      if (rules.any((rule) => _ruleMatches(query, rule))) {
+        ruleMatches.add(row);
+      }
+    }
+    if (ruleMatches.length == 1) {
+      return ruleMatches.single;
+    }
+
+    return candidates.length == 1 && className.isNotEmpty
+        ? candidates.single
+        : null;
+  }
+
+  Future<String> _matchOccurrence({
+    required PersonalCourseMatchQuery query,
+    required String offeringId,
+  }) async {
+    final date = _dateKey(query.date);
+    final rows =
+        await (_db.select(_db.courseOccurrenceRows)
+              ..where((row) => row.offeringId.equals(offeringId))
+              ..where((row) => row.date.equals(date)))
+            .get();
+    final matches = [
+      for (final row in rows)
+        if (row.weekday == query.weekday &&
+            _sectionMatches(row.sectionText, query.sectionText) &&
+            _locationCompatible(row.locationText, query.locationText))
+          row,
+    ];
+    if (matches.length == 1) {
+      return matches.single.id;
+    }
+    final relaxed = [
+      for (final row in rows)
+        if (row.weekday == query.weekday &&
+            _sectionMatches(row.sectionText, query.sectionText))
+          row,
+    ];
+    return relaxed.length == 1 ? relaxed.single.id : '';
+  }
+
   Future<Set<String>> _matchingTermCourseIds(
     AllSchoolTimetableQuery query,
   ) async {
@@ -605,6 +734,95 @@ class DriftAllSchoolTimetableRepository
       selected: parts.length < 2 ? null : int.tryParse(parts[1].trim()),
     );
   }
+
+  bool _teacherMatches(CourseOfferingRow row, String instructor) {
+    final normalizedInstructor = _normalizeName(instructor);
+    if (normalizedInstructor.isEmpty) {
+      return false;
+    }
+    final teachers = [
+      row.instructor,
+      row.title,
+      row.otherTeachers,
+    ].expand((value) => _splitTeacherNames(value));
+    return teachers.any(
+      (teacher) => _normalizeName(teacher) == normalizedInstructor,
+    );
+  }
+
+  Iterable<String> _splitTeacherNames(String value) {
+    return value
+        .split(RegExp(r'[,，;；、/\s]+'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty);
+  }
+
+  bool _ruleMatches(PersonalCourseMatchQuery query, CourseMeetingRuleRow rule) {
+    if (rule.weekday != query.weekday) {
+      return false;
+    }
+    if (!_sectionMatches(rule.sectionText, query.sectionText)) {
+      return false;
+    }
+    return _locationCompatible(rule.locationText, query.locationText);
+  }
+
+  bool _sectionMatches(String left, String right) {
+    final leftRange = _sectionRange(left);
+    final rightRange = _sectionRange(right);
+    if (leftRange == null || rightRange == null) {
+      return _normalizeName(left) == _normalizeName(right);
+    }
+    return leftRange.start == rightRange.start &&
+        leftRange.end == rightRange.end;
+  }
+
+  _SectionRange? _sectionRange(String value) {
+    final numbers = RegExp(r'\d+')
+        .allMatches(value)
+        .map((match) => int.tryParse(match.group(0) ?? ''))
+        .whereType<int>()
+        .toList(growable: false);
+    if (numbers.isEmpty) {
+      return null;
+    }
+    final start = numbers.first;
+    final end = numbers.length >= 2 ? numbers[1] : numbers.first;
+    if (start <= 0 || end < start) {
+      return null;
+    }
+    return _SectionRange(start: start, end: end);
+  }
+
+  bool _locationCompatible(String left, String right) {
+    final normalizedLeft = _normalizeLocation(left);
+    final normalizedRight = _normalizeLocation(right);
+    if (normalizedLeft.isEmpty || normalizedRight.isEmpty) {
+      return true;
+    }
+    return normalizedLeft == normalizedRight ||
+        normalizedLeft.contains(normalizedRight) ||
+        normalizedRight.contains(normalizedLeft);
+  }
+
+  String _normalizeName(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll(RegExp(r'[（）()]'), '');
+  }
+
+  String _normalizeLocation(String value) {
+    return _normalizeName(
+      value,
+    ).replaceAll('教学楼', '').replaceAll('教室', '').replaceAll('武汉大学', '');
+  }
+
+  String _dateKey(DateTime value) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${value.year}-${two(value.month)}-${two(value.day)}';
+  }
 }
 
 class _PeopleCount {
@@ -612,4 +830,11 @@ class _PeopleCount {
 
   final int? capacity;
   final int? selected;
+}
+
+class _SectionRange {
+  const _SectionRange({required this.start, required this.end});
+
+  final int start;
+  final int end;
 }

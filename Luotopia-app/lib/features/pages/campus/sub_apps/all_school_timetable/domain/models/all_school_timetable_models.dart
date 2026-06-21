@@ -204,3 +204,45 @@ class SchoolClassMeeting {
   final String building;
   final String room;
 }
+
+class PersonalCourseMatchQuery {
+  const PersonalCourseMatchQuery({
+    required this.termKey,
+    required this.courseNo,
+    required this.courseName,
+    required this.teachingClassName,
+    required this.instructor,
+    required this.weekday,
+    required this.sectionText,
+    required this.locationText,
+    required this.date,
+  });
+
+  final String termKey;
+  final String courseNo;
+  final String courseName;
+  final String teachingClassName;
+  final String instructor;
+  final int weekday;
+  final String sectionText;
+  final String locationText;
+  final DateTime date;
+}
+
+class CourseEntityLink {
+  const CourseEntityLink({
+    this.termCourseId = '',
+    this.offeringId = '',
+    this.instructorCourseId = '',
+    this.occurrenceId = '',
+  });
+
+  final String termCourseId;
+  final String offeringId;
+  final String instructorCourseId;
+  final String occurrenceId;
+
+  bool get hasCourse => termCourseId.isNotEmpty;
+  bool get hasOffering => offeringId.isNotEmpty;
+  bool get hasOccurrence => occurrenceId.isNotEmpty;
+}
