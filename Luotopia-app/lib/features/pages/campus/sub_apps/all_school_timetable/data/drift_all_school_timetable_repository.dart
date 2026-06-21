@@ -568,21 +568,25 @@ class DriftAllSchoolTimetableRepository
   }
 
   int _int(Map<String, dynamic> item, String key) {
-    return (item[key] as num?)?.toInt() ??
-        int.tryParse(_string(item, key)) ??
-        0;
+    final value = item[key];
+    if (value is num) return value.toInt();
+    final str = value?.toString();
+    if (str == null || str.isEmpty) return 0;
+    return int.tryParse(str) ?? 0;
   }
 
   int? _intOrNull(Map<String, dynamic> item, String key) {
     final value = item[key];
     if (value == null) return null;
-    return (value as num?)?.toInt() ?? int.tryParse(value.toString());
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   double? _doubleOrNull(Map<String, dynamic> item, String key) {
     final value = item[key];
     if (value == null) return null;
-    return (value as num?)?.toDouble() ?? double.tryParse(value.toString());
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   Map<String, String> _decodeFields(String raw) {
