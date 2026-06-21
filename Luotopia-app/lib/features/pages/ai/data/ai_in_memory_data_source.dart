@@ -29,6 +29,15 @@ class InMemoryAiChatRepository extends Notifier<AiChatSessionStore>
     implements AiChatRepository {
   @override
   AiChatSessionStore build() {
+    final preferences = ref.read(sharedPreferencesProvider);
+    if (preferences != null) {
+      return AiChatSessionStorageMapper.fromStorage(
+        sessionsRaw: preferences.getString(AppBootstrapStorageKeys.aiSessions),
+        activeSessionId: preferences.getString(
+          AppBootstrapStorageKeys.activeAiSessionId,
+        ),
+      );
+    }
     return ref.read(aiChatBootstrapSessionStoreProvider);
   }
 

@@ -3,10 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart' as file_selector;
+import 'package:luotopia/app/app_bootstrap.dart';
+import 'package:luotopia/core/localization/locale_controller.dart';
+import 'package:luotopia/core/theme/theme_controller.dart';
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
+import 'package:luotopia/features/pages/ai/data/ai_in_memory_data_source.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/data/drift_all_school_timetable_repository.dart';
+import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
@@ -103,11 +108,11 @@ class _SettingsDataUpdatesPageState
                 ],
               ),
             SettingsFlatSection(
-              title: '本地数据库',
+              title: '用户数据备份',
               children: [
                 SettingsFlatTile(
-                  title: '导出数据库',
-                  subtitle: '分享当前日程与课程数据库备份',
+                  title: '导出用户数据',
+                  subtitle: '分享非课程事项、个人设置与 AI 会话备份',
                   leading: const Icon(Icons.ios_share_outlined),
                   trailing: _ActionIconButton(
                     tooltip: '导出',
@@ -117,8 +122,8 @@ class _SettingsDataUpdatesPageState
                   ),
                 ),
                 SettingsFlatTile(
-                  title: '导入数据库',
-                  subtitle: '选择备份文件并覆盖当前本地数据库',
+                  title: '导入用户数据',
+                  subtitle: '选择备份文件并覆盖当前非课程用户数据',
                   leading: const Icon(Icons.restore_page_outlined),
                   trailing: _ActionIconButton(
                     tooltip: '导入',
@@ -239,17 +244,17 @@ class _SettingsDataUpdatesPageState
       }
       await SharePlus.instance.share(
         ShareParams(
-          text: 'Luotopia 本地数据库备份',
+          text: 'Luotopia 用户数据备份',
           files: [XFile(backup.path, name: backup.fileName)],
           fileNameOverrides: [backup.fileName],
         ),
       );
       if (mounted) {
-        _showMessage('数据库备份已准备分享');
+        _showMessage('用户数据备份已准备分享');
       }
     } catch (error) {
       if (mounted) {
-        _showMessage('数据库导出失败：$error');
+        _showMessage('用户数据导出失败：$error');
       }
     } finally {
       if (mounted) {
@@ -285,17 +290,19 @@ class _SettingsDataUpdatesPageState
       await ref
           .read(localDatabaseBackupServiceProvider)
           .importDatabase(file.path);
+      await _reloadPersonalConfiguration();
       ref.invalidate(agendaItemRepositoryProvider);
       ref.invalidate(courseTimetableRepositoryProvider);
       ref.invalidate(allSchoolTimetableRepositoryProvider);
+      ref.invalidate(aiChatRepositoryProvider);
       ref.invalidate(pendingSyncChangeCountProvider);
       ref.invalidate(lastSyncTimeProvider);
       if (mounted) {
-        _showMessage('数据库已导入');
+        _showMessage('用户数据已导入');
       }
     } catch (error) {
       if (mounted) {
-        _showMessage('数据库导入失败：$error');
+        _showMessage('用户数据导入失败：$error');
       }
     } finally {
       if (mounted) {
@@ -304,14 +311,30 @@ class _SettingsDataUpdatesPageState
     }
   }
 
+  Future<void> _reloadPersonalConfiguration() async {
+    final preferences = ref.read(sharedPreferencesProvider);
+    if (preferences == null) {
+      return;
+    }
+    final bootstrap = await AppBootstrapLoader.load(preferences);
+    ref.read(appLocaleProvider.notifier).state = bootstrap.locale;
+    ref.read(appThemeModeProvider.notifier).state = bootstrap.themeMode;
+    ref.read(appHomeSettingsProvider.notifier).state = bootstrap.homeSettings;
+    ref.read(appAiSettingsProvider.notifier).state = bootstrap.aiSettings;
+    ref.read(appWidgetSettingsProvider.notifier).state =
+        bootstrap.widgetSettings;
+    ref.read(appNavigationSettingsProvider.notifier).state =
+        bootstrap.navigationSettings;
+  }
+
   Future<bool> _confirmImport() async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('导入数据库'),
+        title: const Text('导入用户数据'),
         content: const Text(
-          '导入会覆盖当前本地日程、课程表、选中课程表与同步状态。'
-          '账号、AI 设置、天气缓存等非数据库数据不会被恢复。',
+          '导入会覆盖当前本地非课程事项与个人设置，并清空课程数据和同步状态。'
+          '账号、天气缓存、服务通知和全校课表缓存不会被恢复。',
         ),
         actions: [
           TextButton(
