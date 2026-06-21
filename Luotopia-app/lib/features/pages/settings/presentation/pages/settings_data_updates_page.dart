@@ -6,6 +6,7 @@ import 'package:file_selector/file_selector.dart' as file_selector;
 import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart';
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/data/drift_all_school_timetable_repository.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
@@ -286,6 +287,7 @@ class _SettingsDataUpdatesPageState
           .importDatabase(file.path);
       ref.invalidate(agendaItemRepositoryProvider);
       ref.invalidate(courseTimetableRepositoryProvider);
+      ref.invalidate(allSchoolTimetableRepositoryProvider);
       ref.invalidate(pendingSyncChangeCountProvider);
       ref.invalidate(lastSyncTimeProvider);
       if (mounted) {

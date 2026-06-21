@@ -25,6 +25,30 @@ class SyncCursorStore {
     await _preferences?.setInt(_key, cursor);
   }
 
+  Future<void> reset() async {
+    await _preferences?.remove(_key);
+    await _preferences?.remove(_lastSyncedAtKey);
+  }
+
+  Future<void> restore({
+    required int cursor,
+    required DateTime? lastSyncedAt,
+  }) async {
+    if (cursor <= 0) {
+      await _preferences?.remove(_key);
+    } else {
+      await _preferences?.setInt(_key, cursor);
+    }
+    if (lastSyncedAt == null) {
+      await _preferences?.remove(_lastSyncedAtKey);
+    } else {
+      await _preferences?.setString(
+        _lastSyncedAtKey,
+        lastSyncedAt.toIso8601String(),
+      );
+    }
+  }
+
   DateTime? readLastSyncedAt() {
     final raw = _preferences?.getString(_lastSyncedAtKey);
     if (raw == null || raw.isEmpty) {
