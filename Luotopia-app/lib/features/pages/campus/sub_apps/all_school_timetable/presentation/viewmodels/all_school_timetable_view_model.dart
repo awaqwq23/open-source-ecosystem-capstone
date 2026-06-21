@@ -107,7 +107,7 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
     state = state.copyWith(isSyncing: true, clearErrorMessage: true);
     try {
       final service = ref.read(unifiedPullServiceProvider);
-      final result = await service.pullScoped(
+      final result = await service.pullPublicScoped(
         trigger: 'manual',
         scopes: const ['school_timetable'],
       );
