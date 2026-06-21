@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
+	"github.com/openwhu/luotopia/server/internal/platform/storage"
 )
 
 type Repository interface {
@@ -30,15 +30,22 @@ type Repository interface {
 }
 
 type Service struct {
-	repo        Repository
-	snapshotDir string
+	repo          Repository
+	snapshotDir   string
+	objectStore   storage.Store
+	publicBaseURL string
 }
 
-func NewService(repo Repository, snapshotDir string) *Service {
+func NewService(repo Repository, snapshotDir string, objectStore storage.Store, publicBaseURL string) *Service {
 	if strings.TrimSpace(snapshotDir) == "" {
 		snapshotDir = "school_timetable_snapshots"
 	}
-	return &Service{repo: repo, snapshotDir: snapshotDir}
+	return &Service{
+		repo:          repo,
+		snapshotDir:   snapshotDir,
+		objectStore:   objectStore,
+		publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
+	}
 }
 
 func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
@@ -78,22 +85,30 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	}
 	rawChecksum := PackageChecksum(data)
 	records := BuildRecords(pkg)
-	snapshotData, err := GzipSnapshot(pkg, records)
+	artifact, err := BuildSQLiteArtifact(ctx, pkg, records, version, s.snapshotDir)
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
-	snapshotChecksum := PackageChecksum(snapshotData)
-	fileKey := fmt.Sprintf("%s-v%d-unified.json.gz", sanitizeFilePart(pkg.Manifest.TermKey), version)
-	if err := os.MkdirAll(s.snapshotDir, 0755); err != nil {
+	if s.objectStore == nil {
+		return domain.ImportResult{}, fmt.Errorf("school timetable object store is not configured")
+	}
+	artifactFile, err := os.Open(artifact.Path)
+	if err != nil {
 		return domain.ImportResult{}, err
 	}
-	if err := os.WriteFile(filepath.Join(s.snapshotDir, fileKey), snapshotData, 0644); err != nil {
+	if err := s.objectStore.Put(ctx, storage.Object{
+		Key:         artifact.Key,
+		ContentType: SQLiteArtifactContent,
+		Size:        artifact.Size,
+		Body:        artifactFile,
+	}); err != nil {
 		return domain.ImportResult{}, err
 	}
 	now := time.Now().UTC()
 	release := domain.Release{
-		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: snapshotChecksum,
-		FileKey: fileKey, RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
+		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: artifact.Checksum,
+		FileKey: artifact.Key, ArtifactType: artifact.ArtifactType, SchemaVersion: artifact.SchemaVersion,
+		ArtifactSize: artifact.Size, RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
 	}
 	if err := s.repo.Publish(ctx, pkg, release, records); err != nil {
 		return domain.ImportResult{}, err
@@ -107,23 +122,36 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 }
 
 func (s *Service) ListActiveTerms(ctx context.Context) ([]domain.Term, error) {
-	return s.repo.ListActiveTerms(ctx)
+	terms, err := s.repo.ListActiveTerms(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range terms {
+		terms[i].ArtifactURL = s.objectURL(terms[i].FileKey)
+	}
+	return terms, nil
 }
 
 func (s *Service) ListReleases(ctx context.Context, termKey string) ([]domain.Release, error) {
-	return s.repo.ListReleases(ctx, termKey)
+	releases, err := s.repo.ListReleases(ctx, termKey)
+	if err != nil {
+		return nil, err
+	}
+	for i := range releases {
+		releases[i].ArtifactURL = s.objectURL(releases[i].FileKey)
+	}
+	return releases, nil
 }
 
 func (s *Service) ActivateRelease(ctx context.Context, termKey string, version int) error {
 	return s.repo.ActivateRelease(ctx, termKey, version)
 }
 
-func (s *Service) SnapshotPath(ctx context.Context, termKey string, version int) (string, domain.Release, error) {
-	release, err := s.repo.GetRelease(ctx, termKey, version)
-	if err != nil {
-		return "", domain.Release{}, err
+func (s *Service) objectURL(key string) string {
+	if key == "" || s.publicBaseURL == "" {
+		return ""
 	}
-	return filepath.Join(s.snapshotDir, release.FileKey), release, nil
+	return s.publicBaseURL + "/" + strings.TrimLeft(key, "/")
 }
 
 type Records struct {

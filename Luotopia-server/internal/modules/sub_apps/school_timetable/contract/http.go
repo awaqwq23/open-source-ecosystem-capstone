@@ -1,17 +1,24 @@
 package contract
 
 import (
-	"net/url"
 	"strconv"
+	"strings"
 )
 
 const (
-	ClientBase         = "/school-timetable"
-	SnapshotRoute      = "/terms/:termKey/releases/:version/snapshot"
-	clientAPIPrefix    = "/api/v1"
-	snapshotPathPrefix = clientAPIPrefix + ClientBase + "/terms/"
+	ClientBase = "/school-timetable"
 )
 
-func SnapshotPath(termKey string, version int) string {
-	return snapshotPathPrefix + url.PathEscape(termKey) + "/releases/" + strconv.Itoa(version) + "/snapshot"
+func ArtifactKey(termKey string, version int) string {
+	return "school-timetable/" + sanitizeObjectPart(termKey) + "/v" + strconv.Itoa(version) + ".sqlite.gz"
+}
+
+func sanitizeObjectPart(value string) string {
+	replacer := strings.NewReplacer("/", "_", "\\", "_", " ", "_")
+	value = replacer.Replace(strings.TrimSpace(value))
+	value = strings.Trim(value, "_")
+	if value == "" {
+		return "unknown"
+	}
+	return value
 }

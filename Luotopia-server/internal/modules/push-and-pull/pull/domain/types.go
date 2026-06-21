@@ -84,6 +84,9 @@ type SchoolTimetableTerm struct {
 	FirstWeekMonday string          `json:"first_week_monday"`
 	Version         int             `json:"version"`
 	Checksum        string          `json:"checksum"`
+	ArtifactType    string          `json:"artifact_type"`
+	SchemaVersion   int             `json:"schema_version"`
+	ArtifactSize    int64           `json:"artifact_size"`
 	RowCount        int             `json:"row_count"`
 	Links           map[string]Link `json:"links"`
 	PublishedAt     string          `json:"published_at"`

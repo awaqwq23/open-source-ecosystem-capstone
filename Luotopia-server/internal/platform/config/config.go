@@ -51,8 +51,14 @@ type RedisConfig struct {
 }
 
 type StorageConfig struct {
-	Bucket string
-	Region string
+	Endpoint       string
+	Bucket         string
+	Region         string
+	AccessKey      string
+	SecretKey      string
+	PublicBaseURL  string
+	UseSSL         bool
+	ForcePathStyle bool
 }
 
 type AuthConfig struct {
@@ -97,8 +103,14 @@ func Load() Config {
 		Database: DatabaseConfig{URL: runtimeEndpointEnv("LUOTOPIA_DATABASE_URL")},
 		Redis:    RedisConfig{URL: runtimeEndpointEnv("LUOTOPIA_REDIS_URL")},
 		Storage: StorageConfig{
-			Bucket: declaredEnv("LUOTOPIA_STORAGE_BUCKET"),
-			Region: declaredEnv("LUOTOPIA_STORAGE_REGION"),
+			Endpoint:       optionalEnv("LUOTOPIA_STORAGE_ENDPOINT", ""),
+			Bucket:         optionalEnv("LUOTOPIA_STORAGE_BUCKET", ""),
+			Region:         optionalEnv("LUOTOPIA_STORAGE_REGION", ""),
+			AccessKey:      optionalEnv("LUOTOPIA_STORAGE_ACCESS_KEY", ""),
+			SecretKey:      optionalEnv("LUOTOPIA_STORAGE_SECRET_KEY", ""),
+			PublicBaseURL:  optionalEnv("LUOTOPIA_STORAGE_PUBLIC_BASE_URL", ""),
+			UseSSL:         optionalBoolEnv("LUOTOPIA_STORAGE_USE_SSL", true),
+			ForcePathStyle: optionalBoolEnv("LUOTOPIA_STORAGE_FORCE_PATH_STYLE", true),
 		},
 		Auth: AuthConfig{
 			AccessTokenSecret: requiredEnv("LUOTOPIA_AUTH_ACCESS_TOKEN_SECRET"),
@@ -168,6 +180,18 @@ func optionalEnv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func optionalBoolEnv(key string, fallback bool) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		panic(fmt.Sprintf("环境变量 %s 必须是布尔值", key))
+	}
+	return parsed
 }
 
 func runtimeEndpointEnv(key string) string {

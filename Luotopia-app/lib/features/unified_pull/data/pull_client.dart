@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/features/unified_pull/data/pull_request.dart';
 import 'package:luotopia/shared/data/api_client.dart';
@@ -25,9 +27,13 @@ class PullClient {
     return _apiClient.getText(path);
   }
 
-  Future<List<int>> downloadSchoolTimetableSnapshot(String path) {
-    return _apiClient.getBytes(
-      path,
+  Future<FileDownloadResult> downloadSchoolTimetableArtifact(
+    String href,
+    File destination,
+  ) {
+    return _apiClient.downloadToFile(
+      href,
+      destination,
       timeoutOverride: const Duration(seconds: 120),
     );
   }

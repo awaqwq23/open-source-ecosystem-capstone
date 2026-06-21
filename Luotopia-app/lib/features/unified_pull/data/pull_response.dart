@@ -208,6 +208,9 @@ class SchoolTimetableTermUpdate {
   final String firstWeekMonday;
   final int version;
   final String checksum;
+  final String artifactType;
+  final int schemaVersion;
+  final int artifactSize;
   final int rowCount;
   final Map<String, ApiLink> links;
   final DateTime? publishedAt;
@@ -219,6 +222,9 @@ class SchoolTimetableTermUpdate {
     required this.firstWeekMonday,
     required this.version,
     required this.checksum,
+    required this.artifactType,
+    required this.schemaVersion,
+    required this.artifactSize,
     required this.rowCount,
     required this.links,
     this.publishedAt,
@@ -232,6 +238,9 @@ class SchoolTimetableTermUpdate {
       firstWeekMonday: json['first_week_monday'] as String? ?? '',
       version: (json['version'] as num?)?.toInt() ?? 0,
       checksum: json['checksum'] as String? ?? '',
+      artifactType: json['artifact_type'] as String? ?? '',
+      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
+      artifactSize: (json['artifact_size'] as num?)?.toInt() ?? 0,
       rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
       links: _linksFromJson(json['links']),
       publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),

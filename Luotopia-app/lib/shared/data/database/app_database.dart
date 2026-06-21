@@ -33,6 +33,8 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.withExecutor(super.executor);
+
   @override
   int get schemaVersion => 8;
 

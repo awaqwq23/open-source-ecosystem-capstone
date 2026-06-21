@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 /// 统一 HTTP 客户端，自动处理 base URL、认证头、JSON 解析和超时。
@@ -58,6 +60,54 @@ class ApiClient {
     return response.bodyBytes;
   }
 
+  Future<FileDownloadResult> downloadToFile(
+    String href,
+    File destination, {
+    Duration? timeoutOverride,
+    bool withAuth = false,
+  }) async {
+    final uri = _resolveUri(href);
+    final request = http.Request('GET', uri);
+    request.headers.addAll(
+      withAuth
+          ? _authHeaders
+          : const {'Accept': 'application/octet-stream, application/gzip'},
+    );
+    final response = await _client
+        .send(request)
+        .timeout(timeoutOverride ?? timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = await response.stream.bytesToString();
+      throw ApiClientException._(
+        response.statusCode,
+        _parseErrorBody(response.statusCode, body),
+      );
+    }
+    final sink = destination.openWrite();
+    Digest? digest;
+    final hashSink = sha256.startChunkedConversion(
+      ChunkedConversionSink.withCallback((digests) {
+        digest = digests.single;
+      }),
+    );
+    var bytesWritten = 0;
+    try {
+      await for (final chunk in response.stream) {
+        bytesWritten += chunk.length;
+        hashSink.add(chunk);
+        sink.add(chunk);
+      }
+      await sink.flush();
+    } finally {
+      await sink.close();
+      hashSink.close();
+    }
+    return FileDownloadResult(
+      bytesWritten: bytesWritten,
+      checksum: 'sha256:$digest',
+    );
+  }
+
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? body,
@@ -103,6 +153,27 @@ class ApiClient {
   void dispose() {
     _client.close();
   }
+
+  Uri _resolveUri(String href) {
+    final uri = Uri.parse(href);
+    if (uri.hasScheme) {
+      return uri;
+    }
+    return Uri.parse('$baseUrl$href');
+  }
+
+  String _parseErrorBody(int statusCode, String body) {
+    try {
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        return error['message'] as String? ?? '请求失败（$statusCode）';
+      }
+      return data['message'] as String? ?? '请求失败（$statusCode）';
+    } catch (_) {
+      return '请求失败（$statusCode）';
+    }
+  }
 }
 
 class ApiClientException implements Exception {
@@ -113,4 +184,14 @@ class ApiClientException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class FileDownloadResult {
+  const FileDownloadResult({
+    required this.bytesWritten,
+    required this.checksum,
+  });
+
+  final int bytesWritten;
+  final String checksum;
 }

@@ -39,12 +39,15 @@ void main() {
             'school_year': '2025-2026',
             'term': '1',
             'version': 7,
-            'checksum': 'sha256:snapshot',
+            'checksum': 'sha256:artifact',
+            'artifact_type': 'school_timetable_sqlite_gzip',
+            'schema_version': 3,
+            'artifact_size': 2048,
             'row_count': 42,
             'links': {
-              'snapshot': {
+              'artifact': {
                 'href':
-                    '/api/v1/school-timetable/terms/2025-2026-1/releases/7/snapshot',
+                    'https://cdn.example.com/school-timetable/2025-2026-1/v7.sqlite.gz',
               },
             },
             'published_at': '2026-06-20T12:00:00Z',
@@ -61,10 +64,11 @@ void main() {
       response.hotUpdate?.scripts['jw_login']?.links['content']?.href,
       contains('jw_login'),
     );
-    expect(
-      response.schoolTimetable?.terms.single.links['snapshot']?.href,
-      contains('/releases/7/snapshot'),
-    );
+    final schoolTerm = response.schoolTimetable?.terms.single;
+    expect(schoolTerm?.artifactType, 'school_timetable_sqlite_gzip');
+    expect(schoolTerm?.schemaVersion, 3);
+    expect(schoolTerm?.artifactSize, 2048);
+    expect(schoolTerm?.links['artifact']?.href, contains('/v7.sqlite.gz'));
     expect(response.sync?.hasChanges, isTrue);
     expect(response.sync?.latestCursor, 12);
   });

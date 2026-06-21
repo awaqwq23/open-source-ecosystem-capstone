@@ -1,4 +1,5 @@
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
+import 'dart:io';
 
 abstract class AllSchoolTimetableRepository {
   Future<void> ensureLocalDataReady();
@@ -11,9 +12,12 @@ abstract class AllSchoolTimetableRepository {
     required List<Map<String, String>> rows,
   });
 
-  Future<void> replaceTermFromPackageBytes({
-    required List<int> bytes,
-    required String sourceVersion,
+  Future<void> replaceTermFromArtifactFile({
+    required File gzipFile,
+    required String termKey,
+    required int version,
+    required String checksum,
+    required int rowCount,
   });
 
   Future<List<SchoolTimetableTerm>> loadTerms();

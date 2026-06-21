@@ -10,7 +10,6 @@ import (
 	"github.com/openwhu/luotopia/server/internal/modules/push-and-pull/pull/domain"
 	statsapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/app"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
-	schoolcontract "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/contract"
 	schooldomain "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
 )
 
@@ -134,9 +133,11 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
 						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
 						FirstWeekMonday: term.FirstWeekMonday,
-						Version:         term.Version, Checksum: term.Checksum, RowCount: term.RowCount,
+						Version:         term.Version, Checksum: term.Checksum,
+						ArtifactType: term.ArtifactType, SchemaVersion: term.SchemaVersion,
+						ArtifactSize: term.ArtifactSize, RowCount: term.RowCount,
 						Links: map[string]domain.Link{
-							"snapshot": {Href: schoolcontract.SnapshotPath(term.TermKey, term.Version)},
+							"artifact": {Href: term.ArtifactURL},
 						},
 						PublishedAt: term.PublishedAt.Format(time.RFC3339),
 					})

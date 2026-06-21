@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
 import 'package:luotopia/features/hot_update/data/hot_update_cache.dart';
 import 'package:luotopia/features/unified_pull/data/pull_client.dart';
@@ -8,6 +8,7 @@ import 'package:luotopia/features/unified_pull/data/pull_request.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/features/unified_pull/data/pull_state_store.dart';
 import 'package:luotopia/shared/data/sync/sync_cursor_store.dart';
+import 'package:path_provider/path_provider.dart';
 
 class UnifiedPullService {
   UnifiedPullService({
@@ -159,21 +160,50 @@ class UnifiedPullService {
   Future<void> _cacheChangedSchoolTimetableTerms(PullResponse response) async {
     final terms = response.schoolTimetable?.terms ?? const [];
     for (final term in terms) {
-      final snapshotHref = term.links['snapshot']?.href ?? '';
-      if (snapshotHref.isEmpty || term.checksum.isEmpty) {
+      final artifactHref = term.links['artifact']?.href ?? '';
+      if (artifactHref.isEmpty || term.checksum.isEmpty) {
         continue;
       }
-      final bytes = await _pullClient.downloadSchoolTimetableSnapshot(
-        snapshotHref,
+      if (term.artifactType != 'school_timetable_sqlite_gzip' ||
+          term.schemaVersion != 3) {
+        throw StateError('全校课表 ${term.termKey} 快照格式不受支持');
+      }
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File(
+        '${tempDir.path}${Platform.pathSeparator}school-timetable-${_safeName(term.termKey)}-${term.version}.sqlite.gz',
       );
-      final checksum = 'sha256:${sha256.convert(bytes)}';
-      if (checksum != term.checksum) {
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      final download = await _pullClient.downloadSchoolTimetableArtifact(
+        artifactHref,
+        tempFile,
+      );
+      if (term.artifactSize > 0 && download.bytesWritten != term.artifactSize) {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+        throw StateError('全校课表 ${term.termKey} 快照大小不匹配');
+      }
+      if (download.checksum != term.checksum) {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
         throw StateError('全校课表 ${term.termKey} 快照校验失败');
       }
-      await _allSchoolTimetableRepository.replaceTermFromPackageBytes(
-        bytes: bytes,
-        sourceVersion: '${term.version}:${term.checksum}',
-      );
+      try {
+        await _allSchoolTimetableRepository.replaceTermFromArtifactFile(
+          gzipFile: tempFile,
+          termKey: term.termKey,
+          version: term.version,
+          checksum: term.checksum,
+          rowCount: term.rowCount,
+        );
+      } finally {
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      }
     }
   }
 
@@ -202,6 +232,14 @@ class UnifiedPullService {
   void resetThrottle() {
     _lastColdStartPull = null;
     _lastForegroundPull = null;
+  }
+
+  String _safeName(String value) {
+    final sanitized = value
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    return sanitized.isEmpty ? 'unknown' : sanitized;
   }
 }
 

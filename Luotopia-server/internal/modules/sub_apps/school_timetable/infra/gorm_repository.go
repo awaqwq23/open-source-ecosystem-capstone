@@ -36,7 +36,9 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 		term := termModel{
 			TermKey: pkg.Manifest.TermKey, SchoolYear: pkg.Manifest.SchoolYear, Term: pkg.Manifest.Term,
 			FirstWeekMonday: pkg.Manifest.FirstWeekMonday, ActiveVersion: release.Version,
-			Checksum: release.Checksum, RowCount: release.RowCount, PublishedAt: &release.PublishedAt,
+			Checksum: release.Checksum, FileKey: release.FileKey, ArtifactType: release.ArtifactType,
+			SchemaVersion: release.SchemaVersion, ArtifactSize: release.ArtifactSize,
+			RowCount: release.RowCount, PublishedAt: &release.PublishedAt,
 			CreatedAt: now, UpdatedAt: now,
 		}
 		if err := tx.Save(&term).Error; err != nil {
@@ -177,6 +179,10 @@ func (r *GormRepository) ActivateRelease(ctx context.Context, termKey string, ve
 		return tx.Model(&termModel{}).Where("term_key = ?", termKey).Updates(map[string]any{
 			"active_version": version,
 			"checksum":       rel.Checksum,
+			"file_key":       rel.FileKey,
+			"artifact_type":  rel.ArtifactType,
+			"schema_version": rel.SchemaVersion,
+			"artifact_size":  rel.ArtifactSize,
 			"row_count":      rel.RowCount,
 			"published_at":   rel.PublishedAt,
 			"updated_at":     time.Now().UTC(),
@@ -200,6 +206,10 @@ type termModel struct {
 	FirstWeekMonday string     `gorm:"column:first_week_monday"`
 	ActiveVersion   int        `gorm:"column:active_version"`
 	Checksum        string     `gorm:"column:checksum"`
+	FileKey         string     `gorm:"column:file_key"`
+	ArtifactType    string     `gorm:"column:artifact_type"`
+	SchemaVersion   int        `gorm:"column:schema_version"`
+	ArtifactSize    int64      `gorm:"column:artifact_size"`
 	RowCount        int        `gorm:"column:row_count"`
 	PublishedAt     *time.Time `gorm:"column:published_at"`
 	CreatedAt       time.Time  `gorm:"column:created_at"`
@@ -216,18 +226,23 @@ func (m termModel) toDomain() domain.Term {
 	return domain.Term{
 		TermKey: m.TermKey, SchoolYear: m.SchoolYear, Term: m.Term,
 		FirstWeekMonday: m.FirstWeekMonday, Version: m.ActiveVersion,
-		Checksum: m.Checksum, RowCount: m.RowCount, PublishedAt: publishedAt,
+		Checksum: m.Checksum, FileKey: m.FileKey, ArtifactType: m.ArtifactType,
+		SchemaVersion: m.SchemaVersion, ArtifactSize: m.ArtifactSize,
+		RowCount: m.RowCount, PublishedAt: publishedAt,
 	}
 }
 
 type releaseModel struct {
-	TermKey     string    `gorm:"primaryKey;column:term_key"`
-	Version     int       `gorm:"primaryKey;column:version"`
-	Checksum    string    `gorm:"column:checksum"`
-	FileKey     string    `gorm:"column:file_key"`
-	RowCount    int       `gorm:"column:row_count"`
-	Active      bool      `gorm:"column:active"`
-	PublishedAt time.Time `gorm:"column:published_at"`
+	TermKey       string    `gorm:"primaryKey;column:term_key"`
+	Version       int       `gorm:"primaryKey;column:version"`
+	Checksum      string    `gorm:"column:checksum"`
+	FileKey       string    `gorm:"column:file_key"`
+	ArtifactType  string    `gorm:"column:artifact_type"`
+	SchemaVersion int       `gorm:"column:schema_version"`
+	ArtifactSize  int64     `gorm:"column:artifact_size"`
+	RowCount      int       `gorm:"column:row_count"`
+	Active        bool      `gorm:"column:active"`
+	PublishedAt   time.Time `gorm:"column:published_at"`
 }
 
 func (releaseModel) TableName() string { return "school_timetable_releases" }
@@ -235,6 +250,7 @@ func (releaseModel) TableName() string { return "school_timetable_releases" }
 func releaseModelFromDomain(item domain.Release) releaseModel {
 	return releaseModel{
 		TermKey: item.TermKey, Version: item.Version, Checksum: item.Checksum, FileKey: item.FileKey,
+		ArtifactType: item.ArtifactType, SchemaVersion: item.SchemaVersion, ArtifactSize: item.ArtifactSize,
 		RowCount: item.RowCount, Active: item.Active, PublishedAt: item.PublishedAt,
 	}
 }
@@ -242,6 +258,7 @@ func releaseModelFromDomain(item domain.Release) releaseModel {
 func (m releaseModel) toDomain() domain.Release {
 	return domain.Release{
 		TermKey: m.TermKey, Version: m.Version, Checksum: m.Checksum, FileKey: m.FileKey,
+		ArtifactType: m.ArtifactType, SchemaVersion: m.SchemaVersion, ArtifactSize: m.ArtifactSize,
 		RowCount: m.RowCount, Active: m.Active, PublishedAt: m.PublishedAt,
 	}
 }

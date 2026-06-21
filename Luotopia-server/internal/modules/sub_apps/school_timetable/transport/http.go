@@ -3,7 +3,6 @@ package transport
 import (
 	"errors"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -20,8 +19,7 @@ func NewHandler(service *app.Service) Handler {
 }
 
 func (h Handler) RegisterClient(router gin.IRouter) {
-	group := router.Group(contract.ClientBase)
-	group.GET(contract.SnapshotRoute, h.downloadSnapshot)
+	_ = router
 }
 
 func (h Handler) RegisterAdmin(router gin.IRouter) {
@@ -111,30 +109,6 @@ func (h Handler) activateRelease(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"activated": true})
-}
-
-func (h Handler) downloadSnapshot(c *gin.Context) {
-	version, err := strconv.Atoi(c.Param("version"))
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "版本号无效")
-		return
-	}
-	path, release, err := h.service.SnapshotPath(c.Request.Context(), c.Param("termKey"), version)
-	if err != nil {
-		if errors.Is(err, app.ErrNotFound) {
-			writeError(c, http.StatusNotFound, "not_found", "课表快照不存在")
-			return
-		}
-		writeError(c, http.StatusInternalServerError, "internal_error", "查询课表快照失败")
-		return
-	}
-	if _, err := os.Stat(path); err != nil {
-		writeError(c, http.StatusNotFound, "not_found", "课表快照文件不存在")
-		return
-	}
-	c.Header("X-Checksum", release.Checksum)
-	c.Header("Content-Type", "application/gzip")
-	c.FileAttachment(path, release.FileKey)
 }
 
 func writeError(c *gin.Context, status int, code string, message string) {

@@ -28,18 +28,27 @@ type Term struct {
 	FirstWeekMonday string    `json:"first_week_monday"`
 	Version         int       `json:"version"`
 	Checksum        string    `json:"checksum"`
+	FileKey         string    `json:"file_key"`
+	ArtifactType    string    `json:"artifact_type"`
+	SchemaVersion   int       `json:"schema_version"`
+	ArtifactSize    int64     `json:"artifact_size"`
+	ArtifactURL     string    `json:"artifact_url,omitempty"`
 	RowCount        int       `json:"row_count"`
 	PublishedAt     time.Time `json:"published_at"`
 }
 
 type Release struct {
-	TermKey     string    `json:"term_key"`
-	Version     int       `json:"version"`
-	Checksum    string    `json:"checksum"`
-	FileKey     string    `json:"file_key"`
-	RowCount    int       `json:"row_count"`
-	Active      bool      `json:"active"`
-	PublishedAt time.Time `json:"published_at"`
+	TermKey       string    `json:"term_key"`
+	Version       int       `json:"version"`
+	Checksum      string    `json:"checksum"`
+	FileKey       string    `json:"file_key"`
+	ArtifactType  string    `json:"artifact_type"`
+	SchemaVersion int       `json:"schema_version"`
+	ArtifactSize  int64     `json:"artifact_size"`
+	ArtifactURL   string    `json:"artifact_url,omitempty"`
+	RowCount      int       `json:"row_count"`
+	Active        bool      `json:"active"`
+	PublishedAt   time.Time `json:"published_at"`
 }
 
 type CourseCatalog struct {
