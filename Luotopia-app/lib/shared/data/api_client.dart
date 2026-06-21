@@ -45,10 +45,10 @@ class ApiClient {
     return response.body;
   }
 
-  Future<List<int>> getBytes(String path) async {
+  Future<List<int>> getBytes(String path, {Duration? timeoutOverride}) async {
     final response = await _client
         .get(Uri.parse('$baseUrl$path'), headers: _authHeaders)
-        .timeout(timeout);
+        .timeout(timeoutOverride ?? timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiClientException._(
         response.statusCode,

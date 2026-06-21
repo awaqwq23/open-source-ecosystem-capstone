@@ -26,6 +26,9 @@ class PullClient {
   }
 
   Future<List<int>> downloadSchoolTimetableSnapshot(String path) {
-    return _apiClient.getBytes(path);
+    return _apiClient.getBytes(
+      path,
+      timeoutOverride: const Duration(seconds: 120),
+    );
   }
 }
