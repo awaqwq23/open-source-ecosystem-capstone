@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/data/drift_all_school_timetable_repository.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
+import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 
 class AllSchoolTimetableState {
   const AllSchoolTimetableState({
@@ -9,6 +10,7 @@ class AllSchoolTimetableState {
     this.query = const AllSchoolTimetableQuery(),
     this.courseHeads = const [],
     this.isLoading = false,
+    this.isSyncing = false,
     this.errorMessage,
     this.hasLoaded = false,
   });
@@ -17,6 +19,7 @@ class AllSchoolTimetableState {
   final AllSchoolTimetableQuery query;
   final List<SchoolCourseHead> courseHeads;
   final bool isLoading;
+  final bool isSyncing;
   final String? errorMessage;
   final bool hasLoaded;
 
@@ -34,6 +37,7 @@ class AllSchoolTimetableState {
     AllSchoolTimetableQuery? query,
     List<SchoolCourseHead>? courseHeads,
     bool? isLoading,
+    bool? isSyncing,
     String? errorMessage,
     bool clearErrorMessage = false,
     bool? hasLoaded,
@@ -43,6 +47,7 @@ class AllSchoolTimetableState {
       query: query ?? this.query,
       courseHeads: courseHeads ?? this.courseHeads,
       isLoading: isLoading ?? this.isLoading,
+      isSyncing: isSyncing ?? this.isSyncing,
       errorMessage: clearErrorMessage
           ? null
           : errorMessage ?? this.errorMessage,
@@ -91,6 +96,29 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
       }
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
+    }
+  }
+
+  /// 从服务器同步全校课表数据
+  Future<void> sync() async {
+    if (state.isSyncing) {
+      return;
+    }
+    state = state.copyWith(isSyncing: true, clearErrorMessage: true);
+    try {
+      final service = ref.read(unifiedPullServiceProvider);
+      final result = await service.pullScoped(
+        trigger: 'manual',
+        scopes: const ['school_timetable'],
+      );
+      if (result.isError) {
+        throw result.error!;
+      }
+      // 同步完成后刷新页面数据
+      await load();
+      state = state.copyWith(isSyncing: false);
+    } catch (error) {
+      state = state.copyWith(isSyncing: false, errorMessage: '同步失败：$error');
     }
   }
 

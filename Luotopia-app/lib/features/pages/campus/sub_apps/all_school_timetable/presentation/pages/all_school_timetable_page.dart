@@ -67,6 +67,18 @@ class _AllSchoolTimetablePageState
             ),
           ],
           title: const Text('全校课表'),
+          trailing: [
+            ui.IconButton.ghost(
+              onPressed: state.isSyncing ? null : () => notifier.sync(),
+              icon: state.isSyncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: ui.CircularProgressIndicator(size: 16),
+                    )
+                  : const Icon(Icons.sync, size: 20),
+            ),
+          ],
         ),
       ],
       child: ListView(
