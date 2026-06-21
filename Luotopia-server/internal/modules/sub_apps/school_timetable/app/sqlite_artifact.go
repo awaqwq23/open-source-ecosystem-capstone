@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -117,6 +118,9 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 	if err := insertInstructorCourses(ctx, tx, records.InstructorCourses); err != nil {
 		return err
 	}
+	if err := insertLocations(ctx, tx, records.MeetingRules); err != nil {
+		return err
+	}
 	if err := insertOfferings(ctx, tx, records.Offerings); err != nil {
 		return err
 	}
@@ -129,7 +133,13 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 	if err := insertMeetingRules(ctx, tx, records.MeetingRules); err != nil {
 		return err
 	}
-	if err := insertOccurrences(ctx, tx, records.Occurrences); err != nil {
+	if err := insertMeetingRuleWeeks(ctx, tx, records.MeetingRules); err != nil {
+		return err
+	}
+	if err := insertMeetingRuleSections(ctx, tx, records.MeetingRules); err != nil {
+		return err
+	}
+	if err := insertSearchRows(ctx, tx, records.TermCourses); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, sqliteIndexes); err != nil {
@@ -139,13 +149,13 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 }
 
 func insertCatalogs(ctx context.Context, tx *sql.Tx, rows []domain.CourseCatalog) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_catalog_rows (id, catalog_key, course_no, course_name, credits, search_text) VALUES (?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_catalog_rows (id, stable_id, catalog_key, course_no, course_name, credits, search_text) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.CatalogKey, row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.CatalogKey, row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -153,13 +163,13 @@ func insertCatalogs(ctx context.Context, tx *sql.Tx, rows []domain.CourseCatalog
 }
 
 func insertTermCourses(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_term_course_rows (id, term_key, catalog_id, course_no, course_name, open_college, credits, course_nature, course_category, open_type, teaching_class_count, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_term_course_rows (id, stable_id, term_key, catalog_id, course_no, course_name, open_college, credits, course_nature, course_category, open_type, teaching_class_count, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.TermKey, row.CatalogID, row.CourseNo, row.CourseName, row.OpenCollege, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType, row.TeachingClassCount, row.TeacherSummary, row.WeekdaySummary, row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, row.OpenCollege, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType, row.TeachingClassCount, row.TeacherSummary, row.WeekdaySummary, row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -167,13 +177,44 @@ func insertTermCourses(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse
 }
 
 func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.InstructorCourse) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_instructor_course_rows (id, catalog_id, course_no, course_name, credits, instructor_name, instructor_name_key, offering_count, latest_term_key, latest_open_college, latest_teaching_title, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_instructor_course_rows (id, stable_id, catalog_id, course_no, course_name, credits, instructor_name, instructor_name_key, offering_count, latest_term_key, latest_open_college, latest_teaching_title, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.CatalogID, row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.InstructorName, row.InstructorNameKey, row.OfferingCount, row.LatestTermKey, row.LatestOpenCollege, row.LatestTeachingTitle, row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.InstructorName, row.InstructorNameKey, row.OfferingCount, row.LatestTermKey, row.LatestOpenCollege, row.LatestTeachingTitle, row.SearchText); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertLocations(ctx context.Context, tx *sql.Tx, rules []domain.CourseMeetingRule) error {
+	buildingStmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO location_building_rows (id, stable_id, building_key, display_name) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer buildingStmt.Close()
+	roomStmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO location_room_rows (id, stable_id, building_id, room_key, display_name) VALUES (?, ?, ?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer roomStmt.Close()
+	for _, rule := range rules {
+		if rule.BuildingKey == "" {
+			continue
+		}
+		buildingStableID := stableID("location_building", rule.BuildingKey)
+		buildingID := stableIntID(buildingStableID)
+		if _, err := buildingStmt.ExecContext(ctx, buildingID, buildingStableID, rule.BuildingKey, rule.Building); err != nil {
+			return err
+		}
+		if rule.RoomKey == "" {
+			continue
+		}
+		roomStableID := stableID("location_room", rule.BuildingKey, rule.RoomKey)
+		if _, err := roomStmt.ExecContext(ctx, stableIntID(roomStableID), roomStableID, buildingID, rule.RoomKey, rule.Room); err != nil {
 			return err
 		}
 	}
@@ -182,21 +223,21 @@ func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.Inst
 
 func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOffering) error {
 	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_offering_rows
-	(id, term_key, term_course_id, catalog_id, instructor_course_id, source_key, school_year, term, teaching_class_name, course_no, course_name, open_college, plan_college, credits, course_nature, course_category, open_type, instructor, title, people_raw, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_summary, weekday_summary, search_text, original_fields_json)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	(id, stable_id, term_key, term_course_id, catalog_id, instructor_course_id, source_key, school_year, term, teaching_class_name, teaching_class_key, course_no, course_name, open_college, plan_college, credits, course_nature, course_category, open_type, instructor, instructor_set_key, title, people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_key, schedule_summary, weekday_summary, search_text, detail_fields_json)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		fields := jsonString(row.Fields)
+		fields := jsonString(detailFields(row.Fields))
 		if _, err := stmt.ExecContext(ctx,
-			row.ID, row.TermKey, row.TermCourseID, row.CatalogID, row.InstructorCourseID, row.SourceKey,
-			row.SchoolYear, row.Term, row.TeachingClassName, row.CourseNo, row.CourseName,
-			row.OpenCollege, row.AudienceSummary, nullableFloat(row.Credits), "", "", "",
-			row.Instructor, row.Title, row.PeopleRaw, nullableInt(row.TheoryHours), nullableInt(row.ComputerHours),
+			stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID), stableIntID(row.InstructorCourseID), row.SourceKey,
+			row.SchoolYear, row.Term, row.TeachingClassName, normalizeKey(row.TeachingClassName), row.CourseNo, row.CourseName,
+			row.OpenCollege, row.AudienceSummary, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType,
+			row.Instructor, row.InstructorSetKey, row.Title, row.PeopleRaw, nullablePositiveInt(row.Capacity), nullablePositiveInt(row.SelectedCount), nullableInt(row.TheoryHours), nullableInt(row.ComputerHours),
 			nullableInt(row.ExperimentHours), nullableInt(row.PracticeHours), row.Remark, row.OtherTeachers,
-			row.Textbook, row.Publisher, row.ScheduleSummary, row.WeekdaySummary, row.SearchText, fields,
+			row.Textbook, row.Publisher, row.ScheduleKey, row.ScheduleSummary, row.WeekdaySummary, row.SearchText, fields,
 		); err != nil {
 			return err
 		}
@@ -205,13 +246,13 @@ func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOfferi
 }
 
 func insertAudiences(ctx context.Context, tx *sql.Tx, rows []domain.CourseAudience) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_audience_rows (id, term_key, offering_id, term_course_id, catalog_id, grade, major, plan_college, course_nature, course_nature_code, course_category, course_category_code, open_type, open_type_code, condition_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_audience_rows (id, stable_id, term_key, offering_id, term_course_id, catalog_id, grade, major, plan_college, course_nature, course_nature_code, course_category, course_category_code, open_type, open_type_code, condition_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.TermKey, row.OfferingID, row.TermCourseID, row.CatalogID, row.Grade, row.Major, row.PlanCollege, row.CourseNature, row.CourseNatureCode, row.CourseCategory, row.CourseCategoryCode, row.OpenType, row.OpenTypeCode, row.ConditionCode); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.OfferingID), stableIntID(row.TermCourseID), stableIntID(row.CatalogID), row.Grade, row.Major, row.PlanCollege, row.CourseNature, row.CourseNatureCode, row.CourseCategory, row.CourseCategoryCode, row.OpenType, row.OpenTypeCode, row.ConditionCode); err != nil {
 			return err
 		}
 	}
@@ -219,13 +260,13 @@ func insertAudiences(ctx context.Context, tx *sql.Tx, rows []domain.CourseAudien
 }
 
 func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_source_rows (id, term_key, term_course_id, offering_id, source_key, package_index, source_status, original_fields_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_source_rows (id, stable_id, term_key, term_course_id, offering_id, source_key, package_index, source_status, detail_fields_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.TermKey, row.TermCourseID, row.OfferingID, row.SourceKey, row.PackageIndex, row.Status, jsonString(row.Fields)); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, nullableStableIntID(row.TermCourseID), nullableStableIntID(row.OfferingID), row.SourceKey, row.PackageIndex, row.Status, jsonString(detailFields(row.Fields))); err != nil {
 			return err
 		}
 	}
@@ -233,27 +274,66 @@ func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) 
 }
 
 func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_rows (id, offering_id, term_key, term_course_id, catalog_id, weekday, segment_index, weekday_label, raw_text, week_text, section_text, location_text, building, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_rows (id, stable_id, offering_id, term_key, term_course_id, catalog_id, weekday, segment_index, weekday_label, raw_text, week_text, section_text, location_text, building_id, room_id, building, room, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.OfferingID, row.TermKey, row.TermCourseID, row.CatalogID, row.Weekday, row.SegmentIndex, row.WeekdayLabel, row.RawText, row.WeekText, row.SectionText, row.LocationText, row.Building, row.Room); err != nil {
+		if _, err := stmt.ExecContext(ctx,
+			stableIntID(row.ID), row.ID, stableIntID(row.OfferingID), row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID),
+			row.Weekday, row.SegmentIndex, row.WeekdayLabel, row.RawText, row.WeekText, row.SectionText,
+			row.LocationText, nullableLocationID("location_building", row.BuildingKey), nullableRoomID(row.BuildingKey, row.RoomKey),
+			row.Building, row.Room, row.ParseStatus,
+		); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func insertOccurrences(ctx context.Context, tx *sql.Tx, rows []domain.CourseOccurrence) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_occurrence_rows (id, rule_id, offering_id, term_key, term_course_id, catalog_id, date, week_index, weekday, section_text, location_text, building, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+func insertMeetingRuleWeeks(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_week_rows (rule_id, week_index) VALUES (?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, row.ID, row.RuleID, row.OfferingID, row.TermKey, row.TermCourseID, row.CatalogID, row.Date, row.WeekIndex, row.Weekday, row.SectionText, row.LocationText, row.Building, row.Room); err != nil {
+		ruleID := stableIntID(row.ID)
+		for _, week := range row.WeekIndexes {
+			if _, err := stmt.ExecContext(ctx, ruleID, week); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func insertMeetingRuleSections(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_section_rows (rule_id, section_index) VALUES (?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, row := range rows {
+		ruleID := stableIntID(row.ID)
+		for _, section := range row.SectionIndexes {
+			if _, err := stmt.ExecContext(ctx, ruleID, section); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func insertSearchRows(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse) error {
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_search_fts (term_course_id, term_key, course_name, course_no, open_college, course_nature, course_category, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, row := range rows {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.TermKey, row.CourseName, row.CourseNo, row.OpenCollege, row.CourseNature, row.CourseCategory, row.TeacherSummary, row.WeekdaySummary, row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -315,6 +395,57 @@ func nullableInt(raw string) any {
 	return value
 }
 
+func nullablePositiveInt(value int) any {
+	if value <= 0 {
+		return nil
+	}
+	return value
+}
+
+func stableIntID(stableID string) int64 {
+	sum := sha256.Sum256([]byte(stableID))
+	value := binary.BigEndian.Uint64(sum[:8]) & ((uint64(1) << 63) - 1)
+	if value == 0 {
+		return 1
+	}
+	return int64(value)
+}
+
+func nullableStableIntID(stableID string) any {
+	if stableID == "" {
+		return nil
+	}
+	return stableIntID(stableID)
+}
+
+func nullableLocationID(kind, key string) any {
+	if key == "" {
+		return nil
+	}
+	return stableIntID(stableID(kind, key))
+}
+
+func nullableRoomID(buildingKey, roomKey string) any {
+	if buildingKey == "" || roomKey == "" {
+		return nil
+	}
+	return stableIntID(stableID("location_room", buildingKey, roomKey))
+}
+
+func detailFields(fields map[string]string) map[string]string {
+	keys := []string{
+		"key", "jxbmc", "yskch", "kcmc", "skxy", "jhxy", "kcxf", "kcxzmc", "kclbmc", "kklxmc",
+		"jsxm", "jszc", "skrs", "xsdm_01", "xsdm_02", "xsdm_03", "xsdm_04", "xkbz", "qtjs", "jcmc", "cbs",
+	}
+	result := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value := fields[key]; value != "" {
+			result[key] = value
+		}
+	}
+	return result
+}
+
 func jsonString(value map[string]string) string {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -333,11 +464,13 @@ CREATE TABLE school_timetable_term_rows (
   row_count INTEGER NOT NULL DEFAULT 0, imported_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
 );
 CREATE TABLE course_catalog_rows (
-  id TEXT PRIMARY KEY, catalog_key TEXT NOT NULL, course_no TEXT NOT NULL,
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  catalog_key TEXT NOT NULL, course_no TEXT NOT NULL,
   course_name TEXT NOT NULL, credits REAL, search_text TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE course_term_course_rows (
-  id TEXT PRIMARY KEY, term_key TEXT NOT NULL, catalog_id TEXT NOT NULL,
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  term_key TEXT NOT NULL, catalog_id INTEGER NOT NULL,
   course_no TEXT NOT NULL, course_name TEXT NOT NULL, open_college TEXT NOT NULL DEFAULT '',
   credits REAL, course_nature TEXT NOT NULL DEFAULT '', course_category TEXT NOT NULL DEFAULT '',
   open_type TEXT NOT NULL DEFAULT '', teaching_class_count INTEGER NOT NULL DEFAULT 0,
@@ -345,40 +478,45 @@ CREATE TABLE course_term_course_rows (
   search_text TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE course_instructor_course_rows (
-  id TEXT PRIMARY KEY, catalog_id TEXT NOT NULL, course_no TEXT NOT NULL,
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  catalog_id INTEGER NOT NULL, course_no TEXT NOT NULL,
   course_name TEXT NOT NULL, credits REAL, instructor_name TEXT NOT NULL DEFAULT '',
   instructor_name_key TEXT NOT NULL DEFAULT '', offering_count INTEGER NOT NULL DEFAULT 0,
   latest_term_key TEXT NOT NULL DEFAULT '', latest_open_college TEXT NOT NULL DEFAULT '',
   latest_teaching_title TEXT NOT NULL DEFAULT '', search_text TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE location_building_rows (
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  building_key TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE location_room_rows (
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  building_id INTEGER, room_key TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '',
+  UNIQUE(building_id, room_key)
+);
 CREATE TABLE course_offering_rows (
-  id TEXT PRIMARY KEY, term_key TEXT NOT NULL, term_course_id TEXT NOT NULL,
-  catalog_id TEXT NOT NULL, instructor_course_id TEXT NOT NULL, source_key TEXT NOT NULL,
-  package_index INTEGER NOT NULL DEFAULT 0, source_status TEXT NOT NULL DEFAULT 'active',
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  term_key TEXT NOT NULL, term_course_id INTEGER NOT NULL,
+  catalog_id INTEGER NOT NULL, instructor_course_id INTEGER NOT NULL, source_key TEXT NOT NULL,
   school_year TEXT NOT NULL, term TEXT NOT NULL, teaching_class_name TEXT NOT NULL,
+  teaching_class_key TEXT NOT NULL DEFAULT '',
   course_no TEXT NOT NULL, course_name TEXT NOT NULL, open_college TEXT NOT NULL DEFAULT '',
   plan_college TEXT NOT NULL DEFAULT '', credits REAL, course_nature TEXT NOT NULL DEFAULT '',
   course_category TEXT NOT NULL DEFAULT '', open_type TEXT NOT NULL DEFAULT '',
-  grade TEXT NOT NULL DEFAULT '', major TEXT NOT NULL DEFAULT '', instructor TEXT NOT NULL DEFAULT '',
-  title TEXT NOT NULL DEFAULT '', people_raw TEXT NOT NULL DEFAULT '', theory_hours INTEGER,
+  instructor TEXT NOT NULL DEFAULT '', instructor_set_key TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '', people_raw TEXT NOT NULL DEFAULT '',
+  capacity INTEGER, selected_count INTEGER, theory_hours INTEGER,
   computer_hours INTEGER, experiment_hours INTEGER, practice_hours INTEGER,
-  sunday_raw TEXT NOT NULL DEFAULT '', monday_raw TEXT NOT NULL DEFAULT '',
-  tuesday_raw TEXT NOT NULL DEFAULT '', wednesday_raw TEXT NOT NULL DEFAULT '',
-  thursday_raw TEXT NOT NULL DEFAULT '', friday_raw TEXT NOT NULL DEFAULT '',
-  saturday_raw TEXT NOT NULL DEFAULT '', remark TEXT NOT NULL DEFAULT '',
+  remark TEXT NOT NULL DEFAULT '',
   other_teachers TEXT NOT NULL DEFAULT '', textbook TEXT NOT NULL DEFAULT '',
-  publisher TEXT NOT NULL DEFAULT '', open_department_code TEXT NOT NULL DEFAULT '',
-  college_code TEXT NOT NULL DEFAULT '', major_code TEXT NOT NULL DEFAULT '',
-  grade_code TEXT NOT NULL DEFAULT '', school_year_code TEXT NOT NULL DEFAULT '',
-  term_code TEXT NOT NULL DEFAULT '', course_category_code TEXT NOT NULL DEFAULT '',
-  condition_code TEXT NOT NULL DEFAULT '', open_type_code TEXT NOT NULL DEFAULT '',
-  course_nature_code TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+  publisher TEXT NOT NULL DEFAULT '', schedule_key TEXT NOT NULL DEFAULT '',
   schedule_summary TEXT NOT NULL DEFAULT '', weekday_summary TEXT NOT NULL DEFAULT '',
-  search_text TEXT NOT NULL DEFAULT '', original_fields_json TEXT NOT NULL DEFAULT '{}'
+  search_text TEXT NOT NULL DEFAULT '', detail_fields_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE course_audience_rows (
-  id TEXT PRIMARY KEY, term_key TEXT NOT NULL, offering_id TEXT NOT NULL,
-  term_course_id TEXT NOT NULL, catalog_id TEXT NOT NULL, grade TEXT NOT NULL DEFAULT '',
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  term_key TEXT NOT NULL, offering_id INTEGER NOT NULL,
+  term_course_id INTEGER NOT NULL, catalog_id INTEGER NOT NULL, grade TEXT NOT NULL DEFAULT '',
   major TEXT NOT NULL DEFAULT '', plan_college TEXT NOT NULL DEFAULT '',
   course_nature TEXT NOT NULL DEFAULT '', course_nature_code TEXT NOT NULL DEFAULT '',
   course_category TEXT NOT NULL DEFAULT '', course_category_code TEXT NOT NULL DEFAULT '',
@@ -386,35 +524,56 @@ CREATE TABLE course_audience_rows (
   condition_code TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE course_source_rows (
-  id TEXT PRIMARY KEY, term_key TEXT NOT NULL, term_course_id TEXT NOT NULL DEFAULT '',
-  offering_id TEXT NOT NULL DEFAULT '', source_key TEXT NOT NULL DEFAULT '',
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  term_key TEXT NOT NULL, term_course_id INTEGER,
+  offering_id INTEGER, source_key TEXT NOT NULL DEFAULT '',
   package_index INTEGER NOT NULL DEFAULT 0, source_status TEXT NOT NULL DEFAULT 'active',
-  original_fields_json TEXT NOT NULL DEFAULT '{}'
+  detail_fields_json TEXT NOT NULL DEFAULT '{}'
 );
 CREATE TABLE course_meeting_rule_rows (
-  id TEXT PRIMARY KEY, offering_id TEXT NOT NULL, term_key TEXT NOT NULL,
-  term_course_id TEXT NOT NULL, catalog_id TEXT NOT NULL, weekday INTEGER NOT NULL,
+  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
+  offering_id INTEGER NOT NULL, term_key TEXT NOT NULL,
+  term_course_id INTEGER NOT NULL, catalog_id INTEGER NOT NULL, weekday INTEGER NOT NULL,
   segment_index INTEGER NOT NULL, weekday_label TEXT NOT NULL DEFAULT '',
   raw_text TEXT NOT NULL DEFAULT '', week_text TEXT NOT NULL DEFAULT '',
   section_text TEXT NOT NULL DEFAULT '', location_text TEXT NOT NULL DEFAULT '',
-  building TEXT NOT NULL DEFAULT '', room TEXT NOT NULL DEFAULT ''
+  building_id INTEGER, room_id INTEGER,
+  building TEXT NOT NULL DEFAULT '', room TEXT NOT NULL DEFAULT '',
+  parse_status TEXT NOT NULL DEFAULT 'parsed'
 );
-CREATE TABLE course_occurrence_rows (
-  id TEXT PRIMARY KEY, rule_id TEXT NOT NULL, offering_id TEXT NOT NULL,
-  term_key TEXT NOT NULL, term_course_id TEXT NOT NULL, catalog_id TEXT NOT NULL,
-  date TEXT NOT NULL, week_index INTEGER NOT NULL, weekday INTEGER NOT NULL,
-  section_text TEXT NOT NULL DEFAULT '', location_text TEXT NOT NULL DEFAULT '',
-  building TEXT NOT NULL DEFAULT '', room TEXT NOT NULL DEFAULT ''
+CREATE TABLE course_meeting_rule_week_rows (
+  rule_id INTEGER NOT NULL, week_index INTEGER NOT NULL,
+  PRIMARY KEY(rule_id, week_index)
+);
+CREATE TABLE course_meeting_rule_section_rows (
+  rule_id INTEGER NOT NULL, section_index INTEGER NOT NULL,
+  PRIMARY KEY(rule_id, section_index)
+);
+CREATE VIRTUAL TABLE course_search_fts USING fts5(
+  term_course_id UNINDEXED,
+  term_key UNINDEXED,
+  course_name,
+  course_no,
+  open_college,
+  course_nature,
+  course_category,
+  teacher_summary,
+  weekday_summary,
+  search_text
 );
 `
 
 const sqliteIndexes = `
 CREATE INDEX idx_course_term_course_rows_term ON course_term_course_rows(term_key);
 CREATE INDEX idx_course_term_course_rows_course_no ON course_term_course_rows(term_key, course_no);
-CREATE INDEX idx_course_offering_rows_term_course ON course_offering_rows(term_course_id);
+CREATE INDEX idx_course_offering_rows_term_course ON course_offering_rows(term_course_id, instructor, teaching_class_name);
 CREATE INDEX idx_course_offering_rows_course_no ON course_offering_rows(term_key, course_no);
+CREATE INDEX idx_course_offering_rows_stable ON course_offering_rows(stable_id);
 CREATE INDEX idx_course_audience_rows_filter ON course_audience_rows(term_key, grade, major, plan_college);
-CREATE INDEX idx_course_meeting_rule_rows_offering ON course_meeting_rule_rows(offering_id);
+CREATE INDEX idx_course_audience_rows_offering ON course_audience_rows(offering_id);
+CREATE INDEX idx_location_room_rows_building_room ON location_room_rows(building_id, room_key);
+CREATE INDEX idx_course_meeting_rule_rows_offering ON course_meeting_rule_rows(offering_id, weekday);
 CREATE INDEX idx_course_meeting_rule_rows_filter ON course_meeting_rule_rows(term_key, weekday, building);
-CREATE INDEX idx_course_occurrence_rows_offering_date ON course_occurrence_rows(offering_id, date);
+CREATE INDEX idx_course_meeting_rule_week_rows_week ON course_meeting_rule_week_rows(week_index, rule_id);
+CREATE INDEX idx_course_meeting_rule_section_rows_section ON course_meeting_rule_section_rows(section_index, rule_id);
 `

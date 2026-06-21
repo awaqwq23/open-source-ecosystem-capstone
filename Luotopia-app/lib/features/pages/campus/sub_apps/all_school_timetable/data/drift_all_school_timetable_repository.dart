@@ -115,45 +115,43 @@ class DriftAllSchoolTimetableRepository
     if (db == null || termKey == null || termKey.isEmpty) {
       return const [];
     }
-    final allowedTermCourseIds = query.hasProfessionalFilters
-        ? await _matchingTermCourseIds(db, query)
-        : null;
-    if (allowedTermCourseIds != null && allowedTermCourseIds.isEmpty) {
-      return const [];
-    }
-    final where = <String>['term_key = ?'];
-    final variables = <Variable>[Variable.withString(termKey)];
     final keyword = query.keyword.trim();
-    if (keyword.isNotEmpty) {
-      where.add(
-        '(search_text LIKE ? OR course_name LIKE ? OR course_no LIKE ?)',
-      );
-      final pattern = '%$keyword%';
-      variables.addAll([
-        Variable.withString(pattern),
-        Variable.withString(pattern),
-        Variable.withString(pattern),
-      ]);
-    }
-    if (allowedTermCourseIds != null) {
-      where.add(
-        'id IN (${List.filled(allowedTermCourseIds.length, '?').join(',')})',
-      );
-      variables.addAll(allowedTermCourseIds.map(Variable.withString));
-    }
-    final rows = await db.customSelect('''
+    final filterVariables = <Variable>[];
+    final professionalClause = _professionalExistsClause(query, filterVariables);
+    final rows = keyword.isNotEmpty
+        ? await db.customSelect('''
+          SELECT c.id, c.term_key, c.catalog_id, c.course_no, c.course_name, c.open_college,
+                 c.credits, c.course_nature, c.course_category, c.open_type,
+                 c.teaching_class_count, c.teacher_summary, c.weekday_summary,
+                 c.search_text
+          FROM course_search_fts
+          JOIN course_term_course_rows c
+            ON c.id = course_search_fts.term_course_id
+          WHERE course_search_fts.term_key = ?
+            AND course_search_fts MATCH ?
+            $professionalClause
+          ORDER BY bm25(course_search_fts), c.teaching_class_count DESC
+          LIMIT 80
+          ''', variables: [
+              Variable.withString(termKey),
+              Variable.withString(_ftsQuery(keyword)),
+              ...filterVariables,
+            ]).get()
+        : await db.customSelect('''
           SELECT id, term_key, catalog_id, course_no, course_name, open_college,
                  credits, course_nature, course_category, open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
-          FROM course_term_course_rows
-          WHERE ${where.join(' AND ')}
-          ''', variables: variables).get();
-    rows.sort(
-      (a, b) =>
-          _relevanceScore(b, keyword).compareTo(_relevanceScore(a, keyword)),
-    );
-    return rows.take(80).map(_termCourseFromRow).toList(growable: false);
+          FROM course_term_course_rows c
+          WHERE c.term_key = ?
+            $professionalClause
+          ORDER BY teaching_class_count DESC
+          LIMIT 80
+          ''', variables: [
+              Variable.withString(termKey),
+              ...filterVariables,
+            ]).get();
+    return rows.map(_termCourseFromRow).toList(growable: false);
   }
 
   @override
@@ -172,7 +170,7 @@ class DriftAllSchoolTimetableRepository
           FROM course_term_course_rows
           WHERE id = ?
           ''',
-          variables: [Variable.withString(id)],
+          variables: [_idVariable(id)],
         )
         .getSingleOrNull();
     return row == null ? null : _termCourseFromRow(row);
@@ -194,7 +192,7 @@ class DriftAllSchoolTimetableRepository
           WHERE term_course_id = ?
           ORDER BY instructor, teaching_class_name
           ''',
-          variables: [Variable.withString(courseHeadId)],
+          variables: [_idVariable(courseHeadId)],
         )
         .get();
     return rows.map(_offeringFromRow).toList(growable: false);
@@ -209,7 +207,7 @@ class DriftAllSchoolTimetableRepository
     final row = await db
         .customSelect(
           'SELECT * FROM course_offering_rows WHERE id = ?',
-          variables: [Variable.withString(id)],
+          variables: [_idVariable(id)],
         )
         .getSingleOrNull();
     return row == null ? null : _offeringFromRow(row);
@@ -229,7 +227,7 @@ class DriftAllSchoolTimetableRepository
           WHERE offering_id = ?
           ORDER BY weekday, segment_index
           ''',
-          variables: [Variable.withString(teachingClassId)],
+          variables: [_idVariable(teachingClassId)],
         )
         .get();
     return rows.map(_ruleFromRow).toList(growable: false);
@@ -247,16 +245,16 @@ class DriftAllSchoolTimetableRepository
     }
 
     final termCourseId = await _matchTermCourse(db, query);
-    final offering = await _matchOffering(db, query);
+    final weekIndex = await _weekIndexForDate(db, query);
+    final offering = await _matchOffering(db, query, weekIndex: weekIndex);
     if (offering == null) {
       return CourseEntityLink(termCourseId: termCourseId);
     }
 
-    final occurrenceId = await _matchOccurrence(
-      db: db,
-      query: query,
-      offeringId: _readString(offering, 'id'),
-    );
+    final ruleId = _readString(offering, 'matched_rule_id');
+    final occurrenceId = ruleId.isEmpty || weekIndex == null
+        ? ''
+        : '$ruleId:$weekIndex';
     return CourseEntityLink(
       termCourseId: _readString(offering, 'term_course_id').isNotEmpty
           ? _readString(offering, 'term_course_id')
@@ -297,19 +295,47 @@ class DriftAllSchoolTimetableRepository
 
   Future<QueryRow?> _matchOffering(
     AppDatabase db,
-    PersonalCourseMatchQuery query,
-  ) async {
+    PersonalCourseMatchQuery query, {
+    required int? weekIndex,
+  }) async {
+    final sectionIndexes = _sectionIndexes(query.sectionText);
+    final ruleClauses = <String>[];
+    final variables = <Variable>[
+      Variable.withString(query.termKey.trim()),
+      Variable.withString(query.courseNo.trim()),
+      Variable.withInt(query.weekday),
+    ];
+    if (weekIndex != null) {
+      ruleClauses.add('''
+        EXISTS (
+          SELECT 1 FROM course_meeting_rule_week_rows rw
+          WHERE rw.rule_id = r.id AND rw.week_index = ?
+        )
+      ''');
+      variables.add(Variable.withInt(weekIndex));
+    }
+    for (final section in sectionIndexes) {
+      ruleClauses.add('''
+        EXISTS (
+          SELECT 1 FROM course_meeting_rule_section_rows rs
+          WHERE rs.rule_id = r.id AND rs.section_index = ?
+        )
+      ''');
+      variables.add(Variable.withInt(section));
+    }
     final rows = await db
         .customSelect(
           '''
-          SELECT *
-          FROM course_offering_rows
-          WHERE term_key = ? AND course_no = ?
+          SELECT o.*, r.id AS matched_rule_id, r.location_text AS matched_location_text
+          FROM course_offering_rows o
+          JOIN course_meeting_rule_rows r
+            ON r.offering_id = o.id
+          WHERE o.term_key = ?
+            AND o.course_no = ?
+            AND r.weekday = ?
+            ${ruleClauses.isEmpty ? '' : 'AND ${ruleClauses.join(' AND ')}'}
           ''',
-          variables: [
-            Variable.withString(query.termKey.trim()),
-            Variable.withString(query.courseNo.trim()),
-          ],
+          variables: variables,
         )
         .get();
     if (rows.isEmpty) {
@@ -341,20 +367,16 @@ class DriftAllSchoolTimetableRepository
       }
     }
 
-    final ruleMatches = <QueryRow>[];
-    for (final row in candidates) {
-      final rules = await db
-          .customSelect(
-            'SELECT * FROM course_meeting_rule_rows WHERE offering_id = ?',
-            variables: [Variable.withString(_readString(row, 'id'))],
-          )
-          .get();
-      if (rules.any((rule) => _ruleMatches(query, rule))) {
-        ruleMatches.add(row);
-      }
-    }
-    if (ruleMatches.length == 1) {
-      return ruleMatches.single;
+    final locationMatches = [
+      for (final row in candidates)
+        if (_locationCompatible(
+          _readString(row, 'matched_location_text'),
+          query.locationText,
+        ))
+          row,
+    ];
+    if (locationMatches.length == 1) {
+      return locationMatches.single;
     }
 
     return candidates.length == 1 && className.isNotEmpty
@@ -362,59 +384,50 @@ class DriftAllSchoolTimetableRepository
         : null;
   }
 
-  Future<String> _matchOccurrence({
-    required AppDatabase db,
-    required PersonalCourseMatchQuery query,
-    required String offeringId,
-  }) async {
-    final date = _dateKey(query.date);
-    final rows = await db
+  Future<int?> _weekIndexForDate(
+    AppDatabase db,
+    PersonalCourseMatchQuery query,
+  ) async {
+    final row = await db
         .customSelect(
           '''
-          SELECT *
-          FROM course_occurrence_rows
-          WHERE offering_id = ? AND date = ?
+          SELECT first_week_monday
+          FROM school_timetable_term_rows
+          WHERE term_key = ?
           ''',
-          variables: [
-            Variable.withString(offeringId),
-            Variable.withString(date),
-          ],
+          variables: [Variable.withString(query.termKey.trim())],
         )
-        .get();
-    final matches = [
-      for (final row in rows)
-        if (_readInt(row, 'weekday') == query.weekday &&
-            _sectionMatches(
-              _readString(row, 'section_text'),
-              query.sectionText,
-            ) &&
-            _locationCompatible(
-              _readString(row, 'location_text'),
-              query.locationText,
-            ))
-          row,
-    ];
-    if (matches.length == 1) {
-      return _readString(matches.single, 'id');
+        .getSingleOrNull();
+    if (row == null) {
+      return null;
     }
-    final relaxed = [
-      for (final row in rows)
-        if (_readInt(row, 'weekday') == query.weekday &&
-            _sectionMatches(
-              _readString(row, 'section_text'),
-              query.sectionText,
-            ))
-          row,
-    ];
-    return relaxed.length == 1 ? _readString(relaxed.single, 'id') : '';
+    final firstWeekMonday = DateTime.tryParse(
+      _readString(row, 'first_week_monday'),
+    );
+    if (firstWeekMonday == null) {
+      return null;
+    }
+    final queryDate = DateTime(query.date.year, query.date.month, query.date.day);
+    final firstDate = DateTime(
+      firstWeekMonday.year,
+      firstWeekMonday.month,
+      firstWeekMonday.day,
+    );
+    final days = queryDate.difference(firstDate).inDays;
+    if (days < 0) {
+      return null;
+    }
+    return days ~/ 7 + 1;
   }
 
-  Future<Set<String>> _matchingTermCourseIds(
-    AppDatabase db,
+  String _professionalExistsClause(
     AllSchoolTimetableQuery query,
-  ) async {
-    final conditions = <String>['o.term_key = ?'];
-    final variables = <Variable>[Variable.withString(query.termKey!)];
+    List<Variable> variables,
+  ) {
+    if (!query.hasProfessionalFilters) {
+      return '';
+    }
+    final conditions = <String>['o.term_course_id = c.id'];
 
     void addLike(String column, String value) {
       final normalized = value.trim();
@@ -434,33 +447,29 @@ class DriftAllSchoolTimetableRepository
     }
     addLike('r.building', query.building);
 
-    final rows = await db.customSelect('''
-          SELECT DISTINCT o.term_course_id
-          FROM course_offering_rows o
-          LEFT JOIN course_audience_rows a
-            ON a.offering_id = o.id
-          LEFT JOIN course_meeting_rule_rows r
-            ON r.offering_id = o.id
-          WHERE ${conditions.join(' AND ')}
-          ''', variables: variables).get();
-    return rows.map((row) => _readString(row, 'term_course_id')).toSet();
+    return '''
+      AND EXISTS (
+        SELECT 1
+        FROM course_offering_rows o
+        LEFT JOIN course_audience_rows a
+          ON a.offering_id = o.id
+        LEFT JOIN course_meeting_rule_rows r
+          ON r.offering_id = o.id
+        WHERE ${conditions.join(' AND ')}
+      )
+    ''';
   }
 
-  int _relevanceScore(QueryRow row, String keyword) {
-    if (keyword.isEmpty) {
-      return _readInt(row, 'teaching_class_count');
+  String _ftsQuery(String keyword) {
+    final tokens = keyword
+        .split(RegExp(r'\s+'))
+        .map((part) => part.trim().replaceAll('"', '""'))
+        .where((part) => part.isNotEmpty)
+        .toList(growable: false);
+    if (tokens.isEmpty) {
+      return '""';
     }
-    var score = 0;
-    final courseName = _readString(row, 'course_name');
-    final courseNo = _readString(row, 'course_no');
-    if (courseName == keyword) score += 1000;
-    if (courseNo == keyword) score += 900;
-    if (courseName.startsWith(keyword)) score += 600;
-    if (courseNo.startsWith(keyword)) score += 500;
-    if (_readString(row, 'teacher_summary').contains(keyword)) score += 240;
-    if (_readString(row, 'open_college').contains(keyword)) score += 160;
-    if (_readString(row, 'search_text').contains(keyword)) score += 80;
-    return score + _readInt(row, 'teaching_class_count');
+    return tokens.map((part) => '"$part"').join(' ');
   }
 
   SchoolTimetableTerm _termFromRow(QueryRow row) {
@@ -515,8 +524,8 @@ class DriftAllSchoolTimetableRepository
       major: _readString(row, 'major'),
       instructor: _readString(row, 'instructor'),
       title: _readString(row, 'title'),
-      capacity: _parsePeople(_readString(row, 'people_raw')).capacity,
-      selectedCount: _parsePeople(_readString(row, 'people_raw')).selected,
+      capacity: _readIntOrNull(row, 'capacity'),
+      selectedCount: _readIntOrNull(row, 'selected_count'),
       peopleRaw: _readString(row, 'people_raw'),
       theoryHours: _readIntOrNull(row, 'theory_hours'),
       computerHours: _readIntOrNull(row, 'computer_hours'),
@@ -528,7 +537,7 @@ class DriftAllSchoolTimetableRepository
       publisher: _readString(row, 'publisher'),
       scheduleSummary: _readString(row, 'schedule_summary'),
       weekdaySummary: _readString(row, 'weekday_summary'),
-      originalFields: _decodeFields(_readString(row, 'original_fields_json')),
+      originalFields: _decodeFields(_readString(row, 'detail_fields_json')),
     );
   }
 
@@ -627,7 +636,11 @@ class DriftAllSchoolTimetableRepository
         'course_audience_rows',
         'course_source_rows',
         'course_meeting_rule_rows',
-        'course_occurrence_rows',
+        'course_meeting_rule_week_rows',
+        'course_meeting_rule_section_rows',
+        'location_building_rows',
+        'location_room_rows',
+        'course_search_fts',
       ]) {
         db.select('SELECT 1 FROM $table LIMIT 1');
       }
@@ -639,6 +652,11 @@ class DriftAllSchoolTimetableRepository
   String _readString(QueryRow row, String column) {
     final value = row.data[column];
     return value?.toString() ?? '';
+  }
+
+  Variable _idVariable(String id) {
+    final parsed = int.tryParse(id);
+    return parsed == null ? Variable.withString(id) : Variable.withInt(parsed);
   }
 
   int _readInt(QueryRow row, String column) {
@@ -683,14 +701,6 @@ class DriftAllSchoolTimetableRepository
     };
   }
 
-  _PeopleCount _parsePeople(String raw) {
-    final parts = raw.split(RegExp(r'[\\/／]'));
-    return _PeopleCount(
-      capacity: parts.isEmpty ? null : int.tryParse(parts.first.trim()),
-      selected: parts.length < 2 ? null : int.tryParse(parts[1].trim()),
-    );
-  }
-
   bool _teacherMatches(QueryRow row, String instructor) {
     final normalizedInstructor = _normalizeName(instructor);
     if (normalizedInstructor.isEmpty) {
@@ -713,32 +723,6 @@ class DriftAllSchoolTimetableRepository
         .where((part) => part.isNotEmpty);
   }
 
-  bool _ruleMatches(PersonalCourseMatchQuery query, QueryRow rule) {
-    if (_readInt(rule, 'weekday') != query.weekday) {
-      return false;
-    }
-    if (!_sectionMatches(
-      _readString(rule, 'section_text'),
-      query.sectionText,
-    )) {
-      return false;
-    }
-    return _locationCompatible(
-      _readString(rule, 'location_text'),
-      query.locationText,
-    );
-  }
-
-  bool _sectionMatches(String left, String right) {
-    final leftRange = _sectionRange(left);
-    final rightRange = _sectionRange(right);
-    if (leftRange == null || rightRange == null) {
-      return _normalizeName(left) == _normalizeName(right);
-    }
-    return leftRange.start == rightRange.start &&
-        leftRange.end == rightRange.end;
-  }
-
   _SectionRange? _sectionRange(String value) {
     final numbers = RegExp(r'\d+')
         .allMatches(value)
@@ -754,6 +738,16 @@ class DriftAllSchoolTimetableRepository
       return null;
     }
     return _SectionRange(start: start, end: end);
+  }
+
+  List<int> _sectionIndexes(String value) {
+    final range = _sectionRange(value);
+    if (range == null) {
+      return const [];
+    }
+    return [
+      for (var index = range.start; index <= range.end; index++) index,
+    ];
   }
 
   bool _locationCompatible(String left, String right) {
@@ -781,11 +775,6 @@ class DriftAllSchoolTimetableRepository
     ).replaceAll('教学楼', '').replaceAll('教室', '').replaceAll('武汉大学', '');
   }
 
-  String _dateKey(DateTime value) {
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${value.year}-${two(value.month)}-${two(value.day)}';
-  }
-
   String _safeName(String value) {
     final sanitized = value
         .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
@@ -793,13 +782,6 @@ class DriftAllSchoolTimetableRepository
         .replaceAll(RegExp(r'^_|_$'), '');
     return sanitized.isEmpty ? 'unknown' : sanitized;
   }
-}
-
-class _PeopleCount {
-  const _PeopleCount({required this.capacity, required this.selected});
-
-  final int? capacity;
-  final int? selected;
 }
 
 class _SectionRange {

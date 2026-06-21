@@ -53,6 +53,7 @@ type Release struct {
 
 type CourseCatalog struct {
 	ID         string `json:"id"`
+	StableID   string `json:"stable_id"`
 	CatalogKey string `json:"catalog_key"`
 	CourseNo   string `json:"course_no"`
 	CourseName string `json:"course_name"`
@@ -62,6 +63,7 @@ type CourseCatalog struct {
 
 type TermCourse struct {
 	ID                 string `json:"id"`
+	StableID           string `json:"stable_id"`
 	TermKey            string `json:"term_key"`
 	CatalogID          string `json:"catalog_id"`
 	CourseNo           string `json:"course_no"`
@@ -94,6 +96,7 @@ type InstructorCourse struct {
 
 type CourseOffering struct {
 	ID                 string            `json:"id"`
+	StableID           string            `json:"stable_id"`
 	TermKey            string            `json:"term_key"`
 	SchoolYear         string            `json:"school_year"`
 	Term               string            `json:"term"`
@@ -106,10 +109,16 @@ type CourseOffering struct {
 	CourseName         string            `json:"course_name"`
 	OpenCollege        string            `json:"open_college"`
 	Credits            string            `json:"credits"`
+	CourseNature       string            `json:"course_nature"`
+	CourseCategory     string            `json:"course_category"`
+	OpenType           string            `json:"open_type"`
 	Instructor         string            `json:"instructor"`
 	InstructorKey      string            `json:"instructor_key"`
+	InstructorSetKey   string            `json:"instructor_set_key"`
 	Title              string            `json:"title"`
 	PeopleRaw          string            `json:"people_raw"`
+	Capacity           int               `json:"capacity"`
+	SelectedCount      int               `json:"selected_count"`
 	TheoryHours        string            `json:"theory_hours"`
 	ComputerHours      string            `json:"computer_hours"`
 	ExperimentHours    string            `json:"experiment_hours"`
@@ -119,6 +128,7 @@ type CourseOffering struct {
 	Textbook           string            `json:"textbook"`
 	Publisher          string            `json:"publisher"`
 	ScheduleSignature  string            `json:"schedule_signature"`
+	ScheduleKey        string            `json:"schedule_key"`
 	ScheduleSummary    string            `json:"schedule_summary"`
 	WeekdaySummary     string            `json:"weekday_summary"`
 	AudienceSummary    string            `json:"audience_summary"`
@@ -129,6 +139,7 @@ type CourseOffering struct {
 
 type CourseAudience struct {
 	ID                 string `json:"id"`
+	StableID           string `json:"stable_id"`
 	TermKey            string `json:"term_key"`
 	OfferingID         string `json:"offering_id"`
 	TermCourseID       string `json:"term_course_id"`
@@ -146,20 +157,26 @@ type CourseAudience struct {
 }
 
 type CourseMeetingRule struct {
-	ID           string `json:"id"`
-	OfferingID   string `json:"offering_id"`
-	TermKey      string `json:"term_key"`
-	TermCourseID string `json:"term_course_id"`
-	CatalogID    string `json:"catalog_id"`
-	Weekday      int    `json:"weekday"`
-	SegmentIndex int    `json:"segment_index"`
-	WeekdayLabel string `json:"weekday_label"`
-	RawText      string `json:"raw_text"`
-	WeekText     string `json:"week_text"`
-	SectionText  string `json:"section_text"`
-	LocationText string `json:"location_text"`
-	Building     string `json:"building"`
-	Room         string `json:"room"`
+	ID             string `json:"id"`
+	StableID       string `json:"stable_id"`
+	OfferingID     string `json:"offering_id"`
+	TermKey        string `json:"term_key"`
+	TermCourseID   string `json:"term_course_id"`
+	CatalogID      string `json:"catalog_id"`
+	Weekday        int    `json:"weekday"`
+	SegmentIndex   int    `json:"segment_index"`
+	WeekdayLabel   string `json:"weekday_label"`
+	RawText        string `json:"raw_text"`
+	WeekText       string `json:"week_text"`
+	SectionText    string `json:"section_text"`
+	LocationText   string `json:"location_text"`
+	Building       string `json:"building"`
+	BuildingKey    string `json:"building_key"`
+	Room           string `json:"room"`
+	RoomKey        string `json:"room_key"`
+	WeekIndexes    []int  `json:"week_indexes"`
+	SectionIndexes []int  `json:"section_indexes"`
+	ParseStatus    string `json:"parse_status"`
 }
 
 type CourseOccurrence struct {
