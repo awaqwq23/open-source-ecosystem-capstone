@@ -59,7 +59,7 @@ class LocalDatabaseBackupService {
       await _db.customStatement('PRAGMA foreign_keys = OFF');
       try {
         await _db.transaction(() async {
-          await _deleteCurrentRows();
+          await _deleteCurrentNonCourseRows();
           await _copyRows(alias);
           await _validateImportedRows();
         });
@@ -181,6 +181,16 @@ class LocalDatabaseBackupService {
       }
     }
 
+    final courseRow = await _db.customSelect('''
+      SELECT id
+      FROM $alias.agenda_item_rows
+      WHERE deleted_at IS NULL AND type = 'course'
+      LIMIT 1
+    ''').getSingleOrNull();
+    if (courseRow != null) {
+      throw const LocalDatabaseBackupException('数据库导入失败：备份包含课程事项');
+    }
+
     final preferencesTable = await _db.customSelect('''
       SELECT name
       FROM $alias.sqlite_master
@@ -191,10 +201,29 @@ class LocalDatabaseBackupService {
     }
   }
 
-  Future<void> _deleteCurrentRows() async {
-    for (final table in _deleteOrder) {
-      await _db.customStatement('DELETE FROM ${_sqlIdentifier(table)}');
-    }
+  Future<void> _deleteCurrentNonCourseRows() async {
+    await _db.customStatement('''
+      DELETE FROM schedule_item_detail_rows
+      WHERE item_id IN (
+        SELECT id FROM agenda_item_rows
+        WHERE type = 'schedule'
+      )
+    ''');
+    await _db.customStatement('''
+      DELETE FROM task_item_detail_rows
+      WHERE item_id IN (
+        SELECT id FROM agenda_item_rows
+        WHERE type = 'task'
+      )
+    ''');
+    await _db.customStatement('''
+      DELETE FROM agenda_item_rows
+      WHERE type IN ('schedule', 'task', 'memo')
+    ''');
+    await _db.customStatement('''
+      DELETE FROM sync_tombstone_rows
+      WHERE entity_type = 'agenda_item'
+    ''');
   }
 
   Future<void> _copyRows(String alias) async {
@@ -349,16 +378,6 @@ class LocalDatabaseBackupService {
         '数据库导入失败：${missingDetails.data['id']} 缺少事项详情',
       );
     }
-
-    final courseRow = await _db.customSelect('''
-      SELECT id
-      FROM agenda_item_rows
-      WHERE deleted_at IS NULL AND type = 'course'
-      LIMIT 1
-    ''').getSingleOrNull();
-    if (courseRow != null) {
-      throw const LocalDatabaseBackupException('数据库导入失败：备份包含课程事项');
-    }
   }
 
   void _notifyImportedTablesUpdated() {
@@ -366,18 +385,6 @@ class LocalDatabaseBackupService {
       _db.agendaItemRows,
       _db.scheduleItemDetailRows,
       _db.taskItemDetailRows,
-      _db.courseItemDetailRows,
-      _db.courseTimetableRows,
-      _db.selectedCourseTimetableRows,
-      _db.schoolTimetableTermRows,
-      _db.courseCatalogRows,
-      _db.courseTermCourseRows,
-      _db.courseInstructorCourseRows,
-      _db.courseOfferingRows,
-      _db.courseAudienceRows,
-      _db.courseSourceRows,
-      _db.courseMeetingRuleRows,
-      _db.courseOccurrenceRows,
       _db.syncTombstoneRows,
     ]);
   }
@@ -470,27 +477,6 @@ const _backupTables = [
 final _columnsByTable = {
   for (final table in _backupTables) table.name: table.columns,
 };
-
-const _deleteOrder = [
-  'course_instance_week_rows',
-  'course_instance_rows',
-  'course_occurrence_rows',
-  'course_meeting_rule_rows',
-  'course_source_rows',
-  'course_audience_rows',
-  'course_offering_rows',
-  'course_instructor_course_rows',
-  'course_term_course_rows',
-  'course_catalog_rows',
-  'school_timetable_term_rows',
-  'schedule_item_detail_rows',
-  'task_item_detail_rows',
-  'course_item_detail_rows',
-  'selected_course_timetable_rows',
-  'agenda_item_rows',
-  'course_timetable_rows',
-  'sync_tombstone_rows',
-];
 
 const _excludedTables = [
   'course_instance_week_rows',

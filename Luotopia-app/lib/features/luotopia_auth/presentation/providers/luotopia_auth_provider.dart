@@ -12,7 +12,7 @@ final luotopiaAuthProvider =
     );
 
 class LuotopiaAuthNotifier extends Notifier<LuotopiaAuthState> {
-  late final LuotopiaAuthRepository _repository;
+  late LuotopiaAuthRepository _repository;
 
   @override
   LuotopiaAuthState build() {

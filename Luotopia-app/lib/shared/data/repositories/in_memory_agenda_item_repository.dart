@@ -15,8 +15,8 @@ import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
 class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     implements AgendaItemRepository {
-  late final AppDatabase _db;
-  late final UserDataMutationService _mutations;
+  late AppDatabase _db;
+  late UserDataMutationService _mutations;
 
   @override
   List<AgendaItem> build() {

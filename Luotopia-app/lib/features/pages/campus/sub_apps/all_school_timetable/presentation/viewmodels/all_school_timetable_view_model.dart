@@ -57,7 +57,7 @@ class AllSchoolTimetableState {
 }
 
 class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
-  late final AllSchoolTimetableRepository _repository;
+  late AllSchoolTimetableRepository _repository;
 
   @override
   AllSchoolTimetableState build() {

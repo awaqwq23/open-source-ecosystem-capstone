@@ -36,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -138,6 +138,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 9) {
         await _createCourseInstanceTables();
         await _createSchoolTimetableIndexes();
+      }
+      if (from < 10) {
+        await _ensureCourseItemDetailEntityColumns();
       }
     },
     beforeOpen: (details) async {
@@ -248,6 +251,34 @@ class AppDatabase extends _$AppDatabase {
         PRIMARY KEY(instance_id, week_index)
       )
     ''');
+  }
+
+  Future<void> _ensureCourseItemDetailEntityColumns() async {
+    await _addTextColumnIfMissing('course_item_detail_rows', 'term_course_id');
+    await _addTextColumnIfMissing('course_item_detail_rows', 'offering_id');
+    await _addTextColumnIfMissing(
+      'course_item_detail_rows',
+      'instructor_course_id',
+    );
+    await _addTextColumnIfMissing('course_item_detail_rows', 'occurrence_id');
+  }
+
+  Future<void> _addTextColumnIfMissing(String table, String column) async {
+    final columns = await customSelect(
+      'PRAGMA table_info(${_sqlIdentifier(table)})',
+    ).get();
+    final exists = columns.any((row) => row.data['name'] == column);
+    if (exists) {
+      return;
+    }
+    await customStatement(
+      'ALTER TABLE ${_sqlIdentifier(table)} '
+      'ADD COLUMN ${_sqlIdentifier(column)} TEXT NOT NULL DEFAULT \'\'',
+    );
+  }
+
+  String _sqlIdentifier(String value) {
+    return '"${value.replaceAll('"', '""')}"';
   }
 }
 

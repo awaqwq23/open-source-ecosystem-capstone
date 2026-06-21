@@ -8,8 +8,8 @@ import 'package:luotopia/shared/domain/repositories/course_timetable_repository.
 
 class InMemoryCourseTimetableRepository extends Notifier<CourseTimetableStore>
     implements CourseTimetableRepository {
-  late final AppDatabase _db;
-  late final UserDataMutationService _mutations;
+  late AppDatabase _db;
+  late UserDataMutationService _mutations;
 
   @override
   CourseTimetableStore build() {

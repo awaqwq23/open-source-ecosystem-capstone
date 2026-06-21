@@ -10,14 +10,11 @@ import 'package:luotopia/features/luotopia_auth/domain/luotopia_auth_state.dart'
 import 'package:luotopia/features/luotopia_auth/presentation/providers/luotopia_auth_provider.dart';
 import 'package:luotopia/features/notification/presentation/providers/notification_providers.dart';
 import 'package:luotopia/features/pages/ai/data/ai_in_memory_data_source.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/data/drift_all_school_timetable_repository.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
 import 'package:luotopia/features/unified_pull/presentation/providers/pull_providers.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
 import 'package:luotopia/shared/data/export/local_database_backup_service.dart';
-import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
-import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
 import 'package:luotopia/shared/data/sync/sync_service.dart';
 import 'package:luotopia/shared/data/sync/sync_state_providers.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
@@ -291,9 +288,6 @@ class _SettingsDataUpdatesPageState
           .read(localDatabaseBackupServiceProvider)
           .importDatabase(file.path);
       await _reloadPersonalConfiguration();
-      ref.invalidate(agendaItemRepositoryProvider);
-      ref.invalidate(courseTimetableRepositoryProvider);
-      ref.invalidate(allSchoolTimetableRepositoryProvider);
       ref.invalidate(aiChatRepositoryProvider);
       ref.invalidate(pendingSyncChangeCountProvider);
       ref.invalidate(lastSyncTimeProvider);
@@ -333,7 +327,7 @@ class _SettingsDataUpdatesPageState
       builder: (context) => AlertDialog(
         title: const Text('导入用户数据'),
         content: const Text(
-          '导入会覆盖当前本地非课程事项与个人设置，并清空课程数据和同步状态。'
+          '导入会覆盖当前本地非课程事项与个人设置，并重置对应同步状态。'
           '账号、天气缓存、服务通知和全校课表缓存不会被恢复。',
         ),
         actions: [
@@ -370,7 +364,14 @@ class _SettingsDataUpdatesPageState
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (!mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) {
+      return;
+    }
+    messenger.showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
