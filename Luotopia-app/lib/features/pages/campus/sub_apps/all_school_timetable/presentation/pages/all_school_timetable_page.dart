@@ -136,9 +136,10 @@ class _AllSchoolTimetablePageState
             _StatusCard(
               text: state.terms.isEmpty
                   ? '暂无全校课表数据，等待更新'
-                  : state.query.keyword.isEmpty && !state.query.hasProfessionalFilters
-                      ? '以上是当前学期信息，搜索或筛选以查看课程'
-                      : '没有找到符合条件的课程',
+                  : state.query.keyword.isEmpty &&
+                        !state.query.hasProfessionalFilters
+                  ? '以上是当前学期信息，搜索或筛选以查看课程'
+                  : '没有找到符合条件的课程',
             )
           else
             ...state.courseHeads.map(
@@ -164,20 +165,25 @@ class _QueryModeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ui.ButtonGroup.horizontal(
-      expands: true,
-      children: [
-        ui.SelectedButton(
-          value: mode == AllSchoolTimetableQueryMode.lightweight,
-          onChanged: (_) => onChanged(AllSchoolTimetableQueryMode.lightweight),
-          child: const Text('轻量'),
-        ),
-        ui.SelectedButton(
-          value: mode == AllSchoolTimetableQueryMode.professional,
-          onChanged: (_) => onChanged(AllSchoolTimetableQueryMode.professional),
-          child: const Text('专业'),
-        ),
-      ],
+    return SizedBox(
+      height: 40,
+      child: ui.ButtonGroup.horizontal(
+        expands: true,
+        children: [
+          ui.SelectedButton(
+            value: mode == AllSchoolTimetableQueryMode.lightweight,
+            onChanged: (_) =>
+                onChanged(AllSchoolTimetableQueryMode.lightweight),
+            child: const Text('轻量'),
+          ),
+          ui.SelectedButton(
+            value: mode == AllSchoolTimetableQueryMode.professional,
+            onChanged: (_) =>
+                onChanged(AllSchoolTimetableQueryMode.professional),
+            child: const Text('专业'),
+          ),
+        ],
+      ),
     );
   }
 }
