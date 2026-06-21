@@ -51,7 +51,7 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 			return err
 		}
 		for _, model := range []any{
-			&occurrenceModel{}, &meetingRuleModel{}, &sourceRowModel{}, &audienceModel{},
+			&courseInstanceModel{}, &sourceRowModel{}, &audienceModel{},
 			&offeringModel{}, &termCourseModel{},
 		} {
 			if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(model).Error; err != nil {
@@ -115,19 +115,10 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 				return err
 			}
 		}
-		if len(records.MeetingRules) > 0 {
-			models := make([]meetingRuleModel, len(records.MeetingRules))
-			for i, item := range records.MeetingRules {
-				models[i] = meetingRuleModelFromDomain(item)
-			}
-			if err := tx.CreateInBatches(models, 500).Error; err != nil {
-				return err
-			}
-		}
-		if len(records.Occurrences) > 0 {
-			models := make([]occurrenceModel, len(records.Occurrences))
-			for i, item := range records.Occurrences {
-				models[i] = occurrenceModelFromDomain(item)
+		if len(records.CourseInstances) > 0 {
+			models := make([]courseInstanceModel, len(records.CourseInstances))
+			for i, item := range records.CourseInstances {
+				models[i] = courseInstanceModelFromDomain(item)
 			}
 			if err := tx.CreateInBatches(models, 500).Error; err != nil {
 				return err
@@ -439,58 +430,37 @@ func sourceRowModelFromDomain(item domain.SourceRow) sourceRowModel {
 	}
 }
 
-type meetingRuleModel struct {
-	ID           string `gorm:"primaryKey;column:id"`
-	OfferingID   string `gorm:"column:offering_id"`
-	TermKey      string `gorm:"column:term_key"`
-	TermCourseID string `gorm:"column:term_course_id"`
-	CatalogID    string `gorm:"column:catalog_id"`
-	Weekday      int    `gorm:"column:weekday"`
-	SegmentIndex int    `gorm:"column:segment_index"`
-	WeekdayLabel string `gorm:"column:weekday_label"`
-	RawText      string `gorm:"column:raw_text"`
-	WeekText     string `gorm:"column:week_text"`
-	SectionText  string `gorm:"column:section_text"`
-	LocationText string `gorm:"column:location_text"`
-	Building     string `gorm:"column:building"`
-	Room         string `gorm:"column:room"`
+type courseInstanceModel struct {
+	ID             string `gorm:"primaryKey;column:id"`
+	OfferingID     string `gorm:"column:offering_id"`
+	TermKey        string `gorm:"column:term_key"`
+	TermCourseID   string `gorm:"column:term_course_id"`
+	CatalogID      string `gorm:"column:catalog_id"`
+	Weekday        int    `gorm:"column:weekday"`
+	DayField       string `gorm:"column:day_field"`
+	SegmentIndex   int    `gorm:"column:segment_index"`
+	WeekdayLabel   string `gorm:"column:weekday_label"`
+	RawDayText     string `gorm:"column:raw_day_text"`
+	RawSegmentText string `gorm:"column:raw_segment_text"`
+	WeekText       string `gorm:"column:week_text"`
+	SectionText    string `gorm:"column:section_text"`
+	SectionStart   int    `gorm:"column:section_start"`
+	SectionEnd     int    `gorm:"column:section_end"`
+	LocationText   string `gorm:"column:location_text"`
+	ParseStatus    string `gorm:"column:parse_status"`
+	WeekIndexes    string `gorm:"column:week_indexes"`
 }
 
-func (meetingRuleModel) TableName() string { return "course_meeting_rules" }
+func (courseInstanceModel) TableName() string { return "course_instances" }
 
-func meetingRuleModelFromDomain(item domain.CourseMeetingRule) meetingRuleModel {
-	return meetingRuleModel{
+func courseInstanceModelFromDomain(item domain.CourseInstance) courseInstanceModel {
+	weeks, _ := json.Marshal(item.WeekIndexes)
+	return courseInstanceModel{
 		ID: item.ID, OfferingID: item.OfferingID, TermKey: item.TermKey,
 		TermCourseID: item.TermCourseID, CatalogID: item.CatalogID, Weekday: item.Weekday,
-		SegmentIndex: item.SegmentIndex, WeekdayLabel: item.WeekdayLabel, RawText: item.RawText,
-		WeekText: item.WeekText, SectionText: item.SectionText, LocationText: item.LocationText,
-		Building: item.Building, Room: item.Room,
-	}
-}
-
-type occurrenceModel struct {
-	ID           string `gorm:"primaryKey;column:id"`
-	RuleID       string `gorm:"column:rule_id"`
-	OfferingID   string `gorm:"column:offering_id"`
-	TermKey      string `gorm:"column:term_key"`
-	TermCourseID string `gorm:"column:term_course_id"`
-	CatalogID    string `gorm:"column:catalog_id"`
-	Date         string `gorm:"column:date"`
-	WeekIndex    int    `gorm:"column:week_index"`
-	Weekday      int    `gorm:"column:weekday"`
-	SectionText  string `gorm:"column:section_text"`
-	LocationText string `gorm:"column:location_text"`
-	Building     string `gorm:"column:building"`
-	Room         string `gorm:"column:room"`
-}
-
-func (occurrenceModel) TableName() string { return "course_occurrences" }
-
-func occurrenceModelFromDomain(item domain.CourseOccurrence) occurrenceModel {
-	return occurrenceModel{
-		ID: item.ID, RuleID: item.RuleID, OfferingID: item.OfferingID, TermKey: item.TermKey,
-		TermCourseID: item.TermCourseID, CatalogID: item.CatalogID, Date: item.Date,
-		WeekIndex: item.WeekIndex, Weekday: item.Weekday, SectionText: item.SectionText,
-		LocationText: item.LocationText, Building: item.Building, Room: item.Room,
+		DayField: item.DayField, SegmentIndex: item.SegmentIndex, WeekdayLabel: item.WeekdayLabel,
+		RawDayText: item.RawDayText, RawSegmentText: item.RawSegmentText, WeekText: item.WeekText,
+		SectionText: item.SectionText, SectionStart: item.SectionStart, SectionEnd: item.SectionEnd,
+		LocationText: item.LocationText, ParseStatus: item.ParseStatus, WeekIndexes: string(weeks),
 	}
 }

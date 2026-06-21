@@ -156,7 +156,7 @@ type CourseAudience struct {
 	ConditionCode      string `json:"condition_code"`
 }
 
-type CourseMeetingRule struct {
+type CourseInstance struct {
 	ID             string `json:"id"`
 	StableID       string `json:"stable_id"`
 	OfferingID     string `json:"offering_id"`
@@ -164,35 +164,18 @@ type CourseMeetingRule struct {
 	TermCourseID   string `json:"term_course_id"`
 	CatalogID      string `json:"catalog_id"`
 	Weekday        int    `json:"weekday"`
+	DayField       string `json:"day_field"`
 	SegmentIndex   int    `json:"segment_index"`
 	WeekdayLabel   string `json:"weekday_label"`
-	RawText        string `json:"raw_text"`
+	RawDayText     string `json:"raw_day_text"`
+	RawSegmentText string `json:"raw_segment_text"`
 	WeekText       string `json:"week_text"`
 	SectionText    string `json:"section_text"`
+	SectionStart   int    `json:"section_start"`
+	SectionEnd     int    `json:"section_end"`
 	LocationText   string `json:"location_text"`
-	Building       string `json:"building"`
-	BuildingKey    string `json:"building_key"`
-	Room           string `json:"room"`
-	RoomKey        string `json:"room_key"`
 	WeekIndexes    []int  `json:"week_indexes"`
-	SectionIndexes []int  `json:"section_indexes"`
 	ParseStatus    string `json:"parse_status"`
-}
-
-type CourseOccurrence struct {
-	ID           string `json:"id"`
-	RuleID       string `json:"rule_id"`
-	OfferingID   string `json:"offering_id"`
-	TermKey      string `json:"term_key"`
-	TermCourseID string `json:"term_course_id"`
-	CatalogID    string `json:"catalog_id"`
-	Date         string `json:"date"`
-	WeekIndex    int    `json:"week_index"`
-	Weekday      int    `json:"weekday"`
-	SectionText  string `json:"section_text"`
-	LocationText string `json:"location_text"`
-	Building     string `json:"building"`
-	Room         string `json:"room"`
 }
 
 type SourceRow struct {
@@ -207,15 +190,14 @@ type SourceRow struct {
 }
 
 type Snapshot struct {
-	Manifest          Manifest            `json:"manifest"`
-	Catalogs          []CourseCatalog     `json:"catalogs"`
-	TermCourses       []TermCourse        `json:"term_courses"`
-	InstructorCourses []InstructorCourse  `json:"instructor_courses"`
-	Offerings         []CourseOffering    `json:"offerings"`
-	Audiences         []CourseAudience    `json:"audiences"`
-	MeetingRules      []CourseMeetingRule `json:"meeting_rules"`
-	Occurrences       []CourseOccurrence  `json:"occurrences"`
-	SourceRows        []SourceRow         `json:"source_rows"`
+	Manifest          Manifest           `json:"manifest"`
+	Catalogs          []CourseCatalog    `json:"catalogs"`
+	TermCourses       []TermCourse       `json:"term_courses"`
+	InstructorCourses []InstructorCourse `json:"instructor_courses"`
+	Offerings         []CourseOffering   `json:"offerings"`
+	Audiences         []CourseAudience   `json:"audiences"`
+	CourseInstances   []CourseInstance   `json:"course_instances"`
+	SourceRows        []SourceRow        `json:"source_rows"`
 }
 
 type ImportResult struct {

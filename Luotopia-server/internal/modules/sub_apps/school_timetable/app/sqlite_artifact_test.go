@@ -54,7 +54,7 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 	if err := db.QueryRow(`SELECT value FROM school_timetable_meta WHERE key = 'schema_version'`).Scan(&schemaVersion); err != nil {
 		t.Fatal(err)
 	}
-	if schemaVersion != "3" {
+	if schemaVersion != "4" {
 		t.Fatalf("schema_version = %q", schemaVersion)
 	}
 	var rowCount int
@@ -70,6 +70,13 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 	}
 	if courses != 1 {
 		t.Fatalf("course_term_course_rows count = %d, want 1", courses)
+	}
+	var instances int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM course_instance_rows`).Scan(&instances); err != nil {
+		t.Fatal(err)
+	}
+	if instances != 1 {
+		t.Fatalf("course_instance_rows count = %d, want 1", instances)
 	}
 }
 

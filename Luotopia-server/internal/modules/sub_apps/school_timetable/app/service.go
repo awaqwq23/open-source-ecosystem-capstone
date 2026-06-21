@@ -161,13 +161,12 @@ type Records struct {
 	Offerings         []domain.CourseOffering
 	Audiences         []domain.CourseAudience
 	SourceRows        []domain.SourceRow
-	MeetingRules      []domain.CourseMeetingRule
-	Occurrences       []domain.CourseOccurrence
+	CourseInstances   []domain.CourseInstance
 }
 
 func BuildRecords(pkg domain.Package) Records {
 	sourceRows := make([]domain.SourceRow, 0, len(pkg.Rows))
-	ruleRecords := make([]domain.CourseMeetingRule, 0, len(pkg.Rows))
+	instanceRecords := make([]domain.CourseInstance, 0, len(pkg.Rows))
 	termCourseRows := make(map[string][]map[string]string)
 	offeringRows := make(map[string][]map[string]string)
 	offeringOrder := make([]string, 0, len(pkg.Rows))
@@ -237,8 +236,8 @@ func BuildRecords(pkg domain.Package) Records {
 			LatestTermKey: pkg.Manifest.TermKey, LatestOpenCollege: first["skxy"], LatestTeachingTitle: first["jszc"],
 			SearchText: strings.Join(nonEmpty([]string{first["kcmc"], first["yskch"], instructorName, first["skxy"]}), " "),
 		}
-		rules := meetingRulesForRow(pkg.Manifest.TermKey, termCourseID, catalogID, id, first)
-		ruleRecords = append(ruleRecords, rules...)
+		instances := courseInstancesForRow(pkg.Manifest.TermKey, termCourseID, catalogID, id, first)
+		instanceRecords = append(instanceRecords, instances...)
 		for _, row := range rows {
 			audience := domain.CourseAudience{
 				ID: courseAudienceID(id, row), StableID: courseAudienceID(id, row), TermKey: pkg.Manifest.TermKey,
@@ -280,11 +279,11 @@ func BuildRecords(pkg domain.Package) Records {
 	countInstructorOfferings(instructorCourses, offerings)
 	sort.Slice(termCourses, func(i, j int) bool { return termCourses[i].ID < termCourses[j].ID })
 	sort.Slice(offerings, func(i, j int) bool { return offerings[i].ID < offerings[j].ID })
-	sort.Slice(ruleRecords, func(i, j int) bool { return ruleRecords[i].ID < ruleRecords[j].ID })
+	sort.Slice(instanceRecords, func(i, j int) bool { return instanceRecords[i].ID < instanceRecords[j].ID })
 	return Records{
 		Catalogs: catalogs, TermCourses: termCourses, InstructorCourses: instructorCourses,
 		Offerings: offerings, Audiences: audiences, SourceRows: sourceRows,
-		MeetingRules: ruleRecords,
+		CourseInstances: instanceRecords,
 	}
 }
 
@@ -330,8 +329,8 @@ func GzipSnapshot(pkg domain.Package, records Records) ([]byte, error) {
 	snapshot := domain.Snapshot{
 		Manifest: manifest, Catalogs: records.Catalogs, TermCourses: records.TermCourses,
 		InstructorCourses: records.InstructorCourses, Offerings: records.Offerings,
-		Audiences: records.Audiences, MeetingRules: records.MeetingRules,
-		Occurrences: records.Occurrences, SourceRows: records.SourceRows,
+		Audiences: records.Audiences, CourseInstances: records.CourseInstances,
+		SourceRows: records.SourceRows,
 	}
 	data, err := json.Marshal(snapshot)
 	if err != nil {
@@ -357,76 +356,40 @@ var weekdayFields = []struct {
 	{4, "thu", "周四"}, {5, "fri", "周五"}, {6, "sat", "周六"},
 }
 
-func meetingRulesForRow(termKey, termCourseID, catalogID, offeringID string, row map[string]string) []domain.CourseMeetingRule {
-	result := make([]domain.CourseMeetingRule, 0, 2)
+func courseInstancesForRow(termKey, termCourseID, catalogID, offeringID string, row map[string]string) []domain.CourseInstance {
+	result := make([]domain.CourseInstance, 0, 2)
 	for _, field := range weekdayFields {
 		raw := strings.TrimSpace(row[field.code])
 		if raw == "" {
 			continue
 		}
-		location, building, room := extractLocation(raw)
-		weeks := parseWeekIndexes(raw)
-		sections := parseSectionIndexes(raw)
-		weekText := extractFirst(raw, `\d+(?:-\d+)?周(?:\((?:单|双)\))?`)
-		sectionText := extractFirst(raw, `\d+(?:-\d+)?节`)
-		buildingKey := normalizeLocationKey(building)
-		roomKey := normalizeLocationKey(room)
-		parseStatus := "parsed"
-		if len(weeks) == 0 || len(sections) == 0 {
-			parseStatus = "partial"
-		}
-		ruleID := stableID(
-			"meeting_rule",
-			offeringID,
-			fmt.Sprintf("%d", field.index),
-			intListKey(weeks),
-			intListKey(sections),
-			buildingKey,
-			roomKey,
-			normalizeLocationKey(location),
-		)
-		result = append(result, domain.CourseMeetingRule{
-			ID: ruleID, StableID: ruleID, OfferingID: offeringID, TermKey: termKey, TermCourseID: termCourseID, CatalogID: catalogID,
-			Weekday: field.index, SegmentIndex: len(result), WeekdayLabel: field.label, RawText: raw,
-			WeekText: weekText, SectionText: sectionText, LocationText: location, Building: building,
-			BuildingKey: buildingKey, Room: room, RoomKey: roomKey, WeekIndexes: weeks, SectionIndexes: sections,
-			ParseStatus: parseStatus,
-		})
-	}
-	return result
-}
-
-func occurrencesForRule(firstMonday time.Time, rule domain.CourseMeetingRule) []domain.CourseOccurrence {
-	if firstMonday.IsZero() {
-		return nil
-	}
-	weeks := parseWeekSpans(rule.RawText)
-	if len(weeks) == 0 {
-		return nil
-	}
-	offset := rule.Weekday - 1
-	if rule.Weekday == 0 {
-		offset = 6
-	}
-	result := make([]domain.CourseOccurrence, 0, 16)
-	occurrenceIndex := 0
-	for _, week := range weeks {
-		for index := week.start; index <= week.end; index++ {
-			if week.parity == "单" && index%2 == 0 {
-				continue
+		segments := splitScheduleSegments(raw)
+		for segmentIndex, segment := range segments {
+			weeks := parseWeekIndexes(segment)
+			sectionStart, sectionEnd, sectionText := parseSectionRange(segment)
+			weekText := extractFirst(segment, `\d+(?:-\d+)?周(?:\((?:单|双)\))?`)
+			location := extractLocationText(segment)
+			parseStatus := "parsed"
+			if len(weeks) == 0 || sectionStart == 0 || sectionEnd == 0 {
+				parseStatus = "partial"
 			}
-			if week.parity == "双" && index%2 != 0 {
-				continue
-			}
-			date := firstMonday.AddDate(0, 0, (index-1)*7+offset)
-			id := stableID("occurrence", rule.ID, fmt.Sprintf("%d", occurrenceIndex), date.Format("2006-01-02"), rule.SectionText, rule.LocationText)
-			result = append(result, domain.CourseOccurrence{
-				ID: id, RuleID: rule.ID, OfferingID: rule.OfferingID, TermKey: rule.TermKey,
-				TermCourseID: rule.TermCourseID, CatalogID: rule.CatalogID, Date: date.Format("2006-01-02"),
-				WeekIndex: index, Weekday: rule.Weekday, SectionText: rule.SectionText,
-				LocationText: rule.LocationText, Building: rule.Building, Room: rule.Room,
+			instanceID := stableID(
+				"course_instance",
+				offeringID,
+				fmt.Sprintf("%d", field.index),
+				fmt.Sprintf("%d", segmentIndex),
+				intListKey(weeks),
+				fmt.Sprintf("%d", sectionStart),
+				fmt.Sprintf("%d", sectionEnd),
+				normalizeLocationKey(location),
+			)
+			result = append(result, domain.CourseInstance{
+				ID: instanceID, StableID: instanceID, OfferingID: offeringID, TermKey: termKey, TermCourseID: termCourseID, CatalogID: catalogID,
+				Weekday: field.index, DayField: field.code, SegmentIndex: segmentIndex, WeekdayLabel: field.label,
+				RawDayText: raw, RawSegmentText: segment, WeekText: weekText, SectionText: sectionText,
+				SectionStart: sectionStart, SectionEnd: sectionEnd, LocationText: location, WeekIndexes: weeks,
+				ParseStatus: parseStatus,
 			})
-			occurrenceIndex++
 		}
 	}
 	return result
@@ -436,6 +399,38 @@ type weekSpan struct {
 	start  int
 	end    int
 	parity string
+}
+
+func splitScheduleSegments(raw string) []string {
+	parts := regexp.MustCompile(`[，,;；]`).Split(raw, -1)
+	result := make([]string, 0, len(parts))
+	var current []string
+	for index, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		current = append(current, part)
+		segment := strings.Join(current, ",")
+		if extractFirst(segment, `\d+(?:-\d+)?节`) == "" {
+			continue
+		}
+		if index == len(parts)-1 || looksLikeWeekStart(parts[index+1]) {
+			result = append(result, segment)
+			current = nil
+		}
+	}
+	if len(current) > 0 {
+		result = append(result, strings.Join(current, ","))
+	}
+	if len(result) == 0 && strings.TrimSpace(raw) != "" {
+		return []string{strings.TrimSpace(raw)}
+	}
+	return result
+}
+
+func looksLikeWeekStart(raw string) bool {
+	return regexp.MustCompile(`^\s*\d+(?:-\d+)?周`).MatchString(raw)
 }
 
 func parseWeekSpans(raw string) []weekSpan {
@@ -479,29 +474,20 @@ func parseWeekIndexes(raw string) []int {
 	return result
 }
 
-func parseSectionIndexes(raw string) []int {
-	matches := regexp.MustCompile(`(\d+)(?:-(\d+))?节`).FindAllStringSubmatch(raw, -1)
-	seen := map[int]struct{}{}
-	result := make([]int, 0, len(matches)*2)
-	for _, match := range matches {
-		start, _ := strconv.Atoi(match[1])
-		end := start
-		if match[2] != "" {
-			end, _ = strconv.Atoi(match[2])
-		}
-		if start <= 0 || end < start {
-			continue
-		}
-		for index := start; index <= end; index++ {
-			if _, ok := seen[index]; ok {
-				continue
-			}
-			seen[index] = struct{}{}
-			result = append(result, index)
-		}
+func parseSectionRange(raw string) (int, int, string) {
+	match := regexp.MustCompile(`(\d+)(?:-(\d+))?节`).FindStringSubmatch(raw)
+	if len(match) == 0 {
+		return 0, 0, ""
 	}
-	sort.Ints(result)
-	return result
+	start, _ := strconv.Atoi(match[1])
+	end := start
+	if match[2] != "" {
+		end, _ = strconv.Atoi(match[2])
+	}
+	if start <= 0 || end < start {
+		return 0, 0, ""
+	}
+	return start, end, match[0]
 }
 
 func validateFirstWeekMonday(value string) error {
@@ -590,15 +576,17 @@ func scheduleSignature(row map[string]string) string {
 		if raw == "" {
 			continue
 		}
-		location, building, room := extractLocation(raw)
-		values = append(values, strings.Join([]string{
-			field.code,
-			intListKey(parseWeekIndexes(raw)),
-			intListKey(parseSectionIndexes(raw)),
-			normalizeLocationKey(building),
-			normalizeLocationKey(room),
-			normalizeLocationKey(location),
-		}, "="))
+		for index, segment := range splitScheduleSegments(raw) {
+			sectionStart, sectionEnd, _ := parseSectionRange(segment)
+			values = append(values, strings.Join([]string{
+				field.code,
+				strconv.Itoa(index),
+				intListKey(parseWeekIndexes(segment)),
+				strconv.Itoa(sectionStart),
+				strconv.Itoa(sectionEnd),
+				normalizeLocationKey(extractLocationText(segment)),
+			}, "="))
+		}
 	}
 	return strings.Join(values, "|")
 }
@@ -752,20 +740,12 @@ func extractFirst(raw string, pattern string) string {
 	return strings.TrimSpace(match)
 }
 
-func extractLocation(raw string) (string, string, string) {
-	matches := regexp.MustCompile(`((?:\d区|虚拟教室)[^,，;；)]*)`).FindAllStringSubmatch(raw, -1)
-	if len(matches) == 0 {
-		return "", "", ""
+func extractLocationText(raw string) string {
+	match := regexp.MustCompile(`\d+(?:-\d+)?节(.*)$`).FindStringSubmatch(raw)
+	if len(match) < 2 {
+		return ""
 	}
-	location := strings.TrimSpace(matches[len(matches)-1][1])
-	if location == "" || location == "虚拟教室" {
-		return location, location, ""
-	}
-	parts := regexp.MustCompile(`^(\d区[^-－]*)[-－]?(.*)$`).FindStringSubmatch(location)
-	if len(parts) == 0 {
-		return location, location, ""
-	}
-	return location, strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
+	return strings.TrimSpace(match[1])
 }
 
 func normalizeLocationKey(value string) string {

@@ -154,47 +154,29 @@ CREATE TABLE IF NOT EXISTS course_source_rows (
 CREATE INDEX IF NOT EXISTS idx_course_source_rows_term_status
   ON course_source_rows(term_key, status);
 
-CREATE TABLE IF NOT EXISTS course_meeting_rules (
+CREATE TABLE IF NOT EXISTS course_instances (
   id TEXT PRIMARY KEY,
   offering_id TEXT NOT NULL REFERENCES course_offerings(id) ON DELETE CASCADE,
   term_key TEXT NOT NULL REFERENCES school_timetable_terms(term_key) ON DELETE CASCADE,
   term_course_id TEXT NOT NULL REFERENCES course_term_courses(id) ON DELETE CASCADE,
   catalog_id TEXT NOT NULL REFERENCES course_catalogs(id) ON DELETE CASCADE,
   weekday INT NOT NULL,
+  day_field TEXT NOT NULL DEFAULT '',
   segment_index INT NOT NULL,
   weekday_label TEXT NOT NULL DEFAULT '',
-  raw_text TEXT NOT NULL DEFAULT '',
+  raw_day_text TEXT NOT NULL DEFAULT '',
+  raw_segment_text TEXT NOT NULL DEFAULT '',
   week_text TEXT NOT NULL DEFAULT '',
   section_text TEXT NOT NULL DEFAULT '',
+  section_start INT NOT NULL DEFAULT 0,
+  section_end INT NOT NULL DEFAULT 0,
   location_text TEXT NOT NULL DEFAULT '',
-  building TEXT NOT NULL DEFAULT '',
-  room TEXT NOT NULL DEFAULT ''
+  parse_status TEXT NOT NULL DEFAULT 'parsed',
+  week_indexes JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
-CREATE INDEX IF NOT EXISTS idx_course_meeting_rules_offering
-  ON course_meeting_rules(offering_id);
+CREATE INDEX IF NOT EXISTS idx_course_instances_offering
+  ON course_instances(offering_id);
 
-CREATE INDEX IF NOT EXISTS idx_course_meeting_rules_weekday
-  ON course_meeting_rules(weekday);
-
-CREATE TABLE IF NOT EXISTS course_occurrences (
-  id TEXT PRIMARY KEY,
-  rule_id TEXT NOT NULL REFERENCES course_meeting_rules(id) ON DELETE CASCADE,
-  offering_id TEXT NOT NULL REFERENCES course_offerings(id) ON DELETE CASCADE,
-  term_key TEXT NOT NULL REFERENCES school_timetable_terms(term_key) ON DELETE CASCADE,
-  term_course_id TEXT NOT NULL REFERENCES course_term_courses(id) ON DELETE CASCADE,
-  catalog_id TEXT NOT NULL REFERENCES course_catalogs(id) ON DELETE CASCADE,
-  date TEXT NOT NULL,
-  week_index INT NOT NULL,
-  weekday INT NOT NULL,
-  section_text TEXT NOT NULL DEFAULT '',
-  location_text TEXT NOT NULL DEFAULT '',
-  building TEXT NOT NULL DEFAULT '',
-  room TEXT NOT NULL DEFAULT ''
-);
-
-CREATE INDEX IF NOT EXISTS idx_course_occurrences_offering
-  ON course_occurrences(offering_id);
-
-CREATE INDEX IF NOT EXISTS idx_course_occurrences_date
-  ON course_occurrences(date);
+CREATE INDEX IF NOT EXISTS idx_course_instances_weekday
+  ON course_instances(weekday);

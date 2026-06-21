@@ -22,7 +22,7 @@ import (
 
 const (
 	SQLiteArtifactType    = "school_timetable_sqlite_gzip"
-	SQLiteSchemaVersion   = 3
+	SQLiteSchemaVersion   = 4
 	SQLiteArtifactContent = "application/gzip"
 )
 
@@ -118,9 +118,6 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 	if err := insertInstructorCourses(ctx, tx, records.InstructorCourses); err != nil {
 		return err
 	}
-	if err := insertLocations(ctx, tx, records.MeetingRules); err != nil {
-		return err
-	}
 	if err := insertOfferings(ctx, tx, records.Offerings); err != nil {
 		return err
 	}
@@ -130,13 +127,10 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 	if err := insertSourceRows(ctx, tx, records.SourceRows); err != nil {
 		return err
 	}
-	if err := insertMeetingRules(ctx, tx, records.MeetingRules); err != nil {
+	if err := insertCourseInstances(ctx, tx, records.CourseInstances); err != nil {
 		return err
 	}
-	if err := insertMeetingRuleWeeks(ctx, tx, records.MeetingRules); err != nil {
-		return err
-	}
-	if err := insertMeetingRuleSections(ctx, tx, records.MeetingRules); err != nil {
+	if err := insertCourseInstanceWeeks(ctx, tx, records.CourseInstances); err != nil {
 		return err
 	}
 	if err := insertSearchRows(ctx, tx, records.TermCourses); err != nil {
@@ -184,37 +178,6 @@ func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.Inst
 	defer stmt.Close()
 	for _, row := range rows {
 		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.InstructorName, row.InstructorNameKey, row.OfferingCount, row.LatestTermKey, row.LatestOpenCollege, row.LatestTeachingTitle, row.SearchText); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func insertLocations(ctx context.Context, tx *sql.Tx, rules []domain.CourseMeetingRule) error {
-	buildingStmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO location_building_rows (id, stable_id, building_key, display_name) VALUES (?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer buildingStmt.Close()
-	roomStmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO location_room_rows (id, stable_id, building_id, room_key, display_name) VALUES (?, ?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer roomStmt.Close()
-	for _, rule := range rules {
-		if rule.BuildingKey == "" {
-			continue
-		}
-		buildingStableID := stableID("location_building", rule.BuildingKey)
-		buildingID := stableIntID(buildingStableID)
-		if _, err := buildingStmt.ExecContext(ctx, buildingID, buildingStableID, rule.BuildingKey, rule.Building); err != nil {
-			return err
-		}
-		if rule.RoomKey == "" {
-			continue
-		}
-		roomStableID := stableID("location_room", rule.BuildingKey, rule.RoomKey)
-		if _, err := roomStmt.ExecContext(ctx, stableIntID(roomStableID), roomStableID, buildingID, rule.RoomKey, rule.Room); err != nil {
 			return err
 		}
 	}
@@ -273,8 +236,8 @@ func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) 
 	return nil
 }
 
-func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_rows (id, stable_id, offering_id, term_key, term_course_id, catalog_id, weekday, segment_index, weekday_label, raw_text, week_text, section_text, location_text, building_id, room_id, building, room, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+func insertCourseInstances(ctx context.Context, tx *sql.Tx, rows []domain.CourseInstance) error {
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_instance_rows (id, stable_id, offering_id, term_key, term_course_id, catalog_id, weekday, day_field, segment_index, weekday_label, raw_day_text, raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -282,9 +245,9 @@ func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseMee
 	for _, row := range rows {
 		if _, err := stmt.ExecContext(ctx,
 			stableIntID(row.ID), row.ID, stableIntID(row.OfferingID), row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID),
-			row.Weekday, row.SegmentIndex, row.WeekdayLabel, row.RawText, row.WeekText, row.SectionText,
-			row.LocationText, nullableLocationID("location_building", row.BuildingKey), nullableRoomID(row.BuildingKey, row.RoomKey),
-			row.Building, row.Room, row.ParseStatus,
+			row.Weekday, row.DayField, row.SegmentIndex, row.WeekdayLabel, row.RawDayText, row.RawSegmentText,
+			row.WeekText, row.SectionText, nullablePositiveInt(row.SectionStart), nullablePositiveInt(row.SectionEnd),
+			row.LocationText, row.ParseStatus,
 		); err != nil {
 			return err
 		}
@@ -292,33 +255,16 @@ func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseMee
 	return nil
 }
 
-func insertMeetingRuleWeeks(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_week_rows (rule_id, week_index) VALUES (?, ?)`)
+func insertCourseInstanceWeeks(ctx context.Context, tx *sql.Tx, rows []domain.CourseInstance) error {
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_instance_week_rows (instance_id, week_index) VALUES (?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		ruleID := stableIntID(row.ID)
+		instanceID := stableIntID(row.ID)
 		for _, week := range row.WeekIndexes {
-			if _, err := stmt.ExecContext(ctx, ruleID, week); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func insertMeetingRuleSections(ctx context.Context, tx *sql.Tx, rows []domain.CourseMeetingRule) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_section_rows (rule_id, section_index) VALUES (?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	for _, row := range rows {
-		ruleID := stableIntID(row.ID)
-		for _, section := range row.SectionIndexes {
-			if _, err := stmt.ExecContext(ctx, ruleID, section); err != nil {
+			if _, err := stmt.ExecContext(ctx, instanceID, week); err != nil {
 				return err
 			}
 		}
@@ -418,20 +364,6 @@ func nullableStableIntID(stableID string) any {
 	return stableIntID(stableID)
 }
 
-func nullableLocationID(kind, key string) any {
-	if key == "" {
-		return nil
-	}
-	return stableIntID(stableID(kind, key))
-}
-
-func nullableRoomID(buildingKey, roomKey string) any {
-	if buildingKey == "" || roomKey == "" {
-		return nil
-	}
-	return stableIntID(stableID("location_room", buildingKey, roomKey))
-}
-
 func detailFields(fields map[string]string) map[string]string {
 	keys := []string{
 		"key", "jxbmc", "yskch", "kcmc", "skxy", "jhxy", "kcxf", "kcxzmc", "kclbmc", "kklxmc",
@@ -485,15 +417,6 @@ CREATE TABLE course_instructor_course_rows (
   latest_term_key TEXT NOT NULL DEFAULT '', latest_open_college TEXT NOT NULL DEFAULT '',
   latest_teaching_title TEXT NOT NULL DEFAULT '', search_text TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE location_building_rows (
-  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
-  building_key TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL DEFAULT ''
-);
-CREATE TABLE location_room_rows (
-  id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
-  building_id INTEGER, room_key TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '',
-  UNIQUE(building_id, room_key)
-);
 CREATE TABLE course_offering_rows (
   id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
   term_key TEXT NOT NULL, term_course_id INTEGER NOT NULL,
@@ -530,24 +453,21 @@ CREATE TABLE course_source_rows (
   package_index INTEGER NOT NULL DEFAULT 0, source_status TEXT NOT NULL DEFAULT 'active',
   detail_fields_json TEXT NOT NULL DEFAULT '{}'
 );
-CREATE TABLE course_meeting_rule_rows (
+CREATE TABLE course_instance_rows (
   id INTEGER PRIMARY KEY, stable_id TEXT NOT NULL UNIQUE,
   offering_id INTEGER NOT NULL, term_key TEXT NOT NULL,
   term_course_id INTEGER NOT NULL, catalog_id INTEGER NOT NULL, weekday INTEGER NOT NULL,
-  segment_index INTEGER NOT NULL, weekday_label TEXT NOT NULL DEFAULT '',
-  raw_text TEXT NOT NULL DEFAULT '', week_text TEXT NOT NULL DEFAULT '',
-  section_text TEXT NOT NULL DEFAULT '', location_text TEXT NOT NULL DEFAULT '',
-  building_id INTEGER, room_id INTEGER,
-  building TEXT NOT NULL DEFAULT '', room TEXT NOT NULL DEFAULT '',
+  day_field TEXT NOT NULL DEFAULT '', segment_index INTEGER NOT NULL,
+  weekday_label TEXT NOT NULL DEFAULT '',
+  raw_day_text TEXT NOT NULL DEFAULT '', raw_segment_text TEXT NOT NULL DEFAULT '',
+  week_text TEXT NOT NULL DEFAULT '', section_text TEXT NOT NULL DEFAULT '',
+  section_start INTEGER, section_end INTEGER,
+  location_text TEXT NOT NULL DEFAULT '',
   parse_status TEXT NOT NULL DEFAULT 'parsed'
 );
-CREATE TABLE course_meeting_rule_week_rows (
-  rule_id INTEGER NOT NULL, week_index INTEGER NOT NULL,
-  PRIMARY KEY(rule_id, week_index)
-);
-CREATE TABLE course_meeting_rule_section_rows (
-  rule_id INTEGER NOT NULL, section_index INTEGER NOT NULL,
-  PRIMARY KEY(rule_id, section_index)
+CREATE TABLE course_instance_week_rows (
+  instance_id INTEGER NOT NULL, week_index INTEGER NOT NULL,
+  PRIMARY KEY(instance_id, week_index)
 );
 CREATE VIRTUAL TABLE course_search_fts USING fts5(
   term_course_id UNINDEXED,
@@ -571,9 +491,8 @@ CREATE INDEX idx_course_offering_rows_course_no ON course_offering_rows(term_key
 CREATE INDEX idx_course_offering_rows_stable ON course_offering_rows(stable_id);
 CREATE INDEX idx_course_audience_rows_filter ON course_audience_rows(term_key, grade, major, plan_college);
 CREATE INDEX idx_course_audience_rows_offering ON course_audience_rows(offering_id);
-CREATE INDEX idx_location_room_rows_building_room ON location_room_rows(building_id, room_key);
-CREATE INDEX idx_course_meeting_rule_rows_offering ON course_meeting_rule_rows(offering_id, weekday);
-CREATE INDEX idx_course_meeting_rule_rows_filter ON course_meeting_rule_rows(term_key, weekday, building);
-CREATE INDEX idx_course_meeting_rule_week_rows_week ON course_meeting_rule_week_rows(week_index, rule_id);
-CREATE INDEX idx_course_meeting_rule_section_rows_section ON course_meeting_rule_section_rows(section_index, rule_id);
+CREATE INDEX idx_course_instance_rows_offering ON course_instance_rows(offering_id, weekday, segment_index);
+CREATE INDEX idx_course_instance_rows_filter ON course_instance_rows(term_key, weekday, section_start, section_end);
+CREATE INDEX idx_course_instance_rows_location ON course_instance_rows(term_key, location_text);
+CREATE INDEX idx_course_instance_week_rows_week ON course_instance_week_rows(week_index, instance_id);
 `

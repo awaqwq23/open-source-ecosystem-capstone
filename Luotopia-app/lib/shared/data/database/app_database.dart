@@ -36,10 +36,15 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+      await _createCourseInstanceTables();
+      await _createSchoolTimetableIndexes();
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.addColumn(
@@ -127,6 +132,11 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(courseSourceRows);
         await m.createTable(courseMeetingRuleRows);
         await m.createTable(courseOccurrenceRows);
+        await _createCourseInstanceTables();
+        await _createSchoolTimetableIndexes();
+      }
+      if (from < 9) {
+        await _createCourseInstanceTables();
         await _createSchoolTimetableIndexes();
       }
     },
@@ -138,6 +148,8 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _dropSchoolTimetableTables() async {
     await customStatement('DROP TABLE IF EXISTS course_occurrence_rows');
     await customStatement('DROP TABLE IF EXISTS course_meeting_rule_rows');
+    await customStatement('DROP TABLE IF EXISTS course_instance_week_rows');
+    await customStatement('DROP TABLE IF EXISTS course_instance_rows');
     await customStatement('DROP TABLE IF EXISTS course_source_rows');
     await customStatement('DROP TABLE IF EXISTS course_audience_rows');
     await customStatement('DROP TABLE IF EXISTS course_offering_rows');
@@ -193,20 +205,48 @@ class AppDatabase extends _$AppDatabase {
       ON course_source_rows(term_key, source_status)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_course_meeting_rules_offering
-      ON course_meeting_rule_rows(offering_id)
+      CREATE INDEX IF NOT EXISTS idx_course_instances_offering
+      ON course_instance_rows(offering_id, weekday, segment_index)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_course_meeting_rules_weekday
-      ON course_meeting_rule_rows(weekday)
+      CREATE INDEX IF NOT EXISTS idx_course_instances_filter
+      ON course_instance_rows(term_key, weekday, section_start, section_end)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_course_occurrences_date
-      ON course_occurrence_rows(date)
+      CREATE INDEX IF NOT EXISTS idx_course_instance_weeks_week
+      ON course_instance_week_rows(week_index, instance_id)
+    ''');
+  }
+
+  Future<void> _createCourseInstanceTables() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS course_instance_rows (
+        id TEXT PRIMARY KEY,
+        stable_id TEXT NOT NULL DEFAULT '',
+        offering_id TEXT NOT NULL,
+        term_key TEXT NOT NULL,
+        term_course_id TEXT NOT NULL,
+        catalog_id TEXT NOT NULL,
+        weekday INTEGER NOT NULL,
+        day_field TEXT NOT NULL DEFAULT '',
+        segment_index INTEGER NOT NULL,
+        weekday_label TEXT NOT NULL DEFAULT '',
+        raw_day_text TEXT NOT NULL DEFAULT '',
+        raw_segment_text TEXT NOT NULL DEFAULT '',
+        week_text TEXT NOT NULL DEFAULT '',
+        section_text TEXT NOT NULL DEFAULT '',
+        section_start INTEGER,
+        section_end INTEGER,
+        location_text TEXT NOT NULL DEFAULT '',
+        parse_status TEXT NOT NULL DEFAULT 'parsed'
+      )
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_course_occurrences_offering
-      ON course_occurrence_rows(offering_id)
+      CREATE TABLE IF NOT EXISTS course_instance_week_rows (
+        instance_id TEXT NOT NULL,
+        week_index INTEGER NOT NULL,
+        PRIMARY KEY(instance_id, week_index)
+      )
     ''');
   }
 }
