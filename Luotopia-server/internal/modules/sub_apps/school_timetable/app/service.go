@@ -363,6 +363,7 @@ func occurrencesForRule(firstMonday time.Time, rule domain.CourseMeetingRule) []
 		offset = 6
 	}
 	result := make([]domain.CourseOccurrence, 0, 16)
+	occurrenceIndex := 0
 	for _, week := range weeks {
 		for index := week.start; index <= week.end; index++ {
 			if week.parity == "单" && index%2 == 0 {
@@ -372,13 +373,14 @@ func occurrencesForRule(firstMonday time.Time, rule domain.CourseMeetingRule) []
 				continue
 			}
 			date := firstMonday.AddDate(0, 0, (index-1)*7+offset)
-			id := stableID("occurrence", rule.ID, date.Format("2006-01-02"), rule.SectionText, rule.LocationText)
+			id := stableID("occurrence", rule.ID, fmt.Sprintf("%d", occurrenceIndex), date.Format("2006-01-02"), rule.SectionText, rule.LocationText)
 			result = append(result, domain.CourseOccurrence{
 				ID: id, RuleID: rule.ID, OfferingID: rule.OfferingID, TermKey: rule.TermKey,
 				TermCourseID: rule.TermCourseID, CatalogID: rule.CatalogID, Date: date.Format("2006-01-02"),
 				WeekIndex: index, Weekday: rule.Weekday, SectionText: rule.SectionText,
 				LocationText: rule.LocationText, Building: rule.Building, Room: rule.Room,
 			})
+			occurrenceIndex++
 		}
 	}
 	return result
