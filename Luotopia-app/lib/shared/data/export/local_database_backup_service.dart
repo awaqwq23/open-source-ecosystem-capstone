@@ -63,6 +63,7 @@ class LocalDatabaseBackupService {
           await _copyRows(alias);
           await _validateImportedRows();
         });
+        _notifyImportedTablesUpdated();
       } finally {
         await _db.customStatement('PRAGMA foreign_keys = ON');
       }
@@ -358,6 +359,27 @@ class LocalDatabaseBackupService {
     if (courseRow != null) {
       throw const LocalDatabaseBackupException('数据库导入失败：备份包含课程事项');
     }
+  }
+
+  void _notifyImportedTablesUpdated() {
+    _db.markTablesUpdated([
+      _db.agendaItemRows,
+      _db.scheduleItemDetailRows,
+      _db.taskItemDetailRows,
+      _db.courseItemDetailRows,
+      _db.courseTimetableRows,
+      _db.selectedCourseTimetableRows,
+      _db.schoolTimetableTermRows,
+      _db.courseCatalogRows,
+      _db.courseTermCourseRows,
+      _db.courseInstructorCourseRows,
+      _db.courseOfferingRows,
+      _db.courseAudienceRows,
+      _db.courseSourceRows,
+      _db.courseMeetingRuleRows,
+      _db.courseOccurrenceRows,
+      _db.syncTombstoneRows,
+    ]);
   }
 
   Future<bool> _tableExists(String alias, String table) async {

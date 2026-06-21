@@ -22,20 +22,31 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
   List<AgendaItem> build() {
     _db = ref.read(appDatabaseProvider);
     _mutations = ref.read(userDataMutationServiceProvider);
-    final subscription =
-        (_db.select(_db.agendaItemRows)
-              ..where((row) => row.deletedAt.isNull())
-              ..orderBy([
-                (row) => OrderingTerm(expression: row.sortOrder),
-                (row) => OrderingTerm(expression: row.createdAt),
-              ]))
-            .watch()
-            .asyncMap((rows) async {
-              return Future.wait(rows.map(_fromRow));
-            })
-            .listen((items) {
-              state = items;
-            });
+    final query =
+        _db.select(_db.agendaItemRows).join([
+            leftOuterJoin(
+              _db.scheduleItemDetailRows,
+              _db.scheduleItemDetailRows.itemId.equalsExp(
+                _db.agendaItemRows.id,
+              ),
+            ),
+            leftOuterJoin(
+              _db.taskItemDetailRows,
+              _db.taskItemDetailRows.itemId.equalsExp(_db.agendaItemRows.id),
+            ),
+            leftOuterJoin(
+              _db.courseItemDetailRows,
+              _db.courseItemDetailRows.itemId.equalsExp(_db.agendaItemRows.id),
+            ),
+          ])
+          ..where(_db.agendaItemRows.deletedAt.isNull())
+          ..orderBy([
+            OrderingTerm(expression: _db.agendaItemRows.sortOrder),
+            OrderingTerm(expression: _db.agendaItemRows.createdAt),
+          ]);
+    final subscription = query.watch().listen((rows) {
+      state = rows.map(_fromJoinedRow).toList(growable: false);
+    });
     ref.onDispose(subscription.cancel);
     return const [];
   }
@@ -108,7 +119,22 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     };
   }
 
-  Future<AgendaItem> _fromRow(AgendaItemRow row) async {
+  AgendaItem _fromJoinedRow(TypedResult row) {
+    final item = row.readTable(_db.agendaItemRows);
+    return _fromRow(
+      item,
+      scheduleDetails: row.readTableOrNull(_db.scheduleItemDetailRows),
+      taskDetails: row.readTableOrNull(_db.taskItemDetailRows),
+      courseDetails: row.readTableOrNull(_db.courseItemDetailRows),
+    );
+  }
+
+  AgendaItem _fromRow(
+    AgendaItemRow row, {
+    ScheduleItemDetailRow? scheduleDetails,
+    TaskItemDetailRow? taskDetails,
+    CourseItemDetailRow? courseDetails,
+  }) {
     return AgendaItem(
       id: row.id,
       type: _enumByName(ItemType.values, row.type) ?? ItemType.task,
@@ -122,7 +148,12 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
           ReminderOption.none,
       repeatRule:
           _enumByName(RepeatRule.values, row.repeatRule) ?? RepeatRule.none,
-      details: await _detailsForRow(row),
+      details: _detailsForRow(
+        row,
+        scheduleDetails: scheduleDetails,
+        taskDetails: taskDetails,
+        courseDetails: courseDetails,
+      ),
       isCompleted: row.isCompleted,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -135,20 +166,28 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     );
   }
 
-  Future<AgendaItemDetails> _detailsForRow(AgendaItemRow row) async {
+  AgendaItemDetails _detailsForRow(
+    AgendaItemRow row, {
+    ScheduleItemDetailRow? scheduleDetails,
+    TaskItemDetailRow? taskDetails,
+    CourseItemDetailRow? courseDetails,
+  }) {
     final type = _enumByName(ItemType.values, row.type) ?? ItemType.task;
     return switch (type) {
-      ItemType.schedule => await _scheduleDetails(row.id),
-      ItemType.task => await _taskDetails(row.id),
+      ItemType.schedule => _scheduleDetails(row.id, scheduleDetails),
+      ItemType.task => _taskDetails(row.id, taskDetails),
       ItemType.memo => const MemoItemDetails(),
-      ItemType.course => await _courseDetails(row.id),
+      ItemType.course => _courseDetails(row.id, courseDetails),
     };
   }
 
-  Future<ScheduleItemDetails> _scheduleDetails(String itemId) async {
-    final row = await (_db.select(
-      _db.scheduleItemDetailRows,
-    )..where((table) => table.itemId.equals(itemId))).getSingle();
+  ScheduleItemDetails _scheduleDetails(
+    String itemId,
+    ScheduleItemDetailRow? row,
+  ) {
+    if (row == null) {
+      throw StateError('事项 $itemId 缺少日程详情');
+    }
     return ScheduleItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
@@ -158,17 +197,20 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
     );
   }
 
-  Future<TaskItemDetails> _taskDetails(String itemId) async {
-    final row = await (_db.select(
-      _db.taskItemDetailRows,
-    )..where((table) => table.itemId.equals(itemId))).getSingle();
+  TaskItemDetails _taskDetails(String itemId, TaskItemDetailRow? row) {
+    if (row == null) {
+      throw StateError('事项 $itemId 缺少任务详情');
+    }
     return TaskItemDetails(deadlineAt: row.deadlineAt);
   }
 
-  Future<CourseAgendaItemDetails> _courseDetails(String itemId) async {
-    final row = await (_db.select(
-      _db.courseItemDetailRows,
-    )..where((table) => table.itemId.equals(itemId))).getSingle();
+  CourseAgendaItemDetails _courseDetails(
+    String itemId,
+    CourseItemDetailRow? row,
+  ) {
+    if (row == null) {
+      throw StateError('事项 $itemId 缺少课程详情');
+    }
     return CourseAgendaItemDetails(
       startAt: row.startAt,
       endAt: row.endAt,
