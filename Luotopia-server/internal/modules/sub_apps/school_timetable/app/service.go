@@ -84,7 +84,7 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 		return domain.ImportResult{}, err
 	}
 	rawChecksum := PackageChecksum(data)
-	records := BuildRecords(pkg)
+	records := BuildRecords(pkg, version)
 	artifact, err := BuildSQLiteArtifact(ctx, pkg, records, version, s.snapshotDir)
 	if err != nil {
 		return domain.ImportResult{}, err
@@ -164,7 +164,7 @@ type Records struct {
 	CourseInstances   []domain.CourseInstance
 }
 
-func BuildRecords(pkg domain.Package) Records {
+func BuildRecords(pkg domain.Package, version int) Records {
 	sourceRows := make([]domain.SourceRow, 0, len(pkg.Rows))
 	instanceRecords := make([]domain.CourseInstance, 0, len(pkg.Rows))
 	termCourseRows := make(map[string][]map[string]string)
@@ -178,7 +178,7 @@ func BuildRecords(pkg domain.Package) Records {
 		sourceID := sourceRowID(pkg.Manifest.TermKey, canonical, sourceOrdinals[canonical])
 		if !canBuildEntity(row) {
 			sourceRows = append(sourceRows, domain.SourceRow{
-				ID: sourceID, TermKey: pkg.Manifest.TermKey, SourceKey: row["key"],
+				ID: sourceID, StableID: sourceID, TermKey: pkg.Manifest.TermKey, SourceKey: row["key"],
 				PackageIndex: index + 1, Status: "incomplete", Fields: row,
 			})
 			continue
@@ -192,7 +192,7 @@ func BuildRecords(pkg domain.Package) Records {
 		}
 		offeringRows[offeringID] = append(offeringRows[offeringID], row)
 		sourceRows = append(sourceRows, domain.SourceRow{
-			ID: sourceID, TermKey: pkg.Manifest.TermKey, TermCourseID: termCourseID, OfferingID: offeringID,
+			ID: sourceID, StableID: sourceID, TermKey: pkg.Manifest.TermKey, TermCourseID: termCourseID, OfferingID: offeringID,
 			SourceKey: row["key"], PackageIndex: index + 1, Status: "active", Fields: row,
 		})
 	}
@@ -209,6 +209,9 @@ func BuildRecords(pkg domain.Package) Records {
 		instructorSetKey := teacherSetKey(mapValues(rows, "jsxm"))
 		instructorID := instructorCourseID(catalogID, instructorSetKey)
 		audienceSummary := audienceSummary(rows)
+		gradeSummary := uniqueSummary(mapValues(rows, "nj"), 3, "个年级")
+		majorSummary := uniqueSummary(mapValues(rows, "jszy"), 3, "个专业")
+		planCollegeSummary := uniqueSummary(mapValues(rows, "jhxy"), 3, "个学院")
 		capacity, selectedCount := parsePeopleCount(first["skrs"])
 		scheduleKey := scheduleSignature(first)
 		searchText := strings.Join(nonEmpty([]string{
@@ -228,10 +231,11 @@ func BuildRecords(pkg domain.Package) Records {
 			OtherTeachers: first["qtjs"], Textbook: first["jcmc"], Publisher: first["cbs"],
 			ScheduleSignature: scheduleKey, ScheduleKey: scheduleKey, ScheduleSummary: scheduleSummary(first),
 			WeekdaySummary:  strings.Join(weekdaySummaries([]map[string]string{first}), "、"),
-			AudienceSummary: audienceSummary, SourceRowCount: len(rows), SearchText: searchText, Fields: first,
+			AudienceSummary: audienceSummary, GradeSummary: gradeSummary, MajorSummary: majorSummary,
+			PlanCollegeSummary: planCollegeSummary, SourceRowCount: len(rows), SearchText: searchText, Fields: first,
 		})
 		instructorByID[instructorID] = domain.InstructorCourse{
-			ID: instructorID, CatalogID: catalogID, CourseNo: first["yskch"], CourseName: first["kcmc"],
+			ID: instructorID, StableID: instructorID, CatalogID: catalogID, CourseNo: first["yskch"], CourseName: first["kcmc"],
 			Credits: first["kcxf"], InstructorName: instructorName, InstructorNameKey: normalizeKey(instructorName),
 			LatestTermKey: pkg.Manifest.TermKey, LatestOpenCollege: first["skxy"], LatestTeachingTitle: first["jszc"],
 			SearchText: strings.Join(nonEmpty([]string{first["kcmc"], first["yskch"], instructorName, first["skxy"]}), " "),
@@ -280,11 +284,99 @@ func BuildRecords(pkg domain.Package) Records {
 	sort.Slice(termCourses, func(i, j int) bool { return termCourses[i].ID < termCourses[j].ID })
 	sort.Slice(offerings, func(i, j int) bool { return offerings[i].ID < offerings[j].ID })
 	sort.Slice(instanceRecords, func(i, j int) bool { return instanceRecords[i].ID < instanceRecords[j].ID })
-	return Records{
+	records := Records{
 		Catalogs: catalogs, TermCourses: termCourses, InstructorCourses: instructorCourses,
 		Offerings: offerings, Audiences: audiences, SourceRows: sourceRows,
 		CourseInstances: instanceRecords,
 	}
+	return scopeRecordsToRelease(records, releaseID(pkg.Manifest.TermKey, version))
+}
+
+func releaseID(termKey string, version int) string {
+	return termKey + "@" + strconv.Itoa(version)
+}
+
+func scopeRecordsToRelease(records Records, releaseID string) Records {
+	termCourseIDs := make(map[string]string, len(records.TermCourses))
+	instructorCourseIDs := make(map[string]string, len(records.InstructorCourses))
+	offeringIDs := make(map[string]string, len(records.Offerings))
+	audienceIDs := make(map[string]string, len(records.Audiences))
+	instanceIDs := make(map[string]string, len(records.CourseInstances))
+	sourceIDs := make(map[string]string, len(records.SourceRows))
+
+	for i := range records.TermCourses {
+		stable := records.TermCourses[i].StableID
+		if stable == "" {
+			stable = records.TermCourses[i].ID
+		}
+		termCourseIDs[records.TermCourses[i].ID] = scopedEntityID(releaseID, stable)
+		records.TermCourses[i].StableID = stable
+		records.TermCourses[i].ReleaseID = releaseID
+		records.TermCourses[i].ID = termCourseIDs[records.TermCourses[i].ID]
+	}
+	for i := range records.InstructorCourses {
+		stable := records.InstructorCourses[i].StableID
+		if stable == "" {
+			stable = records.InstructorCourses[i].ID
+		}
+		instructorCourseIDs[records.InstructorCourses[i].ID] = scopedEntityID(releaseID, stable)
+		records.InstructorCourses[i].StableID = stable
+		records.InstructorCourses[i].ReleaseID = releaseID
+		records.InstructorCourses[i].ID = instructorCourseIDs[records.InstructorCourses[i].ID]
+	}
+	for i := range records.Offerings {
+		stable := records.Offerings[i].StableID
+		if stable == "" {
+			stable = records.Offerings[i].ID
+		}
+		offeringIDs[records.Offerings[i].ID] = scopedEntityID(releaseID, stable)
+		records.Offerings[i].StableID = stable
+		records.Offerings[i].ReleaseID = releaseID
+		records.Offerings[i].ID = offeringIDs[records.Offerings[i].ID]
+		records.Offerings[i].TermCourseID = termCourseIDs[records.Offerings[i].TermCourseID]
+		records.Offerings[i].InstructorCourseID = instructorCourseIDs[records.Offerings[i].InstructorCourseID]
+	}
+	for i := range records.Audiences {
+		stable := records.Audiences[i].StableID
+		if stable == "" {
+			stable = records.Audiences[i].ID
+		}
+		audienceIDs[records.Audiences[i].ID] = scopedEntityID(releaseID, stable)
+		records.Audiences[i].StableID = stable
+		records.Audiences[i].ReleaseID = releaseID
+		records.Audiences[i].ID = audienceIDs[records.Audiences[i].ID]
+		records.Audiences[i].OfferingID = offeringIDs[records.Audiences[i].OfferingID]
+		records.Audiences[i].TermCourseID = termCourseIDs[records.Audiences[i].TermCourseID]
+	}
+	for i := range records.CourseInstances {
+		stable := records.CourseInstances[i].StableID
+		if stable == "" {
+			stable = records.CourseInstances[i].ID
+		}
+		instanceIDs[records.CourseInstances[i].ID] = scopedEntityID(releaseID, stable)
+		records.CourseInstances[i].StableID = stable
+		records.CourseInstances[i].ReleaseID = releaseID
+		records.CourseInstances[i].ID = instanceIDs[records.CourseInstances[i].ID]
+		records.CourseInstances[i].OfferingID = offeringIDs[records.CourseInstances[i].OfferingID]
+		records.CourseInstances[i].TermCourseID = termCourseIDs[records.CourseInstances[i].TermCourseID]
+	}
+	for i := range records.SourceRows {
+		stable := records.SourceRows[i].StableID
+		if stable == "" {
+			stable = records.SourceRows[i].ID
+		}
+		sourceIDs[records.SourceRows[i].ID] = scopedEntityID(releaseID, stable)
+		records.SourceRows[i].StableID = stable
+		records.SourceRows[i].ReleaseID = releaseID
+		records.SourceRows[i].ID = sourceIDs[records.SourceRows[i].ID]
+		records.SourceRows[i].TermCourseID = termCourseIDs[records.SourceRows[i].TermCourseID]
+		records.SourceRows[i].OfferingID = offeringIDs[records.SourceRows[i].OfferingID]
+	}
+	return records
+}
+
+func scopedEntityID(releaseID, entityStableID string) string {
+	return stableID("release_entity", releaseID, entityStableID)
 }
 
 func GzipPackage(pkg domain.Package) ([]byte, error) {

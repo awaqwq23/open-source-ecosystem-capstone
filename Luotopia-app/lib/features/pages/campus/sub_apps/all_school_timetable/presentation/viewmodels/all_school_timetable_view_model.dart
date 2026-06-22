@@ -241,18 +241,33 @@ class CourseHeadState {
   final String? errorMessage;
 }
 
-final courseHeadDetailProvider = FutureProvider.family<CourseHeadState, String>(
-  (ref, courseHeadId) async {
-    final repository = ref.read(allSchoolTimetableRepositoryProvider);
-    await repository.ensureLocalDataReady();
-    final head = await repository.findCourseHead(courseHeadId);
-    if (head == null) {
-      return const CourseHeadState(isLoading: false, errorMessage: '未找到课程');
-    }
-    final classes = await repository.loadTeachingClasses(courseHeadId);
-    return CourseHeadState(head: head, classes: classes, isLoading: false);
-  },
-);
+class CourseHeadDetailQuery {
+  const CourseHeadDetailQuery({required this.termKey, required this.id});
+
+  final String termKey;
+  final String id;
+}
+
+final courseHeadDetailProvider =
+    FutureProvider.family<CourseHeadState, CourseHeadDetailQuery>((
+      ref,
+      args,
+    ) async {
+      final repository = ref.read(allSchoolTimetableRepositoryProvider);
+      await repository.ensureLocalDataReady();
+      final head = await repository.findCourseHead(
+        termKey: args.termKey,
+        id: args.id,
+      );
+      if (head == null) {
+        return const CourseHeadState(isLoading: false, errorMessage: '未找到课程');
+      }
+      final classes = await repository.loadTeachingClasses(
+        termKey: args.termKey,
+        courseHeadId: args.id,
+      );
+      return CourseHeadState(head: head, classes: classes, isLoading: false);
+    });
 
 class TeachingClassDetailState {
   const TeachingClassDetailState({
@@ -264,18 +279,31 @@ class TeachingClassDetailState {
   final List<SchoolClassMeeting> meetings;
 }
 
+class TeachingClassDetailQuery {
+  const TeachingClassDetailQuery({required this.termKey, required this.id});
+
+  final String termKey;
+  final String id;
+}
+
 final teachingClassDetailProvider =
-    FutureProvider.family<TeachingClassDetailState?, String>((
+    FutureProvider.family<TeachingClassDetailState?, TeachingClassDetailQuery>((
       ref,
-      teachingClassId,
+      args,
     ) async {
       final repository = ref.read(allSchoolTimetableRepositoryProvider);
       await repository.ensureLocalDataReady();
-      final teachingClass = await repository.findTeachingClass(teachingClassId);
+      final teachingClass = await repository.findTeachingClass(
+        termKey: args.termKey,
+        id: args.id,
+      );
       if (teachingClass == null) {
         return null;
       }
-      final meetings = await repository.loadMeetings(teachingClassId);
+      final meetings = await repository.loadMeetings(
+        termKey: args.termKey,
+        teachingClassId: args.id,
+      );
       return TeachingClassDetailState(
         teachingClass: teachingClass,
         meetings: meetings,

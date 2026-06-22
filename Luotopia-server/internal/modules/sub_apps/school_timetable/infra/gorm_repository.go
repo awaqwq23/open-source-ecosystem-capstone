@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
@@ -12,6 +13,10 @@ import (
 )
 
 var _ app.Repository = (*GormRepository)(nil)
+
+func releaseID(termKey string, version int) string {
+	return termKey + "@" + strconv.Itoa(version)
+}
 
 type GormRepository struct {
 	db *gorm.DB
@@ -32,6 +37,9 @@ func (r *GormRepository) NextVersion(ctx context.Context, termKey string) (int, 
 
 func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, release domain.Release, records app.Records) error {
 	now := time.Now().UTC()
+	if release.ID == "" {
+		release.ID = releaseID(release.TermKey, release.Version)
+	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		term := termModel{
 			TermKey: pkg.Manifest.TermKey, SchoolYear: pkg.Manifest.SchoolYear, Term: pkg.Manifest.Term,
@@ -48,17 +56,6 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 			return err
 		}
 		if err := tx.Create(releaseModelFromDomain(release)).Error; err != nil {
-			return err
-		}
-		for _, model := range []any{
-			&courseInstanceModel{}, &sourceRowModel{}, &audienceModel{},
-			&offeringModel{}, &termCourseModel{},
-		} {
-			if err := tx.Where("term_key = ?", pkg.Manifest.TermKey).Delete(model).Error; err != nil {
-				return err
-			}
-		}
-		if err := tx.Where("latest_term_key = ?", pkg.Manifest.TermKey).Delete(&instructorCourseModel{}).Error; err != nil {
 			return err
 		}
 		if len(records.Catalogs) > 0 {
@@ -84,7 +81,7 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 			for i, item := range records.InstructorCourses {
 				models[i] = instructorCourseModelFromDomain(item)
 			}
-			if err := tx.Save(&models).Error; err != nil {
+			if err := tx.CreateInBatches(models, 500).Error; err != nil {
 				return err
 			}
 		}
@@ -122,6 +119,21 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 			}
 			if err := tx.CreateInBatches(models, 500).Error; err != nil {
 				return err
+			}
+			weekModels := make([]courseInstanceWeekModel, 0, len(records.CourseInstances)*8)
+			for _, item := range records.CourseInstances {
+				for _, week := range item.WeekIndexes {
+					weekModels = append(weekModels, courseInstanceWeekModel{
+						ReleaseID:  item.ReleaseID,
+						InstanceID: item.ID,
+						WeekIndex:  week,
+					})
+				}
+			}
+			if len(weekModels) > 0 {
+				if err := tx.CreateInBatches(weekModels, 1000).Error; err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -224,6 +236,7 @@ func (m termModel) toDomain() domain.Term {
 }
 
 type releaseModel struct {
+	ID            string    `gorm:"column:release_id"`
 	TermKey       string    `gorm:"primaryKey;column:term_key"`
 	Version       int       `gorm:"primaryKey;column:version"`
 	Checksum      string    `gorm:"column:checksum"`
@@ -239,8 +252,11 @@ type releaseModel struct {
 func (releaseModel) TableName() string { return "school_timetable_releases" }
 
 func releaseModelFromDomain(item domain.Release) releaseModel {
+	if item.ID == "" {
+		item.ID = releaseID(item.TermKey, item.Version)
+	}
 	return releaseModel{
-		TermKey: item.TermKey, Version: item.Version, Checksum: item.Checksum, FileKey: item.FileKey,
+		ID: item.ID, TermKey: item.TermKey, Version: item.Version, Checksum: item.Checksum, FileKey: item.FileKey,
 		ArtifactType: item.ArtifactType, SchemaVersion: item.SchemaVersion, ArtifactSize: item.ArtifactSize,
 		RowCount: item.RowCount, Active: item.Active, PublishedAt: item.PublishedAt,
 	}
@@ -248,7 +264,7 @@ func releaseModelFromDomain(item domain.Release) releaseModel {
 
 func (m releaseModel) toDomain() domain.Release {
 	return domain.Release{
-		TermKey: m.TermKey, Version: m.Version, Checksum: m.Checksum, FileKey: m.FileKey,
+		ID: m.ID, TermKey: m.TermKey, Version: m.Version, Checksum: m.Checksum, FileKey: m.FileKey,
 		ArtifactType: m.ArtifactType, SchemaVersion: m.SchemaVersion, ArtifactSize: m.ArtifactSize,
 		RowCount: m.RowCount, Active: m.Active, PublishedAt: m.PublishedAt,
 	}
@@ -274,6 +290,8 @@ func catalogModelFromDomain(item domain.CourseCatalog) catalogModel {
 
 type termCourseModel struct {
 	ID                 string `gorm:"primaryKey;column:id"`
+	StableID           string `gorm:"column:stable_id"`
+	ReleaseID          string `gorm:"column:release_id"`
 	TermKey            string `gorm:"column:term_key"`
 	CatalogID          string `gorm:"column:catalog_id"`
 	CourseNo           string `gorm:"column:course_no"`
@@ -293,7 +311,8 @@ func (termCourseModel) TableName() string { return "course_term_courses" }
 
 func termCourseModelFromDomain(item domain.TermCourse) termCourseModel {
 	return termCourseModel{
-		ID: item.ID, TermKey: item.TermKey, CatalogID: item.CatalogID, CourseNo: item.CourseNo,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		TermKey: item.TermKey, CatalogID: item.CatalogID, CourseNo: item.CourseNo,
 		CourseName: item.CourseName, OpenCollege: item.OpenCollege, Credits: item.Credits,
 		CourseNature: item.CourseNature, CourseCategory: item.CourseCategory, OpenType: item.OpenType,
 		TeachingClassCount: item.TeachingClassCount, TeacherSummary: item.TeacherSummary,
@@ -303,6 +322,8 @@ func termCourseModelFromDomain(item domain.TermCourse) termCourseModel {
 
 type instructorCourseModel struct {
 	ID                  string `gorm:"primaryKey;column:id"`
+	StableID            string `gorm:"column:stable_id"`
+	ReleaseID           string `gorm:"column:release_id"`
 	CatalogID           string `gorm:"column:catalog_id"`
 	CourseNo            string `gorm:"column:course_no"`
 	CourseName          string `gorm:"column:course_name"`
@@ -320,7 +341,8 @@ func (instructorCourseModel) TableName() string { return "course_instructor_cour
 
 func instructorCourseModelFromDomain(item domain.InstructorCourse) instructorCourseModel {
 	return instructorCourseModel{
-		ID: item.ID, CatalogID: item.CatalogID, CourseNo: item.CourseNo, CourseName: item.CourseName,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		CatalogID: item.CatalogID, CourseNo: item.CourseNo, CourseName: item.CourseName,
 		Credits: item.Credits, InstructorName: item.InstructorName, InstructorNameKey: item.InstructorNameKey,
 		OfferingCount: item.OfferingCount, LatestTermKey: item.LatestTermKey,
 		LatestOpenCollege: item.LatestOpenCollege, LatestTeachingTitle: item.LatestTeachingTitle,
@@ -330,6 +352,8 @@ func instructorCourseModelFromDomain(item domain.InstructorCourse) instructorCou
 
 type offeringModel struct {
 	ID                 string `gorm:"primaryKey;column:id"`
+	StableID           string `gorm:"column:stable_id"`
+	ReleaseID          string `gorm:"column:release_id"`
 	TermKey            string `gorm:"column:term_key"`
 	TermCourseID       string `gorm:"column:term_course_id"`
 	CatalogID          string `gorm:"column:catalog_id"`
@@ -355,6 +379,9 @@ type offeringModel struct {
 	ScheduleSummary    string `gorm:"column:schedule_summary"`
 	WeekdaySummary     string `gorm:"column:weekday_summary"`
 	AudienceSummary    string `gorm:"column:audience_summary"`
+	GradeSummary       string `gorm:"column:grade_summary"`
+	MajorSummary       string `gorm:"column:major_summary"`
+	PlanCollegeSummary string `gorm:"column:plan_college_summary"`
 	SourceRowCount     int    `gorm:"column:source_row_count"`
 	SearchText         string `gorm:"column:search_text"`
 	FieldsJSON         string `gorm:"column:fields_json"`
@@ -365,7 +392,8 @@ func (offeringModel) TableName() string { return "course_offerings" }
 func offeringModelFromDomain(item domain.CourseOffering) offeringModel {
 	data, _ := json.Marshal(item.Fields)
 	model := offeringModel{
-		ID: item.ID, TermKey: item.TermKey, TermCourseID: item.TermCourseID, CatalogID: item.CatalogID,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		TermKey: item.TermKey, TermCourseID: item.TermCourseID, CatalogID: item.CatalogID,
 		InstructorCourseID: item.InstructorCourseID, TeachingClassName: item.TeachingClassName,
 		CourseNo: item.CourseNo, CourseName: item.CourseName, OpenCollege: item.OpenCollege, Credits: item.Credits,
 		Instructor: item.Instructor, InstructorKey: item.InstructorKey, Title: item.Title, PeopleRaw: item.PeopleRaw,
@@ -373,6 +401,7 @@ func offeringModelFromDomain(item domain.CourseOffering) offeringModel {
 		PracticeHours: item.PracticeHours, Remark: item.Remark, OtherTeachers: item.OtherTeachers,
 		Textbook: item.Textbook, Publisher: item.Publisher, ScheduleSignature: item.ScheduleSignature,
 		ScheduleSummary: item.ScheduleSummary, WeekdaySummary: item.WeekdaySummary, AudienceSummary: item.AudienceSummary,
+		GradeSummary: item.GradeSummary, MajorSummary: item.MajorSummary, PlanCollegeSummary: item.PlanCollegeSummary,
 		SourceRowCount: item.SourceRowCount, SearchText: item.SearchText, FieldsJSON: string(data),
 	}
 	return model
@@ -380,6 +409,8 @@ func offeringModelFromDomain(item domain.CourseOffering) offeringModel {
 
 type audienceModel struct {
 	ID                 string `gorm:"primaryKey;column:id"`
+	StableID           string `gorm:"column:stable_id"`
+	ReleaseID          string `gorm:"column:release_id"`
 	TermKey            string `gorm:"column:term_key"`
 	OfferingID         string `gorm:"column:offering_id"`
 	TermCourseID       string `gorm:"column:term_course_id"`
@@ -400,7 +431,8 @@ func (audienceModel) TableName() string { return "course_audiences" }
 
 func audienceModelFromDomain(item domain.CourseAudience) audienceModel {
 	return audienceModel{
-		ID: item.ID, TermKey: item.TermKey, OfferingID: item.OfferingID,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		TermKey: item.TermKey, OfferingID: item.OfferingID,
 		TermCourseID: item.TermCourseID, CatalogID: item.CatalogID, Grade: item.Grade,
 		Major: item.Major, PlanCollege: item.PlanCollege, CourseNature: item.CourseNature,
 		CourseNatureCode: item.CourseNatureCode, CourseCategory: item.CourseCategory,
@@ -411,6 +443,8 @@ func audienceModelFromDomain(item domain.CourseAudience) audienceModel {
 
 type sourceRowModel struct {
 	ID           string `gorm:"primaryKey;column:id"`
+	StableID     string `gorm:"column:stable_id"`
+	ReleaseID    string `gorm:"column:release_id"`
 	TermKey      string `gorm:"column:term_key"`
 	TermCourseID string `gorm:"column:term_course_id"`
 	OfferingID   string `gorm:"column:offering_id"`
@@ -425,13 +459,16 @@ func (sourceRowModel) TableName() string { return "course_source_rows" }
 func sourceRowModelFromDomain(item domain.SourceRow) sourceRowModel {
 	data, _ := json.Marshal(item.Fields)
 	return sourceRowModel{
-		ID: item.ID, TermKey: item.TermKey, TermCourseID: item.TermCourseID, OfferingID: item.OfferingID,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		TermKey: item.TermKey, TermCourseID: item.TermCourseID, OfferingID: item.OfferingID,
 		SourceKey: item.SourceKey, PackageIndex: item.PackageIndex, Status: item.Status, FieldsJSON: string(data),
 	}
 }
 
 type courseInstanceModel struct {
 	ID             string `gorm:"primaryKey;column:id"`
+	StableID       string `gorm:"column:stable_id"`
+	ReleaseID      string `gorm:"column:release_id"`
 	OfferingID     string `gorm:"column:offering_id"`
 	TermKey        string `gorm:"column:term_key"`
 	TermCourseID   string `gorm:"column:term_course_id"`
@@ -456,7 +493,8 @@ func (courseInstanceModel) TableName() string { return "course_instances" }
 func courseInstanceModelFromDomain(item domain.CourseInstance) courseInstanceModel {
 	weeks, _ := json.Marshal(item.WeekIndexes)
 	return courseInstanceModel{
-		ID: item.ID, OfferingID: item.OfferingID, TermKey: item.TermKey,
+		ID: item.ID, StableID: item.StableID, ReleaseID: item.ReleaseID,
+		OfferingID: item.OfferingID, TermKey: item.TermKey,
 		TermCourseID: item.TermCourseID, CatalogID: item.CatalogID, Weekday: item.Weekday,
 		DayField: item.DayField, SegmentIndex: item.SegmentIndex, WeekdayLabel: item.WeekdayLabel,
 		RawDayText: item.RawDayText, RawSegmentText: item.RawSegmentText, WeekText: item.WeekText,
@@ -464,3 +502,11 @@ func courseInstanceModelFromDomain(item domain.CourseInstance) courseInstanceMod
 		LocationText: item.LocationText, ParseStatus: item.ParseStatus, WeekIndexes: string(weeks),
 	}
 }
+
+type courseInstanceWeekModel struct {
+	ReleaseID  string `gorm:"primaryKey;column:release_id"`
+	InstanceID string `gorm:"primaryKey;column:instance_id"`
+	WeekIndex  int    `gorm:"primaryKey;column:week_index"`
+}
+
+func (courseInstanceWeekModel) TableName() string { return "course_instance_weeks" }

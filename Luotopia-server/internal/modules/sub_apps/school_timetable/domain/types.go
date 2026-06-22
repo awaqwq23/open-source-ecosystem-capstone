@@ -38,6 +38,7 @@ type Term struct {
 }
 
 type Release struct {
+	ID            string    `json:"id"`
 	TermKey       string    `json:"term_key"`
 	Version       int       `json:"version"`
 	Checksum      string    `json:"checksum"`
@@ -64,6 +65,7 @@ type CourseCatalog struct {
 type TermCourse struct {
 	ID                 string `json:"id"`
 	StableID           string `json:"stable_id"`
+	ReleaseID          string `json:"release_id"`
 	TermKey            string `json:"term_key"`
 	CatalogID          string `json:"catalog_id"`
 	CourseNo           string `json:"course_no"`
@@ -81,6 +83,8 @@ type TermCourse struct {
 
 type InstructorCourse struct {
 	ID                  string `json:"id"`
+	StableID            string `json:"stable_id"`
+	ReleaseID           string `json:"release_id"`
 	CatalogID           string `json:"catalog_id"`
 	CourseNo            string `json:"course_no"`
 	CourseName          string `json:"course_name"`
@@ -97,6 +101,7 @@ type InstructorCourse struct {
 type CourseOffering struct {
 	ID                 string            `json:"id"`
 	StableID           string            `json:"stable_id"`
+	ReleaseID          string            `json:"release_id"`
 	TermKey            string            `json:"term_key"`
 	SchoolYear         string            `json:"school_year"`
 	Term               string            `json:"term"`
@@ -132,6 +137,9 @@ type CourseOffering struct {
 	ScheduleSummary    string            `json:"schedule_summary"`
 	WeekdaySummary     string            `json:"weekday_summary"`
 	AudienceSummary    string            `json:"audience_summary"`
+	GradeSummary       string            `json:"grade_summary"`
+	MajorSummary       string            `json:"major_summary"`
+	PlanCollegeSummary string            `json:"plan_college_summary"`
 	SourceRowCount     int               `json:"source_row_count"`
 	SearchText         string            `json:"search_text"`
 	Fields             map[string]string `json:"fields,omitempty"`
@@ -140,6 +148,7 @@ type CourseOffering struct {
 type CourseAudience struct {
 	ID                 string `json:"id"`
 	StableID           string `json:"stable_id"`
+	ReleaseID          string `json:"release_id"`
 	TermKey            string `json:"term_key"`
 	OfferingID         string `json:"offering_id"`
 	TermCourseID       string `json:"term_course_id"`
@@ -159,6 +168,7 @@ type CourseAudience struct {
 type CourseInstance struct {
 	ID             string `json:"id"`
 	StableID       string `json:"stable_id"`
+	ReleaseID      string `json:"release_id"`
 	OfferingID     string `json:"offering_id"`
 	TermKey        string `json:"term_key"`
 	TermCourseID   string `json:"term_course_id"`
@@ -180,6 +190,8 @@ type CourseInstance struct {
 
 type SourceRow struct {
 	ID           string            `json:"id"`
+	StableID     string            `json:"stable_id"`
+	ReleaseID    string            `json:"release_id"`
 	TermKey      string            `json:"term_key"`
 	TermCourseID string            `json:"term_course_id"`
 	OfferingID   string            `json:"offering_id"`

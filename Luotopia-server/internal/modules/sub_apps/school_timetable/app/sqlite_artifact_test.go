@@ -27,7 +27,7 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 			"skrs": "10/20", "mon": "1-16周1-2节1区-101", "nj": "2025", "jszy": "测试专业",
 		}},
 	}
-	records := BuildRecords(pkg)
+	records := BuildRecords(pkg, 3)
 
 	artifact, err := BuildSQLiteArtifact(context.Background(), pkg, records, 3, t.TempDir())
 	if err != nil {
@@ -54,7 +54,7 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 	if err := db.QueryRow(`SELECT value FROM school_timetable_meta WHERE key = 'schema_version'`).Scan(&schemaVersion); err != nil {
 		t.Fatal(err)
 	}
-	if schemaVersion != "4" {
+	if schemaVersion != "5" {
 		t.Fatalf("schema_version = %q", schemaVersion)
 	}
 	var rowCount int

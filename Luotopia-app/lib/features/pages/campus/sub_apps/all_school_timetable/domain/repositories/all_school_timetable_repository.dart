@@ -26,13 +26,25 @@ abstract class AllSchoolTimetableRepository {
     AllSchoolTimetableQuery query,
   );
 
-  Future<SchoolCourseHead?> findCourseHead(String id);
+  Future<SchoolCourseHead?> findCourseHead({
+    required String termKey,
+    required String id,
+  });
 
-  Future<List<SchoolTeachingClass>> loadTeachingClasses(String courseHeadId);
+  Future<List<SchoolTeachingClass>> loadTeachingClasses({
+    required String termKey,
+    required String courseHeadId,
+  });
 
-  Future<SchoolTeachingClass?> findTeachingClass(String id);
+  Future<SchoolTeachingClass?> findTeachingClass({
+    required String termKey,
+    required String id,
+  });
 
-  Future<List<SchoolClassMeeting>> loadMeetings(String teachingClassId);
+  Future<List<SchoolClassMeeting>> loadMeetings({
+    required String termKey,
+    required String teachingClassId,
+  });
 
   Future<CourseEntityLink> matchPersonalCourse(PersonalCourseMatchQuery query);
 }

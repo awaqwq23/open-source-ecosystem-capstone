@@ -16,7 +16,11 @@ class CourseHeadClassesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(courseHeadDetailProvider(args.courseHeadId));
+    final state = ref.watch(
+      courseHeadDetailProvider(
+        CourseHeadDetailQuery(termKey: args.termKey, id: args.courseHeadId),
+      ),
+    );
     return ui.Scaffold(
       headers: [
         ui.AppBar(
@@ -54,7 +58,7 @@ class CourseHeadClassesPage extends ConsumerWidget {
                   item: item,
                   onTap: () => context.openSecondary(
                     AppRoutePaths.campusAllSchoolTimetableClass,
-                    extra: TeachingClassDetailPageArgs(item.id),
+                    extra: TeachingClassDetailPageArgs(args.termKey, item.id),
                   ),
                 ),
             ],

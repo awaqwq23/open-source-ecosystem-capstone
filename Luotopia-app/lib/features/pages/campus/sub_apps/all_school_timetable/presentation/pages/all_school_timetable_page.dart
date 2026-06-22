@@ -159,7 +159,7 @@ class _AllSchoolTimetablePageState
                 head: head,
                 onTap: () => context.openSecondary(
                   AppRoutePaths.campusAllSchoolTimetableHead,
-                  extra: CourseHeadPageArgs(head.id),
+                  extra: CourseHeadPageArgs(head.termKey, head.id),
                 ),
               ),
             ),
@@ -502,13 +502,15 @@ String _weekdayLabel(int weekday) {
 }
 
 class CourseHeadPageArgs {
-  const CourseHeadPageArgs(this.courseHeadId);
+  const CourseHeadPageArgs(this.termKey, this.courseHeadId);
 
+  final String termKey;
   final String courseHeadId;
 }
 
 class TeachingClassDetailPageArgs {
-  const TeachingClassDetailPageArgs(this.teachingClassId);
+  const TeachingClassDetailPageArgs(this.termKey, this.teachingClassId);
 
+  final String termKey;
   final String teachingClassId;
 }

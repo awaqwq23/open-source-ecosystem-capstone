@@ -28,16 +28,15 @@ class DriftAllSchoolTimetableRepository
     implements AllSchoolTimetableRepository {
   DriftAllSchoolTimetableRepository(this._preferences);
 
-  static const _activePathKey = 'school_timetable.artifact.active_path';
-  static const _activeChecksumKey = 'school_timetable.artifact.checksum';
+  static const _artifactIndexKey = 'school_timetable.artifact.index';
 
   final SharedPreferences? _preferences;
-  AppDatabase? _activeDb;
-  String? _activePath;
+  final Map<String, AppDatabase> _openDbs = {};
+  final Map<String, String> _openPaths = {};
 
   @override
   Future<void> ensureLocalDataReady() async {
-    await _database();
+    _readArtifactIndex();
   }
 
   @override
@@ -69,7 +68,7 @@ class DriftAllSchoolTimetableRepository
     }
     await gzipFile.openRead().transform(gzip.decoder).pipe(tempDb.openWrite());
     try {
-      _validateArtifact(
+      final entry = _validateArtifact(
         tempDb,
         termKey: termKey,
         version: version,
@@ -79,10 +78,10 @@ class DriftAllSchoolTimetableRepository
         await target.delete();
       }
       await tempDb.rename(target.path);
-      await _closeActiveDb();
-      await _preferences?.setString(_activePathKey, target.path);
-      await _preferences?.setString(_activeChecksumKey, checksum);
-      _activePath = null;
+      await _closeDbForTerm(termKey);
+      final index = _readArtifactIndex();
+      index[termKey] = entry.copyWith(path: target.path, checksum: checksum);
+      await _writeArtifactIndex(index);
     } catch (_) {
       if (await tempDb.exists()) {
         await tempDb.delete();
@@ -93,141 +92,189 @@ class DriftAllSchoolTimetableRepository
 
   @override
   Future<List<SchoolTimetableTerm>> loadTerms() async {
-    final db = await _database();
-    if (db == null) {
-      return const [];
-    }
-    final rows = await db.customSelect('''
-          SELECT term_key, school_year, term, first_week_monday, source_version,
-                 row_count, imported_at, updated_at
-          FROM school_timetable_term_rows
-          ORDER BY term_key DESC
-          ''').get();
-    return rows.map(_termFromRow).toList(growable: false);
+    final entries = _readArtifactIndex().values.toList(growable: false)
+      ..sort((a, b) => b.termKey.compareTo(a.termKey));
+    return [
+      for (final entry in entries)
+        SchoolTimetableTerm(
+          termKey: entry.termKey,
+          schoolYear: entry.schoolYear,
+          term: entry.term,
+          firstWeekMonday: entry.firstWeekMonday,
+          sourceVersion: entry.version.toString(),
+          rowCount: entry.rowCount,
+          importedAt: entry.updatedAt,
+          updatedAt: entry.updatedAt,
+        ),
+    ];
   }
 
   @override
   Future<List<SchoolCourseHead>> searchCourseHeads(
     AllSchoolTimetableQuery query,
   ) async {
-    final db = await _database();
     final termKey = query.termKey;
-    if (db == null || termKey == null || termKey.isEmpty) {
+    if (termKey == null || termKey.isEmpty) {
+      return const [];
+    }
+    final db = await _databaseForTerm(termKey);
+    if (db == null) {
       return const [];
     }
     final keyword = query.keyword.trim();
     final filterVariables = <Variable>[];
-    final professionalClause = _professionalExistsClause(query, filterVariables);
+    final professionalClause = _professionalExistsClause(
+      query,
+      filterVariables,
+    );
     final rows = keyword.isNotEmpty
-        ? await db.customSelect('''
-          SELECT c.id, c.term_key, c.catalog_id, c.course_no, c.course_name, c.open_college,
+        ? await db
+              .customSelect(
+                '''
+          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
                  c.credits, c.course_nature, c.course_category, c.open_type,
                  c.teaching_class_count, c.teacher_summary, c.weekday_summary,
                  c.search_text
           FROM course_search_fts
           JOIN course_term_course_rows c
             ON c.id = course_search_fts.term_course_id
+          JOIN course_catalog_rows cc
+            ON cc.id = c.catalog_id
           WHERE course_search_fts.term_key = ?
             AND course_search_fts MATCH ?
             $professionalClause
           ORDER BY bm25(course_search_fts), c.teaching_class_count DESC
           LIMIT 80
-          ''', variables: [
-              Variable.withString(termKey),
-              Variable.withString(_ftsQuery(keyword)),
-              ...filterVariables,
-            ]).get()
-        : await db.customSelect('''
-          SELECT id, term_key, catalog_id, course_no, course_name, open_college,
+          ''',
+                variables: [
+                  Variable.withString(termKey),
+                  Variable.withString(_ftsQuery(keyword)),
+                  ...filterVariables,
+                ],
+              )
+              .get()
+        : await db
+              .customSelect(
+                '''
+          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
                  credits, course_nature, course_category, open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
           FROM course_term_course_rows c
+          JOIN course_catalog_rows cc
+            ON cc.id = c.catalog_id
           WHERE c.term_key = ?
             $professionalClause
           ORDER BY teaching_class_count DESC
           LIMIT 80
-          ''', variables: [
-              Variable.withString(termKey),
-              ...filterVariables,
-            ]).get();
+          ''',
+                variables: [Variable.withString(termKey), ...filterVariables],
+              )
+              .get();
     return rows.map(_termCourseFromRow).toList(growable: false);
   }
 
   @override
-  Future<SchoolCourseHead?> findCourseHead(String id) async {
-    final db = await _database();
+  Future<SchoolCourseHead?> findCourseHead({
+    required String termKey,
+    required String id,
+  }) async {
+    final db = await _databaseForTerm(termKey);
     if (db == null) {
       return null;
     }
     final row = await db
         .customSelect(
           '''
-          SELECT id, term_key, catalog_id, course_no, course_name, open_college,
+          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
                  credits, course_nature, course_category, open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
-          FROM course_term_course_rows
-          WHERE id = ?
+          FROM course_term_course_rows c
+          JOIN course_catalog_rows cc
+            ON cc.id = c.catalog_id
+          WHERE c.stable_id = ?
           ''',
-          variables: [_idVariable(id)],
+          variables: [Variable.withString(id)],
         )
         .getSingleOrNull();
     return row == null ? null : _termCourseFromRow(row);
   }
 
   @override
-  Future<List<SchoolTeachingClass>> loadTeachingClasses(
-    String courseHeadId,
-  ) async {
-    final db = await _database();
+  Future<List<SchoolTeachingClass>> loadTeachingClasses({
+    required String termKey,
+    required String courseHeadId,
+  }) async {
+    final db = await _databaseForTerm(termKey);
     if (db == null) {
       return const [];
     }
     final rows = await db
         .customSelect(
           '''
-          SELECT *
-          FROM course_offering_rows
-          WHERE term_course_id = ?
+          SELECT o.*, c.stable_id AS term_course_stable_id,
+                 cc.stable_id AS catalog_stable_id,
+                 ic.stable_id AS instructor_course_stable_id
+          FROM course_offering_rows o
+          JOIN course_term_course_rows c ON c.id = o.term_course_id
+          JOIN course_catalog_rows cc ON cc.id = o.catalog_id
+          JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
+          WHERE c.stable_id = ?
           ORDER BY instructor, teaching_class_name
           ''',
-          variables: [_idVariable(courseHeadId)],
+          variables: [Variable.withString(courseHeadId)],
         )
         .get();
     return rows.map(_offeringFromRow).toList(growable: false);
   }
 
   @override
-  Future<SchoolTeachingClass?> findTeachingClass(String id) async {
-    final db = await _database();
+  Future<SchoolTeachingClass?> findTeachingClass({
+    required String termKey,
+    required String id,
+  }) async {
+    final db = await _databaseForTerm(termKey);
     if (db == null) {
       return null;
     }
     final row = await db
         .customSelect(
-          'SELECT * FROM course_offering_rows WHERE id = ?',
-          variables: [_idVariable(id)],
+          '''
+          SELECT o.*, c.stable_id AS term_course_stable_id,
+                 cc.stable_id AS catalog_stable_id,
+                 ic.stable_id AS instructor_course_stable_id
+          FROM course_offering_rows o
+          JOIN course_term_course_rows c ON c.id = o.term_course_id
+          JOIN course_catalog_rows cc ON cc.id = o.catalog_id
+          JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
+          WHERE o.stable_id = ?
+          ''',
+          variables: [Variable.withString(id)],
         )
         .getSingleOrNull();
     return row == null ? null : _offeringFromRow(row);
   }
 
   @override
-  Future<List<SchoolClassMeeting>> loadMeetings(String teachingClassId) async {
-    final db = await _database();
+  Future<List<SchoolClassMeeting>> loadMeetings({
+    required String termKey,
+    required String teachingClassId,
+  }) async {
+    final db = await _databaseForTerm(termKey);
     if (db == null) {
       return const [];
     }
     final rows = await db
         .customSelect(
           '''
-          SELECT *
-          FROM course_instance_rows
-          WHERE offering_id = ?
+          SELECT r.*, o.stable_id AS offering_stable_id
+          FROM course_instance_rows r
+          JOIN course_offering_rows o ON o.id = r.offering_id
+          WHERE o.stable_id = ?
           ORDER BY weekday, segment_index
           ''',
-          variables: [_idVariable(teachingClassId)],
+          variables: [Variable.withString(teachingClassId)],
         )
         .get();
     return rows.map(_ruleFromRow).toList(growable: false);
@@ -237,10 +284,13 @@ class DriftAllSchoolTimetableRepository
   Future<CourseEntityLink> matchPersonalCourse(
     PersonalCourseMatchQuery query,
   ) async {
-    final db = await _database();
     final termKey = query.termKey.trim();
     final courseNo = query.courseNo.trim();
-    if (db == null || termKey.isEmpty || courseNo.isEmpty) {
+    if (termKey.isEmpty || courseNo.isEmpty) {
+      return const CourseEntityLink();
+    }
+    final db = await _databaseForTerm(termKey);
+    if (db == null) {
       return const CourseEntityLink();
     }
 
@@ -256,11 +306,14 @@ class DriftAllSchoolTimetableRepository
         ? ''
         : '$instanceId:$weekIndex';
     return CourseEntityLink(
-      termCourseId: _readString(offering, 'term_course_id').isNotEmpty
-          ? _readString(offering, 'term_course_id')
+      termCourseId: _readString(offering, 'term_course_stable_id').isNotEmpty
+          ? _readString(offering, 'term_course_stable_id')
           : termCourseId,
-      offeringId: _readString(offering, 'id'),
-      instructorCourseId: _readString(offering, 'instructor_course_id'),
+      offeringId: _readPreferredString(offering, 'stable_id', 'id'),
+      instructorCourseId:
+          _readString(offering, 'instructor_course_stable_id').isNotEmpty
+          ? _readString(offering, 'instructor_course_stable_id')
+          : _readString(offering, 'instructor_course_id'),
       occurrenceId: occurrenceId,
     );
   }
@@ -272,7 +325,7 @@ class DriftAllSchoolTimetableRepository
     final rows = await db
         .customSelect(
           '''
-          SELECT id, course_name
+          SELECT stable_id AS id, course_name
           FROM course_term_course_rows
           WHERE term_key = ? AND course_no = ?
           ''',
@@ -321,21 +374,23 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withInt(sectionRange.end));
       variables.add(Variable.withInt(sectionRange.start));
     }
-    final rows = await db
-        .customSelect(
-          '''
-          SELECT o.*, r.id AS matched_instance_id, r.location_text AS matched_location_text
+    final rows = await db.customSelect('''
+          SELECT o.*, c.stable_id AS term_course_stable_id,
+                 ic.stable_id AS instructor_course_stable_id,
+                 r.stable_id AS matched_instance_id,
+                 r.location_text AS matched_location_text
           FROM course_offering_rows o
+          JOIN course_term_course_rows c
+            ON c.id = o.term_course_id
+          JOIN course_instructor_course_rows ic
+            ON ic.id = o.instructor_course_id
           JOIN course_instance_rows r
             ON r.offering_id = o.id
           WHERE o.term_key = ?
             AND o.course_no = ?
             AND r.weekday = ?
             ${ruleClauses.isEmpty ? '' : 'AND ${ruleClauses.join(' AND ')}'}
-          ''',
-          variables: variables,
-        )
-        .get();
+          ''', variables: variables).get();
     if (rows.isEmpty) {
       return null;
     }
@@ -405,7 +460,11 @@ class DriftAllSchoolTimetableRepository
     if (firstWeekMonday == null) {
       return null;
     }
-    final queryDate = DateTime(query.date.year, query.date.month, query.date.day);
+    final queryDate = DateTime(
+      query.date.year,
+      query.date.month,
+      query.date.day,
+    );
     final firstDate = DateTime(
       firstWeekMonday.year,
       firstWeekMonday.month,
@@ -470,19 +529,6 @@ class DriftAllSchoolTimetableRepository
     return tokens.map((part) => '"$part"').join(' ');
   }
 
-  SchoolTimetableTerm _termFromRow(QueryRow row) {
-    return SchoolTimetableTerm(
-      termKey: _readString(row, 'term_key'),
-      schoolYear: _readString(row, 'school_year'),
-      term: _readString(row, 'term'),
-      firstWeekMonday: _readString(row, 'first_week_monday'),
-      sourceVersion: _readString(row, 'source_version'),
-      rowCount: _readInt(row, 'row_count'),
-      importedAt: _readDateTime(row, 'imported_at'),
-      updatedAt: _readDateTime(row, 'updated_at'),
-    );
-  }
-
   SchoolCourseHead _termCourseFromRow(QueryRow row) {
     return SchoolCourseHead(
       id: _readString(row, 'id'),
@@ -503,12 +549,19 @@ class DriftAllSchoolTimetableRepository
 
   SchoolTeachingClass _offeringFromRow(QueryRow row) {
     return SchoolTeachingClass(
-      id: _readString(row, 'id'),
+      id: _readPreferredString(row, 'stable_id', 'id'),
       termKey: _readString(row, 'term_key'),
       sourceKey: _readString(row, 'source_key'),
-      termCourseId: _readString(row, 'term_course_id'),
-      catalogId: _readString(row, 'catalog_id'),
-      instructorCourseId: _readString(row, 'instructor_course_id'),
+      termCourseId: _readString(row, 'term_course_stable_id').isNotEmpty
+          ? _readString(row, 'term_course_stable_id')
+          : _readString(row, 'term_course_id'),
+      catalogId: _readString(row, 'catalog_stable_id').isNotEmpty
+          ? _readString(row, 'catalog_stable_id')
+          : _readString(row, 'catalog_id'),
+      instructorCourseId:
+          _readString(row, 'instructor_course_stable_id').isNotEmpty
+          ? _readString(row, 'instructor_course_stable_id')
+          : _readString(row, 'instructor_course_id'),
       teachingClassName: _readString(row, 'teaching_class_name'),
       courseNo: _readString(row, 'course_no'),
       courseName: _readString(row, 'course_name'),
@@ -541,8 +594,12 @@ class DriftAllSchoolTimetableRepository
 
   SchoolClassMeeting _ruleFromRow(QueryRow row) {
     return SchoolClassMeeting(
-      id: _readString(row, 'id'),
-      offeringId: _readString(row, 'offering_id'),
+      id: _readPreferredString(row, 'stable_id', 'id'),
+      offeringId: _readPreferredString(
+        row,
+        'offering_stable_id',
+        'offering_id',
+      ),
       weekday: _readInt(row, 'weekday'),
       weekdayLabel: _readString(row, 'weekday_label'),
       rawText: _readString(row, 'raw_segment_text'),
@@ -554,18 +611,20 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  Future<AppDatabase?> _database() async {
-    final path = _preferences?.getString(_activePathKey) ?? '';
+  Future<AppDatabase?> _databaseForTerm(String termKey) async {
+    final entry = _readArtifactIndex()[termKey];
+    final path = entry?.path ?? '';
     if (path.isEmpty || !await File(path).exists()) {
-      await _closeActiveDb();
+      await _closeDbForTerm(termKey);
       return null;
     }
-    if (_activeDb != null && _activePath == path) {
-      return _activeDb;
+    final existing = _openDbs[termKey];
+    if (existing != null && _openPaths[termKey] == path) {
+      return existing;
     }
-    await _closeActiveDb();
-    _activePath = path;
-    _activeDb = AppDatabase.withExecutor(
+    await _closeDbForTerm(termKey);
+    _openPaths[termKey] = path;
+    final db = AppDatabase.withExecutor(
       NativeDatabase.createInBackground(
         File(path),
         enableMigrations: false,
@@ -574,18 +633,23 @@ class DriftAllSchoolTimetableRepository
         },
       ),
     );
-    return _activeDb;
+    _openDbs[termKey] = db;
+    return db;
   }
 
-  Future<void> _closeActiveDb() async {
-    final db = _activeDb;
-    _activeDb = null;
-    _activePath = null;
+  Future<void> _closeDbForTerm(String termKey) async {
+    final db = _openDbs.remove(termKey);
+    _openPaths.remove(termKey);
     await db?.close();
   }
 
   Future<void> dispose() async {
-    await _closeActiveDb();
+    final dbs = List<AppDatabase>.from(_openDbs.values);
+    _openDbs.clear();
+    _openPaths.clear();
+    for (final db in dbs) {
+      await db.close();
+    }
   }
 
   Future<Directory> _artifactDirectory() async {
@@ -599,7 +663,34 @@ class DriftAllSchoolTimetableRepository
     return dir;
   }
 
-  void _validateArtifact(
+  Map<String, _ArtifactEntry> _readArtifactIndex() {
+    final raw = _preferences?.getString(_artifactIndexKey);
+    if (raw == null || raw.isEmpty) {
+      return const {};
+    }
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return {
+        for (final entry in decoded.entries)
+          entry.key: _ArtifactEntry.fromJson(
+            entry.value as Map<String, dynamic>,
+          ),
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _writeArtifactIndex(Map<String, _ArtifactEntry> index) async {
+    await _preferences?.setString(
+      _artifactIndexKey,
+      jsonEncode({
+        for (final entry in index.entries) entry.key: entry.value.toJson(),
+      }),
+    );
+  }
+
+  _ArtifactEntry _validateArtifact(
     File file, {
     required String termKey,
     required int version,
@@ -613,14 +704,20 @@ class DriftAllSchoolTimetableRepository
       )) {
         meta[row['key'] as String] = row['value'].toString();
       }
-      if (meta['schema_version'] != '4' ||
+      final schemaVersion = int.tryParse(meta['schema_version'] ?? '') ?? 0;
+      if (!const {4, 5}.contains(schemaVersion) ||
           meta['artifact_type'] != 'school_timetable_sqlite_gzip' ||
           meta['term_key'] != termKey ||
           meta['version'] != version.toString()) {
         throw const FormatException('全校课表 SQLite 快照元信息不匹配');
       }
       final termRows = db.select(
-        'SELECT row_count FROM school_timetable_term_rows WHERE term_key = ?',
+        '''
+        SELECT term_key, school_year, term, first_week_monday, source_version,
+               row_count, imported_at, updated_at
+        FROM school_timetable_term_rows
+        WHERE term_key = ?
+        ''',
         [termKey],
       );
       if (termRows.length != 1 || termRows.first['row_count'] != rowCount) {
@@ -639,6 +736,19 @@ class DriftAllSchoolTimetableRepository
       ]) {
         db.select('SELECT 1 FROM $table LIMIT 1');
       }
+      final term = termRows.first;
+      return _ArtifactEntry(
+        termKey: termKey,
+        path: file.path,
+        version: version,
+        checksum: '',
+        schemaVersion: schemaVersion,
+        schoolYear: term['school_year']?.toString() ?? '',
+        term: term['term']?.toString() ?? '',
+        firstWeekMonday: term['first_week_monday']?.toString() ?? '',
+        rowCount: rowCount,
+        updatedAt: _dateTimeFromMillis(term['updated_at']),
+      );
     } finally {
       db.dispose();
     }
@@ -649,9 +759,13 @@ class DriftAllSchoolTimetableRepository
     return value?.toString() ?? '';
   }
 
-  Variable _idVariable(String id) {
-    final parsed = int.tryParse(id);
-    return parsed == null ? Variable.withString(id) : Variable.withInt(parsed);
+  String _readPreferredString(
+    QueryRow row,
+    String preferredColumn,
+    String fallbackColumn,
+  ) {
+    final preferred = _readString(row, preferredColumn);
+    return preferred.isNotEmpty ? preferred : _readString(row, fallbackColumn);
   }
 
   int _readInt(QueryRow row, String column) {
@@ -676,8 +790,7 @@ class DriftAllSchoolTimetableRepository
     return double.tryParse(value.toString());
   }
 
-  DateTime _readDateTime(QueryRow row, String column) {
-    final value = row.data[column];
+  DateTime _dateTimeFromMillis(Object? value) {
     if (value is DateTime) return value;
     if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
     if (value is num) {
@@ -766,6 +879,79 @@ class DriftAllSchoolTimetableRepository
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
     return sanitized.isEmpty ? 'unknown' : sanitized;
+  }
+}
+
+class _ArtifactEntry {
+  const _ArtifactEntry({
+    required this.termKey,
+    required this.path,
+    required this.version,
+    required this.checksum,
+    required this.schemaVersion,
+    required this.schoolYear,
+    required this.term,
+    required this.firstWeekMonday,
+    required this.rowCount,
+    required this.updatedAt,
+  });
+
+  final String termKey;
+  final String path;
+  final int version;
+  final String checksum;
+  final int schemaVersion;
+  final String schoolYear;
+  final String term;
+  final String firstWeekMonday;
+  final int rowCount;
+  final DateTime updatedAt;
+
+  _ArtifactEntry copyWith({String? path, String? checksum}) {
+    return _ArtifactEntry(
+      termKey: termKey,
+      path: path ?? this.path,
+      version: version,
+      checksum: checksum ?? this.checksum,
+      schemaVersion: schemaVersion,
+      schoolYear: schoolYear,
+      term: term,
+      firstWeekMonday: firstWeekMonday,
+      rowCount: rowCount,
+      updatedAt: updatedAt,
+    );
+  }
+
+  factory _ArtifactEntry.fromJson(Map<String, dynamic> json) {
+    return _ArtifactEntry(
+      termKey: json['term_key'] as String? ?? '',
+      path: json['path'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 0,
+      checksum: json['checksum'] as String? ?? '',
+      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
+      schoolYear: json['school_year'] as String? ?? '',
+      term: json['term'] as String? ?? '',
+      firstWeekMonday: json['first_week_monday'] as String? ?? '',
+      rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        (json['updated_at'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'term_key': termKey,
+      'path': path,
+      'version': version,
+      'checksum': checksum,
+      'schema_version': schemaVersion,
+      'school_year': schoolYear,
+      'term': term,
+      'first_week_monday': firstWeekMonday,
+      'row_count': rowCount,
+      'updated_at': updatedAt.millisecondsSinceEpoch,
+    };
   }
 }
 

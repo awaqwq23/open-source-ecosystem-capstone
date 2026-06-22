@@ -22,7 +22,7 @@ import (
 
 const (
 	SQLiteArtifactType    = "school_timetable_sqlite_gzip"
-	SQLiteSchemaVersion   = 4
+	SQLiteSchemaVersion   = 5
 	SQLiteArtifactContent = "application/gzip"
 )
 
@@ -149,7 +149,7 @@ func insertCatalogs(ctx context.Context, tx *sql.Tx, rows []domain.CourseCatalog
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.CatalogKey, row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), row.CatalogKey, row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -163,7 +163,7 @@ func insertTermCourses(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, row.OpenCollege, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType, row.TeachingClassCount, row.TeacherSummary, row.WeekdaySummary, row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), row.TermKey, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, row.OpenCollege, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType, row.TeachingClassCount, row.TeacherSummary, row.WeekdaySummary, row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -177,7 +177,7 @@ func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.Inst
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, stableIntID(row.CatalogID), row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.InstructorName, row.InstructorNameKey, row.OfferingCount, row.LatestTermKey, row.LatestOpenCollege, row.LatestTeachingTitle, row.SearchText); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), stableIntID(row.CatalogID), row.CourseNo, row.CourseName, nullableFloat(row.Credits), row.InstructorName, row.InstructorNameKey, row.OfferingCount, row.LatestTermKey, row.LatestOpenCollege, row.LatestTeachingTitle, row.SearchText); err != nil {
 			return err
 		}
 	}
@@ -186,8 +186,8 @@ func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.Inst
 
 func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOffering) error {
 	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_offering_rows
-	(id, stable_id, term_key, term_course_id, catalog_id, instructor_course_id, source_key, school_year, term, teaching_class_name, teaching_class_key, course_no, course_name, open_college, plan_college, credits, course_nature, course_category, open_type, instructor, instructor_set_key, title, people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_key, schedule_summary, weekday_summary, search_text, detail_fields_json)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	(id, stable_id, term_key, term_course_id, catalog_id, instructor_course_id, source_key, school_year, term, teaching_class_name, teaching_class_key, course_no, course_name, open_college, plan_college, grade, major, credits, course_nature, course_category, open_type, instructor, instructor_set_key, title, people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_key, schedule_summary, weekday_summary, search_text, detail_fields_json)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -195,9 +195,10 @@ func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOfferi
 	for _, row := range rows {
 		fields := jsonString(detailFields(row.Fields))
 		if _, err := stmt.ExecContext(ctx,
-			stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID), stableIntID(row.InstructorCourseID), row.SourceKey,
+			stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID), stableIntID(row.InstructorCourseID), row.SourceKey,
 			row.SchoolYear, row.Term, row.TeachingClassName, normalizeKey(row.TeachingClassName), row.CourseNo, row.CourseName,
-			row.OpenCollege, row.AudienceSummary, nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType,
+			row.OpenCollege, firstNonEmpty(row.PlanCollegeSummary, row.AudienceSummary), row.GradeSummary, row.MajorSummary,
+			nullableFloat(row.Credits), row.CourseNature, row.CourseCategory, row.OpenType,
 			row.Instructor, row.InstructorSetKey, row.Title, row.PeopleRaw, nullablePositiveInt(row.Capacity), nullablePositiveInt(row.SelectedCount), nullableInt(row.TheoryHours), nullableInt(row.ComputerHours),
 			nullableInt(row.ExperimentHours), nullableInt(row.PracticeHours), row.Remark, row.OtherTeachers,
 			row.Textbook, row.Publisher, row.ScheduleKey, row.ScheduleSummary, row.WeekdaySummary, row.SearchText, fields,
@@ -215,7 +216,7 @@ func insertAudiences(ctx context.Context, tx *sql.Tx, rows []domain.CourseAudien
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, stableIntID(row.OfferingID), stableIntID(row.TermCourseID), stableIntID(row.CatalogID), row.Grade, row.Major, row.PlanCollege, row.CourseNature, row.CourseNatureCode, row.CourseCategory, row.CourseCategoryCode, row.OpenType, row.OpenTypeCode, row.ConditionCode); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), row.TermKey, stableIntID(row.OfferingID), stableIntID(row.TermCourseID), stableIntID(row.CatalogID), row.Grade, row.Major, row.PlanCollege, row.CourseNature, row.CourseNatureCode, row.CourseCategory, row.CourseCategoryCode, row.OpenType, row.OpenTypeCode, row.ConditionCode); err != nil {
 			return err
 		}
 	}
@@ -229,7 +230,7 @@ func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) 
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), row.ID, row.TermKey, nullableStableIntID(row.TermCourseID), nullableStableIntID(row.OfferingID), row.SourceKey, row.PackageIndex, row.Status, jsonString(detailFields(row.Fields))); err != nil {
+		if _, err := stmt.ExecContext(ctx, stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), row.TermKey, nullableStableIntID(row.TermCourseID), nullableStableIntID(row.OfferingID), row.SourceKey, row.PackageIndex, row.Status, jsonString(detailFields(row.Fields))); err != nil {
 			return err
 		}
 	}
@@ -244,7 +245,7 @@ func insertCourseInstances(ctx context.Context, tx *sql.Tx, rows []domain.Course
 	defer stmt.Close()
 	for _, row := range rows {
 		if _, err := stmt.ExecContext(ctx,
-			stableIntID(row.ID), row.ID, stableIntID(row.OfferingID), row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID),
+			stableIntID(row.ID), nonEmptyStableID(row.StableID, row.ID), stableIntID(row.OfferingID), row.TermKey, stableIntID(row.TermCourseID), stableIntID(row.CatalogID),
 			row.Weekday, row.DayField, row.SegmentIndex, row.WeekdayLabel, row.RawDayText, row.RawSegmentText,
 			row.WeekText, row.SectionText, nullablePositiveInt(row.SectionStart), nullablePositiveInt(row.SectionEnd),
 			row.LocationText, row.ParseStatus,
@@ -364,6 +365,22 @@ func nullableStableIntID(stableID string) any {
 	return stableIntID(stableID)
 }
 
+func nonEmptyStableID(stableID, fallback string) string {
+	if stableID != "" {
+		return stableID
+	}
+	return fallback
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func detailFields(fields map[string]string) map[string]string {
 	keys := []string{
 		"key", "jxbmc", "yskch", "kcmc", "skxy", "jhxy", "kcxf", "kcxzmc", "kclbmc", "kklxmc",
@@ -424,7 +441,8 @@ CREATE TABLE course_offering_rows (
   school_year TEXT NOT NULL, term TEXT NOT NULL, teaching_class_name TEXT NOT NULL,
   teaching_class_key TEXT NOT NULL DEFAULT '',
   course_no TEXT NOT NULL, course_name TEXT NOT NULL, open_college TEXT NOT NULL DEFAULT '',
-  plan_college TEXT NOT NULL DEFAULT '', credits REAL, course_nature TEXT NOT NULL DEFAULT '',
+  plan_college TEXT NOT NULL DEFAULT '', grade TEXT NOT NULL DEFAULT '',
+  major TEXT NOT NULL DEFAULT '', credits REAL, course_nature TEXT NOT NULL DEFAULT '',
   course_category TEXT NOT NULL DEFAULT '', open_type TEXT NOT NULL DEFAULT '',
   instructor TEXT NOT NULL DEFAULT '', instructor_set_key TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '', people_raw TEXT NOT NULL DEFAULT '',

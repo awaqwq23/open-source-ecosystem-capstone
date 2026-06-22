@@ -13,7 +13,14 @@ class TeachingClassDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(teachingClassDetailProvider(args.teachingClassId));
+    final state = ref.watch(
+      teachingClassDetailProvider(
+        TeachingClassDetailQuery(
+          termKey: args.termKey,
+          id: args.teachingClassId,
+        ),
+      ),
+    );
     return ui.Scaffold(
       headers: [
         ui.AppBar(

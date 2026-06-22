@@ -20,7 +20,7 @@ func TestPullSchoolTimetableUsesArtifactLinkContract(t *testing.T) {
 			Version:       7,
 			Checksum:      "sha256:artifact",
 			ArtifactType:  "school_timetable_sqlite_gzip",
-			SchemaVersion: 3,
+			SchemaVersion: 5,
 			ArtifactSize:  2048,
 			ArtifactURL:   "https://cdn.example.com/school-timetable/2025-2026-1/v7.sqlite.gz",
 			RowCount:      42,
@@ -41,7 +41,7 @@ func TestPullSchoolTimetableUsesArtifactLinkContract(t *testing.T) {
 	if link.Href != want {
 		t.Fatalf("artifact link href = %q, want %q", link.Href, want)
 	}
-	if term.ArtifactType != "school_timetable_sqlite_gzip" || term.SchemaVersion != 3 || term.ArtifactSize != 2048 {
+	if term.ArtifactType != "school_timetable_sqlite_gzip" || term.SchemaVersion != 5 || term.ArtifactSize != 2048 {
 		t.Fatalf("artifact metadata = %#v", term)
 	}
 	payload, err := json.Marshal(resp.SchoolTimetable.Terms[0])
