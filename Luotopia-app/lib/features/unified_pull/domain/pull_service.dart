@@ -158,6 +158,8 @@ class UnifiedPullService {
   }
 
   Future<void> _cacheChangedSchoolTimetableTerms(PullResponse response) async {
+    final activeTerms =
+        response.schoolTimetable?.activeTerms.toSet() ?? const <String>{};
     final terms = response.schoolTimetable?.terms ?? const [];
     for (final term in terms) {
       final artifactHref = term.links['artifact']?.href ?? '';
@@ -165,7 +167,7 @@ class UnifiedPullService {
         continue;
       }
       if (term.artifactType != 'school_timetable_sqlite_gzip' ||
-          !const {4, 5}.contains(term.schemaVersion)) {
+          term.schemaVersion != 6) {
         throw StateError('全校课表 ${term.termKey} 快照格式不受支持');
       }
       final tempDir = await getTemporaryDirectory();
@@ -204,6 +206,9 @@ class UnifiedPullService {
           await tempFile.delete();
         }
       }
+    }
+    if (activeTerms.isNotEmpty) {
+      await _allSchoolTimetableRepository.retainActiveTerms(activeTerms);
     }
   }
 

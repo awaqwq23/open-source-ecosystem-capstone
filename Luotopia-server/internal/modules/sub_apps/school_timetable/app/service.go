@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/contract"
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
 	"github.com/openwhu/luotopia/server/internal/platform/storage"
 )
@@ -92,6 +93,15 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	if s.objectStore == nil {
 		return domain.ImportResult{}, fmt.Errorf("school timetable object store is not configured")
 	}
+	rawKey := contract.RawPackageKey(pkg.Manifest.TermKey, version)
+	if err := s.objectStore.Put(ctx, storage.Object{
+		Key:         rawKey,
+		ContentType: "application/gzip",
+		Size:        int64(len(data)),
+		Body:        io.NopCloser(bytes.NewReader(data)),
+	}); err != nil {
+		return domain.ImportResult{}, err
+	}
 	artifactFile, err := os.Open(artifact.Path)
 	if err != nil {
 		return domain.ImportResult{}, err
@@ -108,7 +118,8 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	release := domain.Release{
 		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: artifact.Checksum,
 		FileKey: artifact.Key, ArtifactType: artifact.ArtifactType, SchemaVersion: artifact.SchemaVersion,
-		ArtifactSize: artifact.Size, RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
+		ArtifactSize: artifact.Size, RawFileKey: rawKey, RawChecksum: rawChecksum, RawSize: int64(len(data)),
+		RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
 	}
 	if err := s.repo.Publish(ctx, pkg, release, records); err != nil {
 		return domain.ImportResult{}, err
@@ -289,7 +300,7 @@ func BuildRecords(pkg domain.Package, version int) Records {
 		Offerings: offerings, Audiences: audiences, SourceRows: sourceRows,
 		CourseInstances: instanceRecords,
 	}
-	return scopeRecordsToRelease(records, releaseID(pkg.Manifest.TermKey, version))
+	return records
 }
 
 func releaseID(termKey string, version int) string {

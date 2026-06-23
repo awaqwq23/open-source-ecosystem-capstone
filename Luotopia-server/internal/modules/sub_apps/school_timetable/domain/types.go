@@ -32,6 +32,9 @@ type Term struct {
 	ArtifactType    string    `json:"artifact_type"`
 	SchemaVersion   int       `json:"schema_version"`
 	ArtifactSize    int64     `json:"artifact_size"`
+	RawFileKey      string    `json:"raw_file_key,omitempty"`
+	RawChecksum     string    `json:"raw_checksum,omitempty"`
+	RawSize         int64     `json:"raw_size,omitempty"`
 	ArtifactURL     string    `json:"artifact_url,omitempty"`
 	RowCount        int       `json:"row_count"`
 	PublishedAt     time.Time `json:"published_at"`
@@ -46,6 +49,9 @@ type Release struct {
 	ArtifactType  string    `json:"artifact_type"`
 	SchemaVersion int       `json:"schema_version"`
 	ArtifactSize  int64     `json:"artifact_size"`
+	RawFileKey    string    `json:"raw_file_key,omitempty"`
+	RawChecksum   string    `json:"raw_checksum,omitempty"`
+	RawSize       int64     `json:"raw_size,omitempty"`
 	ArtifactURL   string    `json:"artifact_url,omitempty"`
 	RowCount      int       `json:"row_count"`
 	Active        bool      `json:"active"`

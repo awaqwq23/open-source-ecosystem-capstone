@@ -121,8 +121,12 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 	if s.schoolTimetableSvc != nil && scopeEnabled(req.Scopes, "school_timetable") {
 		terms, err := s.schoolTimetableSvc.ListActiveTerms(ctx)
 		if err == nil {
-			block := &domain.SchoolTimetableBlock{Terms: []domain.SchoolTimetableTerm{}}
+			block := &domain.SchoolTimetableBlock{
+				ActiveTerms: make([]string, 0, len(terms)),
+				Terms:       []domain.SchoolTimetableTerm{},
+			}
 			for _, term := range terms {
+				block.ActiveTerms = append(block.ActiveTerms, term.TermKey)
 				client := domain.ClientTermState{}
 				if req.ClientState.SchoolTimetableTerms != nil {
 					client = req.ClientState.SchoolTimetableTerms[term.TermKey]

@@ -54,7 +54,7 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 	if err := db.QueryRow(`SELECT value FROM school_timetable_meta WHERE key = 'schema_version'`).Scan(&schemaVersion); err != nil {
 		t.Fatal(err)
 	}
-	if schemaVersion != "5" {
+	if schemaVersion != "6" {
 		t.Fatalf("schema_version = %q", schemaVersion)
 	}
 	var rowCount int
@@ -72,11 +72,30 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 		t.Fatalf("course_term_course_rows count = %d, want 1", courses)
 	}
 	var instances int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM course_instance_rows`).Scan(&instances); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM course_meeting_rule_rows`).Scan(&instances); err != nil {
 		t.Fatal(err)
 	}
 	if instances != 1 {
-		t.Fatalf("course_instance_rows count = %d, want 1", instances)
+		t.Fatalf("course_meeting_rule_rows count = %d, want 1", instances)
+	}
+	var idType string
+	if err := db.QueryRow(`SELECT typeof(id) FROM course_term_course_rows LIMIT 1`).Scan(&idType); err != nil {
+		t.Fatal(err)
+	}
+	if idType != "text" {
+		t.Fatalf("course_term_course_rows.id typeof = %q, want text", idType)
+	}
+	var orphanCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM course_offering_rows o
+		LEFT JOIN course_term_course_rows c ON c.id = o.term_course_id
+		WHERE c.id IS NULL
+	`).Scan(&orphanCount); err != nil {
+		t.Fatal(err)
+	}
+	if orphanCount != 0 {
+		t.Fatalf("orphan offering rows = %d", orphanCount)
 	}
 }
 

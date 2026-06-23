@@ -33,6 +33,7 @@ void main() {
       },
       'school_timetable': {
         'changed': true,
+        'active_terms': ['2025-2026-1'],
         'terms': [
           {
             'term_key': '2025-2026-1',
@@ -41,7 +42,7 @@ void main() {
             'version': 7,
             'checksum': 'sha256:artifact',
             'artifact_type': 'school_timetable_sqlite_gzip',
-            'schema_version': 3,
+            'schema_version': 6,
             'artifact_size': 2048,
             'row_count': 42,
             'links': {
@@ -65,8 +66,9 @@ void main() {
       contains('jw_login'),
     );
     final schoolTerm = response.schoolTimetable?.terms.single;
+    expect(response.schoolTimetable?.activeTerms, ['2025-2026-1']);
     expect(schoolTerm?.artifactType, 'school_timetable_sqlite_gzip');
-    expect(schoolTerm?.schemaVersion, 3);
+    expect(schoolTerm?.schemaVersion, 6);
     expect(schoolTerm?.artifactSize, 2048);
     expect(schoolTerm?.links['artifact']?.href, contains('/v7.sqlite.gz'));
     expect(response.sync?.hasChanges, isTrue);

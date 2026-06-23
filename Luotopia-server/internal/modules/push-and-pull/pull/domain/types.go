@@ -73,8 +73,9 @@ type ScriptVersion struct {
 }
 
 type SchoolTimetableBlock struct {
-	Changed bool                  `json:"changed"`
-	Terms   []SchoolTimetableTerm `json:"terms"`
+	Changed     bool                  `json:"changed"`
+	ActiveTerms []string              `json:"active_terms"`
+	Terms       []SchoolTimetableTerm `json:"terms"`
 }
 
 type SchoolTimetableTerm struct {

@@ -20,6 +20,8 @@ abstract class AllSchoolTimetableRepository {
     required int rowCount,
   });
 
+  Future<void> retainActiveTerms(Set<String> termKeys);
+
   Future<List<SchoolTimetableTerm>> loadTerms();
 
   Future<List<SchoolCourseHead>> searchCourseHeads(

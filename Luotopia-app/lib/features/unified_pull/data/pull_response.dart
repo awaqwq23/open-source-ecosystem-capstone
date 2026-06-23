@@ -184,14 +184,23 @@ class SyncBlock {
 
 class SchoolTimetableBlock {
   final bool changed;
+  final List<String> activeTerms;
   final List<SchoolTimetableTermUpdate> terms;
 
-  const SchoolTimetableBlock({this.changed = false, this.terms = const []});
+  const SchoolTimetableBlock({
+    this.changed = false,
+    this.activeTerms = const [],
+    this.terms = const [],
+  });
 
   factory SchoolTimetableBlock.fromJson(Map<String, dynamic> json) {
     final rawTerms = json['terms'] as List? ?? const [];
+    final rawActiveTerms = json['active_terms'] as List? ?? const [];
     return SchoolTimetableBlock(
       changed: json['changed'] as bool? ?? false,
+      activeTerms: [
+        for (final item in rawActiveTerms) item?.toString() ?? '',
+      ].where((value) => value.isNotEmpty).toList(growable: false),
       terms: [
         for (final item in rawTerms)
           if (item is Map<String, dynamic>)

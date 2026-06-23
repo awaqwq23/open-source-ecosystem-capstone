@@ -22,7 +22,7 @@ var (
 )
 
 var requiredFields = []string{
-	"xn", "xq", "kcmc",
+	"xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs",
 }
 
 func ParsePackage(ctx context.Context, reader io.Reader) (domain.Package, error) {

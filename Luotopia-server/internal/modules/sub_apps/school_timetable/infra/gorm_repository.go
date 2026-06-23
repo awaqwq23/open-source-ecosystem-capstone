@@ -45,6 +45,7 @@ func (r *GormRepository) Publish(ctx context.Context, pkg domain.Package, releas
 			FirstWeekMonday: pkg.Manifest.FirstWeekMonday, ActiveVersion: release.Version,
 			Checksum: release.Checksum, FileKey: release.FileKey, ArtifactType: release.ArtifactType,
 			SchemaVersion: release.SchemaVersion, ArtifactSize: release.ArtifactSize,
+			RawFileKey: release.RawFileKey, RawChecksum: release.RawChecksum, RawSize: release.RawSize,
 			RowCount: release.RowCount, PublishedAt: &release.PublishedAt,
 			CreatedAt: now, UpdatedAt: now,
 		}
@@ -107,6 +108,9 @@ func (r *GormRepository) ActivateRelease(ctx context.Context, termKey string, ve
 			"artifact_type":  rel.ArtifactType,
 			"schema_version": rel.SchemaVersion,
 			"artifact_size":  rel.ArtifactSize,
+			"raw_file_key":   rel.RawFileKey,
+			"raw_checksum":   rel.RawChecksum,
+			"raw_size":       rel.RawSize,
 			"row_count":      rel.RowCount,
 			"published_at":   rel.PublishedAt,
 			"updated_at":     time.Now().UTC(),
@@ -134,6 +138,9 @@ type termModel struct {
 	ArtifactType    string     `gorm:"column:artifact_type"`
 	SchemaVersion   int        `gorm:"column:schema_version"`
 	ArtifactSize    int64      `gorm:"column:artifact_size"`
+	RawFileKey      string     `gorm:"column:raw_file_key"`
+	RawChecksum     string     `gorm:"column:raw_checksum"`
+	RawSize         int64      `gorm:"column:raw_size"`
 	RowCount        int        `gorm:"column:row_count"`
 	PublishedAt     *time.Time `gorm:"column:published_at"`
 	CreatedAt       time.Time  `gorm:"column:created_at"`
@@ -152,6 +159,7 @@ func (m termModel) toDomain() domain.Term {
 		FirstWeekMonday: m.FirstWeekMonday, Version: m.ActiveVersion,
 		Checksum: m.Checksum, FileKey: m.FileKey, ArtifactType: m.ArtifactType,
 		SchemaVersion: m.SchemaVersion, ArtifactSize: m.ArtifactSize,
+		RawFileKey: m.RawFileKey, RawChecksum: m.RawChecksum, RawSize: m.RawSize,
 		RowCount: m.RowCount, PublishedAt: publishedAt,
 	}
 }
@@ -165,6 +173,9 @@ type releaseModel struct {
 	ArtifactType  string    `gorm:"column:artifact_type"`
 	SchemaVersion int       `gorm:"column:schema_version"`
 	ArtifactSize  int64     `gorm:"column:artifact_size"`
+	RawFileKey    string    `gorm:"column:raw_file_key"`
+	RawChecksum   string    `gorm:"column:raw_checksum"`
+	RawSize       int64     `gorm:"column:raw_size"`
 	RowCount      int       `gorm:"column:row_count"`
 	Active        bool      `gorm:"column:active"`
 	PublishedAt   time.Time `gorm:"column:published_at"`
@@ -179,6 +190,7 @@ func releaseModelFromDomain(item domain.Release) releaseModel {
 	return releaseModel{
 		ID: item.ID, TermKey: item.TermKey, Version: item.Version, Checksum: item.Checksum, FileKey: item.FileKey,
 		ArtifactType: item.ArtifactType, SchemaVersion: item.SchemaVersion, ArtifactSize: item.ArtifactSize,
+		RawFileKey: item.RawFileKey, RawChecksum: item.RawChecksum, RawSize: item.RawSize,
 		RowCount: item.RowCount, Active: item.Active, PublishedAt: item.PublishedAt,
 	}
 }
@@ -187,6 +199,7 @@ func (m releaseModel) toDomain() domain.Release {
 	return domain.Release{
 		ID: m.ID, TermKey: m.TermKey, Version: m.Version, Checksum: m.Checksum, FileKey: m.FileKey,
 		ArtifactType: m.ArtifactType, SchemaVersion: m.SchemaVersion, ArtifactSize: m.ArtifactSize,
+		RawFileKey: m.RawFileKey, RawChecksum: m.RawChecksum, RawSize: m.RawSize,
 		RowCount: m.RowCount, Active: m.Active, PublishedAt: m.PublishedAt,
 	}
 }

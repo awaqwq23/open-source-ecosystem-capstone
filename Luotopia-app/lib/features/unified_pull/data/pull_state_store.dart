@@ -93,14 +93,18 @@ class PullStateStore {
       );
     }
     final schoolTimetable = response.schoolTimetable;
-    if (schoolTimetable != null && schoolTimetable.terms.isNotEmpty) {
+    if (schoolTimetable != null &&
+        (schoolTimetable.activeTerms.isNotEmpty ||
+            schoolTimetable.terms.isNotEmpty)) {
+      final activeSet = schoolTimetable.activeTerms.toSet();
       final terms = readSchoolTimetableTerms();
       final updated = {
         for (final entry in terms.entries)
-          entry.key: {
-            'version': entry.value.version,
-            'checksum': entry.value.checksum,
-          },
+          if (activeSet.isEmpty || activeSet.contains(entry.key))
+            entry.key: {
+              'version': entry.value.version,
+              'checksum': entry.value.checksum,
+            },
         for (final term in schoolTimetable.terms)
           term.termKey: {'version': term.version, 'checksum': term.checksum},
       };

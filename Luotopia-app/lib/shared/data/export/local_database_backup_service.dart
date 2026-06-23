@@ -479,6 +479,7 @@ final _columnsByTable = {
 };
 
 const _excludedTables = [
+  'course_meeting_rule_week_rows',
   'course_instance_week_rows',
   'course_instance_rows',
   'course_occurrence_rows',

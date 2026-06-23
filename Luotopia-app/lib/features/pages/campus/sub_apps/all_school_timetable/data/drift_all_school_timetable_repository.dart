@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/storage/shared_preferences_provider.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
-import 'package:luotopia/shared/data/database/app_database.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -31,7 +30,7 @@ class DriftAllSchoolTimetableRepository
   static const _artifactIndexKey = 'school_timetable.artifact.index';
 
   final SharedPreferences? _preferences;
-  final Map<String, AppDatabase> _openDbs = {};
+  final Map<String, _SchoolTimetableArtifactDatabase> _openDbs = {};
   final Map<String, String> _openPaths = {};
 
   @override
@@ -91,6 +90,27 @@ class DriftAllSchoolTimetableRepository
   }
 
   @override
+  Future<void> retainActiveTerms(Set<String> termKeys) async {
+    final index = _readArtifactIndex();
+    final removed = [
+      for (final entry in index.entries)
+        if (!termKeys.contains(entry.key)) entry,
+    ];
+    if (removed.isEmpty) {
+      return;
+    }
+    for (final entry in removed) {
+      await _closeDbForTerm(entry.key);
+      final file = File(entry.value.path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+      index.remove(entry.key);
+    }
+    await _writeArtifactIndex(index);
+  }
+
+  @override
   Future<List<SchoolTimetableTerm>> loadTerms() async {
     final entries = _readArtifactIndex().values.toList(growable: false)
       ..sort((a, b) => b.termKey.compareTo(a.termKey));
@@ -131,8 +151,8 @@ class DriftAllSchoolTimetableRepository
         ? await db
               .customSelect(
                 '''
-          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
-                 c.credits, c.course_nature, c.course_category, c.open_type,
+          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
+                 cc.credits, c.course_nature, c.course_category, c.open_type,
                  c.teaching_class_count, c.teacher_summary, c.weekday_summary,
                  c.search_text
           FROM course_search_fts
@@ -156,8 +176,8 @@ class DriftAllSchoolTimetableRepository
         : await db
               .customSelect(
                 '''
-          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
-                 credits, course_nature, course_category, open_type,
+          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
+                 cc.credits, c.course_nature, c.course_category, c.open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
           FROM course_term_course_rows c
@@ -186,14 +206,14 @@ class DriftAllSchoolTimetableRepository
     final row = await db
         .customSelect(
           '''
-          SELECT c.stable_id AS id, c.term_key, cc.stable_id AS catalog_id, c.course_no, c.course_name, c.open_college,
-                 credits, course_nature, course_category, open_type,
+          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
+                 cc.credits, c.course_nature, c.course_category, c.open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
           FROM course_term_course_rows c
           JOIN course_catalog_rows cc
             ON cc.id = c.catalog_id
-          WHERE c.stable_id = ?
+          WHERE c.id = ?
           ''',
           variables: [Variable.withString(id)],
         )
@@ -213,14 +233,27 @@ class DriftAllSchoolTimetableRepository
     final rows = await db
         .customSelect(
           '''
-          SELECT o.*, c.stable_id AS term_course_stable_id,
-                 cc.stable_id AS catalog_stable_id,
-                 ic.stable_id AS instructor_course_stable_id
+          SELECT o.*, c.id AS term_course_stable_id,
+                 cc.id AS catalog_stable_id,
+                 ic.id AS instructor_course_stable_id,
+                 cc.course_no, cc.course_name, cc.credits, c.open_college,
+                 c.course_nature, c.course_category, c.open_type,
+                 COALESCE(a.grade, '') AS grade,
+                 COALESCE(a.major, '') AS major,
+                 COALESCE(a.plan_college, '') AS plan_college
           FROM course_offering_rows o
           JOIN course_term_course_rows c ON c.id = o.term_course_id
-          JOIN course_catalog_rows cc ON cc.id = o.catalog_id
+          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
           JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
-          WHERE c.stable_id = ?
+          LEFT JOIN (
+            SELECT offering_id,
+                   GROUP_CONCAT(DISTINCT grade) AS grade,
+                   GROUP_CONCAT(DISTINCT major) AS major,
+                   GROUP_CONCAT(DISTINCT plan_college) AS plan_college
+            FROM course_audience_rows
+            GROUP BY offering_id
+          ) a ON a.offering_id = o.id
+          WHERE c.id = ?
           ORDER BY instructor, teaching_class_name
           ''',
           variables: [Variable.withString(courseHeadId)],
@@ -241,14 +274,27 @@ class DriftAllSchoolTimetableRepository
     final row = await db
         .customSelect(
           '''
-          SELECT o.*, c.stable_id AS term_course_stable_id,
-                 cc.stable_id AS catalog_stable_id,
-                 ic.stable_id AS instructor_course_stable_id
+          SELECT o.*, c.id AS term_course_stable_id,
+                 cc.id AS catalog_stable_id,
+                 ic.id AS instructor_course_stable_id,
+                 cc.course_no, cc.course_name, cc.credits, c.open_college,
+                 c.course_nature, c.course_category, c.open_type,
+                 COALESCE(a.grade, '') AS grade,
+                 COALESCE(a.major, '') AS major,
+                 COALESCE(a.plan_college, '') AS plan_college
           FROM course_offering_rows o
           JOIN course_term_course_rows c ON c.id = o.term_course_id
-          JOIN course_catalog_rows cc ON cc.id = o.catalog_id
+          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
           JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
-          WHERE o.stable_id = ?
+          LEFT JOIN (
+            SELECT offering_id,
+                   GROUP_CONCAT(DISTINCT grade) AS grade,
+                   GROUP_CONCAT(DISTINCT major) AS major,
+                   GROUP_CONCAT(DISTINCT plan_college) AS plan_college
+            FROM course_audience_rows
+            GROUP BY offering_id
+          ) a ON a.offering_id = o.id
+          WHERE o.id = ?
           ''',
           variables: [Variable.withString(id)],
         )
@@ -268,10 +314,10 @@ class DriftAllSchoolTimetableRepository
     final rows = await db
         .customSelect(
           '''
-          SELECT r.*, o.stable_id AS offering_stable_id
-          FROM course_instance_rows r
+          SELECT r.*, r.id AS stable_id, o.id AS offering_stable_id
+          FROM course_meeting_rule_rows r
           JOIN course_offering_rows o ON o.id = r.offering_id
-          WHERE o.stable_id = ?
+          WHERE o.id = ?
           ORDER BY weekday, segment_index
           ''',
           variables: [Variable.withString(teachingClassId)],
@@ -309,7 +355,7 @@ class DriftAllSchoolTimetableRepository
       termCourseId: _readString(offering, 'term_course_stable_id').isNotEmpty
           ? _readString(offering, 'term_course_stable_id')
           : termCourseId,
-      offeringId: _readPreferredString(offering, 'stable_id', 'id'),
+      offeringId: _readString(offering, 'id'),
       instructorCourseId:
           _readString(offering, 'instructor_course_stable_id').isNotEmpty
           ? _readString(offering, 'instructor_course_stable_id')
@@ -319,15 +365,16 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<String> _matchTermCourse(
-    AppDatabase db,
+    _SchoolTimetableArtifactDatabase db,
     PersonalCourseMatchQuery query,
   ) async {
     final rows = await db
         .customSelect(
           '''
-          SELECT stable_id AS id, course_name
-          FROM course_term_course_rows
-          WHERE term_key = ? AND course_no = ?
+          SELECT c.id AS id, cc.course_name
+          FROM course_term_course_rows c
+          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
+          WHERE c.term_key = ? AND cc.course_no = ?
           ''',
           variables: [
             Variable.withString(query.termKey.trim()),
@@ -347,7 +394,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<QueryRow?> _matchOffering(
-    AppDatabase db,
+    _SchoolTimetableArtifactDatabase db,
     PersonalCourseMatchQuery query, {
     required int? weekIndex,
   }) async {
@@ -361,8 +408,8 @@ class DriftAllSchoolTimetableRepository
     if (weekIndex != null) {
       ruleClauses.add('''
         EXISTS (
-          SELECT 1 FROM course_instance_week_rows iw
-          WHERE iw.instance_id = r.id AND iw.week_index = ?
+          SELECT 1 FROM course_meeting_rule_week_rows iw
+          WHERE iw.meeting_rule_id = r.id AND iw.week_index = ?
         )
       ''');
       variables.add(Variable.withInt(weekIndex));
@@ -375,19 +422,23 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withInt(sectionRange.start));
     }
     final rows = await db.customSelect('''
-          SELECT o.*, c.stable_id AS term_course_stable_id,
-                 ic.stable_id AS instructor_course_stable_id,
-                 r.stable_id AS matched_instance_id,
+          SELECT o.*, c.id AS term_course_stable_id,
+                 ic.id AS instructor_course_stable_id,
+                 cc.course_no, cc.course_name, cc.credits, c.open_college,
+                 c.course_nature, c.course_category, c.open_type,
+                 r.id AS matched_instance_id,
                  r.location_text AS matched_location_text
           FROM course_offering_rows o
           JOIN course_term_course_rows c
             ON c.id = o.term_course_id
+          JOIN course_catalog_rows cc
+            ON cc.id = c.catalog_id
           JOIN course_instructor_course_rows ic
             ON ic.id = o.instructor_course_id
-          JOIN course_instance_rows r
+          JOIN course_meeting_rule_rows r
             ON r.offering_id = o.id
           WHERE o.term_key = ?
-            AND o.course_no = ?
+            AND cc.course_no = ?
             AND r.weekday = ?
             ${ruleClauses.isEmpty ? '' : 'AND ${ruleClauses.join(' AND ')}'}
           ''', variables: variables).get();
@@ -438,7 +489,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<int?> _weekIndexForDate(
-    AppDatabase db,
+    _SchoolTimetableArtifactDatabase db,
     PersonalCourseMatchQuery query,
   ) async {
     final row = await db
@@ -495,7 +546,7 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withString('%$normalized%'));
     }
 
-    addLike('o.open_college', query.openCollege);
+    addLike('c2.open_college', query.openCollege);
     addLike('a.grade', query.grade);
     addLike('a.major', query.major);
     if (query.weekday != null) {
@@ -508,9 +559,11 @@ class DriftAllSchoolTimetableRepository
       AND EXISTS (
         SELECT 1
         FROM course_offering_rows o
+        JOIN course_term_course_rows c2
+          ON c2.id = o.term_course_id
         LEFT JOIN course_audience_rows a
           ON a.offering_id = o.id
-        LEFT JOIN course_instance_rows r
+        LEFT JOIN course_meeting_rule_rows r
           ON r.offering_id = o.id
         WHERE ${conditions.join(' AND ')}
       )
@@ -549,7 +602,7 @@ class DriftAllSchoolTimetableRepository
 
   SchoolTeachingClass _offeringFromRow(QueryRow row) {
     return SchoolTeachingClass(
-      id: _readPreferredString(row, 'stable_id', 'id'),
+      id: _readString(row, 'id'),
       termKey: _readString(row, 'term_key'),
       sourceKey: _readString(row, 'source_key'),
       termCourseId: _readString(row, 'term_course_stable_id').isNotEmpty
@@ -594,12 +647,8 @@ class DriftAllSchoolTimetableRepository
 
   SchoolClassMeeting _ruleFromRow(QueryRow row) {
     return SchoolClassMeeting(
-      id: _readPreferredString(row, 'stable_id', 'id'),
-      offeringId: _readPreferredString(
-        row,
-        'offering_stable_id',
-        'offering_id',
-      ),
+      id: _readString(row, 'id'),
+      offeringId: _readString(row, 'offering_stable_id'),
       weekday: _readInt(row, 'weekday'),
       weekdayLabel: _readString(row, 'weekday_label'),
       rawText: _readString(row, 'raw_segment_text'),
@@ -611,7 +660,9 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  Future<AppDatabase?> _databaseForTerm(String termKey) async {
+  Future<_SchoolTimetableArtifactDatabase?> _databaseForTerm(
+    String termKey,
+  ) async {
     final entry = _readArtifactIndex()[termKey];
     final path = entry?.path ?? '';
     if (path.isEmpty || !await File(path).exists()) {
@@ -624,7 +675,7 @@ class DriftAllSchoolTimetableRepository
     }
     await _closeDbForTerm(termKey);
     _openPaths[termKey] = path;
-    final db = AppDatabase.withExecutor(
+    final db = _SchoolTimetableArtifactDatabase(
       NativeDatabase.createInBackground(
         File(path),
         enableMigrations: false,
@@ -644,7 +695,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<void> dispose() async {
-    final dbs = List<AppDatabase>.from(_openDbs.values);
+    final dbs = List<_SchoolTimetableArtifactDatabase>.from(_openDbs.values);
     _openDbs.clear();
     _openPaths.clear();
     for (final db in dbs) {
@@ -705,7 +756,7 @@ class DriftAllSchoolTimetableRepository
         meta[row['key'] as String] = row['value'].toString();
       }
       final schemaVersion = int.tryParse(meta['schema_version'] ?? '') ?? 0;
-      if (!const {4, 5}.contains(schemaVersion) ||
+      if (schemaVersion != 6 ||
           meta['artifact_type'] != 'school_timetable_sqlite_gzip' ||
           meta['term_key'] != termKey ||
           meta['version'] != version.toString()) {
@@ -730,8 +781,8 @@ class DriftAllSchoolTimetableRepository
         'course_offering_rows',
         'course_audience_rows',
         'course_source_rows',
-        'course_instance_rows',
-        'course_instance_week_rows',
+        'course_meeting_rule_rows',
+        'course_meeting_rule_week_rows',
         'course_search_fts',
       ]) {
         db.select('SELECT 1 FROM $table LIMIT 1');
@@ -757,15 +808,6 @@ class DriftAllSchoolTimetableRepository
   String _readString(QueryRow row, String column) {
     final value = row.data[column];
     return value?.toString() ?? '';
-  }
-
-  String _readPreferredString(
-    QueryRow row,
-    String preferredColumn,
-    String fallbackColumn,
-  ) {
-    final preferred = _readString(row, preferredColumn);
-    return preferred.isNotEmpty ? preferred : _readString(row, fallbackColumn);
   }
 
   int _readInt(QueryRow row, String column) {
@@ -953,6 +995,16 @@ class _ArtifactEntry {
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
   }
+}
+
+class _SchoolTimetableArtifactDatabase extends GeneratedDatabase {
+  _SchoolTimetableArtifactDatabase(super.executor);
+
+  @override
+  Iterable<TableInfo<Table, Object?>> get allTables => const [];
+
+  @override
+  int get schemaVersion => 1;
 }
 
 class _SectionRange {

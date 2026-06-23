@@ -68,6 +68,29 @@ func TestParsePackageAcceptsMissingSourceKey(t *testing.T) {
 	}
 }
 
+func TestParsePackageRejectsRowsMissingEntityFields(t *testing.T) {
+	data := packageBytes(t, map[string]any{
+		"type":              "manifest",
+		"schema_version":    1,
+		"term_key":          "2025-2026-1",
+		"school_year":       "2025-2026",
+		"term":              "1",
+		"field_codes":       []string{"xn", "xq", "jxbmc", "yskch", "kcmc", "skxy", "kcxf", "jsxm", "skrs"},
+		"row_count":         1,
+		"first_week_monday": "2025-09-01",
+	}, []map[string]string{
+		{
+			"xn": "2025-2026", "xq": "1", "jxbmc": "教学班", "yskch": "3200520011014",
+			"kcmc": "软件工程", "skxy": "计算机学院", "kcxf": "4.0", "skrs": "80\\70",
+		},
+	})
+
+	_, err := ParsePackage(context.Background(), bytes.NewReader(data))
+	if err == nil {
+		t.Fatal("ParsePackage returned nil error for row missing jsxm")
+	}
+}
+
 func packageBytes(t *testing.T, manifest map[string]any, rows []map[string]string) []byte {
 	t.Helper()
 	var raw bytes.Buffer
