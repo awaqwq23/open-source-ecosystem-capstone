@@ -167,7 +167,7 @@ class UnifiedPullService {
         continue;
       }
       if (term.artifactType != 'school_timetable_sqlite_gzip' ||
-          (term.schemaVersion != 6 && term.schemaVersion != 7)) {
+          term.schemaVersion != 7) {
         throw StateError('全校课表 ${term.termKey} 快照格式不受支持');
       }
       final tempDir = await getTemporaryDirectory();

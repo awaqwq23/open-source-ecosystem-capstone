@@ -32,7 +32,6 @@ class DriftAllSchoolTimetableRepository
   final SharedPreferences? _preferences;
   final Map<String, _SchoolTimetableArtifactDatabase> _openDbs = {};
   final Map<String, String> _openPaths = {};
-  final Map<String, int> _openSchemaVersions = {};
 
   @override
   Future<void> ensureLocalDataReady() async {
@@ -691,7 +690,6 @@ class DriftAllSchoolTimetableRepository
     }
     await _closeDbForTerm(termKey);
     _openPaths[termKey] = path;
-    _openSchemaVersions[termKey] = entry?.schemaVersion ?? 6;
     final db = _SchoolTimetableArtifactDatabase(
       NativeDatabase.createInBackground(
         File(path),
@@ -706,18 +704,12 @@ class DriftAllSchoolTimetableRepository
   }
 
   _ArtifactSchema _schemaForDb(_SchoolTimetableArtifactDatabase db) {
-    for (final entry in _openDbs.entries) {
-      if (identical(entry.value, db)) {
-        return _ArtifactSchema.forVersion(_openSchemaVersions[entry.key] ?? 6);
-      }
-    }
-    return _ArtifactSchema.forVersion(6);
+    return _ArtifactSchema.v7;
   }
 
   Future<void> _closeDbForTerm(String termKey) async {
     final db = _openDbs.remove(termKey);
     _openPaths.remove(termKey);
-    _openSchemaVersions.remove(termKey);
     await db?.close();
   }
 
@@ -725,7 +717,6 @@ class DriftAllSchoolTimetableRepository
     final dbs = List<_SchoolTimetableArtifactDatabase>.from(_openDbs.values);
     _openDbs.clear();
     _openPaths.clear();
-    _openSchemaVersions.clear();
     for (final db in dbs) {
       await db.close();
     }
@@ -784,7 +775,7 @@ class DriftAllSchoolTimetableRepository
         meta[row['key'] as String] = row['value'].toString();
       }
       final schemaVersion = int.tryParse(meta['schema_version'] ?? '') ?? 0;
-      if ((schemaVersion != 6 && schemaVersion != 7) ||
+      if (schemaVersion != 7 ||
           meta['artifact_type'] != 'school_timetable_sqlite_gzip' ||
           meta['term_key'] != termKey ||
           meta['version'] != version.toString()) {
@@ -802,30 +793,17 @@ class DriftAllSchoolTimetableRepository
       if (termRows.length != 1 || termRows.first['row_count'] != rowCount) {
         throw const FormatException('全校课表 SQLite 快照课表统计不匹配');
       }
-      final requiredTables = schemaVersion == 7
-          ? const [
-              'school_timetable_courses',
-              'school_timetable_course_terms',
-              'school_timetable_instructors',
-              'school_timetable_offerings',
-              'school_timetable_audiences',
-              'school_timetable_source_rows',
-              'school_timetable_meeting_rules',
-              'school_timetable_meeting_weeks',
-              'school_timetable_search_fts',
-            ]
-          : const [
-              'course_catalog_rows',
-              'course_term_course_rows',
-              'course_instructor_course_rows',
-              'course_offering_rows',
-              'course_audience_rows',
-              'course_source_rows',
-              'course_meeting_rule_rows',
-              'course_meeting_rule_week_rows',
-              'course_search_fts',
-            ];
-      for (final table in requiredTables) {
+      for (final table in const [
+        'school_timetable_courses',
+        'school_timetable_course_terms',
+        'school_timetable_instructors',
+        'school_timetable_offerings',
+        'school_timetable_audiences',
+        'school_timetable_source_rows',
+        'school_timetable_meeting_rules',
+        'school_timetable_meeting_weeks',
+        'school_timetable_search_fts',
+      ]) {
         db.select('SELECT 1 FROM $table LIMIT 1');
       }
       final term = termRows.first;
@@ -1065,36 +1043,19 @@ class _ArtifactSchema {
   final String offeringInstructorIdColumn;
   final String detailFieldsSelect;
 
-  factory _ArtifactSchema.forVersion(int version) {
-    if (version >= 7) {
-      return const _ArtifactSchema(
-        courseTable: 'school_timetable_courses',
-        termCourseTable: 'school_timetable_course_terms',
-        instructorTable: 'school_timetable_instructors',
-        offeringTable: 'school_timetable_offerings',
-        audienceTable: 'school_timetable_audiences',
-        meetingRuleTable: 'school_timetable_meeting_rules',
-        meetingWeekTable: 'school_timetable_meeting_weeks',
-        searchTable: 'school_timetable_search_fts',
-        courseIdColumn: 'course_id',
-        offeringInstructorIdColumn: 'instructor_id',
-        detailFieldsSelect: '\'{}\' AS detail_fields_json,',
-      );
-    }
-    return const _ArtifactSchema(
-      courseTable: 'course_catalog_rows',
-      termCourseTable: 'course_term_course_rows',
-      instructorTable: 'course_instructor_course_rows',
-      offeringTable: 'course_offering_rows',
-      audienceTable: 'course_audience_rows',
-      meetingRuleTable: 'course_meeting_rule_rows',
-      meetingWeekTable: 'course_meeting_rule_week_rows',
-      searchTable: 'course_search_fts',
-      courseIdColumn: 'catalog_id',
-      offeringInstructorIdColumn: 'instructor_course_id',
-      detailFieldsSelect: '',
-    );
-  }
+  static const v7 = _ArtifactSchema(
+    courseTable: 'school_timetable_courses',
+    termCourseTable: 'school_timetable_course_terms',
+    instructorTable: 'school_timetable_instructors',
+    offeringTable: 'school_timetable_offerings',
+    audienceTable: 'school_timetable_audiences',
+    meetingRuleTable: 'school_timetable_meeting_rules',
+    meetingWeekTable: 'school_timetable_meeting_weeks',
+    searchTable: 'school_timetable_search_fts',
+    courseIdColumn: 'course_id',
+    offeringInstructorIdColumn: 'instructor_id',
+    detailFieldsSelect: '\'{}\' AS detail_fields_json,',
+  );
 }
 
 class _SchoolTimetableArtifactDatabase extends GeneratedDatabase {

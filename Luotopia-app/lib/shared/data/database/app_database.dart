@@ -110,43 +110,11 @@ class AppDatabase extends _$AppDatabase {
           scheduleItemDetailRows.countdownEnabled,
         );
       }
-      if (from < 8) {
-        await _dropSchoolTimetableTables();
-      }
-      if (from < 9) {
-        await _dropSchoolTimetableTables();
-      }
       if (from < 10) {
         await _ensureCourseItemDetailEntityColumns();
       }
     },
-    beforeOpen: (details) async {
-      await _dropSchoolTimetableTables();
-    },
   );
-
-  Future<void> _dropSchoolTimetableTables() async {
-    await customStatement('DROP TABLE IF EXISTS course_occurrence_rows');
-    await customStatement('DROP TABLE IF EXISTS course_meeting_rule_rows');
-    await customStatement('DROP TABLE IF EXISTS course_meeting_rule_week_rows');
-    await customStatement('DROP TABLE IF EXISTS course_instance_week_rows');
-    await customStatement('DROP TABLE IF EXISTS course_instance_rows');
-    await customStatement('DROP TABLE IF EXISTS course_source_rows');
-    await customStatement('DROP TABLE IF EXISTS course_audience_rows');
-    await customStatement('DROP TABLE IF EXISTS course_offering_rows');
-    await customStatement('DROP TABLE IF EXISTS course_instructor_course_rows');
-    await customStatement('DROP TABLE IF EXISTS course_term_course_rows');
-    await customStatement('DROP TABLE IF EXISTS course_catalog_rows');
-    await customStatement('DROP TABLE IF EXISTS school_class_meeting_rows');
-    await customStatement('DROP TABLE IF EXISTS school_timetable_source_rows');
-    await customStatement(
-      'DROP TABLE IF EXISTS school_timetable_audience_rows',
-    );
-    await customStatement('DROP TABLE IF EXISTS school_teaching_class_rows');
-    await customStatement('DROP TABLE IF EXISTS school_timetable_raw_rows');
-    await customStatement('DROP TABLE IF EXISTS school_course_head_rows');
-    await customStatement('DROP TABLE IF EXISTS school_timetable_term_rows');
-  }
 
   Future<void> _ensureCourseItemDetailEntityColumns() async {
     await _addTextColumnIfMissing('course_item_detail_rows', 'term_course_id');

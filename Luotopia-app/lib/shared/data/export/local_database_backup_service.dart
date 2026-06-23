@@ -479,18 +479,6 @@ final _columnsByTable = {
 };
 
 const _excludedTables = [
-  'course_meeting_rule_week_rows',
-  'course_instance_week_rows',
-  'course_instance_rows',
-  'course_occurrence_rows',
-  'course_meeting_rule_rows',
-  'course_source_rows',
-  'course_audience_rows',
-  'course_offering_rows',
-  'course_instructor_course_rows',
-  'course_term_course_rows',
-  'course_catalog_rows',
-  'school_timetable_term_rows',
   'course_item_detail_rows',
   'selected_course_timetable_rows',
   'course_timetable_rows',

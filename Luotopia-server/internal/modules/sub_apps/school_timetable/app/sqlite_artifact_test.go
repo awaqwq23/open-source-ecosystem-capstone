@@ -104,6 +104,9 @@ func TestBuildSQLiteArtifactCreatesQueryableSnapshot(t *testing.T) {
 	if sourceFields == "" || sourceFields == "{}" {
 		t.Fatalf("source row raw_fields_json = %q, want complete raw fields", sourceFields)
 	}
+	if _, err := db.Query(`SELECT 1 FROM course_term_course_rows LIMIT 1`); err == nil {
+		t.Fatal("legacy v6 compatibility view course_term_course_rows should not exist")
+	}
 }
 
 func gunzipForTest(srcPath, dstPath string) error {
