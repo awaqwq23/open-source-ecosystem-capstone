@@ -345,8 +345,8 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
                 ? '统一课程关联：课程 $matchedCourseCount，教学班 $matchedOfferingCount，课次 $matchedOccurrenceCount。'
                 : 'Linked entities: courses $matchedCourseCount, offerings $matchedOfferingCount, occurrences $matchedOccurrenceCount.')
           : (isZh
-                ? '未找到 $termLabel 全校课表快照，本次仅导入个人课表。'
-                : 'No all-school timetable snapshot for $termLabel; imported personal timetable only.');
+                ? '未找到 $termLabel 全校课表数据集，本次仅导入个人课表。'
+                : 'No all-school timetable dataset for $termLabel; imported personal timetable only.');
 
       setState(() {
         _statusText = isZh

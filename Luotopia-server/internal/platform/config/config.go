@@ -32,7 +32,6 @@ type WeatherConfig struct {
 }
 
 type SchoolTimetableConfig struct {
-	SnapshotDir string
 }
 
 type HTTPConfig struct {
@@ -127,9 +126,7 @@ func Load() Config {
 			Location: declaredEnv("LUOTOPIA_WEATHER_LOCATION"),
 			CacheTTL: requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
 		},
-		SchoolTimetable: SchoolTimetableConfig{
-			SnapshotDir: optionalEnv("LUOTOPIA_SCHOOL_TIMETABLE_SNAPSHOT_DIR", "school_timetable_snapshots"),
-		},
+		SchoolTimetable: SchoolTimetableConfig{},
 		SMS: SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),

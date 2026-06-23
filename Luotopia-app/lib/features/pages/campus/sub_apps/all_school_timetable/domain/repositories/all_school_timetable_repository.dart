@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 
 abstract class AllSchoolTimetableRepository {
@@ -17,6 +19,12 @@ abstract class AllSchoolTimetableRepository {
     required int version,
     required String checksum,
     required List<SchoolTimetableChange> changes,
+  });
+
+  Future<void> replaceFromBundle({
+    required int version,
+    required String checksum,
+    required File sqliteGzipFile,
   });
 
   Future<List<SchoolTimetableTerm>> loadTerms();

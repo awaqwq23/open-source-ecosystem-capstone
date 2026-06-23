@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -37,7 +38,7 @@ class DriftAllSchoolTimetableRepository
     required String sourceVersion,
     required List<Map<String, String>> rows,
   }) async {
-    throw UnsupportedError('全校课表由服务端 SQLite 快照提供');
+    throw UnsupportedError('全校课表由服务端 SQLite 数据集提供');
   }
 
   @override
@@ -74,6 +75,48 @@ class DriftAllSchoolTimetableRepository
         DateTime.now().millisecondsSinceEpoch.toString(),
       );
     });
+  }
+
+  @override
+  Future<void> replaceFromBundle({
+    required int version,
+    required String checksum,
+    required File sqliteGzipFile,
+  }) async {
+    final tempDir = await sqliteGzipFile.parent.createTemp(
+      'school-timetable-bundle-',
+    );
+    final sqliteFile = File(
+      '${tempDir.path}${Platform.pathSeparator}bundle.sqlite',
+    );
+    try {
+      final compressed = await sqliteGzipFile.readAsBytes();
+      await sqliteFile.writeAsBytes(gzip.decode(compressed), flush: true);
+      await _db.transaction(() async {
+        await _db.customStatement(
+          'ATTACH DATABASE ${_sqlString(sqliteFile.path)} AS bundle',
+        );
+        try {
+          await _clearSchoolTimetableTables();
+          for (final table in _bundleCopyTables) {
+            await _db.customStatement(
+              'INSERT INTO $table SELECT * FROM bundle.$table',
+            );
+          }
+          await _rebuildSearchIndex();
+          await _writeMeta('dataset_version', version.toString());
+          await _writeMeta('dataset_checksum', checksum);
+          await _writeMeta(
+            'updated_at',
+            DateTime.now().millisecondsSinceEpoch.toString(),
+          );
+        } finally {
+          await _db.customStatement('DETACH DATABASE bundle');
+        }
+      });
+    } finally {
+      await tempDir.delete(recursive: true);
+    }
   }
 
   @override
@@ -662,6 +705,12 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
+  Future<void> _clearSchoolTimetableTables() async {
+    for (final table in _bundleCopyTables.reversed) {
+      await _db.customStatement('DELETE FROM $table');
+    }
+  }
+
   Future<void> _upsertEntity(SchoolTimetableChange change) async {
     final p = change.payload;
     switch (change.entityType) {
@@ -1075,4 +1124,20 @@ class _SectionRange {
 
   final int start;
   final int end;
+}
+
+const _bundleCopyTables = [
+  'school_timetable_term_rows',
+  'school_timetable_courses',
+  'school_timetable_course_terms',
+  'school_timetable_instructors',
+  'school_timetable_offerings',
+  'school_timetable_audiences',
+  'school_timetable_source_rows',
+  'school_timetable_meeting_rules',
+  'school_timetable_meeting_weeks',
+];
+
+String _sqlString(String value) {
+  return "'${value.replaceAll("'", "''")}'";
 }

@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -16,22 +15,35 @@ import (
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
+	"github.com/openwhu/luotopia/server/internal/platform/storage"
 )
 
 type Repository interface {
 	CurrentDataset(ctx context.Context) (domain.DatasetState, error)
+	ListEntities(ctx context.Context) ([]domain.EntityRecord, error)
 	ListEntitiesByTerm(ctx context.Context, termKey string) ([]domain.EntityRecord, error)
 	ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview) error
 	ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error)
 	ListTerms(ctx context.Context) ([]domain.Term, error)
+	UpdateBundle(ctx context.Context, version int64, bundle domain.DatasetBundle) error
+}
+
+type BundleStore interface {
+	Put(ctx context.Context, object storage.Object) error
+	PublicURL(key string) string
 }
 
 type Service struct {
-	repo Repository
+	repo        Repository
+	bundleStore BundleStore
 }
 
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+func NewServiceWithBundleStore(repo Repository, store BundleStore) *Service {
+	return &Service{repo: repo, bundleStore: store}
 }
 
 func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
@@ -79,6 +91,9 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	if err := s.repo.ApplyImport(ctx, pkg, preview); err != nil {
 		return domain.ImportResult{}, err
 	}
+	if err := s.publishBundle(ctx, preview.NextVersion); err != nil {
+		return domain.ImportResult{}, err
+	}
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
 		Checksum: rawChecksum,
@@ -94,6 +109,17 @@ func (s *Service) CurrentDataset(ctx context.Context) (domain.DatasetState, erro
 
 func (s *Service) ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error) {
 	return s.repo.ChangesAfter(ctx, version, limit)
+}
+
+func (s *Service) CurrentBundle(ctx context.Context) (*domain.DatasetBundle, error) {
+	state, err := s.repo.CurrentDataset(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if state.Bundle == nil || state.Bundle.Href == "" {
+		return nil, ErrNotFound
+	}
+	return state.Bundle, nil
 }
 
 func (s *Service) ListTerms(ctx context.Context) ([]domain.Term, error) {
@@ -263,6 +289,17 @@ type Records struct {
 }
 
 func BuildRecords(pkg domain.Package, version int) Records {
+	if len(pkg.Catalogs)+len(pkg.TermCourses)+len(pkg.InstructorCourses)+len(pkg.Offerings)+len(pkg.Audiences)+len(pkg.SourceRows)+len(pkg.CourseInstances) > 0 {
+		return Records{
+			Catalogs:          pkg.Catalogs,
+			TermCourses:       pkg.TermCourses,
+			InstructorCourses: pkg.InstructorCourses,
+			Offerings:         pkg.Offerings,
+			Audiences:         pkg.Audiences,
+			SourceRows:        pkg.SourceRows,
+			CourseInstances:   pkg.CourseInstances,
+		}
+	}
 	sourceRows := make([]domain.SourceRow, 0, len(pkg.Rows))
 	instanceRecords := make([]domain.CourseInstance, 0, len(pkg.Rows))
 	termCourseRows := make(map[string][]map[string]string)
@@ -388,41 +425,6 @@ func BuildRecords(pkg domain.Package, version int) Records {
 		CourseInstances: instanceRecords,
 	}
 	return records
-}
-
-func GzipPackage(pkg domain.Package) ([]byte, error) {
-	fieldCodes := append([]string(nil), pkg.Manifest.FieldCodes...)
-	sort.Strings(fieldCodes)
-	var raw bytes.Buffer
-	manifest := pkg.Manifest
-	manifest.FieldCodes = fieldCodes
-	manifest.RowCount = len(pkg.Rows)
-	if manifest.Type == "" {
-		manifest.Type = "manifest"
-	}
-	if manifest.SchemaVersion == 0 {
-		manifest.SchemaVersion = 1
-	}
-	rowsPayload := StableRowsPayload(pkg.Rows)
-	sum := sha256.Sum256(rowsPayload)
-	manifest.SourceChecksum = "sha256:" + hex.EncodeToString(sum[:])
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		return nil, err
-	}
-	raw.Write(data)
-	raw.WriteByte('\n')
-	raw.Write(rowsPayload)
-	raw.WriteByte('\n')
-	var compressed bytes.Buffer
-	writer := gzip.NewWriter(&compressed)
-	if _, err := writer.Write(raw.Bytes()); err != nil {
-		return nil, err
-	}
-	if err := writer.Close(); err != nil {
-		return nil, err
-	}
-	return compressed.Bytes(), nil
 }
 
 var weekdayFields = []struct {

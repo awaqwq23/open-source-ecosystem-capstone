@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS school_timetable_dataset_state (
   checksum TEXT NOT NULL DEFAULT '',
   schema_version INTEGER NOT NULL DEFAULT 1,
   term_keys_json TEXT NOT NULL DEFAULT '[]',
+  bundle_key TEXT NOT NULL DEFAULT '',
+  bundle_href TEXT NOT NULL DEFAULT '',
+  bundle_size BIGINT NOT NULL DEFAULT 0,
+  bundle_checksum TEXT NOT NULL DEFAULT '',
   published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

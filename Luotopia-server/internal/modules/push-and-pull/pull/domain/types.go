@@ -76,8 +76,17 @@ type SchoolTimetableBlock struct {
 	Checksum      string                  `json:"checksum"`
 	SchemaVersion int                     `json:"schema_version"`
 	Terms         []string                `json:"terms"`
+	SyncMode      string                  `json:"sync_mode"`
+	Bundle        *SchoolTimetableBundle  `json:"bundle,omitempty"`
 	Changes       []SchoolTimetableChange `json:"changes"`
 	PublishedAt   string                  `json:"published_at"`
+}
+
+type SchoolTimetableBundle struct {
+	Version  int64  `json:"version"`
+	Href     string `json:"href"`
+	Size     int64  `json:"size"`
+	Checksum string `json:"checksum"`
 }
 
 type SchoolTimetableChange struct {

@@ -37,6 +37,7 @@ void main() {
         'checksum': 'sha256:dataset',
         'schema_version': 1,
         'terms': ['2025-2026-1'],
+        'sync_mode': 'changes',
         'changes': [
           {
             'version': 7,
@@ -68,11 +69,40 @@ void main() {
     final schoolChange = schoolBlock?.changes.single;
     expect(schoolBlock?.latestVersion, 7);
     expect(schoolBlock?.checksum, 'sha256:dataset');
+    expect(schoolBlock?.syncMode, SchoolTimetableSyncMode.changes);
     expect(schoolBlock?.terms, ['2025-2026-1']);
     expect(schoolChange?.operation, 'upsert');
     expect(schoolChange?.entityType, 'term');
     expect(schoolChange?.payload['school_year'], '2025-2026');
     expect(response.sync?.hasChanges, isTrue);
     expect(response.sync?.latestCursor, 12);
+  });
+
+  test('解析统一拉取响应中的全量数据集包', () {
+    final response = PullResponse.fromJson({
+      'school_timetable': {
+        'changed': true,
+        'latest_version': 12,
+        'checksum': 'sha256:dataset',
+        'schema_version': 1,
+        'terms': ['2025-2026-1', '2025-2026-2'],
+        'sync_mode': 'bundle',
+        'changes': [],
+        'bundle': {
+          'href':
+              'https://cdn.example.com/school-timetable/datasets/v12.sqlite.gz',
+          'size': 123456,
+          'checksum': 'sha256:bundle',
+        },
+        'published_at': '2026-06-20T12:00:00Z',
+      },
+    });
+
+    final block = response.schoolTimetable;
+    expect(block?.syncMode, SchoolTimetableSyncMode.bundle);
+    expect(block?.changes, isEmpty);
+    expect(block?.bundle?.href, contains('v12.sqlite.gz'));
+    expect(block?.bundle?.size, 123456);
+    expect(block?.bundle?.checksum, 'sha256:bundle');
   });
 }

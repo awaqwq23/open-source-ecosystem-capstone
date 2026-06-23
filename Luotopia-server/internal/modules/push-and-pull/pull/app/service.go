@@ -30,6 +30,7 @@ type Service struct {
 type SchoolTimetableProvider interface {
 	CurrentDataset(ctx context.Context) (schooldomain.DatasetState, error)
 	ChangesAfter(ctx context.Context, version int64, limit int) ([]schooldomain.EntityChange, schooldomain.DatasetState, error)
+	CurrentBundle(ctx context.Context) (*schooldomain.DatasetBundle, error)
 }
 
 func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker, statsSvc *statsapp.Service, schoolTimetableSvc SchoolTimetableProvider) *Service {
@@ -120,19 +121,36 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 	}
 
 	if s.schoolTimetableSvc != nil && scopeEnabled(req.Scopes, "school_timetable") {
-		changes, state, err := s.schoolTimetableSvc.ChangesAfter(ctx, req.ClientState.SchoolTimetableVersion, 10000)
+		const changesLimit = 10000
+		clientVersion := req.ClientState.SchoolTimetableVersion
+		changes, state, err := s.schoolTimetableSvc.ChangesAfter(ctx, clientVersion, changesLimit+1)
 		if err == nil {
-			changed := req.ClientState.SchoolTimetableVersion != state.Version
+			changed := clientVersion != state.Version
 			block := &domain.SchoolTimetableBlock{
 				Changed:       changed,
 				LatestVersion: state.Version,
 				Checksum:      state.Checksum,
 				SchemaVersion: state.SchemaVersion,
 				Terms:         state.TermKeys,
+				SyncMode:      "changes",
 				Changes:       []domain.SchoolTimetableChange{},
 				PublishedAt:   state.PublishedAt.Format(time.RFC3339),
 			}
 			if changed {
+				if len(changes) > changesLimit {
+					bundle, bundleErr := s.schoolTimetableSvc.CurrentBundle(ctx)
+					if bundleErr == nil && bundle != nil && bundle.Href != "" {
+						block.SyncMode = "bundle"
+						block.Bundle = &domain.SchoolTimetableBundle{
+							Version: bundle.Version, Href: bundle.Href,
+							Size: bundle.Size, Checksum: bundle.Checksum,
+						}
+						resp.SchoolTimetable = block
+						return resp
+					}
+					resp.SchoolTimetable = block
+					return resp
+				}
 				block.Changes = make([]domain.SchoolTimetableChange, 0, len(changes))
 				for _, change := range changes {
 					block.Changes = append(block.Changes, domain.SchoolTimetableChange{

@@ -37,6 +37,21 @@ func (r *GormRepository) CurrentDataset(ctx context.Context) (domain.DatasetStat
 	return row.toDomain(), nil
 }
 
+func (r *GormRepository) ListEntities(ctx context.Context) ([]domain.EntityRecord, error) {
+	var rows []entityModel
+	err := r.db.WithContext(ctx).
+		Order("entity_type, entity_id").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make([]domain.EntityRecord, len(rows))
+	for i, row := range rows {
+		result[i] = row.toDomain()
+	}
+	return result, nil
+}
+
 func (r *GormRepository) ListEntitiesByTerm(ctx context.Context, termKey string) ([]domain.EntityRecord, error) {
 	var rows []entityModel
 	err := r.db.WithContext(ctx).
@@ -107,6 +122,18 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 	})
 }
 
+func (r *GormRepository) UpdateBundle(ctx context.Context, version int64, bundle domain.DatasetBundle) error {
+	return r.db.WithContext(ctx).Model(&datasetStateModel{}).
+		Where("id = ? AND version = ?", 1, version).
+		Updates(map[string]any{
+			"bundle_key":      bundle.Key,
+			"bundle_href":     bundle.Href,
+			"bundle_size":     bundle.Size,
+			"bundle_checksum": bundle.Checksum,
+			"updated_at":      time.Now().UTC(),
+		}).Error
+}
+
 func (r *GormRepository) ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error) {
 	state, err := r.CurrentDataset(ctx)
 	if err != nil {
@@ -147,13 +174,17 @@ func (r *GormRepository) ListTerms(ctx context.Context) ([]domain.Term, error) {
 }
 
 type datasetStateModel struct {
-	ID            int       `gorm:"primaryKey;column:id"`
-	Version       int64     `gorm:"column:version"`
-	Checksum      string    `gorm:"column:checksum"`
-	SchemaVersion int       `gorm:"column:schema_version"`
-	TermKeysJSON  string    `gorm:"column:term_keys_json"`
-	PublishedAt   time.Time `gorm:"column:published_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at"`
+	ID             int       `gorm:"primaryKey;column:id"`
+	Version        int64     `gorm:"column:version"`
+	Checksum       string    `gorm:"column:checksum"`
+	SchemaVersion  int       `gorm:"column:schema_version"`
+	TermKeysJSON   string    `gorm:"column:term_keys_json"`
+	BundleKey      string    `gorm:"column:bundle_key"`
+	BundleHref     string    `gorm:"column:bundle_href"`
+	BundleSize     int64     `gorm:"column:bundle_size"`
+	BundleChecksum string    `gorm:"column:bundle_checksum"`
+	PublishedAt    time.Time `gorm:"column:published_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
 }
 
 func (datasetStateModel) TableName() string { return "school_timetable_dataset_state" }
@@ -164,10 +195,17 @@ func (m datasetStateModel) toDomain() domain.DatasetState {
 	if termKeys == nil {
 		termKeys = []string{}
 	}
-	return domain.DatasetState{
+	state := domain.DatasetState{
 		Version: m.Version, Checksum: m.Checksum, SchemaVersion: m.SchemaVersion,
 		TermKeys: termKeys, PublishedAt: m.PublishedAt,
 	}
+	if strings.TrimSpace(m.BundleHref) != "" {
+		state.Bundle = &domain.DatasetBundle{
+			Version: m.Version, Key: m.BundleKey, Href: m.BundleHref,
+			Size: m.BundleSize, Checksum: m.BundleChecksum,
+		}
+	}
+	return state
 }
 
 type entityModel struct {

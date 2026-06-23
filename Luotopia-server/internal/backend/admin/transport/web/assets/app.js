@@ -299,12 +299,12 @@ async function renderSchoolTimetable() {
     <section class="panel">
       <h3>导入课表数据包</h3>
       <form id="school-timetable-form" class="form-grid">
-        <label>gzip NDJSON 数据包<input name="file" type="file" accept=".gz,.ndjson.gz" required /></label>
+        <label>gzip SQLite 数据库包<input name="file" type="file" accept=".sqlite.gz,.db.gz,.gz" required /></label>
         <div class="actions">
           <button class="secondary" type="button" onclick="validateSchoolTimetable()">预检</button>
           <button class="primary" type="submit">发布数据集增量</button>
         </div>
-        <pre id="school-timetable-preview" class="muted">请选择由爬虫工具导出的 .ndjson.gz 数据包。</pre>
+        <pre id="school-timetable-preview" class="muted">请选择由处理工具导出的 .sqlite.gz 数据库包。</pre>
       </form>
     </section>
     <section class="table-panel">

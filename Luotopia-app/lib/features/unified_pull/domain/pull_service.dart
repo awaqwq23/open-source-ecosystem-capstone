@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart'
     as timetable;
@@ -9,6 +10,7 @@ import 'package:luotopia/features/unified_pull/data/pull_request.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/features/unified_pull/data/pull_state_store.dart';
 import 'package:luotopia/shared/data/sync/sync_cursor_store.dart';
+import 'package:path_provider/path_provider.dart';
 
 class UnifiedPullService {
   UnifiedPullService({
@@ -165,6 +167,38 @@ class UnifiedPullService {
     final block = response.schoolTimetable;
     if (block == null || !block.changed || block.latestVersion <= 0) {
       return;
+    }
+    if (block.syncMode == SchoolTimetableSyncMode.bundle) {
+      final bundle = block.bundle;
+      if (bundle == null || bundle.href.isEmpty || bundle.checksum.isEmpty) {
+        throw StateError('全校课表 bundle 信息缺失');
+      }
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}${Platform.pathSeparator}school-timetable-v${bundle.version}.sqlite.gz',
+      );
+      final download = await _pullClient.downloadSchoolTimetableBundle(
+        bundle.href,
+        file,
+      );
+      if (download.checksum != bundle.checksum) {
+        throw StateError('全校课表 bundle 校验失败');
+      }
+      try {
+        await _allSchoolTimetableRepository.replaceFromBundle(
+          version: block.latestVersion,
+          checksum: block.checksum,
+          sqliteGzipFile: file,
+        );
+      } finally {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      return;
+    }
+    if (block.changes.isEmpty) {
+      throw StateError('全校课表增量为空，拒绝推进版本');
     }
     await _allSchoolTimetableRepository.applyChanges(
       version: block.latestVersion,

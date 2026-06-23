@@ -73,6 +73,48 @@ func TestPullSchoolTimetableSkipsChangesWhenDatasetCurrent(t *testing.T) {
 	}
 }
 
+func TestPullSchoolTimetableUsesBundleWhenChangesExceedLimit(t *testing.T) {
+	changes := make([]schooldomain.EntityChange, 10001)
+	for i := range changes {
+		changes[i] = schooldomain.EntityChange{
+			Version: 9, Sequence: i + 1, Operation: "upsert",
+			EntityType: "term", EntityID: "term", TermKey: "term",
+			Payload: json.RawMessage(`{"term_key":"term"}`),
+		}
+	}
+	svc := NewService(nil, nil, nil, nil, nil, schoolTimetableProviderStub{
+		state: schooldomain.DatasetState{
+			Version: 9, Checksum: "sha256:dataset", SchemaVersion: 1,
+			PublishedAt: time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC),
+		},
+		changes: changes,
+		bundle: &schooldomain.DatasetBundle{
+			Version: 9, Checksum: "sha256:bundle", Size: 1234,
+			Href: "https://cdn.example.com/school-timetable/datasets/v9.sqlite.gz",
+		},
+	})
+
+	resp := svc.Pull(context.Background(), "", domain.PullRequest{
+		Scopes: []string{"school_timetable"},
+		ClientState: domain.PullClientState{
+			SchoolTimetableVersion: 1,
+		},
+	})
+
+	if resp.SchoolTimetable == nil {
+		t.Fatal("school_timetable missing")
+	}
+	if resp.SchoolTimetable.SyncMode != "bundle" {
+		t.Fatalf("sync_mode = %q", resp.SchoolTimetable.SyncMode)
+	}
+	if len(resp.SchoolTimetable.Changes) != 0 {
+		t.Fatalf("bundle response must not include truncated changes: %d", len(resp.SchoolTimetable.Changes))
+	}
+	if resp.SchoolTimetable.Bundle == nil || resp.SchoolTimetable.Bundle.Href == "" {
+		t.Fatalf("bundle = %#v", resp.SchoolTimetable.Bundle)
+	}
+}
+
 func containsJSONKey(payload []byte, key string) bool {
 	var data map[string]any
 	if err := json.Unmarshal(payload, &data); err != nil {
@@ -85,6 +127,7 @@ func containsJSONKey(payload []byte, key string) bool {
 type schoolTimetableProviderStub struct {
 	state   schooldomain.DatasetState
 	changes []schooldomain.EntityChange
+	bundle  *schooldomain.DatasetBundle
 	err     error
 }
 
@@ -94,4 +137,8 @@ func (s schoolTimetableProviderStub) CurrentDataset(context.Context) (schooldoma
 
 func (s schoolTimetableProviderStub) ChangesAfter(context.Context, int64, int) ([]schooldomain.EntityChange, schooldomain.DatasetState, error) {
 	return s.changes, s.state, s.err
+}
+
+func (s schoolTimetableProviderStub) CurrentBundle(context.Context) (*schooldomain.DatasetBundle, error) {
+	return s.bundle, s.err
 }

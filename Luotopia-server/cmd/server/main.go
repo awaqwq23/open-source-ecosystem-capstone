@@ -39,6 +39,7 @@ import (
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/platform/logger"
 	"github.com/openwhu/luotopia/server/internal/platform/scheduler"
+	"github.com/openwhu/luotopia/server/internal/platform/storage"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -57,7 +58,7 @@ func main() {
 	db := openDB(cfg, log)
 	rdb := openRedis(cfg, log)
 	weatherSvc := newWeatherService(cfg, rdb)
-	schoolTimetableSvc := newSchoolTimetableService(cfg, db)
+	schoolTimetableSvc := newSchoolTimetableService(cfg, db, log)
 
 	registerAuth(server, cfg, log, db, rdb)
 	registerSync(server, cfg, db)
@@ -224,12 +225,35 @@ func newWeatherService(cfg config.Config, rdb *redis.Client) *weatherapp.Service
 	return weatherapp.NewService(weathercache.NewRedisStore(rdb), apiClient, cfg.Weather.CacheTTL)
 }
 
-func newSchoolTimetableService(cfg config.Config, db *gorm.DB) *schoolapp.Service {
+func newSchoolTimetableService(cfg config.Config, db *gorm.DB, log *slog.Logger) *schoolapp.Service {
 	if db == nil {
 		return nil
 	}
-	_ = cfg
-	return schoolapp.NewService(schoolinfra.NewGormRepository(db))
+	repo := schoolinfra.NewGormRepository(db)
+	store, err := newObjectStore(cfg.Storage)
+	if err != nil {
+		log.Error("全校课表 bundle 存储配置无效", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if store == nil {
+		log.Warn("全校课表 CDN bundle 未启用：大批量同步将无法下发完整数据包")
+		return schoolapp.NewService(repo)
+	}
+	return schoolapp.NewServiceWithBundleStore(repo, store)
+}
+
+func newObjectStore(cfg config.StorageConfig) (*storage.S3Store, error) {
+	if cfg.Endpoint == "" && cfg.Bucket == "" && cfg.AccessKey == "" && cfg.SecretKey == "" && cfg.PublicBaseURL == "" {
+		return nil, nil
+	}
+	if cfg.Endpoint == "" || cfg.Bucket == "" || cfg.AccessKey == "" || cfg.SecretKey == "" || cfg.PublicBaseURL == "" {
+		return nil, errors.New("对象存储需要同时配置 endpoint、bucket、access key、secret key 和 public base url")
+	}
+	return storage.NewS3Store(storage.S3Config{
+		Endpoint: cfg.Endpoint, Bucket: cfg.Bucket, Region: cfg.Region,
+		AccessKey: cfg.AccessKey, SecretKey: cfg.SecretKey, PublicBaseURL: cfg.PublicBaseURL,
+		UseSSL: cfg.UseSSL, ForcePathStyle: cfg.ForcePathStyle,
+	})
 }
 
 func registerWeatherRefresh(ctx context.Context, cfg config.Config, weatherSvc *weatherapp.Service, log *slog.Logger) {

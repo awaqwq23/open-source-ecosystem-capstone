@@ -20,8 +20,15 @@ type Manifest struct {
 }
 
 type Package struct {
-	Manifest Manifest
-	Rows     []map[string]string
+	Manifest          Manifest
+	Rows              []map[string]string
+	Catalogs          []CourseCatalog
+	TermCourses       []TermCourse
+	InstructorCourses []InstructorCourse
+	Offerings         []CourseOffering
+	Audiences         []CourseAudience
+	CourseInstances   []CourseInstance
+	SourceRows        []SourceRow
 }
 
 type Term struct {
@@ -186,6 +193,16 @@ type DatasetState struct {
 	SchemaVersion int       `json:"schema_version"`
 	TermKeys      []string  `json:"term_keys"`
 	PublishedAt   time.Time `json:"published_at"`
+	Bundle        *DatasetBundle
+}
+
+type DatasetBundle struct {
+	Version   int64  `json:"version"`
+	Href      string `json:"href"`
+	Key       string `json:"key,omitempty"`
+	Size      int64  `json:"size"`
+	Checksum  string `json:"checksum"`
+	CreatedAt string `json:"created_at,omitempty"`
 }
 
 type EntityRecord struct {

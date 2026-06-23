@@ -188,6 +188,8 @@ class SchoolTimetableBlock {
   final String checksum;
   final int schemaVersion;
   final List<String> terms;
+  final SchoolTimetableSyncMode syncMode;
+  final SchoolTimetableBundle? bundle;
   final List<SchoolTimetableChangeUpdate> changes;
   final DateTime? publishedAt;
 
@@ -197,6 +199,8 @@ class SchoolTimetableBlock {
     this.checksum = '',
     this.schemaVersion = 0,
     this.terms = const [],
+    this.syncMode = SchoolTimetableSyncMode.changes,
+    this.bundle,
     this.changes = const [],
     this.publishedAt,
   });
@@ -209,6 +213,14 @@ class SchoolTimetableBlock {
       latestVersion: (json['latest_version'] as num?)?.toInt() ?? 0,
       checksum: json['checksum'] as String? ?? '',
       schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
+      syncMode: SchoolTimetableSyncModeX.fromWire(
+        json['sync_mode'] as String? ?? 'changes',
+      ),
+      bundle: json['bundle'] is Map<String, dynamic>
+          ? SchoolTimetableBundle.fromJson(
+              json['bundle'] as Map<String, dynamic>,
+            )
+          : null,
       terms: [
         for (final item in rawTerms) item?.toString() ?? '',
       ].where((value) => value.isNotEmpty).toList(growable: false),
@@ -218,6 +230,40 @@ class SchoolTimetableBlock {
             SchoolTimetableChangeUpdate.fromJson(item),
       ],
       publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
+    );
+  }
+}
+
+enum SchoolTimetableSyncMode { changes, bundle }
+
+extension SchoolTimetableSyncModeX on SchoolTimetableSyncMode {
+  static SchoolTimetableSyncMode fromWire(String value) {
+    return switch (value) {
+      'bundle' => SchoolTimetableSyncMode.bundle,
+      _ => SchoolTimetableSyncMode.changes,
+    };
+  }
+}
+
+class SchoolTimetableBundle {
+  const SchoolTimetableBundle({
+    required this.version,
+    required this.href,
+    required this.size,
+    required this.checksum,
+  });
+
+  final int version;
+  final String href;
+  final int size;
+  final String checksum;
+
+  factory SchoolTimetableBundle.fromJson(Map<String, dynamic> json) {
+    return SchoolTimetableBundle(
+      version: (json['version'] as num?)?.toInt() ?? 0,
+      href: json['href'] as String? ?? '',
+      size: (json['size'] as num?)?.toInt() ?? 0,
+      checksum: json['checksum'] as String? ?? '',
     );
   }
 }
