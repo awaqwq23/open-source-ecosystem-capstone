@@ -307,17 +307,23 @@ async function renderSchoolTimetable() {
         <pre id="school-timetable-preview" class="muted">请选择由处理工具导出的 .sqlite.gz 数据库包。</pre>
       </form>
     </section>
-    <section class="table-panel">
-      ${table(["学期", "数据集版本", "行数", "来源", "发布时间"], (terms.items || []).map((item) => [
-        `<strong>${escapeHtml(item.term_key)}</strong><pre>${escapeHtml(item.school_year)} 第 ${escapeHtml(item.term)} 学期</pre>`,
-        item.version || 0,
-        item.row_count || 0,
-        `<pre>${escapeHtml(item.source || "")}\n${escapeHtml(item.source_checksum || "")}</pre>`,
-        formatDate(item.published_at),
-      ]))}
+    <section id="school-timetable-terms" class="table-panel">
     </section>
   `;
   $("school-timetable-form").addEventListener("submit", publishSchoolTimetable);
+  refreshSchoolTimetableTerms(terms);
+}
+
+function refreshSchoolTimetableTerms(terms) {
+  const el = $("school-timetable-terms");
+  if (!el) return;
+  el.innerHTML = table(["学期", "数据集版本", "行数", "来源", "发布时间"], (terms.items || []).map((item) => [
+    `<strong>${escapeHtml(item.term_key)}</strong><pre>${escapeHtml(item.school_year)} 第 ${escapeHtml(item.term)} 学期</pre>`,
+    item.version || 0,
+    item.row_count || 0,
+    `<pre>${escapeHtml(item.source || "")}\n${escapeHtml(item.source_checksum || "")}</pre>`,
+    formatDate(item.published_at),
+  ]));
 }
 
 function schoolTimetableFormData() {
@@ -354,7 +360,8 @@ async function publishSchoolTimetable(event) {
       const job = await api("/admin/api/v1/school-timetable/imports/jobs/" + job_id);
       if (job.status === "completed") {
         showMessage("全校课表新版本已发布");
-        await renderSchoolTimetable();
+        const terms = await api("/admin/api/v1/school-timetable/terms");
+        refreshSchoolTimetableTerms(terms);
         renderSchoolTimetablePreview(job.result);
         return;
       }

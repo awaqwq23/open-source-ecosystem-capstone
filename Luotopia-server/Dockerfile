@@ -12,7 +12,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/luotopi
 
 FROM alpine:3.22
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories && \
+    apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 RUN mkdir -p /app/configs
