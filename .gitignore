@@ -20,6 +20,8 @@ migrate_working_dir/
 
 # go
 /.tmp_go_cache/*
+/Luotopia-server/server.exe
+/Luotopia-server/.build-local/
 
 
 # The .vscode folder contains launch configuration and tasks you configure in

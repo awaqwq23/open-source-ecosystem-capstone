@@ -21,7 +21,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func (s *Service) publishBundle(ctx context.Context, version int64) error {
+func (s *Service) publishBundle(ctx context.Context, version int64, progress ProgressFunc) error {
 	if s.bundleStore == nil {
 		return nil
 	}
@@ -35,7 +35,7 @@ func (s *Service) publishBundle(ctx context.Context, version int64) error {
 	}
 	defer os.RemoveAll(tempDir)
 	dbPath := filepath.Join(tempDir, "dataset.sqlite")
-	if err := writeBundleDatabase(ctx, dbPath, version, entities); err != nil {
+	if err := writeBundleDatabase(ctx, dbPath, version, entities, progress); err != nil {
 		return err
 	}
 	compressed, err := gzipFile(dbPath)
@@ -59,7 +59,7 @@ func (s *Service) publishBundle(ctx context.Context, version int64) error {
 	return s.repo.UpdateBundle(ctx, version, bundle)
 }
 
-func writeBundleDatabase(ctx context.Context, path string, version int64, entities []domain.EntityRecord) error {
+func writeBundleDatabase(ctx context.Context, path string, version int64, entities []domain.EntityRecord, progress ProgressFunc) error {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return err
@@ -77,9 +77,13 @@ func writeBundleDatabase(ctx context.Context, path string, version int64, entiti
 		}
 		return entities[i].EntityType < entities[j].EntityType
 	})
-	for _, entity := range entities {
+	totalBundle := len(entities)
+	for i, entity := range entities {
 		if err := insertBundleEntity(ctx, db, entity); err != nil {
 			return err
+		}
+		if progress != nil && (i%2000 == 0 || i == totalBundle-1) {
+			progress(i+1, totalBundle, entity.EntityType)
 		}
 	}
 	if _, err := db.ExecContext(ctx, `

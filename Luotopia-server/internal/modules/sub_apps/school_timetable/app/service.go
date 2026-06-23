@@ -23,7 +23,7 @@ type Repository interface {
 	CurrentDataset(ctx context.Context) (domain.DatasetState, error)
 	ListEntities(ctx context.Context) ([]domain.EntityRecord, error)
 	ListEntitiesByTerm(ctx context.Context, termKey string) ([]domain.EntityRecord, error)
-	ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview) error
+	ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview, progress ProgressFunc) error
 	ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error)
 	ListTerms(ctx context.Context) ([]domain.Term, error)
 	UpdateBundle(ctx context.Context, version int64, bundle domain.DatasetBundle) error
@@ -33,6 +33,8 @@ type BundleStore interface {
 	Put(ctx context.Context, object storage.Object) error
 	PublicURL(key string) string
 }
+
+type ProgressFunc func(current, total int, message string)
 
 type jobManager struct {
 	mu   sync.Mutex
@@ -155,13 +157,33 @@ func (s *Service) StartImport(reader io.Reader) (string, error) {
 			fail(fmt.Errorf("变更集生成失败: %w", err))
 			return
 		}
-		report(fmt.Sprintf("写入数据库（%d 条变更）", preview.Upserts+preview.Deletes))
-		if err := s.repo.ApplyImport(ctx, pkg, preview); err != nil {
+		report("写入数据库")
+		progress := func(current, total int, message string) {
+			pct := 0
+			if total > 0 {
+				pct = current * 100 / total
+			}
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusRunning
+				job.Progress = fmt.Sprintf("写入数据库 %d%%（%d/%d）", pct, current, total)
+			})
+		}
+		if err := s.repo.ApplyImport(ctx, pkg, preview, progress); err != nil {
 			fail(fmt.Errorf("写入数据库失败: %w", err))
 			return
 		}
 		report("构建并上传离线包")
-		if err := s.publishBundle(ctx, preview.NextVersion); err != nil {
+		bundleProgress := func(current, total int, message string) {
+			pct := 0
+			if total > 0 {
+				pct = current * 100 / total
+			}
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusRunning
+				job.Progress = fmt.Sprintf("构建离线包 %d%%（%s）", pct, message)
+			})
+		}
+		if err := s.publishBundle(ctx, preview.NextVersion, bundleProgress); err != nil {
 			fail(fmt.Errorf("发布离线包失败: %w", err))
 			return
 		}

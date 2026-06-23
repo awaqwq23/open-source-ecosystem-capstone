@@ -68,14 +68,16 @@ func (r *GormRepository) ListEntitiesByTerm(ctx context.Context, termKey string)
 	return result, nil
 }
 
-func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview) error {
+func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview, progress app.ProgressFunc) error {
 	now := time.Now().UTC()
 	changes := preview.AllChanges
 	if changes == nil {
 		changes = preview.Changes
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, change := range changes {
+		total := len(changes)
+		lastPct := -1
+		for idx, change := range changes {
 			if change.Sequence == 0 {
 				continue
 			}
@@ -96,6 +98,13 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 			case "delete":
 				if err := tx.Delete(&entityModel{}, "entity_type = ? AND entity_id = ?", change.EntityType, change.EntityID).Error; err != nil {
 					return err
+				}
+			}
+			if progress != nil {
+				pct := (idx + 1) * 100 / total
+				if pct != lastPct {
+					lastPct = pct
+					progress(idx+1, total, change.EntityType)
 				}
 			}
 		}
