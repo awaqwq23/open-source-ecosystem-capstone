@@ -27,12 +27,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+      await _ensureSchoolTimetableTables();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -113,8 +114,179 @@ class AppDatabase extends _$AppDatabase {
       if (from < 10) {
         await _ensureCourseItemDetailEntityColumns();
       }
+      if (from < 11) {
+        await _ensureSchoolTimetableTables();
+      }
     },
   );
+
+  Future<void> _ensureSchoolTimetableTables() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_term_rows (
+        term_key TEXT PRIMARY KEY,
+        school_year TEXT NOT NULL,
+        term TEXT NOT NULL,
+        first_week_monday TEXT NOT NULL,
+        source_version TEXT NOT NULL,
+        row_count INTEGER NOT NULL,
+        imported_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_courses (
+        id TEXT PRIMARY KEY,
+        catalog_key TEXT NOT NULL DEFAULT '',
+        course_no TEXT NOT NULL DEFAULT '',
+        course_name TEXT NOT NULL DEFAULT '',
+        credits TEXT NOT NULL DEFAULT '',
+        search_text TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_course_terms (
+        id TEXT PRIMARY KEY,
+        term_key TEXT NOT NULL,
+        course_id TEXT NOT NULL,
+        open_college TEXT NOT NULL DEFAULT '',
+        course_nature TEXT NOT NULL DEFAULT '',
+        course_category TEXT NOT NULL DEFAULT '',
+        open_type TEXT NOT NULL DEFAULT '',
+        teaching_class_count INTEGER NOT NULL DEFAULT 0,
+        teacher_summary TEXT NOT NULL DEFAULT '',
+        weekday_summary TEXT NOT NULL DEFAULT '',
+        search_text TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_instructors (
+        id TEXT PRIMARY KEY,
+        course_id TEXT NOT NULL,
+        instructor_name TEXT NOT NULL DEFAULT '',
+        instructor_name_key TEXT NOT NULL DEFAULT '',
+        offering_count INTEGER NOT NULL DEFAULT 0,
+        latest_term_key TEXT NOT NULL DEFAULT '',
+        latest_open_college TEXT NOT NULL DEFAULT '',
+        latest_teaching_title TEXT NOT NULL DEFAULT '',
+        search_text TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_offerings (
+        id TEXT PRIMARY KEY,
+        term_key TEXT NOT NULL,
+        term_course_id TEXT NOT NULL,
+        course_id TEXT NOT NULL,
+        instructor_id TEXT NOT NULL,
+        source_key TEXT NOT NULL DEFAULT '',
+        teaching_class_name TEXT NOT NULL DEFAULT '',
+        instructor TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
+        people_raw TEXT NOT NULL DEFAULT '',
+        capacity INTEGER NOT NULL DEFAULT 0,
+        selected_count INTEGER NOT NULL DEFAULT 0,
+        theory_hours TEXT NOT NULL DEFAULT '',
+        computer_hours TEXT NOT NULL DEFAULT '',
+        experiment_hours TEXT NOT NULL DEFAULT '',
+        practice_hours TEXT NOT NULL DEFAULT '',
+        remark TEXT NOT NULL DEFAULT '',
+        other_teachers TEXT NOT NULL DEFAULT '',
+        textbook TEXT NOT NULL DEFAULT '',
+        publisher TEXT NOT NULL DEFAULT '',
+        schedule_summary TEXT NOT NULL DEFAULT '',
+        weekday_summary TEXT NOT NULL DEFAULT '',
+        detail_fields_json TEXT NOT NULL DEFAULT '{}',
+        search_text TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_audiences (
+        id TEXT PRIMARY KEY,
+        term_key TEXT NOT NULL,
+        offering_id TEXT NOT NULL,
+        grade TEXT NOT NULL DEFAULT '',
+        major TEXT NOT NULL DEFAULT '',
+        plan_college TEXT NOT NULL DEFAULT '',
+        course_nature TEXT NOT NULL DEFAULT '',
+        course_nature_code TEXT NOT NULL DEFAULT '',
+        course_category TEXT NOT NULL DEFAULT '',
+        course_category_code TEXT NOT NULL DEFAULT '',
+        open_type TEXT NOT NULL DEFAULT '',
+        open_type_code TEXT NOT NULL DEFAULT '',
+        condition_code TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_source_rows (
+        id TEXT PRIMARY KEY,
+        term_key TEXT NOT NULL,
+        term_course_id TEXT,
+        offering_id TEXT,
+        source_key TEXT NOT NULL DEFAULT '',
+        package_index INTEGER NOT NULL DEFAULT 0,
+        source_status TEXT NOT NULL DEFAULT '',
+        raw_fields_json TEXT NOT NULL DEFAULT '{}'
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_meeting_rules (
+        id TEXT PRIMARY KEY,
+        offering_id TEXT NOT NULL,
+        term_key TEXT NOT NULL,
+        weekday INTEGER NOT NULL DEFAULT 0,
+        day_field TEXT NOT NULL DEFAULT '',
+        segment_index INTEGER NOT NULL DEFAULT 0,
+        weekday_label TEXT NOT NULL DEFAULT '',
+        raw_day_text TEXT NOT NULL DEFAULT '',
+        raw_segment_text TEXT NOT NULL DEFAULT '',
+        week_text TEXT NOT NULL DEFAULT '',
+        section_text TEXT NOT NULL DEFAULT '',
+        section_start INTEGER NOT NULL DEFAULT 0,
+        section_end INTEGER NOT NULL DEFAULT 0,
+        location_text TEXT NOT NULL DEFAULT '',
+        parse_status TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS school_timetable_meeting_weeks (
+        meeting_rule_id TEXT NOT NULL,
+        week_index INTEGER NOT NULL,
+        PRIMARY KEY (meeting_rule_id, week_index)
+      )
+    ''');
+    await customStatement('''
+      CREATE VIRTUAL TABLE IF NOT EXISTS school_timetable_search_fts USING fts5(
+        term_course_id UNINDEXED,
+        term_key UNINDEXED,
+        course_name,
+        course_no,
+        open_college,
+        course_nature,
+        course_category,
+        teacher_summary,
+        weekday_summary,
+        search_text
+      )
+    ''');
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_course_terms_term ON school_timetable_course_terms(term_key)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_offerings_term_course ON school_timetable_offerings(term_course_id, instructor, teaching_class_name)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_audiences_filter ON school_timetable_audiences(term_key, grade, major, plan_college)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_meeting_rules_filter ON school_timetable_meeting_rules(term_key, weekday, section_start, section_end)',
+    );
+  }
 
   Future<void> _ensureCourseItemDetailEntityColumns() async {
     await _addTextColumnIfMissing('course_item_detail_rows', 'term_course_id');

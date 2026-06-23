@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type PullRequest struct {
 	Trigger     string          `json:"trigger"`
@@ -9,19 +12,14 @@ type PullRequest struct {
 }
 
 type PullClientState struct {
-	WeatherCachedAt      *int64                       `json:"weather_cached_at,omitempty"`
-	NotificationLatestID string                       `json:"notification_latest_id,omitempty"`
-	HotUpdateScripts     map[string]ClientScriptState `json:"hot_update_scripts,omitempty"`
-	SyncCursor           *int64                       `json:"sync_cursor,omitempty"`
-	SchoolTimetableTerms map[string]ClientTermState   `json:"school_timetable_terms,omitempty"`
+	WeatherCachedAt        *int64                       `json:"weather_cached_at,omitempty"`
+	NotificationLatestID   string                       `json:"notification_latest_id,omitempty"`
+	HotUpdateScripts       map[string]ClientScriptState `json:"hot_update_scripts,omitempty"`
+	SyncCursor             *int64                       `json:"sync_cursor,omitempty"`
+	SchoolTimetableVersion int64                        `json:"school_timetable_version,omitempty"`
 }
 
 type ClientScriptState struct {
-	Version  int    `json:"version"`
-	Checksum string `json:"checksum"`
-}
-
-type ClientTermState struct {
 	Version  int    `json:"version"`
 	Checksum string `json:"checksum"`
 }
@@ -73,24 +71,23 @@ type ScriptVersion struct {
 }
 
 type SchoolTimetableBlock struct {
-	Changed     bool                  `json:"changed"`
-	ActiveTerms []string              `json:"active_terms"`
-	Terms       []SchoolTimetableTerm `json:"terms"`
+	Changed       bool                    `json:"changed"`
+	LatestVersion int64                   `json:"latest_version"`
+	Checksum      string                  `json:"checksum"`
+	SchemaVersion int                     `json:"schema_version"`
+	Terms         []string                `json:"terms"`
+	Changes       []SchoolTimetableChange `json:"changes"`
+	PublishedAt   string                  `json:"published_at"`
 }
 
-type SchoolTimetableTerm struct {
-	TermKey         string          `json:"term_key"`
-	SchoolYear      string          `json:"school_year"`
-	Term            string          `json:"term"`
-	FirstWeekMonday string          `json:"first_week_monday"`
-	Version         int             `json:"version"`
-	Checksum        string          `json:"checksum"`
-	ArtifactType    string          `json:"artifact_type"`
-	SchemaVersion   int             `json:"schema_version"`
-	ArtifactSize    int64           `json:"artifact_size"`
-	RowCount        int             `json:"row_count"`
-	Links           map[string]Link `json:"links"`
-	PublishedAt     string          `json:"published_at"`
+type SchoolTimetableChange struct {
+	Version    int64           `json:"version"`
+	Sequence   int             `json:"sequence"`
+	Operation  string          `json:"operation"`
+	EntityType string          `json:"entity_type"`
+	EntityID   string          `json:"entity_id"`
+	TermKey    string          `json:"term_key"`
+	Payload    json.RawMessage `json:"payload,omitempty"`
 }
 
 type SyncBlock struct {

@@ -10,21 +10,18 @@ import (
 	schooldomain "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
 )
 
-// 用户要求添加，不允许删除。该测试保护 pull 聚合响应只暴露对象存储 artifact 链接，不回退到旧快照路由。
-func TestPullSchoolTimetableUsesArtifactLinkContract(t *testing.T) {
+// 用户要求添加，不允许删除。该测试保护 pull 聚合响应使用全局 dataset changeset，不回退到 artifact/快照路由。
+func TestPullSchoolTimetableUsesDatasetChangesetContract(t *testing.T) {
+	publishedAt := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
 	svc := NewService(nil, nil, nil, nil, nil, schoolTimetableProviderStub{
-		terms: []schooldomain.Term{{
-			TermKey:       "2025-2026-1",
-			SchoolYear:    "2025-2026",
-			Term:          "1",
-			Version:       7,
-			Checksum:      "sha256:artifact",
-			ArtifactType:  "school_timetable_sqlite_gzip",
-			SchemaVersion: 7,
-			ArtifactSize:  2048,
-			ArtifactURL:   "https://cdn.example.com/school-timetable/2025-2026-1/v7.sqlite.gz",
-			RowCount:      42,
-			PublishedAt:   time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC),
+		state: schooldomain.DatasetState{
+			Version: 7, Checksum: "sha256:dataset", SchemaVersion: 1,
+			TermKeys: []string{"2025-2026-1"}, PublishedAt: publishedAt,
+		},
+		changes: []schooldomain.EntityChange{{
+			Version: 7, Sequence: 1, Operation: "upsert",
+			EntityType: "term", EntityID: "2025-2026-1", TermKey: "2025-2026-1",
+			Payload: json.RawMessage(`{"term_key":"2025-2026-1"}`),
 		}},
 	})
 
@@ -32,30 +29,47 @@ func TestPullSchoolTimetableUsesArtifactLinkContract(t *testing.T) {
 		Scopes: []string{"school_timetable"},
 	})
 
-	if resp.SchoolTimetable == nil || len(resp.SchoolTimetable.Terms) != 1 {
-		t.Fatalf("school_timetable terms = %#v", resp.SchoolTimetable)
+	if resp.SchoolTimetable == nil || !resp.SchoolTimetable.Changed || len(resp.SchoolTimetable.Changes) != 1 {
+		t.Fatalf("school_timetable changes = %#v", resp.SchoolTimetable)
 	}
-	if len(resp.SchoolTimetable.ActiveTerms) != 1 || resp.SchoolTimetable.ActiveTerms[0] != "2025-2026-1" {
-		t.Fatalf("active_terms = %#v", resp.SchoolTimetable.ActiveTerms)
+	if resp.SchoolTimetable.LatestVersion != 7 || resp.SchoolTimetable.Checksum != "sha256:dataset" {
+		t.Fatalf("dataset state = %#v", resp.SchoolTimetable)
 	}
-	term := resp.SchoolTimetable.Terms[0]
-	link := term.Links["artifact"]
-	want := "https://cdn.example.com/school-timetable/2025-2026-1/v7.sqlite.gz"
-	if link.Href != want {
-		t.Fatalf("artifact link href = %q, want %q", link.Href, want)
+	if len(resp.SchoolTimetable.Terms) != 1 || resp.SchoolTimetable.Terms[0] != "2025-2026-1" {
+		t.Fatalf("terms = %#v", resp.SchoolTimetable.Terms)
 	}
-	if term.ArtifactType != "school_timetable_sqlite_gzip" || term.SchemaVersion != 7 || term.ArtifactSize != 2048 {
-		t.Fatalf("artifact metadata = %#v", term)
+	change := resp.SchoolTimetable.Changes[0]
+	if change.Operation != "upsert" || change.EntityType != "term" || string(change.Payload) == "" {
+		t.Fatalf("change = %#v", change)
 	}
-	payload, err := json.Marshal(resp.SchoolTimetable.Terms[0])
+	payload, err := json.Marshal(resp.SchoolTimetable)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if json.Valid(payload) && string(payload) != "" && containsJSONKey(payload, "download_url") {
-		t.Fatalf("school timetable term should not expose download_url: %s", payload)
+	for _, key := range []string{"artifact", "artifact_type", "download_url", "snapshot"} {
+		if containsJSONKey(payload, key) {
+			t.Fatalf("school timetable block should not expose %s: %s", key, payload)
+		}
 	}
-	if json.Valid(payload) && string(payload) != "" && containsJSONKey(payload, "snapshot") {
-		t.Fatalf("school timetable term should not expose snapshot link: %s", payload)
+}
+
+func TestPullSchoolTimetableSkipsChangesWhenDatasetCurrent(t *testing.T) {
+	svc := NewService(nil, nil, nil, nil, nil, schoolTimetableProviderStub{
+		state: schooldomain.DatasetState{Version: 7, Checksum: "sha256:dataset", SchemaVersion: 1},
+	})
+
+	resp := svc.Pull(context.Background(), "", domain.PullRequest{
+		Scopes: []string{"school_timetable"},
+		ClientState: domain.PullClientState{
+			SchoolTimetableVersion: 7,
+		},
+	})
+
+	if resp.SchoolTimetable == nil || resp.SchoolTimetable.Changed {
+		t.Fatalf("school_timetable should be unchanged: %#v", resp.SchoolTimetable)
+	}
+	if len(resp.SchoolTimetable.Changes) != 0 {
+		t.Fatalf("changes = %#v", resp.SchoolTimetable.Changes)
 	}
 }
 
@@ -69,10 +83,15 @@ func containsJSONKey(payload []byte, key string) bool {
 }
 
 type schoolTimetableProviderStub struct {
-	terms []schooldomain.Term
-	err   error
+	state   schooldomain.DatasetState
+	changes []schooldomain.EntityChange
+	err     error
 }
 
-func (s schoolTimetableProviderStub) ListActiveTerms(context.Context) ([]schooldomain.Term, error) {
-	return s.terms, s.err
+func (s schoolTimetableProviderStub) CurrentDataset(context.Context) (schooldomain.DatasetState, error) {
+	return s.state, s.err
+}
+
+func (s schoolTimetableProviderStub) ChangesAfter(context.Context, int64, int) ([]schooldomain.EntityChange, schooldomain.DatasetState, error) {
+	return s.changes, s.state, s.err
 }

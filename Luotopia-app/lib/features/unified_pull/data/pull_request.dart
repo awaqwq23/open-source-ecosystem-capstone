@@ -23,14 +23,14 @@ class PullClientState {
     this.weatherCachedAt,
     this.notificationLatestId = '',
     this.hotUpdateScripts = const {},
-    this.schoolTimetableTerms = const {},
+    this.schoolTimetableVersion = 0,
     this.syncCursor,
   });
 
   final int? weatherCachedAt;
   final String notificationLatestId;
   final Map<String, ClientScriptState> hotUpdateScripts;
-  final Map<String, ClientTermState> schoolTimetableTerms;
+  final int schoolTimetableVersion;
   final int? syncCursor;
 
   Map<String, dynamic> toJson() {
@@ -43,11 +43,8 @@ class PullClientState {
           for (final entry in hotUpdateScripts.entries)
             entry.key: entry.value.toJson(),
         },
-      if (schoolTimetableTerms.isNotEmpty)
-        'school_timetable_terms': {
-          for (final entry in schoolTimetableTerms.entries)
-            entry.key: entry.value.toJson(),
-        },
+      if (schoolTimetableVersion > 0)
+        'school_timetable_version': schoolTimetableVersion,
       if (syncCursor != null) 'sync_cursor': syncCursor,
     };
   }
@@ -58,24 +55,6 @@ class ClientScriptState {
 
   final int version;
   final String checksum;
-
-  Map<String, dynamic> toJson() {
-    return {'version': version, 'checksum': checksum};
-  }
-}
-
-class ClientTermState {
-  const ClientTermState({required this.version, required this.checksum});
-
-  final int version;
-  final String checksum;
-
-  factory ClientTermState.fromJson(Map<String, dynamic> json) {
-    return ClientTermState(
-      version: (json['version'] as num?)?.toInt() ?? 0,
-      checksum: json['checksum'] as String? ?? '',
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {'version': version, 'checksum': checksum};

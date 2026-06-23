@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/core/storage/shared_preferences_provider.dart';
-import 'package:luotopia/features/unified_pull/data/pull_request.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,7 +15,8 @@ class PullStateStore {
   static const _weatherDataKey = 'pull.weather.data';
   static const _weatherCachedAtKey = 'pull.weather.cachedAt';
   static const _notificationKey = 'pull.notification.latest';
-  static const _schoolTimetableKey = 'pull.school_timetable.terms';
+  static const _schoolTimetableVersionKey = 'pull.school_timetable.version';
+  static const _schoolTimetableChecksumKey = 'pull.school_timetable.checksum';
 
   final SharedPreferences? _preferences;
 
@@ -59,22 +59,8 @@ class PullStateStore {
     return readNotification()?.latestId ?? '';
   }
 
-  Map<String, ClientTermState> readSchoolTimetableTerms() {
-    final raw = _preferences?.getString(_schoolTimetableKey);
-    if (raw == null || raw.isEmpty) {
-      return const {};
-    }
-    try {
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      return {
-        for (final entry in json.entries)
-          entry.key: ClientTermState.fromJson(
-            entry.value as Map<String, dynamic>,
-          ),
-      };
-    } catch (_) {
-      return const {};
-    }
+  int readSchoolTimetableVersion() {
+    return _preferences?.getInt(_schoolTimetableVersionKey) ?? 0;
   }
 
   Future<void> apply(PullResponse response) async {
@@ -93,22 +79,17 @@ class PullStateStore {
       );
     }
     final schoolTimetable = response.schoolTimetable;
-    if (schoolTimetable != null &&
-        (schoolTimetable.activeTerms.isNotEmpty ||
-            schoolTimetable.terms.isNotEmpty)) {
-      final activeSet = schoolTimetable.activeTerms.toSet();
-      final terms = readSchoolTimetableTerms();
-      final updated = {
-        for (final entry in terms.entries)
-          if (activeSet.isEmpty || activeSet.contains(entry.key))
-            entry.key: {
-              'version': entry.value.version,
-              'checksum': entry.value.checksum,
-            },
-        for (final term in schoolTimetable.terms)
-          term.termKey: {'version': term.version, 'checksum': term.checksum},
-      };
-      await _preferences?.setString(_schoolTimetableKey, jsonEncode(updated));
+    if (schoolTimetable != null && schoolTimetable.latestVersion > 0) {
+      await _preferences?.setInt(
+        _schoolTimetableVersionKey,
+        schoolTimetable.latestVersion,
+      );
+      if (schoolTimetable.checksum.isNotEmpty) {
+        await _preferences?.setString(
+          _schoolTimetableChecksumKey,
+          schoolTimetable.checksum,
+        );
+      }
     }
   }
 }

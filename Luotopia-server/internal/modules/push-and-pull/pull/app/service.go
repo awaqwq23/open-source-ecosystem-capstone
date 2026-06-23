@@ -28,7 +28,8 @@ type Service struct {
 }
 
 type SchoolTimetableProvider interface {
-	ListActiveTerms(ctx context.Context) ([]schooldomain.Term, error)
+	CurrentDataset(ctx context.Context) (schooldomain.DatasetState, error)
+	ChangesAfter(ctx context.Context, version int64, limit int) ([]schooldomain.EntityChange, schooldomain.DatasetState, error)
 }
 
 func NewService(weatherSvc *weatherapp.Service, notifcSvc *notiapp.Service, hotUpdateSvc *hotapp.Service, syncChecker SyncChecker, statsSvc *statsapp.Service, schoolTimetableSvc SchoolTimetableProvider) *Service {
@@ -119,31 +120,25 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 	}
 
 	if s.schoolTimetableSvc != nil && scopeEnabled(req.Scopes, "school_timetable") {
-		terms, err := s.schoolTimetableSvc.ListActiveTerms(ctx)
+		changes, state, err := s.schoolTimetableSvc.ChangesAfter(ctx, req.ClientState.SchoolTimetableVersion, 10000)
 		if err == nil {
+			changed := req.ClientState.SchoolTimetableVersion != state.Version
 			block := &domain.SchoolTimetableBlock{
-				ActiveTerms: make([]string, 0, len(terms)),
-				Terms:       []domain.SchoolTimetableTerm{},
+				Changed:       changed,
+				LatestVersion: state.Version,
+				Checksum:      state.Checksum,
+				SchemaVersion: state.SchemaVersion,
+				Terms:         state.TermKeys,
+				Changes:       []domain.SchoolTimetableChange{},
+				PublishedAt:   state.PublishedAt.Format(time.RFC3339),
 			}
-			for _, term := range terms {
-				block.ActiveTerms = append(block.ActiveTerms, term.TermKey)
-				client := domain.ClientTermState{}
-				if req.ClientState.SchoolTimetableTerms != nil {
-					client = req.ClientState.SchoolTimetableTerms[term.TermKey]
-				}
-				changed := client.Version != term.Version || client.Checksum != term.Checksum
-				if changed {
-					block.Changed = true
-					block.Terms = append(block.Terms, domain.SchoolTimetableTerm{
-						TermKey: term.TermKey, SchoolYear: term.SchoolYear, Term: term.Term,
-						FirstWeekMonday: term.FirstWeekMonday,
-						Version:         term.Version, Checksum: term.Checksum,
-						ArtifactType: term.ArtifactType, SchemaVersion: term.SchemaVersion,
-						ArtifactSize: term.ArtifactSize, RowCount: term.RowCount,
-						Links: map[string]domain.Link{
-							"artifact": {Href: term.ArtifactURL},
-						},
-						PublishedAt: term.PublishedAt.Format(time.RFC3339),
+			if changed {
+				block.Changes = make([]domain.SchoolTimetableChange, 0, len(changes))
+				for _, change := range changes {
+					block.Changes = append(block.Changes, domain.SchoolTimetableChange{
+						Version: change.Version, Sequence: change.Sequence, Operation: change.Operation,
+						EntityType: change.EntityType, EntityID: change.EntityID, TermKey: change.TermKey,
+						Payload: change.Payload,
 					})
 				}
 			}

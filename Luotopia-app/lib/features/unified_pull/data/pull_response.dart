@@ -184,75 +184,73 @@ class SyncBlock {
 
 class SchoolTimetableBlock {
   final bool changed;
-  final List<String> activeTerms;
-  final List<SchoolTimetableTermUpdate> terms;
+  final int latestVersion;
+  final String checksum;
+  final int schemaVersion;
+  final List<String> terms;
+  final List<SchoolTimetableChangeUpdate> changes;
+  final DateTime? publishedAt;
 
   const SchoolTimetableBlock({
     this.changed = false,
-    this.activeTerms = const [],
+    this.latestVersion = 0,
+    this.checksum = '',
+    this.schemaVersion = 0,
     this.terms = const [],
+    this.changes = const [],
+    this.publishedAt,
   });
 
   factory SchoolTimetableBlock.fromJson(Map<String, dynamic> json) {
     final rawTerms = json['terms'] as List? ?? const [];
-    final rawActiveTerms = json['active_terms'] as List? ?? const [];
+    final rawChanges = json['changes'] as List? ?? const [];
     return SchoolTimetableBlock(
       changed: json['changed'] as bool? ?? false,
-      activeTerms: [
-        for (final item in rawActiveTerms) item?.toString() ?? '',
-      ].where((value) => value.isNotEmpty).toList(growable: false),
+      latestVersion: (json['latest_version'] as num?)?.toInt() ?? 0,
+      checksum: json['checksum'] as String? ?? '',
+      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
       terms: [
-        for (final item in rawTerms)
+        for (final item in rawTerms) item?.toString() ?? '',
+      ].where((value) => value.isNotEmpty).toList(growable: false),
+      changes: [
+        for (final item in rawChanges)
           if (item is Map<String, dynamic>)
-            SchoolTimetableTermUpdate.fromJson(item),
+            SchoolTimetableChangeUpdate.fromJson(item),
       ],
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
     );
   }
 }
 
-class SchoolTimetableTermUpdate {
-  final String termKey;
-  final String schoolYear;
-  final String term;
-  final String firstWeekMonday;
+class SchoolTimetableChangeUpdate {
   final int version;
-  final String checksum;
-  final String artifactType;
-  final int schemaVersion;
-  final int artifactSize;
-  final int rowCount;
-  final Map<String, ApiLink> links;
-  final DateTime? publishedAt;
+  final int sequence;
+  final String operation;
+  final String entityType;
+  final String entityId;
+  final String termKey;
+  final Map<String, dynamic> payload;
 
-  const SchoolTimetableTermUpdate({
-    required this.termKey,
-    required this.schoolYear,
-    required this.term,
-    required this.firstWeekMonday,
+  const SchoolTimetableChangeUpdate({
     required this.version,
-    required this.checksum,
-    required this.artifactType,
-    required this.schemaVersion,
-    required this.artifactSize,
-    required this.rowCount,
-    required this.links,
-    this.publishedAt,
+    required this.sequence,
+    required this.operation,
+    required this.entityType,
+    required this.entityId,
+    required this.termKey,
+    required this.payload,
   });
 
-  factory SchoolTimetableTermUpdate.fromJson(Map<String, dynamic> json) {
-    return SchoolTimetableTermUpdate(
-      termKey: json['term_key'] as String? ?? '',
-      schoolYear: json['school_year'] as String? ?? '',
-      term: json['term'] as String? ?? '',
-      firstWeekMonday: json['first_week_monday'] as String? ?? '',
+  factory SchoolTimetableChangeUpdate.fromJson(Map<String, dynamic> json) {
+    final payload = json['payload'];
+    return SchoolTimetableChangeUpdate(
       version: (json['version'] as num?)?.toInt() ?? 0,
-      checksum: json['checksum'] as String? ?? '',
-      artifactType: json['artifact_type'] as String? ?? '',
-      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
-      artifactSize: (json['artifact_size'] as num?)?.toInt() ?? 0,
-      rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
-      links: _linksFromJson(json['links']),
-      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? ''),
+      sequence: (json['sequence'] as num?)?.toInt() ?? 0,
+      operation: json['operation'] as String? ?? '',
+      entityType: json['entity_type'] as String? ?? '',
+      entityId: json['entity_id'] as String? ?? '',
+      termKey: json['term_key'] as String? ?? '',
+      payload: payload is Map<String, dynamic> ? payload : const {},
     );
   }
 }

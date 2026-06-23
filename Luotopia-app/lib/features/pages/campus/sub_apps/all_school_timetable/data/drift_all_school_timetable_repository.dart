@@ -1,21 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/core/storage/shared_preferences_provider.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:luotopia/shared/data/database/app_database.dart';
 
 final allSchoolTimetableRepositoryProvider =
     Provider<AllSchoolTimetableRepository>((ref) {
       final repository = DriftAllSchoolTimetableRepository(
-        ref.read(sharedPreferencesProvider),
+        ref.read(appDatabaseProvider),
       );
       ref.onDispose(() {
         unawaited(repository.dispose());
@@ -25,17 +20,13 @@ final allSchoolTimetableRepositoryProvider =
 
 class DriftAllSchoolTimetableRepository
     implements AllSchoolTimetableRepository {
-  DriftAllSchoolTimetableRepository(this._preferences);
+  DriftAllSchoolTimetableRepository(this._db);
 
-  static const _artifactIndexKey = 'school_timetable.artifact.index';
-
-  final SharedPreferences? _preferences;
-  final Map<String, _SchoolTimetableArtifactDatabase> _openDbs = {};
-  final Map<String, String> _openPaths = {};
+  final AppDatabase _db;
 
   @override
   Future<void> ensureLocalDataReady() async {
-    _readArtifactIndex();
+    await _ensureMetaDefaults();
   }
 
   @override
@@ -50,83 +41,63 @@ class DriftAllSchoolTimetableRepository
   }
 
   @override
-  Future<void> replaceTermFromArtifactFile({
-    required File gzipFile,
-    required String termKey,
-    required int version,
-    required String checksum,
-    required int rowCount,
-  }) async {
-    final dir = await _artifactDirectory();
-    final tempDb = File('${dir.path}${Platform.pathSeparator}incoming.sqlite');
-    final target = File(
-      '${dir.path}${Platform.pathSeparator}${_safeName(termKey)}-v$version.sqlite',
-    );
-    if (await tempDb.exists()) {
-      await tempDb.delete();
-    }
-    await gzipFile.openRead().transform(gzip.decoder).pipe(tempDb.openWrite());
-    try {
-      final entry = _validateArtifact(
-        tempDb,
-        termKey: termKey,
-        version: version,
-        rowCount: rowCount,
-      );
-      if (target.path != tempDb.path && await target.exists()) {
-        await target.delete();
-      }
-      await tempDb.rename(target.path);
-      await _closeDbForTerm(termKey);
-      final index = _readArtifactIndex();
-      index[termKey] = entry.copyWith(path: target.path, checksum: checksum);
-      await _writeArtifactIndex(index);
-    } catch (_) {
-      if (await tempDb.exists()) {
-        await tempDb.delete();
-      }
-      rethrow;
-    }
+  Future<int> readDatasetVersion() async {
+    final row = await _db
+        .customSelect(
+          "SELECT value FROM school_timetable_meta WHERE key = 'dataset_version'",
+        )
+        .getSingleOrNull();
+    return int.tryParse(row?.data['value']?.toString() ?? '') ?? 0;
   }
 
   @override
-  Future<void> retainActiveTerms(Set<String> termKeys) async {
-    final index = _readArtifactIndex();
-    final removed = [
-      for (final entry in index.entries)
-        if (!termKeys.contains(entry.key)) entry,
-    ];
-    if (removed.isEmpty) {
-      return;
-    }
-    for (final entry in removed) {
-      await _closeDbForTerm(entry.key);
-      final file = File(entry.value.path);
-      if (await file.exists()) {
-        await file.delete();
+  Future<void> applyChanges({
+    required int version,
+    required String checksum,
+    required List<SchoolTimetableChange> changes,
+  }) async {
+    await _db.transaction(() async {
+      for (final change in changes) {
+        if (change.operation == 'delete') {
+          await _deleteEntity(change.entityType, change.entityId);
+          continue;
+        }
+        if (change.operation == 'upsert') {
+          await _upsertEntity(change);
+        }
       }
-      index.remove(entry.key);
-    }
-    await _writeArtifactIndex(index);
+      await _rebuildSearchIndex();
+      await _writeMeta('dataset_version', version.toString());
+      await _writeMeta('dataset_checksum', checksum);
+      await _writeMeta(
+        'updated_at',
+        DateTime.now().millisecondsSinceEpoch.toString(),
+      );
+    });
   }
 
   @override
   Future<List<SchoolTimetableTerm>> loadTerms() async {
-    final entries = _readArtifactIndex().values.toList(growable: false)
-      ..sort((a, b) => b.termKey.compareTo(a.termKey));
-    return [
-      for (final entry in entries)
-        SchoolTimetableTerm(
-          termKey: entry.termKey,
-          schoolYear: entry.schoolYear,
-          term: entry.term,
-          firstWeekMonday: entry.firstWeekMonday,
-          sourceVersion: entry.version.toString(),
-          rowCount: entry.rowCount,
-          importedAt: entry.updatedAt,
-          updatedAt: entry.updatedAt,
-        ),
-    ];
+    final rows = await _db.customSelect('''
+          SELECT term_key, school_year, term, first_week_monday, source_version,
+                 row_count, imported_at, updated_at
+          FROM school_timetable_term_rows
+          ORDER BY term_key DESC
+          ''').get();
+    return rows
+        .map(
+          (row) => SchoolTimetableTerm(
+            termKey: _readString(row, 'term_key'),
+            schoolYear: _readString(row, 'school_year'),
+            term: _readString(row, 'term'),
+            firstWeekMonday: _readString(row, 'first_week_monday'),
+            sourceVersion: _readString(row, 'source_version'),
+            rowCount: _readInt(row, 'row_count'),
+            importedAt: _dateTimeFromMillis(row.data['imported_at']),
+            updatedAt: _dateTimeFromMillis(row.data['updated_at']),
+          ),
+        )
+        .toList(growable: false);
   }
 
   @override
@@ -377,7 +348,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<String> _matchTermCourse(
-    _SchoolTimetableArtifactDatabase db,
+    GeneratedDatabase db,
     PersonalCourseMatchQuery query,
     _ArtifactSchema schema,
   ) async {
@@ -407,7 +378,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<QueryRow?> _matchOffering(
-    _SchoolTimetableArtifactDatabase db,
+    GeneratedDatabase db,
     PersonalCourseMatchQuery query, {
     required int? weekIndex,
     required _ArtifactSchema schema,
@@ -503,7 +474,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   Future<int?> _weekIndexForDate(
-    _SchoolTimetableArtifactDatabase db,
+    GeneratedDatabase db,
     PersonalCourseMatchQuery query,
   ) async {
     final row = await db
@@ -675,153 +646,315 @@ class DriftAllSchoolTimetableRepository
     );
   }
 
-  Future<_SchoolTimetableArtifactDatabase?> _databaseForTerm(
-    String termKey,
-  ) async {
-    final entry = _readArtifactIndex()[termKey];
-    final path = entry?.path ?? '';
-    if (path.isEmpty || !await File(path).exists()) {
-      await _closeDbForTerm(termKey);
-      return null;
-    }
-    final existing = _openDbs[termKey];
-    if (existing != null && _openPaths[termKey] == path) {
-      return existing;
-    }
-    await _closeDbForTerm(termKey);
-    _openPaths[termKey] = path;
-    final db = _SchoolTimetableArtifactDatabase(
-      NativeDatabase.createInBackground(
-        File(path),
-        enableMigrations: false,
-        setup: (db) {
-          db.execute('PRAGMA query_only = ON;');
-        },
-      ),
-    );
-    _openDbs[termKey] = db;
-    return db;
+  Future<GeneratedDatabase?> _databaseForTerm(String termKey) async {
+    final row = await _db
+        .customSelect(
+          'SELECT 1 FROM school_timetable_term_rows WHERE term_key = ? LIMIT 1',
+          variables: [Variable.withString(termKey)],
+        )
+        .getSingleOrNull();
+    return row == null ? null : _db;
   }
 
-  _ArtifactSchema _schemaForDb(_SchoolTimetableArtifactDatabase db) {
+  _ArtifactSchema _schemaForDb(GeneratedDatabase db) {
     return _ArtifactSchema.v7;
   }
 
-  Future<void> _closeDbForTerm(String termKey) async {
-    final db = _openDbs.remove(termKey);
-    _openPaths.remove(termKey);
-    await db?.close();
-  }
+  Future<void> dispose() async {}
 
-  Future<void> dispose() async {
-    final dbs = List<_SchoolTimetableArtifactDatabase>.from(_openDbs.values);
-    _openDbs.clear();
-    _openPaths.clear();
-    for (final db in dbs) {
-      await db.close();
-    }
-  }
-
-  Future<Directory> _artifactDirectory() async {
-    final root = await getApplicationSupportDirectory();
-    final dir = Directory(
-      '${root.path}${Platform.pathSeparator}school_timetable_artifacts',
-    );
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
-  }
-
-  Map<String, _ArtifactEntry> _readArtifactIndex() {
-    final raw = _preferences?.getString(_artifactIndexKey);
-    if (raw == null || raw.isEmpty) {
-      return const {};
-    }
-    try {
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      return {
-        for (final entry in decoded.entries)
-          entry.key: _ArtifactEntry.fromJson(
-            entry.value as Map<String, dynamic>,
-          ),
-      };
-    } catch (_) {
-      return const {};
-    }
-  }
-
-  Future<void> _writeArtifactIndex(Map<String, _ArtifactEntry> index) async {
-    await _preferences?.setString(
-      _artifactIndexKey,
-      jsonEncode({
-        for (final entry in index.entries) entry.key: entry.value.toJson(),
-      }),
+  Future<void> _ensureMetaDefaults() async {
+    await _writeMeta(
+      'dataset_version',
+      (await readDatasetVersion()).toString(),
     );
   }
 
-  _ArtifactEntry _validateArtifact(
-    File file, {
-    required String termKey,
-    required int version,
-    required int rowCount,
-  }) {
-    final db = sqlite.sqlite3.open(file.path, mode: sqlite.OpenMode.readOnly);
-    try {
-      final meta = <String, String>{};
-      for (final row in db.select(
-        'SELECT key, value FROM school_timetable_meta',
-      )) {
-        meta[row['key'] as String] = row['value'].toString();
-      }
-      final schemaVersion = int.tryParse(meta['schema_version'] ?? '') ?? 0;
-      if (schemaVersion != 7 ||
-          meta['artifact_type'] != 'school_timetable_sqlite_gzip' ||
-          meta['term_key'] != termKey ||
-          meta['version'] != version.toString()) {
-        throw const FormatException('全校课表 SQLite 快照元信息不匹配');
-      }
-      final termRows = db.select(
-        '''
-        SELECT term_key, school_year, term, first_week_monday, source_version,
-               row_count, imported_at, updated_at
-        FROM school_timetable_term_rows
-        WHERE term_key = ?
+  Future<void> _writeMeta(String key, String value) async {
+    await _db.customStatement(
+      'INSERT OR REPLACE INTO school_timetable_meta (key, value) VALUES (?, ?)',
+      [key, value],
+    );
+  }
+
+  Future<void> _upsertEntity(SchoolTimetableChange change) async {
+    final p = change.payload;
+    switch (change.entityType) {
+      case 'term':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_term_rows
+          (term_key, school_year, term, first_week_monday, source_version, row_count, imported_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''',
-        [termKey],
-      );
-      if (termRows.length != 1 || termRows.first['row_count'] != rowCount) {
-        throw const FormatException('全校课表 SQLite 快照课表统计不匹配');
-      }
-      for (final table in const [
-        'school_timetable_courses',
-        'school_timetable_course_terms',
-        'school_timetable_instructors',
-        'school_timetable_offerings',
-        'school_timetable_audiences',
-        'school_timetable_source_rows',
-        'school_timetable_meeting_rules',
-        'school_timetable_meeting_weeks',
-        'school_timetable_search_fts',
-      ]) {
-        db.select('SELECT 1 FROM $table LIMIT 1');
-      }
-      final term = termRows.first;
-      return _ArtifactEntry(
-        termKey: termKey,
-        path: file.path,
-        version: version,
-        checksum: '',
-        schemaVersion: schemaVersion,
-        schoolYear: term['school_year']?.toString() ?? '',
-        term: term['term']?.toString() ?? '',
-        firstWeekMonday: term['first_week_monday']?.toString() ?? '',
-        rowCount: rowCount,
-        updatedAt: _dateTimeFromMillis(term['updated_at']),
-      );
-    } finally {
-      db.dispose();
+          [
+            change.entityId,
+            _stringPayload(p, 'school_year'),
+            _stringPayload(p, 'term'),
+            _stringPayload(p, 'first_week_monday'),
+            change.version.toString(),
+            _intPayload(p, 'row_count'),
+            DateTime.now().millisecondsSinceEpoch,
+            DateTime.now().millisecondsSinceEpoch,
+          ],
+        );
+      case 'course':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_courses
+          (id, catalog_key, course_no, course_name, credits, search_text)
+          VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'catalog_key'),
+            _stringPayload(p, 'course_no'),
+            _stringPayload(p, 'course_name'),
+            _stringPayload(p, 'credits'),
+            _stringPayload(p, 'search_text'),
+          ],
+        );
+      case 'term_course':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_course_terms
+          (id, term_key, course_id, open_college, course_nature, course_category, open_type,
+           teaching_class_count, teacher_summary, weekday_summary, search_text)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'term_key'),
+            _stringPayload(p, 'catalog_id'),
+            _stringPayload(p, 'open_college'),
+            _stringPayload(p, 'course_nature'),
+            _stringPayload(p, 'course_category'),
+            _stringPayload(p, 'open_type'),
+            _intPayload(p, 'teaching_class_count'),
+            _stringPayload(p, 'teacher_summary'),
+            _stringPayload(p, 'weekday_summary'),
+            _stringPayload(p, 'search_text'),
+          ],
+        );
+      case 'instructor_course':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_instructors
+          (id, course_id, instructor_name, instructor_name_key, offering_count,
+           latest_term_key, latest_open_college, latest_teaching_title, search_text)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'catalog_id'),
+            _stringPayload(p, 'instructor_name'),
+            _stringPayload(p, 'instructor_name_key'),
+            _intPayload(p, 'offering_count'),
+            _stringPayload(p, 'latest_term_key'),
+            _stringPayload(p, 'latest_open_college'),
+            _stringPayload(p, 'latest_teaching_title'),
+            _stringPayload(p, 'search_text'),
+          ],
+        );
+      case 'offering':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_offerings
+          (id, term_key, term_course_id, course_id, instructor_id, source_key, teaching_class_name,
+           instructor, title, people_raw, capacity, selected_count, theory_hours, computer_hours,
+           experiment_hours, practice_hours, remark, other_teachers, textbook, publisher,
+           schedule_summary, weekday_summary, detail_fields_json, search_text)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'term_key'),
+            _stringPayload(p, 'term_course_id'),
+            _stringPayload(p, 'catalog_id'),
+            _stringPayload(p, 'instructor_course_id'),
+            _stringPayload(p, 'source_key'),
+            _stringPayload(p, 'teaching_class_name'),
+            _stringPayload(p, 'instructor'),
+            _stringPayload(p, 'title'),
+            _stringPayload(p, 'people_raw'),
+            _intPayload(p, 'capacity'),
+            _intPayload(p, 'selected_count'),
+            _stringPayload(p, 'theory_hours'),
+            _stringPayload(p, 'computer_hours'),
+            _stringPayload(p, 'experiment_hours'),
+            _stringPayload(p, 'practice_hours'),
+            _stringPayload(p, 'remark'),
+            _stringPayload(p, 'other_teachers'),
+            _stringPayload(p, 'textbook'),
+            _stringPayload(p, 'publisher'),
+            _stringPayload(p, 'schedule_summary'),
+            _stringPayload(p, 'weekday_summary'),
+            jsonEncode(p['fields'] is Map ? p['fields'] : const {}),
+            _stringPayload(p, 'search_text'),
+          ],
+        );
+      case 'audience':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_audiences
+          (id, term_key, offering_id, grade, major, plan_college, course_nature, course_nature_code,
+           course_category, course_category_code, open_type, open_type_code, condition_code)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'term_key'),
+            _stringPayload(p, 'offering_id'),
+            _stringPayload(p, 'grade'),
+            _stringPayload(p, 'major'),
+            _stringPayload(p, 'plan_college'),
+            _stringPayload(p, 'course_nature'),
+            _stringPayload(p, 'course_nature_code'),
+            _stringPayload(p, 'course_category'),
+            _stringPayload(p, 'course_category_code'),
+            _stringPayload(p, 'open_type'),
+            _stringPayload(p, 'open_type_code'),
+            _stringPayload(p, 'condition_code'),
+          ],
+        );
+      case 'source_row':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_source_rows
+          (id, term_key, term_course_id, offering_id, source_key, package_index, source_status, raw_fields_json)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'term_key'),
+            _stringPayload(p, 'term_course_id'),
+            _stringPayload(p, 'offering_id'),
+            _stringPayload(p, 'source_key'),
+            _intPayload(p, 'package_index'),
+            _stringPayload(p, 'status'),
+            jsonEncode(p['fields'] is Map ? p['fields'] : const {}),
+          ],
+        );
+      case 'meeting_rule':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_meeting_rules
+          (id, offering_id, term_key, weekday, day_field, segment_index, weekday_label, raw_day_text,
+           raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'offering_id'),
+            _stringPayload(p, 'term_key'),
+            _intPayload(p, 'weekday'),
+            _stringPayload(p, 'day_field'),
+            _intPayload(p, 'segment_index'),
+            _stringPayload(p, 'weekday_label'),
+            _stringPayload(p, 'raw_day_text'),
+            _stringPayload(p, 'raw_segment_text'),
+            _stringPayload(p, 'week_text'),
+            _stringPayload(p, 'section_text'),
+            _intPayload(p, 'section_start'),
+            _intPayload(p, 'section_end'),
+            _stringPayload(p, 'location_text'),
+            _stringPayload(p, 'parse_status'),
+          ],
+        );
+      case 'meeting_week':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_meeting_weeks
+          (meeting_rule_id, week_index)
+          VALUES (?, ?)
+        ''',
+          [_stringPayload(p, 'meeting_rule_id'), _intPayload(p, 'week_index')],
+        );
     }
+  }
+
+  Future<void> _deleteEntity(String entityType, String entityId) async {
+    switch (entityType) {
+      case 'term':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_term_rows WHERE term_key = ?',
+          [entityId],
+        );
+      case 'course':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_courses WHERE id = ?',
+          [entityId],
+        );
+      case 'term_course':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_course_terms WHERE id = ?',
+          [entityId],
+        );
+      case 'instructor_course':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_instructors WHERE id = ?',
+          [entityId],
+        );
+      case 'offering':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_offerings WHERE id = ?',
+          [entityId],
+        );
+      case 'audience':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_audiences WHERE id = ?',
+          [entityId],
+        );
+      case 'source_row':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_source_rows WHERE id = ?',
+          [entityId],
+        );
+      case 'meeting_rule':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_meeting_rules WHERE id = ?',
+          [entityId],
+        );
+        await _db.customStatement(
+          'DELETE FROM school_timetable_meeting_weeks WHERE meeting_rule_id = ?',
+          [entityId],
+        );
+      case 'meeting_week':
+        final separator = entityId.lastIndexOf(':');
+        if (separator > 0) {
+          await _db.customStatement(
+            'DELETE FROM school_timetable_meeting_weeks WHERE meeting_rule_id = ? AND week_index = ?',
+            [
+              entityId.substring(0, separator),
+              int.tryParse(entityId.substring(separator + 1)) ?? 0,
+            ],
+          );
+        }
+    }
+  }
+
+  Future<void> _rebuildSearchIndex() async {
+    await _db.customStatement('DELETE FROM school_timetable_search_fts');
+    await _db.customStatement('''
+      INSERT INTO school_timetable_search_fts
+      (term_course_id, term_key, course_name, course_no, open_college, course_nature,
+       course_category, teacher_summary, weekday_summary, search_text)
+      SELECT c.id, c.term_key, cc.course_name, cc.course_no, c.open_college,
+             c.course_nature, c.course_category, c.teacher_summary,
+             c.weekday_summary, c.search_text
+      FROM school_timetable_course_terms c
+      JOIN school_timetable_courses cc ON cc.id = c.course_id
+    ''');
+  }
+
+  String _stringPayload(Map<String, dynamic> payload, String key) {
+    return payload[key]?.toString() ?? '';
+  }
+
+  int _intPayload(Map<String, dynamic> payload, String key) {
+    final value = payload[key];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   String _readString(QueryRow row, String column) {
@@ -933,87 +1066,6 @@ class DriftAllSchoolTimetableRepository
       value,
     ).replaceAll('教学楼', '').replaceAll('教室', '').replaceAll('武汉大学', '');
   }
-
-  String _safeName(String value) {
-    final sanitized = value
-        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_$'), '');
-    return sanitized.isEmpty ? 'unknown' : sanitized;
-  }
-}
-
-class _ArtifactEntry {
-  const _ArtifactEntry({
-    required this.termKey,
-    required this.path,
-    required this.version,
-    required this.checksum,
-    required this.schemaVersion,
-    required this.schoolYear,
-    required this.term,
-    required this.firstWeekMonday,
-    required this.rowCount,
-    required this.updatedAt,
-  });
-
-  final String termKey;
-  final String path;
-  final int version;
-  final String checksum;
-  final int schemaVersion;
-  final String schoolYear;
-  final String term;
-  final String firstWeekMonday;
-  final int rowCount;
-  final DateTime updatedAt;
-
-  _ArtifactEntry copyWith({String? path, String? checksum}) {
-    return _ArtifactEntry(
-      termKey: termKey,
-      path: path ?? this.path,
-      version: version,
-      checksum: checksum ?? this.checksum,
-      schemaVersion: schemaVersion,
-      schoolYear: schoolYear,
-      term: term,
-      firstWeekMonday: firstWeekMonday,
-      rowCount: rowCount,
-      updatedAt: updatedAt,
-    );
-  }
-
-  factory _ArtifactEntry.fromJson(Map<String, dynamic> json) {
-    return _ArtifactEntry(
-      termKey: json['term_key'] as String? ?? '',
-      path: json['path'] as String? ?? '',
-      version: (json['version'] as num?)?.toInt() ?? 0,
-      checksum: json['checksum'] as String? ?? '',
-      schemaVersion: (json['schema_version'] as num?)?.toInt() ?? 0,
-      schoolYear: json['school_year'] as String? ?? '',
-      term: json['term'] as String? ?? '',
-      firstWeekMonday: json['first_week_monday'] as String? ?? '',
-      rowCount: (json['row_count'] as num?)?.toInt() ?? 0,
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(
-        (json['updated_at'] as num?)?.toInt() ?? 0,
-      ),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'term_key': termKey,
-      'path': path,
-      'version': version,
-      'checksum': checksum,
-      'schema_version': schemaVersion,
-      'school_year': schoolYear,
-      'term': term,
-      'first_week_monday': firstWeekMonday,
-      'row_count': rowCount,
-      'updated_at': updatedAt.millisecondsSinceEpoch,
-    };
-  }
 }
 
 class _ArtifactSchema {
@@ -1056,16 +1108,6 @@ class _ArtifactSchema {
     offeringInstructorIdColumn: 'instructor_id',
     detailFieldsSelect: '\'{}\' AS detail_fields_json,',
   );
-}
-
-class _SchoolTimetableArtifactDatabase extends GeneratedDatabase {
-  _SchoolTimetableArtifactDatabase(super.executor);
-
-  @override
-  Iterable<TableInfo<Table, Object?>> get allTables => const [];
-
-  @override
-  int get schemaVersion => 1;
 }
 
 class _SectionRange {

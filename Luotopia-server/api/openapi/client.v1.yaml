@@ -41,28 +41,6 @@ paths:
             application/javascript:
               schema:
                 type: string
-  /school-timetable/terms/{termKey}/releases/{version}/snapshot:
-    get:
-      summary: Download a school timetable release snapshot
-      parameters:
-        - name: termKey
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: gzip-compressed NDJSON snapshot.
-          content:
-            application/gzip:
-              schema:
-                type: string
-                format: binary
 components:
   schemas:
     ApiLink:
@@ -88,10 +66,24 @@ components:
           properties:
             changed:
               type: boolean
+            latest_version:
+              type: integer
+              format: int64
+            checksum:
+              type: string
+            schema_version:
+              type: integer
             terms:
               type: array
               items:
-                $ref: "#/components/schemas/SchoolTimetableTerm"
+                type: string
+            changes:
+              type: array
+              items:
+                $ref: "#/components/schemas/SchoolTimetableChange"
+            published_at:
+              type: string
+              format: date-time
     ScriptVersion:
       type: object
       required:
@@ -109,31 +101,29 @@ components:
           properties:
             content:
               $ref: "#/components/schemas/ApiLink"
-    SchoolTimetableTerm:
+    SchoolTimetableChange:
       type: object
       required:
-        - term_key
         - version
-        - checksum
-        - links
+        - sequence
+        - operation
+        - entity_type
+        - entity_id
       properties:
-        term_key:
-          type: string
-        school_year:
-          type: string
-        term:
-          type: string
         version:
           type: integer
-        checksum:
-          type: string
-        row_count:
+          format: int64
+        sequence:
           type: integer
-        published_at:
+        operation:
           type: string
-          format: date-time
-        links:
+          enum: [upsert, delete]
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        term_key:
+          type: string
+        payload:
           type: object
-          properties:
-            snapshot:
-              $ref: "#/components/schemas/ApiLink"
+          additionalProperties: true

@@ -9,21 +9,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/contract"
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
-	"github.com/openwhu/luotopia/server/internal/platform/storage"
 )
 
 type Repository interface {
-	Publish(ctx context.Context, pkg domain.Package, release domain.Release, records Records) error
-	NextVersion(ctx context.Context, termKey string) (int, error)
+	CurrentDataset(ctx context.Context) (domain.DatasetState, error)
+	ListEntitiesByTerm(ctx context.Context, termKey string) ([]domain.EntityRecord, error)
+	ApplyImport(ctx context.Context, pkg domain.Package, preview domain.ImportPreview) error
+	ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error)
 	ListActiveTerms(ctx context.Context) ([]domain.Term, error)
 	ListReleases(ctx context.Context, termKey string) ([]domain.Release, error)
 	ActivateRelease(ctx context.Context, termKey string, version int) error
@@ -31,22 +30,11 @@ type Repository interface {
 }
 
 type Service struct {
-	repo          Repository
-	snapshotDir   string
-	objectStore   storage.Store
-	publicBaseURL string
+	repo Repository
 }
 
-func NewService(repo Repository, snapshotDir string, objectStore storage.Store, publicBaseURL string) *Service {
-	if strings.TrimSpace(snapshotDir) == "" {
-		snapshotDir = "school_timetable_snapshots"
-	}
-	return &Service{
-		repo:          repo,
-		snapshotDir:   snapshotDir,
-		objectStore:   objectStore,
-		publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
-	}
+func NewService(repo Repository) *Service {
+	return &Service{repo: repo}
 }
 
 func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
@@ -61,10 +49,16 @@ func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain
 	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
 		return domain.ImportResult{}, err
 	}
+	preview, err := s.previewImport(ctx, pkg, PackageChecksum(data), 100)
+	if err != nil {
+		return domain.ImportResult{}, err
+	}
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
 		Checksum: PackageChecksum(data),
 		RowCount: len(pkg.Rows),
+		Version:  preview.NextVersion,
+		Preview:  &preview,
 	}, nil
 }
 
@@ -80,89 +74,193 @@ func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domai
 	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
 		return domain.ImportResult{}, err
 	}
-	version, err := s.repo.NextVersion(ctx, pkg.Manifest.TermKey)
-	if err != nil {
-		return domain.ImportResult{}, err
-	}
 	rawChecksum := PackageChecksum(data)
-	records := BuildRecords(pkg, version)
-	artifact, err := BuildSQLiteArtifact(ctx, pkg, records, version, s.snapshotDir)
+	preview, err := s.previewImport(ctx, pkg, rawChecksum, 0)
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
-	if s.objectStore == nil {
-		return domain.ImportResult{}, fmt.Errorf("school timetable object store is not configured")
-	}
-	rawKey := contract.RawPackageKey(pkg.Manifest.TermKey, version)
-	if err := s.objectStore.Put(ctx, storage.Object{
-		Key:         rawKey,
-		ContentType: "application/gzip",
-		Size:        int64(len(data)),
-		Body:        io.NopCloser(bytes.NewReader(data)),
-	}); err != nil {
-		return domain.ImportResult{}, err
-	}
-	artifactFile, err := os.Open(artifact.Path)
-	if err != nil {
-		return domain.ImportResult{}, err
-	}
-	if err := s.objectStore.Put(ctx, storage.Object{
-		Key:         artifact.Key,
-		ContentType: SQLiteArtifactContent,
-		Size:        artifact.Size,
-		Body:        artifactFile,
-	}); err != nil {
-		return domain.ImportResult{}, err
-	}
-	now := time.Now().UTC()
-	release := domain.Release{
-		TermKey: pkg.Manifest.TermKey, Version: version, Checksum: artifact.Checksum,
-		FileKey: artifact.Key, ArtifactType: artifact.ArtifactType, SchemaVersion: artifact.SchemaVersion,
-		ArtifactSize: artifact.Size, RawFileKey: rawKey, RawChecksum: rawChecksum, RawSize: int64(len(data)),
-		RowCount: len(pkg.Rows), Active: true, PublishedAt: now,
-	}
-	if err := s.repo.Publish(ctx, pkg, release, records); err != nil {
+	if err := s.repo.ApplyImport(ctx, pkg, preview); err != nil {
 		return domain.ImportResult{}, err
 	}
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
 		Checksum: rawChecksum,
 		RowCount: len(pkg.Rows),
-		Version:  version,
+		Version:  preview.NextVersion,
+		Preview:  &preview,
 	}, nil
 }
 
+func (s *Service) CurrentDataset(ctx context.Context) (domain.DatasetState, error) {
+	return s.repo.CurrentDataset(ctx)
+}
+
+func (s *Service) ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error) {
+	return s.repo.ChangesAfter(ctx, version, limit)
+}
+
 func (s *Service) ListActiveTerms(ctx context.Context) ([]domain.Term, error) {
-	terms, err := s.repo.ListActiveTerms(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for i := range terms {
-		terms[i].ArtifactURL = s.objectURL(terms[i].FileKey)
-	}
-	return terms, nil
+	return s.repo.ListActiveTerms(ctx)
 }
 
 func (s *Service) ListReleases(ctx context.Context, termKey string) ([]domain.Release, error) {
-	releases, err := s.repo.ListReleases(ctx, termKey)
-	if err != nil {
-		return nil, err
-	}
-	for i := range releases {
-		releases[i].ArtifactURL = s.objectURL(releases[i].FileKey)
-	}
-	return releases, nil
+	return s.repo.ListReleases(ctx, termKey)
 }
 
 func (s *Service) ActivateRelease(ctx context.Context, termKey string, version int) error {
 	return s.repo.ActivateRelease(ctx, termKey, version)
 }
 
-func (s *Service) objectURL(key string) string {
-	if key == "" || s.publicBaseURL == "" {
-		return ""
+func (s *Service) previewImport(ctx context.Context, pkg domain.Package, packageChecksum string, limit int) (domain.ImportPreview, error) {
+	state, err := s.repo.CurrentDataset(ctx)
+	if err != nil {
+		return domain.ImportPreview{}, err
 	}
-	return s.publicBaseURL + "/" + strings.TrimLeft(key, "/")
+	existing, err := s.repo.ListEntitiesByTerm(ctx, pkg.Manifest.TermKey)
+	if err != nil {
+		return domain.ImportPreview{}, err
+	}
+	nextVersion := state.Version + 1
+	records := BuildRecords(pkg, int(nextVersion))
+	incoming, counts, err := flattenRecords(pkg, records)
+	if err != nil {
+		return domain.ImportPreview{}, err
+	}
+	previous := make(map[string]domain.EntityRecord, len(existing))
+	for _, entity := range existing {
+		previous[entityKey(entity.EntityType, entity.EntityID)] = entity
+	}
+	changes := make([]domain.EntityChange, 0)
+	keys := make([]string, 0, len(incoming))
+	for key := range incoming {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		entity := incoming[key]
+		old, ok := previous[key]
+		if ok && old.PayloadChecksum == entity.PayloadChecksum {
+			delete(previous, key)
+			continue
+		}
+		changes = append(changes, domain.EntityChange{
+			Version: nextVersion, Operation: "upsert", EntityType: entity.EntityType,
+			EntityID: entity.EntityID, TermKey: entity.TermKey, Payload: entity.Payload,
+		})
+		delete(previous, key)
+	}
+	deleteKeys := make([]string, 0, len(previous))
+	for key := range previous {
+		deleteKeys = append(deleteKeys, key)
+	}
+	sort.Strings(deleteKeys)
+	for _, key := range deleteKeys {
+		entity := previous[key]
+		if isSharedSchoolTimetableEntity(entity.EntityType) {
+			continue
+		}
+		changes = append(changes, domain.EntityChange{
+			Version: nextVersion, Operation: "delete", EntityType: entity.EntityType,
+			EntityID: entity.EntityID, TermKey: entity.TermKey,
+		})
+	}
+	upserts := 0
+	deletes := 0
+	for i := range changes {
+		changes[i].Sequence = i + 1
+		if changes[i].Operation == "delete" {
+			deletes++
+		} else {
+			upserts++
+		}
+	}
+	previewChanges := changes
+	if limit > 0 && len(previewChanges) > limit {
+		previewChanges = previewChanges[:limit]
+	}
+	return domain.ImportPreview{
+		BaseVersion: state.Version, NextVersion: nextVersion, TermKey: pkg.Manifest.TermKey,
+		Checksum: packageChecksum, Upserts: upserts, Deletes: deletes,
+		EntityCounts: counts, Changes: previewChanges, AllChanges: changes,
+	}, nil
+}
+
+func flattenRecords(pkg domain.Package, records Records) (map[string]domain.EntityRecord, map[string]int, error) {
+	entities := make(map[string]domain.EntityRecord)
+	counts := make(map[string]int)
+	add := func(entityType, entityID, termKey string, payload any) error {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(data)
+		record := domain.EntityRecord{
+			EntityType: entityType, EntityID: entityID, TermKey: termKey,
+			Payload: data, PayloadChecksum: "sha256:" + hex.EncodeToString(sum[:]),
+		}
+		entities[entityKey(entityType, entityID)] = record
+		counts[entityType]++
+		return nil
+	}
+	termPayload := map[string]any{
+		"term_key": pkg.Manifest.TermKey, "school_year": pkg.Manifest.SchoolYear,
+		"term": pkg.Manifest.Term, "first_week_monday": pkg.Manifest.FirstWeekMonday,
+		"row_count": len(pkg.Rows), "source": pkg.Manifest.Source,
+		"source_checksum": pkg.Manifest.SourceChecksum,
+	}
+	if err := add("term", pkg.Manifest.TermKey, pkg.Manifest.TermKey, termPayload); err != nil {
+		return nil, nil, err
+	}
+	for _, item := range records.Catalogs {
+		if err := add("course", item.ID, "", item); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, item := range records.TermCourses {
+		if err := add("term_course", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, item := range records.InstructorCourses {
+		if err := add("instructor_course", item.ID, "", item); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, item := range records.Offerings {
+		if err := add("offering", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, item := range records.Audiences {
+		if err := add("audience", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+	}
+	for _, item := range records.CourseInstances {
+		if err := add("meeting_rule", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+		for _, week := range item.WeekIndexes {
+			payload := map[string]any{"meeting_rule_id": item.ID, "week_index": week, "term_key": item.TermKey}
+			if err := add("meeting_week", item.ID+":"+strconv.Itoa(week), item.TermKey, payload); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	for _, item := range records.SourceRows {
+		if err := add("source_row", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+	}
+	return entities, counts, nil
+}
+
+func entityKey(entityType, entityID string) string {
+	return entityType + "\x1f" + entityID
+}
+
+func isSharedSchoolTimetableEntity(entityType string) bool {
+	return entityType == "course" || entityType == "instructor_course"
 }
 
 type Records struct {

@@ -1,9 +1,7 @@
 package transport
 
 import (
-	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
@@ -86,29 +84,11 @@ func (h Handler) publishImport(c *gin.Context) {
 		writeError(c, http.StatusBadRequest, "import_failed", err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{
-		"term_key":  result.Manifest.TermKey,
-		"version":   result.Version,
-		"row_count": result.RowCount,
-		"checksum":  result.Checksum,
-	})
+	c.JSON(http.StatusCreated, result)
 }
 
 func (h Handler) activateRelease(c *gin.Context) {
-	version, err := strconv.Atoi(c.Param("version"))
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "版本号无效")
-		return
-	}
-	if err := h.service.ActivateRelease(c.Request.Context(), c.Param("termKey"), version); err != nil {
-		if errors.Is(err, app.ErrNotFound) {
-			writeError(c, http.StatusNotFound, "not_found", "发布版本不存在")
-			return
-		}
-		writeError(c, http.StatusInternalServerError, "internal_error", "切换发布版本失败")
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"activated": true})
+	writeError(c, http.StatusBadRequest, "unsupported_operation", "全校课表已改为全局权威版本，不支持按学期激活旧版本")
 }
 
 func writeError(c *gin.Context, status int, code string, message string) {

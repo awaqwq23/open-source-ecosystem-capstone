@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart'
+    as timetable;
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
 import 'package:luotopia/features/hot_update/data/hot_update_cache.dart';
 import 'package:luotopia/features/unified_pull/data/pull_client.dart';
@@ -8,7 +9,6 @@ import 'package:luotopia/features/unified_pull/data/pull_request.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/features/unified_pull/data/pull_state_store.dart';
 import 'package:luotopia/shared/data/sync/sync_cursor_store.dart';
-import 'package:path_provider/path_provider.dart';
 
 class UnifiedPullService {
   UnifiedPullService({
@@ -105,6 +105,8 @@ class UnifiedPullService {
     required List<String> scopes,
   }) async {
     try {
+      final schoolTimetableVersion = await _allSchoolTimetableRepository
+          .readDatasetVersion();
       final response = await _pullClient.pullPublic(
         PullRequest(
           trigger: trigger,
@@ -114,11 +116,11 @@ class UnifiedPullService {
                 ? null
                 : _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
-            schoolTimetableTerms: _stateStore.readSchoolTimetableTerms(),
+            schoolTimetableVersion: schoolTimetableVersion,
           ),
         ),
       );
-      await _cacheChangedSchoolTimetableTerms(response);
+      await _applySchoolTimetableChanges(response);
       await _stateStore.apply(response);
       return PullResult(response: response);
     } catch (e) {
@@ -135,6 +137,8 @@ class UnifiedPullService {
     List<String> scopes = const [],
   }) async {
     try {
+      final schoolTimetableVersion = await _allSchoolTimetableRepository
+          .readDatasetVersion();
       final response = await _pullClient.pull(
         PullRequest(
           trigger: trigger,
@@ -143,13 +147,13 @@ class UnifiedPullService {
             weatherCachedAt: _stateStore.readWeatherCachedAt(),
             notificationLatestId: _stateStore.readNotificationLatestId(),
             hotUpdateScripts: _hotUpdateCache.readClientState(),
-            schoolTimetableTerms: _stateStore.readSchoolTimetableTerms(),
+            schoolTimetableVersion: schoolTimetableVersion,
             syncCursor: _syncCursorStore.read(),
           ),
         ),
       );
       await _cacheChangedScripts(response);
-      await _cacheChangedSchoolTimetableTerms(response);
+      await _applySchoolTimetableChanges(response);
       await _stateStore.apply(response);
       return PullResult(response: response);
     } catch (e) {
@@ -157,59 +161,27 @@ class UnifiedPullService {
     }
   }
 
-  Future<void> _cacheChangedSchoolTimetableTerms(PullResponse response) async {
-    final activeTerms =
-        response.schoolTimetable?.activeTerms.toSet() ?? const <String>{};
-    final terms = response.schoolTimetable?.terms ?? const [];
-    for (final term in terms) {
-      final artifactHref = term.links['artifact']?.href ?? '';
-      if (artifactHref.isEmpty || term.checksum.isEmpty) {
-        continue;
-      }
-      if (term.artifactType != 'school_timetable_sqlite_gzip' ||
-          term.schemaVersion != 7) {
-        throw StateError('全校课表 ${term.termKey} 快照格式不受支持');
-      }
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File(
-        '${tempDir.path}${Platform.pathSeparator}school-timetable-${_safeName(term.termKey)}-${term.version}.sqlite.gz',
-      );
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
-      final download = await _pullClient.downloadSchoolTimetableArtifact(
-        artifactHref,
-        tempFile,
-      );
-      if (term.artifactSize > 0 && download.bytesWritten != term.artifactSize) {
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
-        throw StateError('全校课表 ${term.termKey} 快照大小不匹配');
-      }
-      if (download.checksum != term.checksum) {
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
-        throw StateError('全校课表 ${term.termKey} 快照校验失败');
-      }
-      try {
-        await _allSchoolTimetableRepository.replaceTermFromArtifactFile(
-          gzipFile: tempFile,
-          termKey: term.termKey,
-          version: term.version,
-          checksum: term.checksum,
-          rowCount: term.rowCount,
-        );
-      } finally {
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
-      }
+  Future<void> _applySchoolTimetableChanges(PullResponse response) async {
+    final block = response.schoolTimetable;
+    if (block == null || !block.changed || block.latestVersion <= 0) {
+      return;
     }
-    if (activeTerms.isNotEmpty) {
-      await _allSchoolTimetableRepository.retainActiveTerms(activeTerms);
-    }
+    await _allSchoolTimetableRepository.applyChanges(
+      version: block.latestVersion,
+      checksum: block.checksum,
+      changes: [
+        for (final change in block.changes)
+          timetable.SchoolTimetableChange(
+            version: change.version,
+            sequence: change.sequence,
+            operation: change.operation,
+            entityType: change.entityType,
+            entityId: change.entityId,
+            termKey: change.termKey,
+            payload: change.payload,
+          ),
+      ],
+    );
   }
 
   Future<void> _cacheChangedScripts(PullResponse response) async {
@@ -237,14 +209,6 @@ class UnifiedPullService {
   void resetThrottle() {
     _lastColdStartPull = null;
     _lastForegroundPull = null;
-  }
-
-  String _safeName(String value) {
-    final sanitized = value
-        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_$'), '');
-    return sanitized.isEmpty ? 'unknown' : sanitized;
   }
 }
 

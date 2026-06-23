@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Manifest struct {
 	Type            string   `json:"type"`
@@ -219,8 +222,48 @@ type Snapshot struct {
 }
 
 type ImportResult struct {
-	Manifest Manifest `json:"manifest"`
-	Checksum string   `json:"checksum"`
-	RowCount int      `json:"row_count"`
-	Version  int      `json:"version,omitempty"`
+	Manifest Manifest       `json:"manifest"`
+	Checksum string         `json:"checksum"`
+	RowCount int            `json:"row_count"`
+	Version  int64          `json:"version,omitempty"`
+	Preview  *ImportPreview `json:"preview,omitempty"`
+}
+
+type DatasetState struct {
+	Version       int64     `json:"version"`
+	Checksum      string    `json:"checksum"`
+	SchemaVersion int       `json:"schema_version"`
+	TermKeys      []string  `json:"term_keys"`
+	PublishedAt   time.Time `json:"published_at"`
+}
+
+type EntityRecord struct {
+	EntityType      string          `json:"entity_type"`
+	EntityID        string          `json:"entity_id"`
+	TermKey         string          `json:"term_key"`
+	Payload         json.RawMessage `json:"payload"`
+	PayloadChecksum string          `json:"payload_checksum"`
+	UpdatedVersion  int64           `json:"updated_version"`
+}
+
+type EntityChange struct {
+	Version    int64           `json:"version"`
+	Sequence   int             `json:"sequence"`
+	Operation  string          `json:"operation"`
+	EntityType string          `json:"entity_type"`
+	EntityID   string          `json:"entity_id"`
+	TermKey    string          `json:"term_key"`
+	Payload    json.RawMessage `json:"payload,omitempty"`
+}
+
+type ImportPreview struct {
+	BaseVersion  int64          `json:"base_version"`
+	NextVersion  int64          `json:"next_version"`
+	TermKey      string         `json:"term_key"`
+	Checksum     string         `json:"checksum"`
+	Upserts      int            `json:"upserts"`
+	Deletes      int            `json:"deletes"`
+	EntityCounts map[string]int `json:"entity_counts"`
+	Changes      []EntityChange `json:"changes"`
+	AllChanges   []EntityChange `json:"-"`
 }

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 
 void main() {
-  // 用户要求添加，不允许删除。该测试保护 pull 响应的 links 契约，防止客户端再次依赖散装 download_url。
+  // 用户要求添加，不允许删除。该测试保护 pull 响应使用全校课表 dataset changeset，不再依赖 artifact 链接。
   test('解析统一拉取响应中的差量状态', () {
     final response = PullResponse.fromJson({
       'server_time': '2026-05-26T10:00:00Z',
@@ -33,27 +33,26 @@ void main() {
       },
       'school_timetable': {
         'changed': true,
-        'active_terms': ['2025-2026-1'],
-        'terms': [
+        'latest_version': 7,
+        'checksum': 'sha256:dataset',
+        'schema_version': 1,
+        'terms': ['2025-2026-1'],
+        'changes': [
           {
-            'term_key': '2025-2026-1',
-            'school_year': '2025-2026',
-            'term': '1',
             'version': 7,
-            'checksum': 'sha256:artifact',
-            'artifact_type': 'school_timetable_sqlite_gzip',
-            'schema_version': 6,
-            'artifact_size': 2048,
-            'row_count': 42,
-            'links': {
-              'artifact': {
-                'href':
-                    'https://cdn.example.com/school-timetable/2025-2026-1/v7.sqlite.gz',
-              },
+            'sequence': 1,
+            'operation': 'upsert',
+            'entity_type': 'term',
+            'entity_id': '2025-2026-1',
+            'term_key': '2025-2026-1',
+            'payload': {
+              'term_key': '2025-2026-1',
+              'school_year': '2025-2026',
+              'term': '1',
             },
-            'published_at': '2026-06-20T12:00:00Z',
           },
         ],
+        'published_at': '2026-06-20T12:00:00Z',
       },
       'sync': {'enabled': true, 'has_changes': true, 'latest_cursor': 12},
     });
@@ -65,12 +64,14 @@ void main() {
       response.hotUpdate?.scripts['jw_login']?.links['content']?.href,
       contains('jw_login'),
     );
-    final schoolTerm = response.schoolTimetable?.terms.single;
-    expect(response.schoolTimetable?.activeTerms, ['2025-2026-1']);
-    expect(schoolTerm?.artifactType, 'school_timetable_sqlite_gzip');
-    expect(schoolTerm?.schemaVersion, 6);
-    expect(schoolTerm?.artifactSize, 2048);
-    expect(schoolTerm?.links['artifact']?.href, contains('/v7.sqlite.gz'));
+    final schoolBlock = response.schoolTimetable;
+    final schoolChange = schoolBlock?.changes.single;
+    expect(schoolBlock?.latestVersion, 7);
+    expect(schoolBlock?.checksum, 'sha256:dataset');
+    expect(schoolBlock?.terms, ['2025-2026-1']);
+    expect(schoolChange?.operation, 'upsert');
+    expect(schoolChange?.entityType, 'term');
+    expect(schoolChange?.payload['school_year'], '2025-2026');
     expect(response.sync?.hasChanges, isTrue);
     expect(response.sync?.latestCursor, 12);
   });

@@ -39,7 +39,6 @@ import (
 	httpserver "github.com/openwhu/luotopia/server/internal/platform/http"
 	"github.com/openwhu/luotopia/server/internal/platform/logger"
 	"github.com/openwhu/luotopia/server/internal/platform/scheduler"
-	"github.com/openwhu/luotopia/server/internal/platform/storage"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -229,23 +228,8 @@ func newSchoolTimetableService(cfg config.Config, db *gorm.DB) *schoolapp.Servic
 	if db == nil {
 		return nil
 	}
-	var store storage.Store
-	if cfg.Storage.Endpoint != "" && cfg.Storage.Bucket != "" && cfg.Storage.PublicBaseURL != "" {
-		s3, err := storage.NewS3Store(storage.S3Config{
-			Endpoint:       cfg.Storage.Endpoint,
-			Bucket:         cfg.Storage.Bucket,
-			Region:         cfg.Storage.Region,
-			AccessKey:      cfg.Storage.AccessKey,
-			SecretKey:      cfg.Storage.SecretKey,
-			PublicBaseURL:  cfg.Storage.PublicBaseURL,
-			UseSSL:         cfg.Storage.UseSSL,
-			ForcePathStyle: cfg.Storage.ForcePathStyle,
-		})
-		if err == nil {
-			store = s3
-		}
-	}
-	return schoolapp.NewService(schoolinfra.NewGormRepository(db), cfg.SchoolTimetable.SnapshotDir, store, cfg.Storage.PublicBaseURL)
+	_ = cfg
+	return schoolapp.NewService(schoolinfra.NewGormRepository(db))
 }
 
 func registerWeatherRefresh(ctx context.Context, cfg config.Config, weatherSvc *weatherapp.Service, log *slog.Logger) {

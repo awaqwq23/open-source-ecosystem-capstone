@@ -337,7 +337,7 @@ function schoolTimetableFormData() {
 async function validateSchoolTimetable() {
   try {
     const result = await apiForm("/admin/api/v1/school-timetable/imports/validate", schoolTimetableFormData());
-    $("school-timetable-preview").textContent = JSON.stringify(result, null, 2);
+    renderSchoolTimetablePreview(result);
     showMessage("数据包预检通过");
   } catch (error) {
     showMessage(error.message, true);
@@ -348,12 +348,37 @@ async function publishSchoolTimetable(event) {
   event.preventDefault();
   try {
     const result = await apiForm("/admin/api/v1/school-timetable/imports/publish", schoolTimetableFormData());
-    $("school-timetable-preview").textContent = JSON.stringify(result, null, 2);
     showMessage("全校课表新版本已发布");
-    renderSchoolTimetable();
+    await renderSchoolTimetable();
+    renderSchoolTimetablePreview(result);
   } catch (error) {
     showMessage(error.message, true);
   }
+}
+
+function renderSchoolTimetablePreview(result) {
+  const target = $("school-timetable-preview");
+  const preview = result.preview || {};
+  const counts = preview.entity_counts || {};
+  const changes = preview.changes || [];
+  const lines = [
+    `学期：${result.manifest?.term_key || preview.term_key || ""}`,
+    `版本：${preview.base_version || 0} -> ${preview.next_version || result.version || 0}`,
+    `变更：upsert ${preview.upserts || 0} / delete ${preview.deletes || 0}`,
+    `行数：${result.row_count || 0}`,
+    `校验：${result.checksum || preview.checksum || ""}`,
+    "",
+    "实体计数：",
+    ...Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `  ${key}: ${value}`),
+    "",
+    `变更明细（最多显示 ${changes.length} 条）：`,
+    ...changes.map((change) => {
+      const operation = String(change.operation || "").padEnd(6, " ");
+      const type = String(change.entity_type || "").padEnd(18, " ");
+      return `  #${change.sequence || 0} ${operation} ${type} ${change.term_key || "-"} ${change.entity_id || ""}`;
+    }),
+  ];
+  target.textContent = lines.join("\n");
 }
 
 async function loadSchoolTimetableReleases(termKey) {
@@ -367,16 +392,13 @@ async function loadSchoolTimetableReleases(termKey) {
       item.row_count || 0,
       `<pre>${escapeHtml(item.checksum || "")}</pre>`,
       formatDate(item.published_at),
-      item.active ? "" : actions([button("激活", `activateSchoolTimetableRelease('${item.term_key}', ${Number(item.version || 0)})`)]),
+      "",
     ]),
   );
 }
 
 async function activateSchoolTimetableRelease(termKey, version) {
-  await api(`/admin/api/v1/school-timetable/terms/${encodeURIComponent(termKey)}/releases/${version}/activate`, {method: "POST"});
-  showMessage("全校课表版本已激活");
-  await renderSchoolTimetable();
-  await loadSchoolTimetableReleases(termKey);
+  showMessage("全校课表已改为全局权威版本，不支持按学期回滚激活", true);
 }
 
 async function renderScripts() {

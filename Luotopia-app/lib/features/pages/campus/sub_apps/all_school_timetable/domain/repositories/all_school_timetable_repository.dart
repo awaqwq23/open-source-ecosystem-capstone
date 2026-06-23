@@ -1,5 +1,4 @@
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
-import 'dart:io';
 
 abstract class AllSchoolTimetableRepository {
   Future<void> ensureLocalDataReady();
@@ -12,15 +11,13 @@ abstract class AllSchoolTimetableRepository {
     required List<Map<String, String>> rows,
   });
 
-  Future<void> replaceTermFromArtifactFile({
-    required File gzipFile,
-    required String termKey,
+  Future<int> readDatasetVersion();
+
+  Future<void> applyChanges({
     required int version,
     required String checksum,
-    required int rowCount,
+    required List<SchoolTimetableChange> changes,
   });
-
-  Future<void> retainActiveTerms(Set<String> termKeys);
 
   Future<List<SchoolTimetableTerm>> loadTerms();
 
@@ -49,4 +46,24 @@ abstract class AllSchoolTimetableRepository {
   });
 
   Future<CourseEntityLink> matchPersonalCourse(PersonalCourseMatchQuery query);
+}
+
+class SchoolTimetableChange {
+  const SchoolTimetableChange({
+    required this.version,
+    required this.sequence,
+    required this.operation,
+    required this.entityType,
+    required this.entityId,
+    required this.termKey,
+    required this.payload,
+  });
+
+  final int version;
+  final int sequence;
+  final String operation;
+  final String entityType;
+  final String entityId;
+  final String termKey;
+  final Map<String, dynamic> payload;
 }
