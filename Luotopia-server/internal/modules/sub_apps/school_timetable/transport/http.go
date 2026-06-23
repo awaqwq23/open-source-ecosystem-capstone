@@ -23,28 +23,17 @@ func (h Handler) RegisterClient(router gin.IRouter) {
 func (h Handler) RegisterAdmin(router gin.IRouter) {
 	group := router.Group(contract.ClientBase)
 	group.GET("/terms", h.listTerms)
-	group.GET("/terms/:termKey/releases", h.listReleases)
 	group.POST("/imports/validate", h.validateImport)
 	group.POST("/imports/publish", h.publishImport)
-	group.POST("/terms/:termKey/releases/:version/activate", h.activateRelease)
 }
 
 func (h Handler) listTerms(c *gin.Context) {
-	terms, err := h.service.ListActiveTerms(c.Request.Context())
+	terms, err := h.service.ListTerms(c.Request.Context())
 	if err != nil {
 		writeError(c, http.StatusInternalServerError, "internal_error", "获取全校课表失败")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"items": terms})
-}
-
-func (h Handler) listReleases(c *gin.Context) {
-	items, err := h.service.ListReleases(c.Request.Context(), c.Param("termKey"))
-	if err != nil {
-		writeError(c, http.StatusInternalServerError, "internal_error", "获取发布版本失败")
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"items": items})
 }
 
 func (h Handler) validateImport(c *gin.Context) {
@@ -85,10 +74,6 @@ func (h Handler) publishImport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, result)
-}
-
-func (h Handler) activateRelease(c *gin.Context) {
-	writeError(c, http.StatusBadRequest, "unsupported_operation", "全校课表已改为全局权威版本，不支持按学期激活旧版本")
 }
 
 func writeError(c *gin.Context, status int, code string, message string) {

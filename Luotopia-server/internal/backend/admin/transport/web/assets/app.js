@@ -302,22 +302,20 @@ async function renderSchoolTimetable() {
         <label>gzip NDJSON 数据包<input name="file" type="file" accept=".gz,.ndjson.gz" required /></label>
         <div class="actions">
           <button class="secondary" type="button" onclick="validateSchoolTimetable()">预检</button>
-          <button class="primary" type="submit">发布为新版本</button>
+          <button class="primary" type="submit">发布数据集增量</button>
         </div>
         <pre id="school-timetable-preview" class="muted">请选择由爬虫工具导出的 .ndjson.gz 数据包。</pre>
       </form>
     </section>
     <section class="table-panel">
-      ${table(["学期", "激活版本", "行数", "Checksum", "发布时间", "操作"], (terms.items || []).map((item) => [
+      ${table(["学期", "数据集版本", "行数", "来源", "发布时间"], (terms.items || []).map((item) => [
         `<strong>${escapeHtml(item.term_key)}</strong><pre>${escapeHtml(item.school_year)} 第 ${escapeHtml(item.term)} 学期</pre>`,
         item.version || 0,
         item.row_count || 0,
-        `<pre>${escapeHtml(item.checksum || "")}</pre>`,
+        `<pre>${escapeHtml(item.source || "")}\n${escapeHtml(item.source_checksum || "")}</pre>`,
         formatDate(item.published_at),
-        actions([button("查看版本", `loadSchoolTimetableReleases('${item.term_key}')`)]),
       ]))}
     </section>
-    <section id="school-timetable-releases" class="table-panel"></section>
   `;
   $("school-timetable-form").addEventListener("submit", publishSchoolTimetable);
 }
@@ -379,26 +377,6 @@ function renderSchoolTimetablePreview(result) {
     }),
   ];
   target.textContent = lines.join("\n");
-}
-
-async function loadSchoolTimetableReleases(termKey) {
-  const data = await api(`/admin/api/v1/school-timetable/terms/${encodeURIComponent(termKey)}/releases`);
-  $("school-timetable-releases").innerHTML = table(
-    ["学期", "版本", "状态", "行数", "Checksum", "发布时间", "操作"],
-    (data.items || []).map((item) => [
-      escapeHtml(item.term_key),
-      item.version || 0,
-      badge(item.active ? "enabled" : "disabled"),
-      item.row_count || 0,
-      `<pre>${escapeHtml(item.checksum || "")}</pre>`,
-      formatDate(item.published_at),
-      "",
-    ]),
-  );
-}
-
-async function activateSchoolTimetableRelease(termKey, version) {
-  showMessage("全校课表已改为全局权威版本，不支持按学期回滚激活", true);
 }
 
 async function renderScripts() {
@@ -585,8 +563,6 @@ Object.assign(window, {
   deleteNotification,
   refreshWeather,
   validateSchoolTimetable,
-  loadSchoolTimetableReleases,
-  activateSchoolTimetableRelease,
   toggleScript,
   removeAllowlist,
 });

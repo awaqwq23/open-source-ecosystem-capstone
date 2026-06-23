@@ -29,41 +29,15 @@ type Term struct {
 	SchoolYear      string    `json:"school_year"`
 	Term            string    `json:"term"`
 	FirstWeekMonday string    `json:"first_week_monday"`
-	Version         int       `json:"version"`
-	Checksum        string    `json:"checksum"`
-	FileKey         string    `json:"file_key"`
-	ArtifactType    string    `json:"artifact_type"`
-	SchemaVersion   int       `json:"schema_version"`
-	ArtifactSize    int64     `json:"artifact_size"`
-	RawFileKey      string    `json:"raw_file_key,omitempty"`
-	RawChecksum     string    `json:"raw_checksum,omitempty"`
-	RawSize         int64     `json:"raw_size,omitempty"`
-	ArtifactURL     string    `json:"artifact_url,omitempty"`
 	RowCount        int       `json:"row_count"`
+	Source          string    `json:"source,omitempty"`
+	SourceChecksum  string    `json:"source_checksum,omitempty"`
+	Version         int64     `json:"version"`
 	PublishedAt     time.Time `json:"published_at"`
-}
-
-type Release struct {
-	ID            string    `json:"id"`
-	TermKey       string    `json:"term_key"`
-	Version       int       `json:"version"`
-	Checksum      string    `json:"checksum"`
-	FileKey       string    `json:"file_key"`
-	ArtifactType  string    `json:"artifact_type"`
-	SchemaVersion int       `json:"schema_version"`
-	ArtifactSize  int64     `json:"artifact_size"`
-	RawFileKey    string    `json:"raw_file_key,omitempty"`
-	RawChecksum   string    `json:"raw_checksum,omitempty"`
-	RawSize       int64     `json:"raw_size,omitempty"`
-	ArtifactURL   string    `json:"artifact_url,omitempty"`
-	RowCount      int       `json:"row_count"`
-	Active        bool      `json:"active"`
-	PublishedAt   time.Time `json:"published_at"`
 }
 
 type CourseCatalog struct {
 	ID         string `json:"id"`
-	StableID   string `json:"stable_id"`
 	CatalogKey string `json:"catalog_key"`
 	CourseNo   string `json:"course_no"`
 	CourseName string `json:"course_name"`
@@ -73,8 +47,6 @@ type CourseCatalog struct {
 
 type TermCourse struct {
 	ID                 string `json:"id"`
-	StableID           string `json:"stable_id"`
-	ReleaseID          string `json:"release_id"`
 	TermKey            string `json:"term_key"`
 	CatalogID          string `json:"catalog_id"`
 	CourseNo           string `json:"course_no"`
@@ -92,8 +64,6 @@ type TermCourse struct {
 
 type InstructorCourse struct {
 	ID                  string `json:"id"`
-	StableID            string `json:"stable_id"`
-	ReleaseID           string `json:"release_id"`
 	CatalogID           string `json:"catalog_id"`
 	CourseNo            string `json:"course_no"`
 	CourseName          string `json:"course_name"`
@@ -109,8 +79,6 @@ type InstructorCourse struct {
 
 type CourseOffering struct {
 	ID                 string            `json:"id"`
-	StableID           string            `json:"stable_id"`
-	ReleaseID          string            `json:"release_id"`
 	TermKey            string            `json:"term_key"`
 	SchoolYear         string            `json:"school_year"`
 	Term               string            `json:"term"`
@@ -156,8 +124,6 @@ type CourseOffering struct {
 
 type CourseAudience struct {
 	ID                 string `json:"id"`
-	StableID           string `json:"stable_id"`
-	ReleaseID          string `json:"release_id"`
 	TermKey            string `json:"term_key"`
 	OfferingID         string `json:"offering_id"`
 	TermCourseID       string `json:"term_course_id"`
@@ -176,8 +142,6 @@ type CourseAudience struct {
 
 type CourseInstance struct {
 	ID             string `json:"id"`
-	StableID       string `json:"stable_id"`
-	ReleaseID      string `json:"release_id"`
 	OfferingID     string `json:"offering_id"`
 	TermKey        string `json:"term_key"`
 	TermCourseID   string `json:"term_course_id"`
@@ -199,8 +163,6 @@ type CourseInstance struct {
 
 type SourceRow struct {
 	ID           string            `json:"id"`
-	StableID     string            `json:"stable_id"`
-	ReleaseID    string            `json:"release_id"`
 	TermKey      string            `json:"term_key"`
 	TermCourseID string            `json:"term_course_id"`
 	OfferingID   string            `json:"offering_id"`
@@ -208,17 +170,6 @@ type SourceRow struct {
 	PackageIndex int               `json:"package_index"`
 	Status       string            `json:"status"`
 	Fields       map[string]string `json:"fields"`
-}
-
-type Snapshot struct {
-	Manifest          Manifest           `json:"manifest"`
-	Catalogs          []CourseCatalog    `json:"catalogs"`
-	TermCourses       []TermCourse       `json:"term_courses"`
-	InstructorCourses []InstructorCourse `json:"instructor_courses"`
-	Offerings         []CourseOffering   `json:"offerings"`
-	Audiences         []CourseAudience   `json:"audiences"`
-	CourseInstances   []CourseInstance   `json:"course_instances"`
-	SourceRows        []SourceRow        `json:"source_rows"`
 }
 
 type ImportResult struct {
