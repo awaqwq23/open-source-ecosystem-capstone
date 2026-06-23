@@ -32,6 +32,7 @@ class DriftAllSchoolTimetableRepository
   final SharedPreferences? _preferences;
   final Map<String, _SchoolTimetableArtifactDatabase> _openDbs = {};
   final Map<String, String> _openPaths = {};
+  final Map<String, int> _openSchemaVersions = {};
 
   @override
   Future<void> ensureLocalDataReady() async {
@@ -141,11 +142,13 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
+    final schema = _schemaForDb(db);
     final keyword = query.keyword.trim();
     final filterVariables = <Variable>[];
     final professionalClause = _professionalExistsClause(
       query,
       filterVariables,
+      schema,
     );
     final rows = keyword.isNotEmpty
         ? await db
@@ -155,15 +158,15 @@ class DriftAllSchoolTimetableRepository
                  cc.credits, c.course_nature, c.course_category, c.open_type,
                  c.teaching_class_count, c.teacher_summary, c.weekday_summary,
                  c.search_text
-          FROM course_search_fts
-          JOIN course_term_course_rows c
-            ON c.id = course_search_fts.term_course_id
-          JOIN course_catalog_rows cc
-            ON cc.id = c.catalog_id
-          WHERE course_search_fts.term_key = ?
-            AND course_search_fts MATCH ?
+          FROM ${schema.searchTable}
+          JOIN ${schema.termCourseTable} c
+            ON c.id = ${schema.searchTable}.term_course_id
+          JOIN ${schema.courseTable} cc
+            ON cc.id = c.${schema.courseIdColumn}
+          WHERE ${schema.searchTable}.term_key = ?
+            AND ${schema.searchTable} MATCH ?
             $professionalClause
-          ORDER BY bm25(course_search_fts), c.teaching_class_count DESC
+          ORDER BY bm25(${schema.searchTable}), c.teaching_class_count DESC
           LIMIT 80
           ''',
                 variables: [
@@ -180,9 +183,9 @@ class DriftAllSchoolTimetableRepository
                  cc.credits, c.course_nature, c.course_category, c.open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
-          FROM course_term_course_rows c
-          JOIN course_catalog_rows cc
-            ON cc.id = c.catalog_id
+          FROM ${schema.termCourseTable} c
+          JOIN ${schema.courseTable} cc
+            ON cc.id = c.${schema.courseIdColumn}
           WHERE c.term_key = ?
             $professionalClause
           ORDER BY teaching_class_count DESC
@@ -203,6 +206,7 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
+    final schema = _schemaForDb(db);
     final row = await db
         .customSelect(
           '''
@@ -210,9 +214,9 @@ class DriftAllSchoolTimetableRepository
                  cc.credits, c.course_nature, c.course_category, c.open_type,
                  teaching_class_count, teacher_summary, weekday_summary,
                  search_text
-          FROM course_term_course_rows c
-          JOIN course_catalog_rows cc
-            ON cc.id = c.catalog_id
+          FROM ${schema.termCourseTable} c
+          JOIN ${schema.courseTable} cc
+            ON cc.id = c.${schema.courseIdColumn}
           WHERE c.id = ?
           ''',
           variables: [Variable.withString(id)],
@@ -230,10 +234,11 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
+    final schema = _schemaForDb(db);
     final rows = await db
         .customSelect(
           '''
-          SELECT o.*, c.id AS term_course_stable_id,
+          SELECT o.*, ${schema.detailFieldsSelect} c.id AS term_course_stable_id,
                  cc.id AS catalog_stable_id,
                  ic.id AS instructor_course_stable_id,
                  cc.course_no, cc.course_name, cc.credits, c.open_college,
@@ -241,16 +246,16 @@ class DriftAllSchoolTimetableRepository
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college
-          FROM course_offering_rows o
-          JOIN course_term_course_rows c ON c.id = o.term_course_id
-          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
-          JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
+          FROM ${schema.offeringTable} o
+          JOIN ${schema.termCourseTable} c ON c.id = o.term_course_id
+          JOIN ${schema.courseTable} cc ON cc.id = c.${schema.courseIdColumn}
+          JOIN ${schema.instructorTable} ic ON ic.id = o.${schema.offeringInstructorIdColumn}
           LEFT JOIN (
             SELECT offering_id,
                    GROUP_CONCAT(DISTINCT grade) AS grade,
                    GROUP_CONCAT(DISTINCT major) AS major,
                    GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM course_audience_rows
+            FROM ${schema.audienceTable}
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
           WHERE c.id = ?
@@ -271,10 +276,11 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
+    final schema = _schemaForDb(db);
     final row = await db
         .customSelect(
           '''
-          SELECT o.*, c.id AS term_course_stable_id,
+          SELECT o.*, ${schema.detailFieldsSelect} c.id AS term_course_stable_id,
                  cc.id AS catalog_stable_id,
                  ic.id AS instructor_course_stable_id,
                  cc.course_no, cc.course_name, cc.credits, c.open_college,
@@ -282,16 +288,16 @@ class DriftAllSchoolTimetableRepository
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college
-          FROM course_offering_rows o
-          JOIN course_term_course_rows c ON c.id = o.term_course_id
-          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
-          JOIN course_instructor_course_rows ic ON ic.id = o.instructor_course_id
+          FROM ${schema.offeringTable} o
+          JOIN ${schema.termCourseTable} c ON c.id = o.term_course_id
+          JOIN ${schema.courseTable} cc ON cc.id = c.${schema.courseIdColumn}
+          JOIN ${schema.instructorTable} ic ON ic.id = o.${schema.offeringInstructorIdColumn}
           LEFT JOIN (
             SELECT offering_id,
                    GROUP_CONCAT(DISTINCT grade) AS grade,
                    GROUP_CONCAT(DISTINCT major) AS major,
                    GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM course_audience_rows
+            FROM ${schema.audienceTable}
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
           WHERE o.id = ?
@@ -311,12 +317,13 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
+    final schema = _schemaForDb(db);
     final rows = await db
         .customSelect(
           '''
           SELECT r.*, r.id AS stable_id, o.id AS offering_stable_id
-          FROM course_meeting_rule_rows r
-          JOIN course_offering_rows o ON o.id = r.offering_id
+          FROM ${schema.meetingRuleTable} r
+          JOIN ${schema.offeringTable} o ON o.id = r.offering_id
           WHERE o.id = ?
           ORDER BY weekday, segment_index
           ''',
@@ -339,10 +346,16 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const CourseEntityLink();
     }
+    final schema = _schemaForDb(db);
 
-    final termCourseId = await _matchTermCourse(db, query);
+    final termCourseId = await _matchTermCourse(db, query, schema);
     final weekIndex = await _weekIndexForDate(db, query);
-    final offering = await _matchOffering(db, query, weekIndex: weekIndex);
+    final offering = await _matchOffering(
+      db,
+      query,
+      weekIndex: weekIndex,
+      schema: schema,
+    );
     if (offering == null) {
       return CourseEntityLink(termCourseId: termCourseId);
     }
@@ -367,13 +380,14 @@ class DriftAllSchoolTimetableRepository
   Future<String> _matchTermCourse(
     _SchoolTimetableArtifactDatabase db,
     PersonalCourseMatchQuery query,
+    _ArtifactSchema schema,
   ) async {
     final rows = await db
         .customSelect(
           '''
           SELECT c.id AS id, cc.course_name
-          FROM course_term_course_rows c
-          JOIN course_catalog_rows cc ON cc.id = c.catalog_id
+          FROM ${schema.termCourseTable} c
+          JOIN ${schema.courseTable} cc ON cc.id = c.${schema.courseIdColumn}
           WHERE c.term_key = ? AND cc.course_no = ?
           ''',
           variables: [
@@ -397,6 +411,7 @@ class DriftAllSchoolTimetableRepository
     _SchoolTimetableArtifactDatabase db,
     PersonalCourseMatchQuery query, {
     required int? weekIndex,
+    required _ArtifactSchema schema,
   }) async {
     final sectionRange = _sectionRange(query.sectionText);
     final ruleClauses = <String>[];
@@ -408,7 +423,7 @@ class DriftAllSchoolTimetableRepository
     if (weekIndex != null) {
       ruleClauses.add('''
         EXISTS (
-          SELECT 1 FROM course_meeting_rule_week_rows iw
+          SELECT 1 FROM ${schema.meetingWeekTable} iw
           WHERE iw.meeting_rule_id = r.id AND iw.week_index = ?
         )
       ''');
@@ -422,20 +437,20 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withInt(sectionRange.start));
     }
     final rows = await db.customSelect('''
-          SELECT o.*, c.id AS term_course_stable_id,
+          SELECT o.*, ${schema.detailFieldsSelect} c.id AS term_course_stable_id,
                  ic.id AS instructor_course_stable_id,
                  cc.course_no, cc.course_name, cc.credits, c.open_college,
                  c.course_nature, c.course_category, c.open_type,
                  r.id AS matched_instance_id,
                  r.location_text AS matched_location_text
-          FROM course_offering_rows o
-          JOIN course_term_course_rows c
+          FROM ${schema.offeringTable} o
+          JOIN ${schema.termCourseTable} c
             ON c.id = o.term_course_id
-          JOIN course_catalog_rows cc
-            ON cc.id = c.catalog_id
-          JOIN course_instructor_course_rows ic
-            ON ic.id = o.instructor_course_id
-          JOIN course_meeting_rule_rows r
+          JOIN ${schema.courseTable} cc
+            ON cc.id = c.${schema.courseIdColumn}
+          JOIN ${schema.instructorTable} ic
+            ON ic.id = o.${schema.offeringInstructorIdColumn}
+          JOIN ${schema.meetingRuleTable} r
             ON r.offering_id = o.id
           WHERE o.term_key = ?
             AND cc.course_no = ?
@@ -531,6 +546,7 @@ class DriftAllSchoolTimetableRepository
   String _professionalExistsClause(
     AllSchoolTimetableQuery query,
     List<Variable> variables,
+    _ArtifactSchema schema,
   ) {
     if (!query.hasProfessionalFilters) {
       return '';
@@ -558,12 +574,12 @@ class DriftAllSchoolTimetableRepository
     return '''
       AND EXISTS (
         SELECT 1
-        FROM course_offering_rows o
-        JOIN course_term_course_rows c2
+        FROM ${schema.offeringTable} o
+        JOIN ${schema.termCourseTable} c2
           ON c2.id = o.term_course_id
-        LEFT JOIN course_audience_rows a
+        LEFT JOIN ${schema.audienceTable} a
           ON a.offering_id = o.id
-        LEFT JOIN course_meeting_rule_rows r
+        LEFT JOIN ${schema.meetingRuleTable} r
           ON r.offering_id = o.id
         WHERE ${conditions.join(' AND ')}
       )
@@ -675,6 +691,7 @@ class DriftAllSchoolTimetableRepository
     }
     await _closeDbForTerm(termKey);
     _openPaths[termKey] = path;
+    _openSchemaVersions[termKey] = entry?.schemaVersion ?? 6;
     final db = _SchoolTimetableArtifactDatabase(
       NativeDatabase.createInBackground(
         File(path),
@@ -688,9 +705,19 @@ class DriftAllSchoolTimetableRepository
     return db;
   }
 
+  _ArtifactSchema _schemaForDb(_SchoolTimetableArtifactDatabase db) {
+    for (final entry in _openDbs.entries) {
+      if (identical(entry.value, db)) {
+        return _ArtifactSchema.forVersion(_openSchemaVersions[entry.key] ?? 6);
+      }
+    }
+    return _ArtifactSchema.forVersion(6);
+  }
+
   Future<void> _closeDbForTerm(String termKey) async {
     final db = _openDbs.remove(termKey);
     _openPaths.remove(termKey);
+    _openSchemaVersions.remove(termKey);
     await db?.close();
   }
 
@@ -698,6 +725,7 @@ class DriftAllSchoolTimetableRepository
     final dbs = List<_SchoolTimetableArtifactDatabase>.from(_openDbs.values);
     _openDbs.clear();
     _openPaths.clear();
+    _openSchemaVersions.clear();
     for (final db in dbs) {
       await db.close();
     }
@@ -756,7 +784,7 @@ class DriftAllSchoolTimetableRepository
         meta[row['key'] as String] = row['value'].toString();
       }
       final schemaVersion = int.tryParse(meta['schema_version'] ?? '') ?? 0;
-      if (schemaVersion != 6 ||
+      if ((schemaVersion != 6 && schemaVersion != 7) ||
           meta['artifact_type'] != 'school_timetable_sqlite_gzip' ||
           meta['term_key'] != termKey ||
           meta['version'] != version.toString()) {
@@ -774,17 +802,30 @@ class DriftAllSchoolTimetableRepository
       if (termRows.length != 1 || termRows.first['row_count'] != rowCount) {
         throw const FormatException('全校课表 SQLite 快照课表统计不匹配');
       }
-      for (final table in const [
-        'course_catalog_rows',
-        'course_term_course_rows',
-        'course_instructor_course_rows',
-        'course_offering_rows',
-        'course_audience_rows',
-        'course_source_rows',
-        'course_meeting_rule_rows',
-        'course_meeting_rule_week_rows',
-        'course_search_fts',
-      ]) {
+      final requiredTables = schemaVersion == 7
+          ? const [
+              'school_timetable_courses',
+              'school_timetable_course_terms',
+              'school_timetable_instructors',
+              'school_timetable_offerings',
+              'school_timetable_audiences',
+              'school_timetable_source_rows',
+              'school_timetable_meeting_rules',
+              'school_timetable_meeting_weeks',
+              'school_timetable_search_fts',
+            ]
+          : const [
+              'course_catalog_rows',
+              'course_term_course_rows',
+              'course_instructor_course_rows',
+              'course_offering_rows',
+              'course_audience_rows',
+              'course_source_rows',
+              'course_meeting_rule_rows',
+              'course_meeting_rule_week_rows',
+              'course_search_fts',
+            ];
+      for (final table in requiredTables) {
         db.select('SELECT 1 FROM $table LIMIT 1');
       }
       final term = termRows.first;
@@ -994,6 +1035,65 @@ class _ArtifactEntry {
       'row_count': rowCount,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
+  }
+}
+
+class _ArtifactSchema {
+  const _ArtifactSchema({
+    required this.courseTable,
+    required this.termCourseTable,
+    required this.instructorTable,
+    required this.offeringTable,
+    required this.audienceTable,
+    required this.meetingRuleTable,
+    required this.meetingWeekTable,
+    required this.searchTable,
+    required this.courseIdColumn,
+    required this.offeringInstructorIdColumn,
+    required this.detailFieldsSelect,
+  });
+
+  final String courseTable;
+  final String termCourseTable;
+  final String instructorTable;
+  final String offeringTable;
+  final String audienceTable;
+  final String meetingRuleTable;
+  final String meetingWeekTable;
+  final String searchTable;
+  final String courseIdColumn;
+  final String offeringInstructorIdColumn;
+  final String detailFieldsSelect;
+
+  factory _ArtifactSchema.forVersion(int version) {
+    if (version >= 7) {
+      return const _ArtifactSchema(
+        courseTable: 'school_timetable_courses',
+        termCourseTable: 'school_timetable_course_terms',
+        instructorTable: 'school_timetable_instructors',
+        offeringTable: 'school_timetable_offerings',
+        audienceTable: 'school_timetable_audiences',
+        meetingRuleTable: 'school_timetable_meeting_rules',
+        meetingWeekTable: 'school_timetable_meeting_weeks',
+        searchTable: 'school_timetable_search_fts',
+        courseIdColumn: 'course_id',
+        offeringInstructorIdColumn: 'instructor_id',
+        detailFieldsSelect: '\'{}\' AS detail_fields_json,',
+      );
+    }
+    return const _ArtifactSchema(
+      courseTable: 'course_catalog_rows',
+      termCourseTable: 'course_term_course_rows',
+      instructorTable: 'course_instructor_course_rows',
+      offeringTable: 'course_offering_rows',
+      audienceTable: 'course_audience_rows',
+      meetingRuleTable: 'course_meeting_rule_rows',
+      meetingWeekTable: 'course_meeting_rule_week_rows',
+      searchTable: 'course_search_fts',
+      courseIdColumn: 'catalog_id',
+      offeringInstructorIdColumn: 'instructor_course_id',
+      detailFieldsSelect: '',
+    );
   }
 }
 

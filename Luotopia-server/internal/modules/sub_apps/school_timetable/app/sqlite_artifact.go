@@ -21,7 +21,7 @@ import (
 
 const (
 	SQLiteArtifactType    = "school_timetable_sqlite_gzip"
-	SQLiteSchemaVersion   = 6
+	SQLiteSchemaVersion   = 7
 	SQLiteArtifactContent = "application/gzip"
 )
 
@@ -145,7 +145,7 @@ func createSQLiteSnapshot(ctx context.Context, db *sql.DB, pkg domain.Package, r
 }
 
 func insertCatalogs(ctx context.Context, tx *sql.Tx, rows []domain.CourseCatalog) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_catalog_rows (id, catalog_key, course_no, course_name, credits, search_text) VALUES (?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_courses (id, catalog_key, course_no, course_name, credits, search_text) VALUES (?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func insertCatalogs(ctx context.Context, tx *sql.Tx, rows []domain.CourseCatalog
 }
 
 func insertTermCourses(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_term_course_rows (id, term_key, catalog_id, open_college, course_nature, course_category, open_type, teaching_class_count, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_course_terms (id, term_key, course_id, open_college, course_nature, course_category, open_type, teaching_class_count, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func insertTermCourses(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse
 }
 
 func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.InstructorCourse) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_instructor_course_rows (id, catalog_id, instructor_name, instructor_name_key, offering_count, latest_term_key, latest_open_college, latest_teaching_title, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_instructors (id, course_id, instructor_name, instructor_name_key, offering_count, latest_term_key, latest_open_college, latest_teaching_title, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -187,21 +187,20 @@ func insertInstructorCourses(ctx context.Context, tx *sql.Tx, rows []domain.Inst
 }
 
 func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOffering) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_offering_rows
-	(id, term_key, term_course_id, instructor_course_id, source_key, teaching_class_name, teaching_class_key, instructor, instructor_set_key, title, people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_key, schedule_summary, weekday_summary, audience_summary, source_row_count, search_text, detail_fields_json)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_offerings
+	(id, term_key, term_course_id, course_id, instructor_id, source_key, teaching_class_name, teaching_class_key, open_college, course_nature, course_category, open_type, instructor, instructor_set_key, title, people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours, practice_hours, remark, other_teachers, textbook, publisher, schedule_key, schedule_summary, weekday_summary, audience_summary, source_row_count, search_text)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		fields := jsonString(detailFields(row.Fields))
 		if _, err := stmt.ExecContext(ctx,
-			nonEmptyStableID(row.StableID, row.ID), row.TermKey, row.TermCourseID, row.InstructorCourseID, row.SourceKey,
-			row.TeachingClassName, normalizeKey(row.TeachingClassName),
+			nonEmptyStableID(row.StableID, row.ID), row.TermKey, row.TermCourseID, row.CatalogID, row.InstructorCourseID, row.SourceKey,
+			row.TeachingClassName, normalizeKey(row.TeachingClassName), row.OpenCollege, row.CourseNature, row.CourseCategory, row.OpenType,
 			row.Instructor, row.InstructorSetKey, row.Title, row.PeopleRaw, nullablePositiveInt(row.Capacity), nullablePositiveInt(row.SelectedCount), nullableInt(row.TheoryHours), nullableInt(row.ComputerHours),
 			nullableInt(row.ExperimentHours), nullableInt(row.PracticeHours), row.Remark, row.OtherTeachers,
-			row.Textbook, row.Publisher, row.ScheduleKey, row.ScheduleSummary, row.WeekdaySummary, row.AudienceSummary, row.SourceRowCount, row.SearchText, fields,
+			row.Textbook, row.Publisher, row.ScheduleKey, row.ScheduleSummary, row.WeekdaySummary, row.AudienceSummary, row.SourceRowCount, row.SearchText,
 		); err != nil {
 			return err
 		}
@@ -210,7 +209,7 @@ func insertOfferings(ctx context.Context, tx *sql.Tx, rows []domain.CourseOfferi
 }
 
 func insertAudiences(ctx context.Context, tx *sql.Tx, rows []domain.CourseAudience) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_audience_rows (id, term_key, offering_id, grade, major, plan_college, course_nature, course_nature_code, course_category, course_category_code, open_type, open_type_code, condition_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_audiences (id, term_key, offering_id, grade, major, plan_college, course_nature, course_nature_code, course_category, course_category_code, open_type, open_type_code, condition_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -224,13 +223,13 @@ func insertAudiences(ctx context.Context, tx *sql.Tx, rows []domain.CourseAudien
 }
 
 func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_source_rows (id, term_key, term_course_id, offering_id, source_key, package_index, source_status, detail_fields_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_source_rows (id, term_key, term_course_id, offering_id, source_key, package_index, source_status, raw_fields_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, row := range rows {
-		if _, err := stmt.ExecContext(ctx, nonEmptyStableID(row.StableID, row.ID), row.TermKey, nullableText(row.TermCourseID), nullableText(row.OfferingID), row.SourceKey, row.PackageIndex, row.Status, jsonString(detailFields(row.Fields))); err != nil {
+		if _, err := stmt.ExecContext(ctx, nonEmptyStableID(row.StableID, row.ID), row.TermKey, nullableText(row.TermCourseID), nullableText(row.OfferingID), row.SourceKey, row.PackageIndex, row.Status, jsonString(row.Fields)); err != nil {
 			return err
 		}
 	}
@@ -238,7 +237,7 @@ func insertSourceRows(ctx context.Context, tx *sql.Tx, rows []domain.SourceRow) 
 }
 
 func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseInstance) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_rows (id, offering_id, term_key, weekday, day_field, segment_index, weekday_label, raw_day_text, raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_meeting_rules (id, offering_id, term_key, weekday, day_field, segment_index, weekday_label, raw_day_text, raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -257,7 +256,7 @@ func insertMeetingRules(ctx context.Context, tx *sql.Tx, rows []domain.CourseIns
 }
 
 func insertMeetingRuleWeeks(ctx context.Context, tx *sql.Tx, rows []domain.CourseInstance) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_meeting_rule_week_rows (meeting_rule_id, week_index) VALUES (?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_meeting_weeks (meeting_rule_id, week_index) VALUES (?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -274,7 +273,7 @@ func insertMeetingRuleWeeks(ctx context.Context, tx *sql.Tx, rows []domain.Cours
 }
 
 func insertSearchRows(ctx context.Context, tx *sql.Tx, rows []domain.TermCourse) error {
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO course_search_fts (term_course_id, term_key, course_name, course_no, open_college, course_nature, course_category, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO school_timetable_search_fts (term_course_id, term_key, course_name, course_no, open_college, course_nature, course_category, teacher_summary, weekday_summary, search_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -404,37 +403,41 @@ CREATE TABLE school_timetable_term_rows (
   first_week_monday TEXT NOT NULL, source_version TEXT NOT NULL DEFAULT '',
   row_count INTEGER NOT NULL DEFAULT 0, imported_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
 );
-CREATE TABLE course_catalog_rows (
+CREATE TABLE school_timetable_courses (
   id TEXT PRIMARY KEY,
   catalog_key TEXT NOT NULL, course_no TEXT NOT NULL,
   course_name TEXT NOT NULL, credits REAL, search_text TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE course_term_course_rows (
+CREATE TABLE school_timetable_course_terms (
   id TEXT PRIMARY KEY,
   term_key TEXT NOT NULL REFERENCES school_timetable_term_rows(term_key) ON DELETE CASCADE,
-  catalog_id TEXT NOT NULL REFERENCES course_catalog_rows(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL REFERENCES school_timetable_courses(id) ON DELETE CASCADE,
   open_college TEXT NOT NULL DEFAULT '',
   course_nature TEXT NOT NULL DEFAULT '', course_category TEXT NOT NULL DEFAULT '',
   open_type TEXT NOT NULL DEFAULT '', teaching_class_count INTEGER NOT NULL DEFAULT 0,
   teacher_summary TEXT NOT NULL DEFAULT '', weekday_summary TEXT NOT NULL DEFAULT '',
   search_text TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE course_instructor_course_rows (
+CREATE TABLE school_timetable_instructors (
   id TEXT PRIMARY KEY,
-  catalog_id TEXT NOT NULL REFERENCES course_catalog_rows(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL REFERENCES school_timetable_courses(id) ON DELETE CASCADE,
   instructor_name TEXT NOT NULL DEFAULT '',
   instructor_name_key TEXT NOT NULL DEFAULT '', offering_count INTEGER NOT NULL DEFAULT 0,
   latest_term_key TEXT NOT NULL DEFAULT '', latest_open_college TEXT NOT NULL DEFAULT '',
   latest_teaching_title TEXT NOT NULL DEFAULT '', search_text TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE course_offering_rows (
+CREATE TABLE school_timetable_offerings (
   id TEXT PRIMARY KEY,
   term_key TEXT NOT NULL REFERENCES school_timetable_term_rows(term_key) ON DELETE CASCADE,
-  term_course_id TEXT NOT NULL REFERENCES course_term_course_rows(id) ON DELETE CASCADE,
-  instructor_course_id TEXT NOT NULL REFERENCES course_instructor_course_rows(id) ON DELETE CASCADE,
+  term_course_id TEXT NOT NULL REFERENCES school_timetable_course_terms(id) ON DELETE CASCADE,
+  course_id TEXT NOT NULL REFERENCES school_timetable_courses(id) ON DELETE CASCADE,
+  instructor_id TEXT NOT NULL REFERENCES school_timetable_instructors(id) ON DELETE CASCADE,
   source_key TEXT NOT NULL,
   teaching_class_name TEXT NOT NULL,
   teaching_class_key TEXT NOT NULL DEFAULT '',
+  open_college TEXT NOT NULL DEFAULT '',
+  course_nature TEXT NOT NULL DEFAULT '', course_category TEXT NOT NULL DEFAULT '',
+  open_type TEXT NOT NULL DEFAULT '',
   instructor TEXT NOT NULL DEFAULT '', instructor_set_key TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '', people_raw TEXT NOT NULL DEFAULT '',
   capacity INTEGER, selected_count INTEGER, theory_hours INTEGER,
@@ -444,12 +447,12 @@ CREATE TABLE course_offering_rows (
   publisher TEXT NOT NULL DEFAULT '', schedule_key TEXT NOT NULL DEFAULT '',
   schedule_summary TEXT NOT NULL DEFAULT '', weekday_summary TEXT NOT NULL DEFAULT '',
   audience_summary TEXT NOT NULL DEFAULT '', source_row_count INTEGER NOT NULL DEFAULT 0,
-  search_text TEXT NOT NULL DEFAULT '', detail_fields_json TEXT NOT NULL DEFAULT '{}'
+  search_text TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE course_audience_rows (
+CREATE TABLE school_timetable_audiences (
   id TEXT PRIMARY KEY,
   term_key TEXT NOT NULL REFERENCES school_timetable_term_rows(term_key) ON DELETE CASCADE,
-  offering_id TEXT NOT NULL REFERENCES course_offering_rows(id) ON DELETE CASCADE,
+  offering_id TEXT NOT NULL REFERENCES school_timetable_offerings(id) ON DELETE CASCADE,
   grade TEXT NOT NULL DEFAULT '',
   major TEXT NOT NULL DEFAULT '', plan_college TEXT NOT NULL DEFAULT '',
   course_nature TEXT NOT NULL DEFAULT '', course_nature_code TEXT NOT NULL DEFAULT '',
@@ -457,18 +460,18 @@ CREATE TABLE course_audience_rows (
   open_type TEXT NOT NULL DEFAULT '', open_type_code TEXT NOT NULL DEFAULT '',
   condition_code TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE course_source_rows (
+CREATE TABLE school_timetable_source_rows (
   id TEXT PRIMARY KEY,
   term_key TEXT NOT NULL REFERENCES school_timetable_term_rows(term_key) ON DELETE CASCADE,
-  term_course_id TEXT REFERENCES course_term_course_rows(id) ON DELETE SET NULL,
-  offering_id TEXT REFERENCES course_offering_rows(id) ON DELETE SET NULL,
+  term_course_id TEXT REFERENCES school_timetable_course_terms(id) ON DELETE SET NULL,
+  offering_id TEXT REFERENCES school_timetable_offerings(id) ON DELETE SET NULL,
   source_key TEXT NOT NULL DEFAULT '',
   package_index INTEGER NOT NULL DEFAULT 0, source_status TEXT NOT NULL DEFAULT 'active',
-  detail_fields_json TEXT NOT NULL DEFAULT '{}'
+  raw_fields_json TEXT NOT NULL DEFAULT '{}'
 );
-CREATE TABLE course_meeting_rule_rows (
+CREATE TABLE school_timetable_meeting_rules (
   id TEXT PRIMARY KEY,
-  offering_id TEXT NOT NULL REFERENCES course_offering_rows(id) ON DELETE CASCADE,
+  offering_id TEXT NOT NULL REFERENCES school_timetable_offerings(id) ON DELETE CASCADE,
   term_key TEXT NOT NULL REFERENCES school_timetable_term_rows(term_key) ON DELETE CASCADE,
   weekday INTEGER NOT NULL,
   day_field TEXT NOT NULL DEFAULT '', segment_index INTEGER NOT NULL,
@@ -479,12 +482,12 @@ CREATE TABLE course_meeting_rule_rows (
   location_text TEXT NOT NULL DEFAULT '',
   parse_status TEXT NOT NULL DEFAULT 'parsed'
 );
-CREATE TABLE course_meeting_rule_week_rows (
-  meeting_rule_id TEXT NOT NULL REFERENCES course_meeting_rule_rows(id) ON DELETE CASCADE,
+CREATE TABLE school_timetable_meeting_weeks (
+  meeting_rule_id TEXT NOT NULL REFERENCES school_timetable_meeting_rules(id) ON DELETE CASCADE,
   week_index INTEGER NOT NULL,
   PRIMARY KEY(meeting_rule_id, week_index)
 );
-CREATE VIRTUAL TABLE course_search_fts USING fts5(
+CREATE VIRTUAL TABLE school_timetable_search_fts USING fts5(
   term_course_id UNINDEXED,
   term_key UNINDEXED,
   course_name,
@@ -496,6 +499,44 @@ CREATE VIRTUAL TABLE course_search_fts USING fts5(
   weekday_summary,
   search_text
 );
+CREATE VIEW course_catalog_rows AS
+  SELECT id, catalog_key, course_no, course_name, credits, search_text
+  FROM school_timetable_courses;
+CREATE VIEW course_term_course_rows AS
+  SELECT id, term_key, course_id AS catalog_id, open_college, course_nature, course_category,
+         open_type, teaching_class_count, teacher_summary, weekday_summary, search_text
+  FROM school_timetable_course_terms;
+CREATE VIEW course_instructor_course_rows AS
+  SELECT id, course_id AS catalog_id, instructor_name, instructor_name_key, offering_count,
+         latest_term_key, latest_open_college, latest_teaching_title, search_text
+  FROM school_timetable_instructors;
+CREATE VIEW course_offering_rows AS
+  SELECT id, term_key, term_course_id, instructor_id AS instructor_course_id, source_key,
+         teaching_class_name, teaching_class_key, instructor, instructor_set_key, title,
+         people_raw, capacity, selected_count, theory_hours, computer_hours, experiment_hours,
+         practice_hours, remark, other_teachers, textbook, publisher, schedule_key,
+         schedule_summary, weekday_summary, audience_summary, source_row_count, search_text,
+         '{}' AS detail_fields_json
+  FROM school_timetable_offerings;
+CREATE VIEW course_audience_rows AS
+  SELECT id, term_key, offering_id, grade, major, plan_college, course_nature, course_nature_code,
+         course_category, course_category_code, open_type, open_type_code, condition_code
+  FROM school_timetable_audiences;
+CREATE VIEW course_source_rows AS
+  SELECT id, term_key, term_course_id, offering_id, source_key, package_index, source_status,
+         raw_fields_json AS detail_fields_json
+  FROM school_timetable_source_rows;
+CREATE VIEW course_meeting_rule_rows AS
+  SELECT id, offering_id, term_key, weekday, day_field, segment_index, weekday_label, raw_day_text,
+         raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status
+  FROM school_timetable_meeting_rules;
+CREATE VIEW course_meeting_rule_week_rows AS
+  SELECT meeting_rule_id, week_index
+  FROM school_timetable_meeting_weeks;
+CREATE VIEW course_search_fts_compat AS
+  SELECT term_course_id, term_key, course_name, course_no, open_college, course_nature,
+         course_category, teacher_summary, weekday_summary, search_text
+  FROM school_timetable_search_fts;
 CREATE VIEW course_instance_rows AS
   SELECT
     r.id,
@@ -516,22 +557,22 @@ CREATE VIEW course_instance_rows AS
     r.section_end,
     r.location_text,
     r.parse_status
-  FROM course_meeting_rule_rows r
-  JOIN course_offering_rows o ON o.id = r.offering_id
-  JOIN course_term_course_rows c ON c.id = o.term_course_id;
+  FROM school_timetable_meeting_rules r
+  JOIN school_timetable_offerings o ON o.id = r.offering_id
+  JOIN school_timetable_course_terms c ON c.id = o.term_course_id;
 CREATE VIEW course_instance_week_rows AS
   SELECT meeting_rule_id AS instance_id, week_index
-  FROM course_meeting_rule_week_rows;
+  FROM school_timetable_meeting_weeks;
 `
 
 const sqliteIndexes = `
-CREATE INDEX idx_course_term_course_rows_term ON course_term_course_rows(term_key);
-CREATE INDEX idx_course_term_course_rows_catalog ON course_term_course_rows(term_key, catalog_id);
-CREATE INDEX idx_course_offering_rows_term_course ON course_offering_rows(term_course_id, instructor, teaching_class_name);
-CREATE INDEX idx_course_audience_rows_filter ON course_audience_rows(term_key, grade, major, plan_college);
-CREATE INDEX idx_course_audience_rows_offering ON course_audience_rows(offering_id);
-CREATE INDEX idx_course_meeting_rule_rows_offering ON course_meeting_rule_rows(offering_id, weekday, segment_index);
-CREATE INDEX idx_course_meeting_rule_rows_filter ON course_meeting_rule_rows(term_key, weekday, section_start, section_end);
-CREATE INDEX idx_course_meeting_rule_rows_location ON course_meeting_rule_rows(term_key, location_text);
-CREATE INDEX idx_course_meeting_rule_week_rows_week ON course_meeting_rule_week_rows(week_index, meeting_rule_id);
+CREATE INDEX idx_school_timetable_course_terms_term ON school_timetable_course_terms(term_key);
+CREATE INDEX idx_school_timetable_course_terms_course ON school_timetable_course_terms(term_key, course_id);
+CREATE INDEX idx_school_timetable_offerings_term_course ON school_timetable_offerings(term_course_id, instructor, teaching_class_name);
+CREATE INDEX idx_school_timetable_audiences_filter ON school_timetable_audiences(term_key, grade, major, plan_college);
+CREATE INDEX idx_school_timetable_audiences_offering ON school_timetable_audiences(offering_id);
+CREATE INDEX idx_school_timetable_meeting_rules_offering ON school_timetable_meeting_rules(offering_id, weekday, segment_index);
+CREATE INDEX idx_school_timetable_meeting_rules_filter ON school_timetable_meeting_rules(term_key, weekday, section_start, section_end);
+CREATE INDEX idx_school_timetable_meeting_rules_location ON school_timetable_meeting_rules(term_key, location_text);
+CREATE INDEX idx_school_timetable_meeting_weeks_week ON school_timetable_meeting_weeks(week_index, meeting_rule_id);
 `
