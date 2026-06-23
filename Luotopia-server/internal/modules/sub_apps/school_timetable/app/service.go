@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/domain"
@@ -33,17 +34,58 @@ type BundleStore interface {
 	PublicURL(key string) string
 }
 
+type jobManager struct {
+	mu   sync.Mutex
+	jobs map[string]*domain.ImportJob
+	seq  int64
+}
+
+func newJobManager() *jobManager {
+	return &jobManager{jobs: make(map[string]*domain.ImportJob)}
+}
+
+func (jm *jobManager) create(job domain.ImportJob) string {
+	jm.mu.Lock()
+	defer jm.mu.Unlock()
+	jm.seq++
+	id := fmt.Sprintf("job_%d", jm.seq)
+	job.ID = id
+	jm.jobs[id] = &job
+	return id
+}
+
+func (jm *jobManager) get(id string) *domain.ImportJob {
+	jm.mu.Lock()
+	defer jm.mu.Unlock()
+	job, ok := jm.jobs[id]
+	if !ok {
+		return nil
+	}
+	copy := *job
+	return &copy
+}
+
+func (jm *jobManager) update(id string, fn func(job *domain.ImportJob)) {
+	jm.mu.Lock()
+	defer jm.mu.Unlock()
+	if job, ok := jm.jobs[id]; ok {
+		fn(job)
+		job.UpdatedAt = time.Now().UnixMilli()
+	}
+}
+
 type Service struct {
 	repo        Repository
 	bundleStore BundleStore
+	jobs        *jobManager
 }
 
 func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+	return &Service{repo: repo, jobs: newJobManager()}
 }
 
 func NewServiceWithBundleStore(repo Repository, store BundleStore) *Service {
-	return &Service{repo: repo, bundleStore: store}
+	return &Service{repo: repo, bundleStore: store, jobs: newJobManager()}
 }
 
 func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
@@ -71,36 +113,82 @@ func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain
 	}, nil
 }
 
-func (s *Service) ImportAndPublish(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
+func (s *Service) StartImport(reader io.Reader) (string, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		return domain.ImportResult{}, err
+		return "", err
 	}
-	pkg, err := ParsePackage(ctx, bytes.NewReader(data))
-	if err != nil {
-		return domain.ImportResult{}, err
+	jobID := s.jobs.create(domain.ImportJob{
+		Status:    domain.JobStatusPending,
+		Progress:  "等待处理",
+		CreatedAt: time.Now().UnixMilli(),
+		UpdatedAt: time.Now().UnixMilli(),
+	})
+	go func() {
+		ctx := context.Background()
+		report := func(progress string) {
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusRunning
+				job.Progress = progress
+			})
+		}
+		fail := func(err error) {
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusFailed
+				job.Error = err.Error()
+			})
+		}
+		report("解析数据包")
+		pkg, err := ParsePackage(ctx, bytes.NewReader(data))
+		if err != nil {
+			fail(fmt.Errorf("解析数据包失败: %w", err))
+			return
+		}
+		if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
+			fail(fmt.Errorf("数据包校验失败: %w", err))
+			return
+		}
+		report("生成变更集")
+		rawChecksum := PackageChecksum(data)
+		preview, err := s.previewImport(ctx, pkg, rawChecksum, 0)
+		if err != nil {
+			fail(fmt.Errorf("变更集生成失败: %w", err))
+			return
+		}
+		report(fmt.Sprintf("写入数据库（%d 条变更）", preview.Upserts+preview.Deletes))
+		if err := s.repo.ApplyImport(ctx, pkg, preview); err != nil {
+			fail(fmt.Errorf("写入数据库失败: %w", err))
+			return
+		}
+		report("构建并上传离线包")
+		if err := s.publishBundle(ctx, preview.NextVersion); err != nil {
+			fail(fmt.Errorf("发布离线包失败: %w", err))
+			return
+		}
+		if len(preview.Changes) > 100 {
+			preview.Changes = preview.Changes[:100]
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusCompleted
+			job.Progress = "完成"
+			job.Result = &domain.ImportResult{
+				Manifest: pkg.Manifest,
+				Checksum: rawChecksum,
+				RowCount: len(pkg.Rows),
+				Version:  preview.NextVersion,
+				Preview:  &preview,
+			}
+		})
+	}()
+	return jobID, nil
+}
+
+func (s *Service) GetImportJob(ctx context.Context, id string) (*domain.ImportJob, error) {
+	job := s.jobs.get(id)
+	if job == nil {
+		return nil, ErrNotFound
 	}
-	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
-		return domain.ImportResult{}, err
-	}
-	rawChecksum := PackageChecksum(data)
-	preview, err := s.previewImport(ctx, pkg, rawChecksum, 0)
-	if err != nil {
-		return domain.ImportResult{}, err
-	}
-	if err := s.repo.ApplyImport(ctx, pkg, preview); err != nil {
-		return domain.ImportResult{}, err
-	}
-	if err := s.publishBundle(ctx, preview.NextVersion); err != nil {
-		return domain.ImportResult{}, err
-	}
-	return domain.ImportResult{
-		Manifest: pkg.Manifest,
-		Checksum: rawChecksum,
-		RowCount: len(pkg.Rows),
-		Version:  preview.NextVersion,
-		Preview:  &preview,
-	}, nil
+	return job, nil
 }
 
 func (s *Service) CurrentDataset(ctx context.Context) (domain.DatasetState, error) {

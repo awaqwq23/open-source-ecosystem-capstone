@@ -187,6 +187,25 @@ type ImportResult struct {
 	Preview  *ImportPreview `json:"preview,omitempty"`
 }
 
+type ImportJobStatus string
+
+const (
+	JobStatusPending   ImportJobStatus = "pending"
+	JobStatusRunning   ImportJobStatus = "running"
+	JobStatusCompleted ImportJobStatus = "completed"
+	JobStatusFailed    ImportJobStatus = "failed"
+)
+
+type ImportJob struct {
+	ID        string          `json:"id"`
+	Status    ImportJobStatus `json:"status"`
+	Progress  string          `json:"progress"`
+	Result    *ImportResult   `json:"result,omitempty"`
+	Error     string          `json:"error,omitempty"`
+	CreatedAt int64           `json:"created_at"`
+	UpdatedAt int64           `json:"updated_at"`
+}
+
 type DatasetState struct {
 	Version       int64     `json:"version"`
 	Checksum      string    `json:"checksum"`

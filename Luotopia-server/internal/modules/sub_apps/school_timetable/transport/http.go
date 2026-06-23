@@ -25,6 +25,7 @@ func (h Handler) RegisterAdmin(router gin.IRouter) {
 	group.GET("/terms", h.listTerms)
 	group.POST("/imports/validate", h.validateImport)
 	group.POST("/imports/publish", h.publishImport)
+	group.GET("/imports/jobs/:id", h.getImportJob)
 }
 
 func (h Handler) listTerms(c *gin.Context) {
@@ -68,12 +69,21 @@ func (h Handler) publishImport(c *gin.Context) {
 		return
 	}
 	defer opened.Close()
-	result, err := h.service.ImportAndPublish(c.Request.Context(), opened)
+	jobID, err := h.service.StartImport(opened)
 	if err != nil {
 		writeError(c, http.StatusBadRequest, "import_failed", err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, result)
+	c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
+}
+
+func (h Handler) getImportJob(c *gin.Context) {
+	job, err := h.service.GetImportJob(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		writeError(c, http.StatusNotFound, "not_found", "任务不存在")
+		return
+	}
+	c.JSON(http.StatusOK, job)
 }
 
 func writeError(c *gin.Context, status int, code string, message string) {

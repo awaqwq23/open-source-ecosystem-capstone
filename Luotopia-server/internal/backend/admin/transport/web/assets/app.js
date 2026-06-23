@@ -344,11 +344,28 @@ async function validateSchoolTimetable() {
 
 async function publishSchoolTimetable(event) {
   event.preventDefault();
+  const target = $("school-timetable-preview");
   try {
-    const result = await apiForm("/admin/api/v1/school-timetable/imports/publish", schoolTimetableFormData());
-    showMessage("全校课表新版本已发布");
-    await renderSchoolTimetable();
-    renderSchoolTimetablePreview(result);
+    const { job_id } = await apiForm("/admin/api/v1/school-timetable/imports/publish", schoolTimetableFormData());
+    target.textContent = "已提交，等待处理...";
+    target.className = "muted";
+    for (;;) {
+      await new Promise(r => setTimeout(r, 1500));
+      const job = await api("/admin/api/v1/school-timetable/imports/jobs/" + job_id);
+      if (job.status === "completed") {
+        showMessage("全校课表新版本已发布");
+        await renderSchoolTimetable();
+        renderSchoolTimetablePreview(job.result);
+        return;
+      }
+      if (job.status === "failed") {
+        target.textContent = "导入失败：" + (job.error || "未知错误");
+        showMessage("导入失败", true);
+        return;
+      }
+      target.textContent = "导入中：" + (job.progress || "处理中...");
+      target.className = "muted";
+    }
   } catch (error) {
     showMessage(error.message, true);
   }
