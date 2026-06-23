@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	records := app.BuildRecords(pkg)
+	records := app.BuildRecords(pkg, *version)
 
 	tempDir, err := os.MkdirTemp("", "school-timetable-artifact-*")
 	if err != nil {

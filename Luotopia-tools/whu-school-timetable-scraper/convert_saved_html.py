@@ -5,7 +5,15 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 
-from scrape_school_timetable import REQUIRED_FIELDS, TermSpec, parse_term_key, school_year_label, validate_rows, write_package
+from scrape_school_timetable import (
+    REQUIRED_FIELDS,
+    TermSpec,
+    parse_term_key,
+    school_year_label,
+    validate_first_week_monday,
+    validate_rows,
+    write_package,
+)
 
 
 WEEKDAY_FIELDS = ("sun", "mon", "tue", "wen", "thu", "fri", "sat")
@@ -97,7 +105,13 @@ def infer_spec(rows: list[dict[str, str]], args: argparse.Namespace) -> TermSpec
         raise RuntimeError("无法推断学年/学期，请传入 --term-key 或 --school-year 与 --term")
     if not term_key:
         term_key = f"{school_year}-{term}"
-    return TermSpec(term_key=term_key, school_year=school_year, term=term, output=args.output)
+    return TermSpec(
+        term_key=term_key,
+        school_year=school_year,
+        term=term,
+        output=args.output,
+        first_week_monday=validate_first_week_monday(args.first_week_monday),
+    )
 
 
 def first_non_empty(rows: list[dict[str, str]], code: str) -> str:
@@ -120,6 +134,7 @@ def main() -> None:
     parser.add_argument("--term-key", help="学期 key，例如 2025-2026-2；不传则从 HTML 推断")
     parser.add_argument("--school-year", help="学年，例如 2025-2026；不传则从 HTML 推断")
     parser.add_argument("--term", choices=("1", "2"), help="学期，1 或 2；不传则从 HTML 推断")
+    parser.add_argument("--first-week-monday", required=True, help="本学期首周周一，格式 YYYY-MM-DD")
     parser.add_argument("--output", required=True, help="输出 .ndjson.gz 路径")
     args = parser.parse_args()
 

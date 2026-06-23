@@ -4,7 +4,7 @@ import argparse
 import gzip
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +19,7 @@ class TermSpec:
     school_year: str
     term: str
     output: str
+    first_week_monday: str = ""
 
 
 def setup_driver(headless: bool) -> webdriver.Chrome:
@@ -90,6 +91,17 @@ def default_output(term: str, output_dir: str) -> str:
     return str(Path(output_dir) / f"{term}.ndjson.gz")
 
 
+def validate_first_week_monday(value: str) -> str:
+    normalized = value.strip()
+    try:
+        parsed = datetime.strptime(normalized, "%Y-%m-%d")
+    except ValueError as err:
+        raise ValueError("首周周一格式应为 YYYY-MM-DD") from err
+    if parsed.weekday() != 0:
+        raise ValueError("首周周一必须是周一")
+    return normalized
+
+
 def spec_from_key(value: str, output_dir: str) -> TermSpec:
     start_year, term = parse_term_key(value)
     key = term_key(start_year, term)
@@ -149,6 +161,15 @@ def prompt_choice(text: str, choices: dict[str, str], default: str) -> str:
         print("输入无效，请重新选择。")
 
 
+def prompt_first_week_monday(term: str) -> str:
+    while True:
+        value = prompt(f"{term} 首周周一，格式 YYYY-MM-DD")
+        try:
+            return validate_first_week_monday(value)
+        except ValueError as err:
+            print(err)
+
+
 def build_tui_specs() -> list[TermSpec]:
     print("WHU 全校课表抓取 TUI")
     output_dir = prompt("输出目录", "output")
@@ -173,6 +194,11 @@ def build_tui_specs() -> list[TermSpec]:
         latest = prompt("最新学期 key", default_latest_term_key())
         oldest = prompt("最旧学期 key")
         specs = generate_descending_terms(latest, oldest, output_dir)
+
+    specs = [
+        replace(spec, first_week_monday=prompt_first_week_monday(spec.term_key))
+        for spec in specs
+    ]
 
     print("\n将按以下队列抓取：")
     for index, spec in enumerate(specs, 1):
@@ -289,6 +315,7 @@ def validate_rows(rows: list[dict[str, str]]) -> list[str]:
 
 
 def write_package(spec: TermSpec, rows: list[dict[str, str]], source: str = "jwgl_N214599_dom") -> None:
+    first_week_monday = validate_first_week_monday(spec.first_week_monday)
     field_codes = sorted({code for row in rows for code in row.keys()})
     canonical_rows = [
         {"type": "row", "fields": {code: row.get(code, "") for code in field_codes}}
@@ -302,6 +329,7 @@ def write_package(spec: TermSpec, rows: list[dict[str, str]], source: str = "jwg
         "term_key": spec.term_key,
         "school_year": spec.school_year,
         "term": spec.term,
+        "first_week_monday": first_week_monday,
         "field_codes": field_codes,
         "row_count": len(rows),
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -363,6 +391,7 @@ def main() -> None:
     parser.add_argument("--term-key")
     parser.add_argument("--school-year")
     parser.add_argument("--term")
+    parser.add_argument("--first-week-monday")
     parser.add_argument("--output")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--tui", action="store_true")
@@ -379,9 +408,10 @@ def main() -> None:
         scrape_specs(specs, args.headless, interactive=True)
         return
 
-    missing = [name for name in ("term_key", "school_year", "term", "output") if not getattr(args, name)]
+    required_args = ("term_key", "school_year", "term", "output", "first_week_monday")
+    missing = [name for name in required_args if not getattr(args, name)]
     if missing:
-        parser.error("非 TUI 模式必须提供 --term-key、--school-year、--term 和 --output")
+        parser.error("非 TUI 模式必须提供 --term-key、--school-year、--term、--first-week-monday 和 --output")
     if args.term not in {"1", "2"}:
         parser.error("--term 只能是 1 或 2")
     expected_year = school_year_label(parse_school_year(args.school_year))
@@ -392,6 +422,7 @@ def main() -> None:
         school_year=args.school_year,
         term=args.term,
         output=args.output,
+        first_week_monday=validate_first_week_monday(args.first_week_monday),
     )
     scrape_specs([spec], args.headless, interactive=False)
 
