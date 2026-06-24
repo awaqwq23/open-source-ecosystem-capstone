@@ -1,31 +1,53 @@
 ---
-// 团队介绍：次要板块。团队信息未公开，做 monochrome 杂志感网格占位（lorem），后续替换为真实成员。
 const members = [
-  { name: "Lorem Ipsum", role_cn: "占位", role_en: "Placeholder", initials: "LI" },
-  { name: "Dolor Sit", role_cn: "占位", role_en: "Placeholder", initials: "DS" },
-  { name: "Amet Conset", role_cn: "占位", role_en: "Placeholder", initials: "AC" },
-  { name: "Adipiscing", role_cn: "占位", role_en: "Placeholder", initials: "AD" },
+  { login: "918154429", name: "hushen", avatar: "https://avatars.githubusercontent.com/u/190065939?v=4", url: "https://github.com/918154429" },
+  { login: "Aprilplus", name: "Asuka", avatar: "https://avatars.githubusercontent.com/u/217048350?v=4", url: "https://github.com/Aprilplus" },
+  { login: "Aya-yepyep", name: "Kexin Fu", avatar: "https://avatars.githubusercontent.com/u/246190431?v=4", url: "https://github.com/Aya-yepyep" },
+  { login: "Crescentm", name: "Crescentm", avatar: "https://avatars.githubusercontent.com/u/30401338?v=4", url: "https://github.com/Crescentm" },
+  { login: "Enchograph", name: "陈广隰 / Chen Guangxi", avatar: "https://avatars.githubusercontent.com/u/67186192?v=4", url: "https://github.com/Enchograph" },
+  { login: "foredawn32", name: "", avatar: "https://avatars.githubusercontent.com/u/206981833?v=4", url: "https://github.com/foredawn32" },
+  { login: "fQwQf", name: "fQwQf", avatar: "https://avatars.githubusercontent.com/u/69208179?v=4", url: "https://github.com/fQwQf" },
+  { login: "gclmichael", name: "Michael", avatar: "https://avatars.githubusercontent.com/u/88659262?v=4", url: "https://github.com/gclmichael" },
+  { login: "GuGuMur", name: "HevCateon", avatar: "https://avatars.githubusercontent.com/u/44727214?v=4", url: "https://github.com/GuGuMur" },
+  { login: "HsukqiLee", name: "Hsukqi Lee", avatar: "https://avatars.githubusercontent.com/u/79034142?v=4", url: "https://github.com/HsukqiLee" },
+  { login: "Hunryyy", name: "Hunry", avatar: "https://avatars.githubusercontent.com/u/241919079?v=4", url: "https://github.com/Hunryyy" },
+  { login: "JeredGong", name: "Renjie Gong", avatar: "https://avatars.githubusercontent.com/u/129572249?v=4", url: "https://github.com/JeredGong" },
+  { login: "LaplaceYoung", name: "CauchYoung", avatar: "https://avatars.githubusercontent.com/u/219803883?v=4", url: "https://github.com/LaplaceYoung" },
+  { login: "orangeboyChen", name: "orangeboy", avatar: "https://avatars.githubusercontent.com/u/27876299?v=4", url: "https://github.com/orangeboyChen" },
+  { login: "rengran233", name: "", avatar: "https://avatars.githubusercontent.com/u/200765708?v=4", url: "https://github.com/rengran233" },
+  { login: "SamizuHM", name: "Nyaoha", avatar: "https://avatars.githubusercontent.com/u/51712552?v=4", url: "https://github.com/SamizuHM" },
+  { login: "shantu246", name: "", avatar: "https://avatars.githubusercontent.com/u/244899153?v=4", url: "https://github.com/shantu246" },
+  { login: "shenxianovo", name: "", avatar: "https://avatars.githubusercontent.com/u/138359094?v=4", url: "https://github.com/shenxianovo" },
+  { login: "stephen-zeng", name: "0x535A", avatar: "https://avatars.githubusercontent.com/u/47418664?v=4", url: "https://github.com/stephen-zeng" },
+  { login: "WenshunQiu", name: "Caten", avatar: "https://avatars.githubusercontent.com/u/121172843?v=4", url: "https://github.com/WenshunQiu" },
+  { login: "wofiporia", name: "wofiporia", avatar: "https://avatars.githubusercontent.com/u/172453170?v=4", url: "https://github.com/wofiporia" },
+  { login: "YipanWei", name: "YipanWei", avatar: "https://avatars.githubusercontent.com/u/94840403?v=4", url: "https://github.com/YipanWei" },
 ];
 ---
 <section class="team" id="team">
   <header class="team__head" data-reveal-stagger>
     <p class="eyebrow"><span class="num">04</span>&nbsp;／&nbsp;04&nbsp;&nbsp;·&nbsp;&nbsp;团队</p>
-    <h2 class="team__title">Lorem <em>ipsum</em></h2>
-    <p class="team__sub">团队信息待公开，下列卡片暂为占位。</p>
+    <h2 class="team__title">ClosedWHU <em>members</em></h2>
+    <p class="team__sub">武汉大学开源社区 ClosedWHU 的 GitHub 组织成员。头像与主页来自 GitHub，点击卡片可查看个人主页。</p>
   </header>
 
   <div class="team__grid">
     {members.map((m) => (
-      <article class="team__card" data-reveal="fade">
-        <div class="team__avatar" aria-hidden="true">{m.initials}</div>
-        <h3 class="team__name">{m.name}</h3>
-        <p class="team__role"><span>{m.role_cn}</span><span class="team__role-en">{m.role_en}</span></p>
-        <div class="team__rule"></div>
-      </article>
+      <a class="team__card" href={m.url} target="_blank" rel="noopener" data-reveal="fade">
+        <img class="team__avatar" src={m.avatar} alt={`${m.login} 的 GitHub 头像`} loading="lazy" />
+        <h3 class="team__name">{m.name || m.login}</h3>
+        <p class="team__role">
+          <span>@{m.login}</span>
+          <span class="team__role-en">GitHub member</span>
+        </p>
+        <span class="team__rule"></span>
+      </a>
     ))}
   </div>
 
-  <p class="team__foot" data-reveal="fade">openwhu 社区</p>
+  <p class="team__foot" data-reveal="fade">
+    <a href="https://github.com/ClosedWHU" target="_blank" rel="noopener">github.com/ClosedWHU</a>
+  </p>
 </section>
 
 <style>
@@ -35,30 +57,34 @@ const members = [
   .team__title em { font-style: normal; color: var(--accent-2); font-family: var(--ff-display); }
   .team__sub { color: var(--fg-2); font-size: .95rem; line-height: 1.75; font-weight: 300; max-width: 46ch; }
 
-  .team__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(.6rem,2vw,1.4rem); }
+  .team__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: clamp(.6rem,2vw,1.4rem); }
   .team__card {
     border: 1px solid var(--line); background: transparent;
-    padding: clamp(1.4rem,3vw,2.2rem) clamp(1rem,2vw,1.6rem);
+    padding: clamp(1.15rem,2.4vw,1.7rem) clamp(1rem,2vw,1.4rem);
     display: flex; flex-direction: column; gap: .8rem;
-    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+    min-height: 13rem;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
   }
-  .team__card:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--ink-2) 50%, transparent); }
+  .team__card:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--ink-2) 50%, transparent); transform: translateY(-3px); }
   .team__avatar {
-    width: 4.2rem; height: 4.2rem; border-radius: 50%;
-    display: grid; place-items: center;
-    font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: 1.4rem;
-    color: var(--fg); border: 1px solid var(--line-strong);
-    background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--luojia-green) 60%, var(--ink-3)), var(--ink));
+    width: 4.2rem; height: 4.2rem; border-radius: 50%; object-fit: cover;
+    border: 1px solid var(--line-strong);
+    background: var(--ink-3);
     margin-bottom: .6rem;
   }
-  .team__name { font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: 1.4rem; color: var(--fg); }
+  .team__name {
+    font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: clamp(1.1rem,1.8vw,1.35rem); color: var(--fg);
+    overflow-wrap: anywhere;
+  }
   .team__role { display: flex; flex-direction: column; gap: .1rem; }
-  .team__role span:first-child { font-family: var(--ff-serif-cn); font-size: .95rem; color: var(--fg-2); }
+  .team__role span:first-child { font-size: .9rem; color: var(--fg-2); overflow-wrap: anywhere; }
   .team__role-en { font-size: .68rem !important; letter-spacing: .18em; text-transform: uppercase; color: var(--fg-3) !important; }
   .team__rule { height: 1px; background: var(--line); margin-top: .4rem; }
 
   .team__foot { margin-top: clamp(2rem,5vw,3rem); color: var(--fg-3); font-size: .8rem; letter-spacing: .12em; }
+  .team__foot a { color: inherit; transition: color var(--dur) var(--ease); }
+  .team__foot a:hover { color: var(--accent); }
 
-  @media (max-width: 900px) { .team__grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 520px) { .team__grid { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) { .team__grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 390px) { .team__grid { grid-template-columns: 1fr; } }
 </style>
