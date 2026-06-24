@@ -486,12 +486,25 @@ async function validateSchoolTimetable() {
   try {
     const upload = await ensureSchoolTimetableUpload();
     setSchoolTimetableStatus("预检中：服务端正在解析数据包...");
-    const result = await api("/admin/api/v1/school-timetable/imports/validate", {
+    const { job_id } = await api("/admin/api/v1/school-timetable/imports/validate", {
       method: "POST",
       body: JSON.stringify({upload_id: upload.upload_id}),
     });
-    renderSchoolTimetablePreview(result);
-    showMessage("数据包预检通过");
+    for (;;) {
+      await new Promise(r => setTimeout(r, 1500));
+      const job = await api("/admin/api/v1/school-timetable/imports/jobs/" + job_id);
+      if (job.status === "completed") {
+        renderSchoolTimetablePreview(job.result);
+        showMessage("数据包预检通过");
+        return;
+      }
+      if (job.status === "failed") {
+        setSchoolTimetableStatus("预检失败：" + (job.error || "未知错误"));
+        showMessage("预检失败", true);
+        return;
+      }
+      setSchoolTimetableStatus("预检中：" + (job.progress || "处理中..."));
+    }
   } catch (error) {
     showMessage(error.message, true);
   }

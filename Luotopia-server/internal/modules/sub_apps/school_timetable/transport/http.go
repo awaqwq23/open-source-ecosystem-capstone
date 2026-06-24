@@ -95,12 +95,12 @@ func (h Handler) completeUpload(c *gin.Context) {
 
 func (h Handler) validateImport(c *gin.Context) {
 	if uploadID := uploadIDFromRequest(c); uploadID != "" {
-		result, err := h.service.ValidateUpload(c.Request.Context(), uploadID)
+		jobID, err := h.service.StartValidateUpload(uploadID)
 		if err != nil {
 			writeUploadError(c, err)
 			return
 		}
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
 		return
 	}
 	file, err := c.FormFile("file")

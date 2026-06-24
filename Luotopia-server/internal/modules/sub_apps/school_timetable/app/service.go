@@ -129,6 +129,54 @@ func (s *Service) ValidateUpload(ctx context.Context, uploadID string) (domain.I
 	return s.validatePackageBytes(ctx, data)
 }
 
+func (s *Service) StartValidateUpload(uploadID string) (string, error) {
+	if _, err := s.uploads.packagePath(uploadID); err != nil {
+		return "", err
+	}
+	jobID := s.jobs.create(domain.ImportJob{
+		Status:    domain.JobStatusPending,
+		Progress:  "等待预检",
+		CreatedAt: time.Now().UnixMilli(),
+		UpdatedAt: time.Now().UnixMilli(),
+	})
+	go func() {
+		ctx := context.Background()
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusRunning
+			job.Progress = "读取数据包"
+		})
+		data, err := s.readUploadPackage(uploadID)
+		if err != nil {
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusFailed
+				job.Error = err.Error()
+			})
+			return
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusRunning
+			job.Progress = "解析并生成预览"
+		})
+		result, err := s.validatePackageBytes(ctx, data)
+		if err != nil {
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusFailed
+				job.Error = err.Error()
+			})
+			return
+		}
+		if result.Preview != nil {
+			result.Preview.AllChanges = nil
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusCompleted
+			job.Progress = "预检完成"
+			job.Result = &result
+		})
+	}()
+	return jobID, nil
+}
+
 func (s *Service) StartImport(reader io.Reader) (string, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
