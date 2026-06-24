@@ -92,11 +92,15 @@ class DriftAllSchoolTimetableRepository
     try {
       final compressed = await sqliteGzipFile.readAsBytes();
       await sqliteFile.writeAsBytes(gzip.decode(compressed), flush: true);
-      await _db.transaction(() async {
-        await _db.customStatement(
-          'ATTACH DATABASE ${_sqlString(sqliteFile.path)} AS bundle',
-        );
-        try {
+      // 规范做法：ATTACH/DETACH 是“数据源管理”动作，须在业务事务之外执行。
+      // SQLite 规定“事务活动期不允许 DETACH 仍被使用的附加库”（否则报 database bundle is locked），
+      // 故只把“清表+复制+建索引+写元数据”这些纯业务写包进事务，ATTACH 与 DETACH 放事务外。
+      //
+      await _db.customStatement(
+        'ATTACH DATABASE ${_sqlString(sqliteFile.path)} AS bundle',
+      );
+      try {
+        await _db.transaction(() async {
           await _clearSchoolTimetableTables();
           for (final table in _bundleCopyTables) {
             await _db.customStatement(
@@ -110,10 +114,11 @@ class DriftAllSchoolTimetableRepository
             'updated_at',
             DateTime.now().millisecondsSinceEpoch.toString(),
           );
-        } finally {
-          await _db.customStatement('DETACH DATABASE bundle');
-        }
-      });
+        });
+      } finally {
+        // 事务已提交（或回滚干净）后再取下附加库，此时无活动事务，SQLite 爽快放行。
+        await _db.customStatement('DETACH DATABASE bundle');
+      }
     } finally {
       await tempDir.delete(recursive: true);
     }
