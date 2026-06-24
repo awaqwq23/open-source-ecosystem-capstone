@@ -472,6 +472,20 @@ func flattenRecords(pkg domain.Package, records Records) (map[string]domain.Enti
 			return nil, nil, err
 		}
 	}
+	// 用实际源行数回填 term 元数据，避免依赖源包自报的 RowCount（可能为 0），与 release.row_count 同源。
+	if termEnt, ok := entities[entityKey("term", pkg.Manifest.TermKey)]; ok {
+		var tp map[string]any
+		if err := json.Unmarshal(termEnt.Payload, &tp); err == nil {
+			tp["row_count"] = counts["source_row"]
+			if data, err := json.Marshal(tp); err == nil {
+				sum := sha256.Sum256(data)
+				entities[entityKey("term", pkg.Manifest.TermKey)] = domain.EntityRecord{
+					EntityType: "term", EntityID: pkg.Manifest.TermKey, TermKey: pkg.Manifest.TermKey,
+					Payload: data, PayloadChecksum: "sha256:" + hex.EncodeToString(sum[:]),
+				}
+			}
+		}
+	}
 	return entities, counts, nil
 }
 

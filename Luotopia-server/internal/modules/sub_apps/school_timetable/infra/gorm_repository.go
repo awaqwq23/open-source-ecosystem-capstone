@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -26,15 +25,39 @@ func NewGormRepository(db *gorm.DB) *GormRepository {
 }
 
 func (r *GormRepository) CurrentDataset(ctx context.Context) (domain.DatasetState, error) {
-	var row datasetStateModel
-	err := r.db.WithContext(ctx).First(&row, "id = ?", 1).Error
+	var ds datasetModel
+	err := r.db.WithContext(ctx).First(&ds, "id = ?", 1).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.DatasetState{SchemaVersion: 1, TermKeys: []string{}}, nil
 	}
 	if err != nil {
 		return domain.DatasetState{}, err
 	}
-	return row.toDomain(), nil
+	termKeys, err := listActiveTermKeys(ctx, r.db)
+	if err != nil {
+		return domain.DatasetState{}, err
+	}
+	bundle, err := r.bundleByVersion(ctx, ds.Version)
+	if err != nil {
+		return domain.DatasetState{}, err
+	}
+	return domain.DatasetState{
+		Version: ds.Version, Checksum: ds.Checksum, SchemaVersion: ds.SchemaVersion,
+		TermKeys: termKeys, Bundle: bundle, PublishedAt: ds.PublishedAt,
+	}, nil
+}
+
+// bundleByVersion 取某全局版本对应发行版本的离线包定位；版本未发布或包未上传时返回 nil。
+func (r *GormRepository) bundleByVersion(ctx context.Context, version int64) (*domain.DatasetBundle, error) {
+	var rel releaseModel
+	err := r.db.WithContext(ctx).Where("version = ?", version).First(&rel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rel.toBundle(), nil
 }
 
 func (r *GormRepository) ListEntities(ctx context.Context) ([]domain.EntityRecord, error) {
@@ -108,23 +131,33 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 				}
 			}
 		}
-		termKeys, err := listTermKeys(tx)
-		if err != nil {
-			return err
-		}
+		// 写数据集全局头：版本、聚合校验、发布时间（学期绑定与离线包定位已下沉到 release）
 		checksum, err := datasetChecksum(tx)
 		if err != nil {
 			return err
 		}
-		termKeysJSON, err := json.Marshal(termKeys)
-		if err != nil {
+		dataset := datasetModel{
+			ID: 1, Version: preview.NextVersion, Checksum: checksum,
+			SchemaVersion: 1, PublishedAt: now, UpdatedAt: now,
+		}
+		if err := tx.Save(&dataset).Error; err != nil {
 			return err
 		}
-		state := datasetStateModel{
-			ID: 1, Version: preview.NextVersion, Checksum: checksum,
-			SchemaVersion: 1, TermKeysJSON: string(termKeysJSON), PublishedAt: now, UpdatedAt: now,
+		// 写该学期发行版本行：同 term 旧版本置为非激活，新版本置为激活（历史版本予以保留）
+		if err := tx.Model(&releaseModel{}).
+			Where("term_key = ?", pkg.Manifest.TermKey).
+			Update("active", false).Error; err != nil {
+			return err
 		}
-		if err := tx.Save(&state).Error; err != nil {
+		release := releaseModel{
+			TermKey: pkg.Manifest.TermKey, Version: preview.NextVersion,
+			SchoolYear: pkg.Manifest.SchoolYear, Term: pkg.Manifest.Term,
+			FirstWeekMonday: pkg.Manifest.FirstWeekMonday,
+			RowCount: releaseRowCount(preview), Source: pkg.Manifest.Source,
+			SourceChecksum: pkg.Manifest.SourceChecksum, PackageChecksum: preview.Checksum,
+			Active: true, PublishedAt: now,
+		}
+		if err := tx.Save(&release).Error; err != nil {
 			return err
 		}
 		return nil
@@ -132,14 +165,14 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 }
 
 func (r *GormRepository) UpdateBundle(ctx context.Context, version int64, bundle domain.DatasetBundle) error {
-	return r.db.WithContext(ctx).Model(&datasetStateModel{}).
-		Where("id = ? AND version = ?", 1, version).
+	return r.db.WithContext(ctx).Model(&releaseModel{}).
+		Where("version = ?", version).
 		Updates(map[string]any{
 			"bundle_key":      bundle.Key,
 			"bundle_href":     bundle.Href,
 			"bundle_size":     bundle.Size,
 			"bundle_checksum": bundle.Checksum,
-			"updated_at":      time.Now().UTC(),
+			"published_at":     time.Now().UTC(),
 		}).Error
 }
 
@@ -168,53 +201,68 @@ func (r *GormRepository) ChangesAfter(ctx context.Context, version int64, limit 
 }
 
 func (r *GormRepository) ListTerms(ctx context.Context) ([]domain.Term, error) {
-	var rows []entityModel
+	var rows []releaseModel
 	if err := r.db.WithContext(ctx).
-		Where("entity_type = ?", "term").
-		Order("entity_id DESC").
+		Where("active = ?", true).
+		Order("term_key DESC").
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	result := make([]domain.Term, len(rows))
 	for i, row := range rows {
-		result[i] = termFromEntity(row)
+		result[i] = domain.Term{
+			TermKey: row.TermKey, SchoolYear: row.SchoolYear, Term: row.Term,
+			FirstWeekMonday: row.FirstWeekMonday, RowCount: row.RowCount,
+			Source: row.Source, SourceChecksum: row.SourceChecksum,
+			Version: row.Version, PublishedAt: row.PublishedAt,
+		}
 	}
 	return result, nil
 }
 
-type datasetStateModel struct {
-	ID             int       `gorm:"primaryKey;column:id"`
-	Version        int64     `gorm:"column:version"`
-	Checksum       string    `gorm:"column:checksum"`
-	SchemaVersion  int       `gorm:"column:schema_version"`
-	TermKeysJSON   string    `gorm:"column:term_keys_json"`
-	BundleKey      string    `gorm:"column:bundle_key"`
-	BundleHref     string    `gorm:"column:bundle_href"`
-	BundleSize     int64     `gorm:"column:bundle_size"`
-	BundleChecksum string    `gorm:"column:bundle_checksum"`
-	PublishedAt    time.Time `gorm:"column:published_at"`
-	UpdatedAt      time.Time `gorm:"column:updated_at"`
+// datasetModel 对应 school_timetable_dataset，数据集全局头（单行，id=1）。
+// 仅承载全局版本、聚合校验、schema 版本与发布时间；学期元维度与离线包定位已下沉到 release。
+type datasetModel struct {
+	ID            int       `gorm:"primaryKey;column:id"`
+	Version       int64     `gorm:"column:version"`
+	Checksum      string    `gorm:"column:checksum"`
+	SchemaVersion int       `gorm:"column:schema_version"`
+	PublishedAt   time.Time `gorm:"column:published_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at"`
 }
 
-func (datasetStateModel) TableName() string { return "school_timetable_dataset_state" }
+func (datasetModel) TableName() string { return "school_timetable_dataset" }
 
-func (m datasetStateModel) toDomain() domain.DatasetState {
-	var termKeys []string
-	_ = json.Unmarshal([]byte(m.TermKeysJSON), &termKeys)
-	if termKeys == nil {
-		termKeys = []string{}
+// releaseModel 对应 school_timetable_releases，每学期每发行版本一行。
+// 唯一承载学期元维度、源数据行数、源/包校验、离线包定位与激活标志。
+type releaseModel struct {
+	TermKey         string    `gorm:"primaryKey;column:term_key"`
+	Version         int64     `gorm:"primaryKey;column:version"`
+	SchoolYear      string    `gorm:"column:school_year"`
+	Term            string    `gorm:"column:term"`
+	FirstWeekMonday string    `gorm:"column:first_week_monday"`
+	RowCount        int       `gorm:"column:row_count"`
+	Source          string    `gorm:"column:source"`
+	SourceChecksum  string    `gorm:"column:source_checksum"`
+	PackageChecksum string    `gorm:"column:package_checksum"`
+	BundleKey       string    `gorm:"column:bundle_key"`
+	BundleHref      string    `gorm:"column:bundle_href"`
+	BundleSize      int64     `gorm:"column:bundle_size"`
+	BundleChecksum  string    `gorm:"column:bundle_checksum"`
+	Active          bool      `gorm:"column:active"`
+	PublishedAt     time.Time `gorm:"column:published_at"`
+}
+
+func (releaseModel) TableName() string { return "school_timetable_releases" }
+
+func (m releaseModel) toBundle() *domain.DatasetBundle {
+	if strings.TrimSpace(m.BundleHref) == "" {
+		return nil
 	}
-	state := domain.DatasetState{
-		Version: m.Version, Checksum: m.Checksum, SchemaVersion: m.SchemaVersion,
-		TermKeys: termKeys, PublishedAt: m.PublishedAt,
+	return &domain.DatasetBundle{
+		Version: m.Version, Key: m.BundleKey, Href: m.BundleHref,
+		Size: m.BundleSize, Checksum: m.BundleChecksum,
 	}
-	if strings.TrimSpace(m.BundleHref) != "" {
-		state.Bundle = &domain.DatasetBundle{
-			Version: m.Version, Key: m.BundleKey, Href: m.BundleHref,
-			Size: m.BundleSize, Checksum: m.BundleChecksum,
-		}
-	}
-	return state
 }
 
 type entityModel struct {
@@ -234,30 +282,6 @@ func (m entityModel) toDomain() domain.EntityRecord {
 		EntityType: m.EntityType, EntityID: m.EntityID, TermKey: m.TermKey,
 		Payload: []byte(m.PayloadJSON), PayloadChecksum: m.PayloadChecksum,
 		UpdatedVersion: m.UpdatedVersion,
-	}
-}
-
-func termFromEntity(row entityModel) domain.Term {
-	var payload struct {
-		TermKey         string `json:"term_key"`
-		SchoolYear      string `json:"school_year"`
-		Term            string `json:"term"`
-		FirstWeekMonday string `json:"first_week_monday"`
-		RowCount        int    `json:"row_count"`
-		Source          string `json:"source"`
-		SourceChecksum  string `json:"source_checksum"`
-	}
-	_ = json.Unmarshal([]byte(row.PayloadJSON), &payload)
-	return domain.Term{
-		TermKey:         firstNonEmpty(payload.TermKey, row.EntityID),
-		SchoolYear:      payload.SchoolYear,
-		Term:            payload.Term,
-		FirstWeekMonday: payload.FirstWeekMonday,
-		RowCount:        payload.RowCount,
-		Source:          payload.Source,
-		SourceChecksum:  payload.SourceChecksum,
-		Version:         row.UpdatedVersion,
-		PublishedAt:     row.UpdatedAt,
 	}
 }
 
@@ -290,16 +314,24 @@ func (m changeModel) toDomain() domain.EntityChange {
 	}
 }
 
-func listTermKeys(tx *gorm.DB) ([]string, error) {
+func listActiveTermKeys(ctx context.Context, db *gorm.DB) ([]string, error) {
 	var keys []string
-	err := tx.Model(&entityModel{}).
-		Where("entity_type = ?", "term").
-		Order("entity_id DESC").
-		Pluck("entity_id", &keys).Error
+	err := db.WithContext(ctx).Model(&releaseModel{}).
+		Where("active = ?", true).
+		Order("term_key DESC").
+		Pluck("term_key", &keys).Error
 	if keys == nil {
 		keys = []string{}
 	}
 	return keys, err
+}
+
+// releaseRowCount 以源数据行数（source_row 实体计数）作为发行版本的行数，避免依赖源包自报 RowCount。
+func releaseRowCount(preview domain.ImportPreview) int {
+	if preview.EntityCounts == nil {
+		return 0
+	}
+	return preview.EntityCounts["source_row"]
 }
 
 func datasetChecksum(tx *gorm.DB) (string, error) {
@@ -316,11 +348,3 @@ func datasetChecksum(tx *gorm.DB) (string, error) {
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
-}

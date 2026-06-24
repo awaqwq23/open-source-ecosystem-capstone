@@ -30,6 +30,9 @@ type Package struct {
 	SourceRows        []SourceRow
 }
 
+// Term 是某学期的“当前激活发行版本”视图，供管理端学期列表展示。
+// Version/PublishedAt/RowCount 取自该学期当前 active=true 的发行版本（见 Release），而非数据集全局版本或单一实体版本。
+// TermKey/SchoolYear/Term/FirstWeekMonday/Source/SourceChecksum 直接来自数据包 Manifest。
 type Term struct {
 	TermKey         string    `json:"term_key"`
 	SchoolYear      string    `json:"school_year"`
@@ -40,6 +43,24 @@ type Term struct {
 	SourceChecksum  string    `json:"source_checksum,omitempty"`
 	Version         int64     `json:"version"`
 	PublishedAt     time.Time `json:"published_at"`
+}
+
+// Release 表示某学期某个数据集发行版本：唯一承载该版本的学期元维度、源数据行数、
+// 离线包定位与激活状态。每学期恰好一行 Active=true 为当前激活版本；历史版本予以保留。
+// RowCount 语义为“源数据行数”（source_row 实体计数），与离线包、entities 内嵌 term payload 同源。
+type Release struct {
+	TermKey         string         `json:"term_key"`
+	Version         int64          `json:"version"`
+	SchoolYear      string         `json:"school_year"`
+	Term            string         `json:"term"`
+	FirstWeekMonday string         `json:"first_week_monday"`
+	RowCount        int            `json:"row_count"`
+	Source          string         `json:"source,omitempty"`
+	SourceChecksum  string         `json:"source_checksum,omitempty"`
+	PackageChecksum string         `json:"package_checksum,omitempty"`
+	Bundle          *DatasetBundle `json:"bundle,omitempty"`
+	Active          bool           `json:"active"`
+	PublishedAt     time.Time      `json:"published_at"`
 }
 
 type CourseCatalog struct {
