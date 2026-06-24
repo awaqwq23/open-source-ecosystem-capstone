@@ -227,12 +227,15 @@ type ImportJob struct {
 }
 
 type DatasetState struct {
-	Version       int64     `json:"version"`
-	Checksum      string    `json:"checksum"`
-	SchemaVersion int       `json:"schema_version"`
-	TermKeys      []string  `json:"term_keys"`
-	PublishedAt   time.Time `json:"published_at"`
-	Bundle        *DatasetBundle
+	Version   int64     `json:"version"`
+	Checksum  string    `json:"checksum"`
+	SchemaVersion int   `json:"schema_version"`
+	TermKeys  []string  `json:"term_keys"`
+	PublishedAt  time.Time `json:"published_at"`
+	// MinReplayableVersion：该版本及其之后的 changes 可被客户端从 base 安全增量回放。
+	// 早于此版本的 changes 已被归档清理；客户端 clientVersion < 该值时必须拉整包，不可 apply 增量。
+	MinReplayableVersion int64           `json:"min_replayable_version,omitempty"`
+	Bundle               *DatasetBundle
 }
 
 type DatasetBundle struct {
@@ -261,6 +264,9 @@ type EntityChange struct {
 	EntityID   string          `json:"entity_id"`
 	TermKey    string          `json:"term_key"`
 	Payload    json.RawMessage `json:"payload,omitempty"`
+	// BaseVersion：该 change 所属连续段的基底版本（导入时 = 导入前的数据集版本）。
+	// 客户端 base < BaseVersion 时，该 change 不可直接 apply（除非该段基底仍在回放窗口内）。
+	BaseVersion int64 `json:"base_version,omitempty"`
 }
 
 type ImportPreview struct {

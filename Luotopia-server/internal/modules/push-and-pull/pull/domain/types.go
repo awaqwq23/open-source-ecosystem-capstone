@@ -80,6 +80,9 @@ type SchoolTimetableBlock struct {
 	Bundle        *SchoolTimetableBundle  `json:"bundle,omitempty"`
 	Changes       []SchoolTimetableChange `json:"changes"`
 	PublishedAt   string                  `json:"published_at"`
+	// MinReplayableVersion：早于此版本的 changes 已被服务端归档清理。
+	// 客户端持有的 clientVersion < 该值时应拉整包重建，不可 apply 增量。
+	MinReplayableVersion int64 `json:"min_replayable_version,omitempty"`
 }
 
 type SchoolTimetableBundle struct {

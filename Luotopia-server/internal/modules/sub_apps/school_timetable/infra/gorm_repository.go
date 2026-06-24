@@ -44,6 +44,7 @@ func (r *GormRepository) CurrentDataset(ctx context.Context) (domain.DatasetStat
 	return domain.DatasetState{
 		Version: ds.Version, Checksum: ds.Checksum, SchemaVersion: ds.SchemaVersion,
 		TermKeys: termKeys, Bundle: bundle, PublishedAt: ds.PublishedAt,
+		MinReplayableVersion: ds.MinReplayableVersion,
 	}, nil
 }
 
@@ -131,14 +132,18 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 				}
 			}
 		}
-		// 写数据集全局头：版本、聚合校验、发布时间（学期绑定与离线包定位已下沉到 release）
+		// 写数据集全局头：版本、聚合校验、发布时间。MinReplayableVersion 由归档清理维护，
+		// 导入不动它，故先读旧值再 Save，避免 Save 全字段覆盖清零（首导入无旧行时旧值为 0，正确）。
 		checksum, err := datasetChecksum(tx)
 		if err != nil {
 			return err
 		}
+		var priorDataset datasetModel
+		_ = tx.First(&priorDataset, "id = ?", 1).Error
 		dataset := datasetModel{
 			ID: 1, Version: preview.NextVersion, Checksum: checksum,
-			SchemaVersion: 1, PublishedAt: now, UpdatedAt: now,
+			SchemaVersion: 1, MinReplayableVersion: priorDataset.MinReplayableVersion,
+			PublishedAt: now, UpdatedAt: now,
 		}
 		if err := tx.Save(&dataset).Error; err != nil {
 			return err
@@ -227,6 +232,8 @@ type datasetModel struct {
 	Version       int64     `gorm:"column:version"`
 	Checksum      string    `gorm:"column:checksum"`
 	SchemaVersion int       `gorm:"column:schema_version"`
+	// MinReplayableVersion：早于此版本的 changes 已归档清理，客户端需拉整包。
+	MinReplayableVersion int64 `gorm:"column:min_replayable_version"`
 	PublishedAt   time.Time `gorm:"column:published_at"`
 	UpdatedAt     time.Time `gorm:"column:updated_at"`
 }
@@ -293,6 +300,7 @@ type changeModel struct {
 	EntityID    string    `gorm:"column:entity_id"`
 	TermKey     string    `gorm:"column:term_key"`
 	PayloadJSON string    `gorm:"column:payload_json"`
+	BaseVersion int64     `gorm:"column:base_version"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
 }
 
@@ -302,7 +310,7 @@ func changeModelFromDomain(item domain.EntityChange, now time.Time) changeModel 
 	return changeModel{
 		Version: item.Version, Sequence: item.Sequence, Operation: item.Operation,
 		EntityType: item.EntityType, EntityID: item.EntityID, TermKey: item.TermKey,
-		PayloadJSON: string(item.Payload), CreatedAt: now,
+		PayloadJSON: string(item.Payload), BaseVersion: item.BaseVersion, CreatedAt: now,
 	}
 }
 
@@ -310,7 +318,7 @@ func (m changeModel) toDomain() domain.EntityChange {
 	return domain.EntityChange{
 		Version: m.Version, Sequence: m.Sequence, Operation: m.Operation,
 		EntityType: m.EntityType, EntityID: m.EntityID, TermKey: m.TermKey,
-		Payload: []byte(m.PayloadJSON),
+		Payload: []byte(m.PayloadJSON), BaseVersion: m.BaseVersion,
 	}
 }
 
@@ -347,4 +355,40 @@ func datasetChecksum(tx *gorm.DB) (string, error) {
 	sum := sha256.Sum256([]byte(strings.Join(parts, "\n")))
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
+
+// PruneChanges 归档清理过老的 changes 事件，避免 changes 表无限增长。
+// 语义（按学期分组锚定）：每个学期当前的激活发行版本需可被从其回放基底起完整重建，
+// 故删除下界 = 所有激活 release 回放基底的最小版本（取保守最低，保证任何学期激活态不丢可回放的前置事件）。
+// 清理后更新 dataset.min_replayable_version = 清理下界，供客户端判断：旧于该值必须拉整包。
+func (r *GormRepository) PruneChanges(ctx context.Context) error {
+	// 收集各激活 release 的回放基底版本（release.version - 1，即该次导入前数据集版本）
+	var activeBases []int64
+	if err := r.db.WithContext(ctx).Model(&releaseModel{}).
+		Where("active = ?", true).
+		Pluck("version - 1", &activeBases).Error; err != nil {
+		return err
+	}
+	if len(activeBases) == 0 {
+		return nil
+	}
+	// 清理下界 = 各激活基底的最小值；version <= floor 的 changes 删除（floor 本身保留保证基底段完整）
+	floor := activeBases[0]
+	for _, b := range activeBases[1:] {
+		if b < floor {
+			floor = b
+		}
+	}
+	if floor <= 0 {
+		return nil // 没有可安全清理的版本段
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("version <= ?", floor).Delete(&changeModel{}).Error; err != nil {
+			return err
+		}
+		// 维护 min_replayable_version = floor（该值及之后可增量回放；之前的已清理）
+		return tx.Model(&datasetModel{}).Where("id = ?", 1).
+			Update("min_replayable_version", floor).Error
+	})
+}
+
 

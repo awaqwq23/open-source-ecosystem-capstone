@@ -135,9 +135,13 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 				SyncMode:      "changes",
 				Changes:       []domain.SchoolTimetableChange{},
 				PublishedAt:   state.PublishedAt.Format(time.RFC3339),
+				MinReplayableVersion: state.MinReplayableVersion,
 			}
 			if changed {
-				if len(changes) > changesLimit {
+				// 断层检测：若客户端版本早于可回放基线（该版本前的 changes 已归档），
+				// 不可 apply 增量，直接降级整包；客户端应据此重建本地数据集。
+				broken := state.MinReplayableVersion > 0 && clientVersion < state.MinReplayableVersion
+				if !broken && len(changes) > changesLimit {
 					bundle, bundleErr := s.schoolTimetableSvc.CurrentBundle(ctx)
 					if bundleErr == nil && bundle != nil && bundle.Href != "" {
 						block.SyncMode = "bundle"
@@ -147,6 +151,18 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 						}
 						resp.SchoolTimetable = block
 						return resp
+					}
+					resp.SchoolTimetable = block
+					return resp
+				}
+				if broken {
+					bundle, bundleErr := s.schoolTimetableSvc.CurrentBundle(ctx)
+					if bundleErr == nil && bundle != nil && bundle.Href != "" {
+						block.SyncMode = "bundle"
+						block.Bundle = &domain.SchoolTimetableBundle{
+							Version: bundle.Version, Href: bundle.Href,
+							Size: bundle.Size, Checksum: bundle.Checksum,
+						}
 					}
 					resp.SchoolTimetable = block
 					return resp

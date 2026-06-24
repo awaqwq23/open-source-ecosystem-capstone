@@ -28,6 +28,7 @@ type Repository interface {
 	ChangesAfter(ctx context.Context, version int64, limit int) ([]domain.EntityChange, domain.DatasetState, error)
 	ListTerms(ctx context.Context) ([]domain.Term, error)
 	UpdateBundle(ctx context.Context, version int64, bundle domain.DatasetBundle) error
+	PruneChanges(ctx context.Context) error
 }
 
 type BundleStore interface {
@@ -283,6 +284,13 @@ func (s *Service) runImportJob(jobID string, data []byte) {
 		fail(fmt.Errorf("发布离线包失败: %w", err))
 		return
 	}
+	// 归档清理：按学期分组锚定激活基底，删除可安全裁去的旧版 changes。
+	// 失败不影响导入结果（数据已落库），仅记录以便后续补偿。
+	if err := s.repo.PruneChanges(ctx); err != nil {
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Progress = "完成（归档清理失败）"
+		})
+	}
 	if len(preview.Changes) > 100 {
 		preview.Changes = preview.Changes[:100]
 	}
@@ -366,6 +374,7 @@ func (s *Service) previewImport(ctx context.Context, pkg domain.Package, package
 		changes = append(changes, domain.EntityChange{
 			Version: nextVersion, Operation: "upsert", EntityType: entity.EntityType,
 			EntityID: entity.EntityID, TermKey: entity.TermKey, Payload: entity.Payload,
+			BaseVersion: state.Version,
 		})
 		delete(previous, key)
 	}
@@ -382,6 +391,7 @@ func (s *Service) previewImport(ctx context.Context, pkg domain.Package, package
 		changes = append(changes, domain.EntityChange{
 			Version: nextVersion, Operation: "delete", EntityType: entity.EntityType,
 			EntityID: entity.EntityID, TermKey: entity.TermKey,
+			BaseVersion: state.Version,
 		})
 	}
 	upserts := 0
