@@ -1,14 +1,6 @@
 ---
+import { Globe, Monitor } from "lucide-astro";
 import * as si from "simple-icons";
-
-// Windows 品牌标在 Simple Icons 中已被微软下架，这里采用微软官方四窗格
-// 品牌轮廓（公知 Windows 品牌标记），单色 currentColor 以与其它品牌图标统一。
-const windowsPath =
-  "M2.5 5.5l7.2-.95v7H2.5zm0 7h7.2v6.95L2.5 18.3zm8.2-8.05L21.5 3v8.5h-10.8zm0 9.05H21.5V21l-10.8-1.45z";
-
-// Web（地球）——非品牌图标，用线条 globe 与其它 fill 图标保持视觉协调
-const webPath =
-  "M2.5 11.4h19M12 2.6c2.6 2.4 4 6 4 9.4s-1.4 7-4 9.4c-2.6-2.4-4-6-4-9.4s1.4-7 4-9.4z";
 
 // name -> simple-icons path
 const named: Record<string, string> = {
@@ -16,13 +8,10 @@ const named: Record<string, string> = {
   android: si.siAndroid.path,
   linux: si.siLinux.path,
 };
-// name -> 自有 path（非 simple-icons）
-const custom: Record<string, string> = {
-  windows: windowsPath,
-  web: webPath,
+const lucide: Record<string, typeof Monitor> = {
+  windows: Monitor,
+  web: Globe,
 };
-// name -> 是否描边图标（仅 web 用 stroke，其余 fill）
-const strokeOnly = new Set(["web"]);
 
 export interface Props {
   /** apple | android | linux | windows | web */
@@ -32,22 +21,21 @@ export interface Props {
 }
 const { name, class: cls = "", size = "100%" } = Astro.props;
 
-const path = named[name] ?? custom[name];
-const stroked = strokeOnly.has(name);
-const tag = stroked;
+const path = named[name];
+const LucideIcon = lucide[name];
 ---
 
-<svg
-  class={cls}
-  width={size}
-  height={size}
-  viewBox="0 0 24 24"
-  role="img"
-  aria-hidden="true"
-  focusable="false"
-  fill={stroked ? "none" : "currentColor"}
-  stroke={stroked ? "currentColor" : undefined}
-  stroke-width={stroked ? 1.6 : undefined}
-  stroke-linecap={stroked ? "round" : undefined}
-  stroke-linejoin={stroked ? "round" : undefined}
-><path d={path} /></svg>
+{path ? (
+  <svg
+    class={cls}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    role="img"
+    aria-hidden="true"
+    focusable="false"
+    fill="currentColor"
+  ><path d={path} /></svg>
+) : LucideIcon ? (
+  <LucideIcon class={cls} size={Number(size) || undefined} aria-hidden="true" focusable="false" />
+) : null}

@@ -1,5 +1,6 @@
 ---
 import { Image } from "astro:assets";
+import { Download } from "lucide-astro";
 import heroImg from "../assets/scenery/sakura-castle.jpg";
 ---
 <section class="hero" id="top">
@@ -22,7 +23,7 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
       <span class="hero__cn">珞珈山下的<br/><em>校园应用</em></span>
     </h1>
     <div class="hero__cta">
-      <a class="btn btn--solid" href="#download"><span>下载</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></a>
+      <a class="btn btn--solid" href="#download"><span>下载</span><Download size={16} stroke-width={1.8} aria-hidden="true" /></a>
       <a class="btn btn--ghost" href="#intro"><span>了解更多</span></a>
     </div>
   </div>

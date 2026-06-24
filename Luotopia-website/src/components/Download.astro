@@ -1,6 +1,7 @@
 ---
 // 产品下载：呈现为已完成的应用。移动端与桌面端两组，各平台用真实品牌图标（Simple Icons / 官方品牌标）。
 // 下载链接统一指向 GitHub Releases（仓库真实存在的发布渠道）。
+import { Download as DownloadIcon } from "lucide-astro";
 import BrandIcon from "../components/BrandIcon.astro";
 
 const RELEASES = "https://github.com/ClosedWHU/Luotopia/releases";
@@ -35,7 +36,7 @@ const desktop = [
             <span class="dl__note">{p.note}</span>
           </span>
           <span class="dl__cta">{p.label}
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            <DownloadIcon size={15} stroke-width={1.6} aria-hidden="true" />
           </span>
         </a>
       ))}
@@ -52,7 +53,7 @@ const desktop = [
             <span class="dl__names"><span class="dl__cn">{p.cn}</span><span class="dl__en">{p.en}</span></span>
             <span class="dl__note">{p.note}</span>
             <span class="dl__cta dl__cta--sm">{p.label}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+              <DownloadIcon size={13} stroke-width={1.8} aria-hidden="true" />
             </span>
           </span>
         </a>
