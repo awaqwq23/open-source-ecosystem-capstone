@@ -21,7 +21,6 @@ type Manifest struct {
 
 type Package struct {
 	Manifest          Manifest
-	Rows              []map[string]string
 	Catalogs          []CourseCatalog
 	TermCourses       []TermCourse
 	InstructorCourses []InstructorCourse
