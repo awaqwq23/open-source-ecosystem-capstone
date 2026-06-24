@@ -190,6 +190,7 @@ func (s *Service) StartImport(reader io.Reader) (string, error) {
 		if len(preview.Changes) > 100 {
 			preview.Changes = preview.Changes[:100]
 		}
+		preview.AllChanges = nil
 		s.jobs.update(jobID, func(job *domain.ImportJob) {
 			job.Status = domain.JobStatusCompleted
 			job.Progress = "完成"
