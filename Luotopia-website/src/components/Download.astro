@@ -1,0 +1,72 @@
+---
+// 产品下载：次要板块。项目暂无公开下载渠道，这里做结构化占位（lorem 假文本），后续替换为真实下载入口。
+const platforms = [
+  { num: "i", cn: "安卓", en: "Android", tag: "APK · 待发布", body: "Loris irpum veleris, quis quarum tibi. 应用商店与直链下载随后上线。" },
+  { num: "ii", cn: "苹果", en: "iOS", tag: "App Store · 待发布", body: "Per quis amet tantum这些占位文字将在上架后替换。TestFlight 预览亦在筹备。" },
+  { num: "iii", cn: "桌面", en: "Desktop", tag: "Windows / macOS · 待发布", body: "Loris irpum velerit桌面端正在设计中，与移动端共享同一份校园数据。" },
+];
+---
+<section class="dl" id="download">
+  <header class="dl__head" data-reveal-stagger>
+    <p class="eyebrow"><span class="num">03</span>&nbsp;／&nbsp;04&nbsp;&nbsp;·&nbsp;&nbsp;下载</p>
+    <h2 class="dl__title">把它放进口袋？<em>再等等。</em></h2>
+    <p class="dl__sub">Luotopia 尚在打磨。各平台安装包上架后，将在此提供下载——在那之前，欢迎到 GitHub 关注进展。</p>
+  </header>
+
+  <div class="dl__grid">
+    {platforms.map((p) => (
+      <article class="dl__card" data-reveal="fade">
+        <div class="dl__card-top">
+          <span class="dl__num display">{p.num}.</span>
+          <svg class="dl__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <rect x="6" y="2.5" width="12" height="19" rx="3"></rect>
+            <line x1="11" y1="18.5" x2="13" y2="18.5"></line>
+          </svg>
+        </div>
+        <h3 class="dl__name"><span class="dl__cn">{p.cn}</span><span class="dl__en">{p.en}</span></h3>
+        <p class="dl__tag">{p.tag}</p>
+        <p class="dl__body">{p.body}</p>
+        <a class="dl__btn" href="https://github.com/openwhu/luotopia/releases" target="_blank" rel="noopener">
+          <span>敬请期待</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+      </article>
+    ))}
+  </div>
+</section>
+
+<style>
+  .dl { padding: var(--section-y) clamp(1.25rem,5vw,var(--gutter)); max-width: var(--wide); margin-inline: auto; }
+  .dl__head { display: grid; gap: 1.2rem; margin-bottom: clamp(2.5rem,6vw,4rem); max-width: 60ch; }
+  .dl__title { font-family: var(--ff-serif-cn); font-weight: 600; font-size: var(--step-3); letter-spacing: .06em; }
+  .dl__title em { font-style: normal; color: var(--accent); font-family: var(--ff-display); }
+  .dl__sub { color: var(--fg-2); font-size: .95rem; line-height: 1.75; font-weight: 300; max-width: 48ch; }
+
+  .dl__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(.6rem,2vw,1.2rem); }
+  .dl__card {
+    border: 1px solid var(--line); background: color-mix(in srgb, var(--ink-2) 70%, transparent);
+    padding: clamp(1.4rem,3vw,2rem); display: flex; flex-direction: column; gap: 1rem;
+    min-height: 18rem; transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .dl__card:hover { border-color: var(--line-strong); transform: translateY(-4px); }
+  .dl__card-top { display: flex; align-items: flex-start; justify-content: space-between; color: var(--fg-2); }
+  .dl__num { font-size: 1.4rem; color: var(--accent); }
+  .dl__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+  .dl__cn { font-family: var(--ff-serif-cn); font-weight: 600; font-size: 1.6rem; }
+  .dl__en { font-family: var(--ff-display); font-style: italic; font-weight: 500; font-size: 1.1rem; color: var(--fg-3); }
+  .dl__tag { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-2); }
+  .dl__body { color: var(--fg-2); font-size: .82rem; line-height: 1.65; font-weight: 300; flex: 1; }
+  .dl__btn {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .85rem; letter-spacing: .06em; color: var(--fg);
+    padding: .6rem 1rem; border: 1px solid var(--line-strong); border-radius: 99px;
+    transition: all var(--dur) var(--ease);
+  }
+  .dl__btn:hover { color: var(--ink); background: var(--accent); border-color: var(--accent); }
+  .dl__btn:hover svg { transform: translateX(3px); }
+  .dl__btn svg { transition: transform var(--dur) var(--ease); }
+
+  @media (max-width: 900px) {
+    .dl__grid { grid-template-columns: 1fr; }
+  }
+</style>

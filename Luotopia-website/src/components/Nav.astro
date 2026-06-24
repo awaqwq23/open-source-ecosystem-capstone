@@ -1,0 +1,125 @@
+---
+// 极简导航：左 logo，中锚点，右 GitHub；滚动隐藏/毛玻璃
+const links = [
+  { href: "#intro", label: "项目", num: "01" },
+  { href: "#gallery", label: "珞珈", num: "02" },
+  { href: "#download", label: "下载", num: "03" },
+  { href: "#team", label: "团队", num: "04" },
+];
+---
+<header class="nav" id="nav" data-nav>
+  <a href="#top" class="nav__logo" aria-label="Luotopia 首页">
+    <span class="nav__logo-mark">珞</span>
+    <span class="nav__logo-word">Luotopia</span>
+  </a>
+  <nav class="nav__links" aria-label="主导航">
+    {links.map((l) => (
+      <a href={l.href} class="nav__link">
+        <span class="nav__num">{l.num}</span>
+        <span class="nav__txt">{l.label}</span>
+      </a>
+    ))}
+  </nav>
+  <a class="nav__gh" href="https://github.com/openwhu/luotopia" target="_blank" rel="noopener">
+    <span>GitHub</span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12C23.5 5.7 18.3.5 12 .5Z"/></svg>
+  </a>
+  <button class="nav__burger" data-burger aria-label="菜单" aria-expanded="false">
+    <span></span><span></span>
+  </button>
+</header>
+
+<style>
+  .nav {
+    position: fixed; inset: 0 0 auto 0; z-index: 120;
+    height: var(--nav-h);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 2rem;
+    padding-inline: var(--gutter);
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), transform .5s var(--ease);
+    border-bottom: 1px solid transparent;
+  }
+  .nav[data-scrolled] {
+    background: color-mix(in srgb, var(--luojia-blue) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border-bottom-color: var(--line);
+  }
+  .nav[data-hidden] { transform: translateY(-100%); }
+
+  .nav__logo { display: inline-flex; align-items: baseline; gap: .6rem; }
+  .nav__logo-mark {
+    font-family: var(--ff-serif-cn); font-weight: 700;
+    font-size: 1.5rem; color: var(--fg);
+    line-height: 1;
+  }
+  .nav__logo-word {
+    font-family: var(--ff-display); font-style: italic; font-weight: 500;
+    font-size: 1.15rem; letter-spacing: .02em; color: var(--fg-2);
+  }
+  .nav__logo:hover .nav__logo-word { color: var(--accent); }
+
+  .nav__links { display: flex; gap: clamp(1rem, 3vw, 2.4rem); align-items: center; }
+  .nav__link { position: relative; display: inline-flex; align-items: baseline; gap: .45rem; color: var(--fg-2); transition: color var(--dur) var(--ease); }
+  .nav__link:hover { color: var(--fg); }
+  .nav__num { font-family: var(--ff-display); font-style: italic; font-size: .85rem; color: var(--accent); opacity: .85; }
+  .nav__txt { font-size: .92rem; letter-spacing: .18em; }
+  .nav__link::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 1px;
+    background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform var(--dur) var(--ease);
+  }
+  .nav__link:hover::after { transform: scaleX(1); }
+
+  .nav__gh {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .85rem; letter-spacing: .1em; color: var(--fg-2);
+    border: 1px solid var(--line); padding: .5rem .9rem; border-radius: 99px;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .nav__gh:hover { color: var(--fg); border-color: var(--line-strong); transform: translateY(-1px); }
+
+  .nav__burger { display: none; width: 34px; height: 26px; position: relative; }
+  .nav__burger span { position: absolute; left: 4px; right: 4px; height: 1.5px; background: var(--fg); transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+  .nav__burger span:nth-child(1) { top: 8px; }
+  .nav__burger span:nth-child(2) { bottom: 8px; }
+  .nav[data-open="true"] .nav__burger span:nth-child(1) { transform: translateY(5px) rotate(45deg); }
+  .nav[data-open="true"] .nav__burger span:nth-child(2) { transform: translateY(-5px) rotate(-45deg); }
+
+  @media (max-width: 900px) {
+    .nav__links { position: fixed; inset: var(--nav-h) 0 auto 0; flex-direction: column; gap: 2rem; padding: 2.5rem var(--gutter) 3rem; background: var(--ink); transform: translateY(-120%); transition: transform var(--dur) var(--ease); border-bottom: 1px solid var(--line); height: auto; }
+    .nav__links[data-open="true"] { transform: translateY(0); }
+    .nav__link { font-size: 1.4rem; }
+    .nav__gh { display: none; }
+    .nav__burger { display: block; }
+  }
+</style>
+
+<script>
+  const nav = document.querySelector<HTMLElement>("[data-nav]");
+  const burger = document.querySelector<HTMLElement>("[data-burger]");
+  const links = document.querySelector<HTMLElement>(".nav__links");
+  let lastY = 0;
+  const onScroll = () => {
+    const y = window.scrollY;
+    if (nav) {
+      nav.toggleAttribute("data-scrolled", y > 24);
+      // 向下隐藏 向上显现
+      if (y > 240 && y > lastY + 4) nav.setAttribute("data-hidden", "");
+      else nav.removeAttribute("data-hidden");
+    }
+    lastY = y;
+  };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  burger?.addEventListener("click", () => {
+    const open = nav?.getAttribute("data-open") === "true";
+    nav?.setAttribute("data-open", String(!open));
+    burger.setAttribute("aria-expanded", String(!open));
+    links?.toggleAttribute("data-open", !open);
+    document.body.style.overflow = !open ? "hidden" : "";
+  });
+  links?.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => {
+    nav?.removeAttribute("data-open");
+    links?.removeAttribute("data-open");
+    burger?.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }));
+</script>

@@ -1,0 +1,125 @@
+---
+import { Image } from "astro:assets";
+import { scenery } from "../data/images";
+import sakuraCastle from "../assets/scenery/sakura-castle.jpg";
+import sakuraCastle2 from "../assets/scenery/sakura-castle-2.jpg";
+import oldLibrary from "../assets/scenery/old-library.jpg";
+import laojisheGate from "../assets/scenery/laojishe-gate.jpg";
+import administration from "../assets/scenery/administration.jpg";
+import gate from "../assets/scenery/gate.jpg";
+import wanlin from "../assets/scenery/wanlin.jpg";
+import donghuDusk from "../assets/scenery/donghu-dusk.jpg";
+
+const byFile: Record<string, typeof sakuraCastle> = {
+  "sakura-castle.jpg": sakuraCastle,
+  "sakura-castle-2.jpg": sakuraCastle2,
+  "old-library.jpg": oldLibrary,
+  "laojishe-gate.jpg": laojisheGate,
+  "administration.jpg": administration,
+  "gate.jpg": gate,
+  "wanlin.jpg": wanlin,
+  "donghu-dusk.jpg": donghuDusk,
+};
+const S = scenery.reduce<Record<string, (typeof scenery)[number]>>((m, s) => { m[s.file] = s; return m; }, {});
+---
+<section class="gallery" id="gallery">
+  <header class="gallery__head" data-reveal-stagger>
+    <p class="eyebrow"><span class="num">02</span>&nbsp;／&nbsp;04&nbsp;&nbsp;·&nbsp;&nbsp;珞珈印象</p>
+    <h2 class="gallery__title">墨瓦飞檐，<em>樱云拂肩</em></h2>
+    <p class="gallery__sub">武大没有自己的产品照片，于是先行收录这组珞珈光影——樱花城堡、老图书馆、老斋舍、东湖夕照。图片皆来自 Wikimedia Commons 开放授权，详见页脚致谢。</p>
+  </header>
+
+  <div class="gallery__grid">
+    <figure class="g g--a" data-reveal="fade">
+      <Image src={byFile["sakura-castle.jpg"]} alt={S["sakura-castle.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 60vw" widths={[480,960,1600,2400]} loading="lazy"/>
+      <figcaption><span class="g__n">i.</span><span class="g__cn">樱花城堡</span><span class="g__en">Sakura Castle · 樱顶</span></figcaption>
+    </figure>
+
+    <figure class="g g--b" data-reveal="left">
+      <Image src={byFile["old-library.jpg"]} alt={S["old-library.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 40vw" widths={[480,960,1400]} loading="lazy"/>
+      <figcaption><span class="g__n">ii.</span><span class="g__cn">老图书馆</span><span class="g__en">Old Library · 樱顶</span></figcaption>
+    </figure>
+
+    <figure class="g g--c" data-reveal="right">
+      <Image src={byFile["laojishe-gate.jpg"]} alt={S["laojishe-gate.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 25vw" widths={[480,960,1400]} loading="lazy"/>
+      <figcaption><span class="g__n">iii.</span><span class="g__cn">老斋舍拱门</span><span class="g__en">Laojishe · 老斋舍</span></figcaption>
+    </figure>
+
+    <figure class="g g--d" data-reveal="fade">
+      <Image src={byFile["gate.jpg"]} alt={S["gate.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 33vw" widths={[480,960,1600]} loading="lazy"/>
+      <figcaption><span class="g__n">iv.</span><span class="g__cn">校门牌坊</span><span class="g__en">University Gate</span></figcaption>
+    </figure>
+
+    <figure class="g g--e" data-reveal="left">
+      <Image src={byFile["administration.jpg"]} alt={S["administration.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 26vw" widths={[480,960,1400]} loading="lazy"/>
+      <figcaption><span class="g__n">v.</span><span class="g__cn">行政楼</span><span class="g__en">Administration</span></figcaption>
+    </figure>
+
+    <figure class="g g--f" data-reveal="fade">
+      <Image src={byFile["wanlin.jpg"]} alt={S["wanlin.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 22vw" widths={[480,960,1280]} loading="lazy"/>
+      <figcaption><span class="g__n">vi.</span><span class="g__cn">万林艺术博物馆</span><span class="g__en">Wanlin Museum</span></figcaption>
+    </figure>
+
+    <figure class="g g--g" data-reveal="clip">
+      <Image src={byFile["sakura-castle-2.jpg"]} alt={S["sakura-castle-2.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 40vw" widths={[480,960,1400]} loading="lazy"/>
+      <figcaption><span class="g__n">vii.</span><span class="g__cn">樱花城堡</span><span class="g__en">Sakura Castle · 樱顶</span></figcaption>
+    </figure>
+
+    <figure class="g g--h" data-reveal="fade">
+      <Image src={byFile["donghu-dusk.jpg"]} alt={S["donghu-dusk.jpg"].scene_cn} class="g__img" sizes="(max-width:900px) 100vw, 50vw" widths={[480,960,1600]} loading="lazy"/>
+      <figcaption><span class="g__n">viii.</span><span class="g__cn">东湖夕照</span><span class="g__en">Donghu at Dusk · 东湖</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .gallery { padding: var(--section-y) 0; position: relative; }
+  .gallery__head { max-width: var(--wide); margin-inline: auto; padding-inline: var(--gutter); margin-bottom: clamp(2.5rem,6vw,5rem); display: grid; gap: 1.2rem; }
+  .gallery__title { font-family: var(--ff-serif-cn); font-weight: 600; font-size: var(--step-3); letter-spacing: .06em; color: var(--fg); }
+  .gallery__title em { font-style: normal; color: var(--accent-2); font-family: var(--ff-display); }
+  .gallery__sub { max-width: 52ch; color: var(--fg-2); font-size: .95rem; line-height: 1.75; font-weight: 300; }
+
+  .gallery__grid {
+    max-width: 1500px; margin-inline: auto; padding-inline: var(--gutter);
+    display: grid; gap: clamp(.5rem,1.2vw,1rem);
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 8.2vw;
+  }
+  /* 非对称 bento 位置 */
+  .g--a { grid-column: 1 / span 7; grid-row: span 5; }
+  .g--b { grid-column: 8 / span 5; grid-row: span 3; }
+  .g--c { grid-column: 8 / span 5; grid-row: span 4; }   /* 竖向拱门 */
+  .g--d { grid-column: 1 / span 4; grid-row: span 3; }
+  .g--e { grid-column: 5 / span 4; grid-row: span 3; }
+  .g--f { grid-column: 9 / span 4; grid-row: span 3; }
+  .g--g { grid-column: 1 / span 6; grid-row: span 3; }
+  .g--h { grid-column: 7 / span 6; grid-row: span 3; }
+
+  .g { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--ink-3); }
+  .g__img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.4s var(--ease), filter var(--dur-slow) var(--ease); filter: saturate(.96) contrast(1.02); }
+  .g:hover .g__img { transform: scale(1.05); filter: saturate(1.05); }
+  /* 常驻暗角，hover 时让出给 caption */
+  .g::after { content:""; position:absolute; inset:0; background: linear-gradient(0deg, rgba(5,11,22,.55) 0%, transparent 46%); transition: opacity var(--dur) var(--ease); pointer-events:none; }
+
+  .g figcaption {
+    position: absolute; left: 1rem; bottom: 1rem; right: 1rem; z-index: 2;
+    display: flex; flex-direction: column; gap: .12rem;
+    transform: translateY(6px); opacity: .92; transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .g__n { font-family: var(--ff-display); font-style: italic; font-size: .8rem; color: var(--accent); }
+  .g__cn { font-family: var(--ff-serif-cn); font-size: 1.05rem; color: var(--fg); letter-spacing: .04em; }
+  .g__en { font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--fg-2); }
+  .g:hover figcaption { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 900px) {
+    .gallery__grid { grid-template-columns: 1fr 1fr; grid-auto-rows: 42vw; padding-inline: var(--gutter); }
+    .g--a,.g--b,.g--c,.g--d,.g--e,.g--f,.g--g,.g--h { grid-column: span 2; grid-row: span 1; }
+    .g--a,.g--g,.g--h { grid-column: span 2; grid-row: span 1; }
+    .g--c { grid-row: span 2; } /* 拱门竖图保留高度 */
+    .g__cn { font-size: .95rem; }
+  }
+  @media (max-width: 560px) {
+    .gallery__grid { grid-template-columns: 1fr; grid-auto-rows: 62vw; }
+    .g--a,.g--b,.g--c,.g--d,.g--e,.g--f,.g--g,.g--h { grid-column: span 1; grid-row: span 1; }
+  }
+</style>

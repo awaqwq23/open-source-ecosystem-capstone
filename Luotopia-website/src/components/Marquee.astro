@@ -1,0 +1,23 @@
+---
+const items = "Luotopia · 珞珈山下 · 数字校园 · ";  // 两份用于无缝循环
+---
+<div class="marquee-band" aria-hidden="true">
+  <div class="marquee">
+    <span class="marquee__txt">{(items).repeat(6)}</span>
+    <span class="marquee__txt marquee__txt--ghost">{(items).repeat(6)}</span>
+  </div>
+</div>
+
+<style>
+  .marquee-band { padding: clamp(1.5rem,4vw,3rem) 0; border-block: 1px solid var(--line); overflow: hidden; display: flex; }
+  .marquee { display: flex; white-space: nowrap; animation: marquee 38s linear infinite; }
+  .marquee__txt {
+    font-family: var(--ff-display); font-style: italic; font-weight: 500;
+    font-size: clamp(2rem, 7vw, 5.2rem); line-height: 1; letter-spacing: .02em;
+    color: var(--fg); flex: none; padding-right: 1.5rem;
+  }
+  .marquee__txt--ghost {
+    color: transparent; -webkit-text-stroke: 1px var(--line-strong);
+  }
+  @media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
+</style>

@@ -1,0 +1,207 @@
+/* ============================================================
+   Luotopia.cn 主站全局样式
+   配色：武汉大学标准色卡（见 docs/前端网页设计/用色.md）
+   理念：克制的色 × 放肆的版 —— 深色底场，hairline 分割，
+        流体巨字，出血错位，杂志感艺术排印。
+   字体：Cormorant Garamond（拉丁衬线展示）/ Inter（拉丁无衬线）
+        Noto Serif SC（中文标题）/ Noto Sans SC（中文正文）
+   ============================================================ */
+
+/* ---------- 字体（在 Layout 以 ES import 引入，此处仅 token） ---------- */
+
+:root {
+  /* —— 武大主色 —— */
+  --luojia-blue: #002554;      /* 珞珈蓝：主色 / 深底 / 标题 */
+  --luojia-green: #115740;    /* 珞珈绿：辅色 / 强调 / 按钮 */
+  /* —— 武大辅助色（点睛分寸使用） —— */
+  --luojia-pink: #f8a3bc;     /* 珞樱粉：高光点睛 */
+  --donghu-blue: #41b6e6;     /* 东湖蓝 */
+  --osmanthus: #ffa300;       /* 秋桂黄 */
+  --wisteria: #33058d;        /* 春藤紫 */
+  --tile-green: #00797c;      /* 黄瓦绿 */
+  --frost-red: #e10800;       /* 霜叶红 */
+  --mist-gray: #c1c6c8;       /* 晨雾灰：次要文字 / 细线 */
+
+  /* —— 派生底场（由珞珈蓝过渡到近黑） —— */
+  --ink: #050b16;             /* 最深底，比珞珈蓝更沉 */
+  --ink-2: #0a1428;           /* 次深底 */
+  --ink-3: #10203c;           /* 卡片底 */
+  --line: rgba(193, 198, 200, 0.16);   /* hairline 细线 */
+  --line-strong: rgba(193, 198, 200, 0.32);
+  --paper: #f4efe6;           /* 偶用的暖纸浅底（反白段落） */
+  --paper-ink: #0c1a2e;       /* 纸上墨色文字 */
+
+  /* —— 文字层级 —— */
+  --fg: #eef2f6;              /* 主文字（深底上） */
+  --fg-2: #b9c4cf;            /* 次文字 */
+  --fg-3: #7e8a99;            /* 弱化文字 / label */
+  --accent: var(--osmanthus); /* 默认点睛：秋桂黄 */
+  --accent-2: var(--luojia-pink);
+
+  /* —— 字体族 —— */
+  --ff-display: "Cormorant Garamond", "Noto Serif SC", "Songti SC", "Source Han Serif SC", serif;
+  --ff-serif-cn: "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", serif;
+  --ff-sans: "Inter", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* —— 排版尺度（流体） —— */
+  --step-0: clamp(0.95rem, 0.9rem + 0.25vw, 1.075rem);   /* 正文 */
+  --step-1: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
+  --step-2: clamp(1.4rem, 1.1rem + 1.5vw, 2rem);
+  --step-3: clamp(1.9rem, 1.2rem + 3.5vw, 3.2rem);
+  --step-4: clamp(3rem, 1rem + 10vw, 6.5rem);            /* 大标题 */
+  --step-5: clamp(4rem, 6vw + 4rem, 11rem);              /* 巨字（hero） */
+  --step-mega: clamp(6rem, 18vw, 26rem);                 /* 超巨（章节编号/间奏） */
+
+  /* —— 缓动 / 时长 —— */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.6s;
+  --dur-slow: 1.1s;
+
+  /* —— 间距 / 尺寸 —— */
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+  --section-y: clamp(6rem, 14vw, 12rem);
+  --measure: 68ch;          /* 正文行长上限 */
+  --wide: 1400px;           /* 宽版心 */
+  --nav-h: 4.5rem;
+
+  --radius: 2px;            /* 极小圆角，保留锋利感 */
+}
+
+/* ---------- 重置 ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+html:focus-within { scroll-behavior: smooth; }
+body {
+  font-family: var(--ff-sans);
+  font-size: var(--step-0);
+  line-height: 1.65;
+  color: var(--fg);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+img, picture, svg, video { display: block; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+ul, ol { list-style: none; }
+::selection { background: var(--accent); color: var(--ink); }
+
+/* ---------- 噪点纹理覆层（极淡，提升质感） ---------- */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ---------- 顶部滚动进度条 ---------- */
+.scroll-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 200;
+  background: linear-gradient(90deg, var(--luojia-green), var(--accent));
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+  opacity: 0.9;
+}
+
+/* ---------- 版心容器 ---------- */
+.container { width: 100%; max-width: var(--wide); margin-inline: auto; padding-inline: var(--gutter); }
+.measure { max-width: var(--measure); }
+
+/* ---------- 文字排印基线 ---------- */
+.eyebrow {
+  font-family: var(--ff-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.42em;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--fg-3);
+}
+.eyebrow .num { color: var(--accent); letter-spacing: 0.2em; }
+
+h1, h2, h3 { font-weight: 500; line-height: 1.02; letter-spacing: -0.01em; }
+.display { font-family: var(--ff-display); font-weight: 500; font-style: italic; }
+.italic { font-style: italic; }
+
+/* 首字下沉 */
+.dropcap::first-letter {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 500;
+  float: left;
+  font-size: 3.4em;
+  line-height: 0.78;
+  padding: 0.08em 0.12em 0 0;
+  color: var(--accent);
+}
+
+/* ---------- 分隔 hairline ---------- */
+.rule { height: 1px; background: var(--line); border: 0; }
+.rule-v { width: 1px; align-self: stretch; background: var(--line); }
+
+/* ---------- 滚动渐显（IntersectionObserver 控制 .in） ---------- */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+  will-change: opacity, transform;
+}
+[data-reveal="fade"] { transform: none; }
+[data-reveal="clip"] { transform: none; clip-path: inset(0 0 100% 0); transition: clip-path var(--dur-slow) var(--ease-out), opacity var(--dur) ease; }
+[data-reveal="left"] { transform: translateX(-40px); }
+[data-reveal="right"] { transform: translateX(40px); }
+[data-reveal].in { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+
+/* 逐项错落：子元素用 --d 控制延迟 */
+[data-reveal-stagger] > * {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+  transition-delay: calc(var(--d, 0) * 90ms);
+}
+[data-reveal-stagger].in > * { opacity: 1; transform: none; }
+
+/* ---------- 自定义滚动条（深底） ---------- */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--ink-3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+
+/* ---------- 焦点环 ---------- */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ---------- 辅助 ---------- */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- 横向跑马灯（间奏用） ---------- */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee { display: inline-flex; white-space: nowrap; animation: marquee 38s linear infinite; }
+
+/* ---------- 偏好降级 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .marquee { animation: none; }
+  [data-reveal], [data-reveal-stagger] > * { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --line: rgba(255,255,255,0.5); --fg-3: #aab4c2; }
+  body::before { display: none; }
+}
+
+/* ---------- 响应式断点辅助 ---------- */
+@media (max-width: 900px) {
+  :root { --nav-h: 3.75rem; }
+}

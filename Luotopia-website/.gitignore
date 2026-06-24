@@ -1,0 +1,22 @@
+# 依赖
+node_modules/
+
+# Astro 构建与缓存
+dist/
+.astro/
+.node/
+
+# 本地环境
+.env
+.env.*
+!.env.example
+
+# 编辑器/系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 日志
+*.log
+npm-debug.log*

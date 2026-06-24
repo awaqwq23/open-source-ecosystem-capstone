@@ -1,0 +1,90 @@
+---
+const swatches = [
+  ["#002554", "珞珈蓝"], ["#115740", "珞珈绿"], ["#f8a3bc", "珞樱粉"],
+  ["#41b6e6", "东湖蓝"], ["#ffa300", "秋桂黄"], ["#33058d", "春藤紫"],
+  ["#00797c", "黄瓦绿"], ["#e10800", "霜叶红"], ["#c1c6c8", "晨雾灰"],
+];
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="footer__swatch" aria-label="武汉大学标准色卡">
+    {swatches.map((s) => (
+      <span class="footer__sw" style={`--c:${s[0]}`} title={s[1]} role="img" aria-label={s[1]}></span>
+    ))}
+  </div>
+
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <p class="footer__domain">luotopia.cn</p>
+      <p class="footer__tag">珞珈山下的数字校园</p>
+    </div>
+
+    <nav class="footer__cols" aria-label="页脚">
+      <div class="footer__col">
+        <h4>导航</h4>
+        <a href="#intro">项目</a>
+        <a href="#gallery">珞珈</a>
+        <a href="#download">下载</a>
+        <a href="#team">团队</a>
+      </div>
+      <div class="footer__col">
+        <h4>链接</h4>
+        <a href="https://github.com/openwhu/luotopia" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/openwhu/luotopia/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/openwhu/luotopia/issues" target="_blank" rel="noopener">反馈问题</a>
+      </div>
+      <div class="footer__col">
+        <h4>致谢</h4>
+        <a href="/ATTRIBUTION.md">图片来源与许可</a>
+        <a href="https://commons.wikimedia.org/wiki/Category:Wuhan_University" target="_blank" rel="noopener">Wikimedia Commons</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="footer__wordmark" aria-hidden="true">
+    <span class="display">Luotopia</span>
+  </div>
+
+  <div class="footer__bottom">
+    <span>© {year} openwhu</span>
+    <span class="footer__dot">·</span>
+    <span>武大标准色卡 · 珞珈山下</span>
+    <span class="footer__dot">·</span>
+    <span>武汉</span>
+  </div>
+</footer>
+
+<style>
+  .footer { position: relative; border-top: 1px solid var(--line); padding-top: 0; overflow: hidden; }
+  .footer__swatch { display: grid; grid-template-columns: repeat(9, 1fr); height: 8px; }
+  .footer__sw { background: var(--c); }
+
+  .footer__inner {
+    max-width: var(--wide); margin-inline: auto; padding: clamp(3rem,7vw,5rem) var(--gutter);
+    display: flex; flex-wrap: wrap; gap: clamp(2rem,6vw,5rem); justify-content: space-between; align-items: flex-start;
+  }
+  .footer__brand { display: flex; flex-direction: column; gap: .4rem; }
+  .footer__domain { font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: clamp(1.6rem,3vw,2.4rem); color: var(--fg); }
+  .footer__tag { font-family: var(--ff-serif-cn); color: var(--fg-2); font-size: .9rem; letter-spacing: .08em; }
+
+  .footer__cols { display: flex; gap: clamp(2rem,6vw,4.5rem); flex-wrap: wrap; }
+  .footer__col { display: flex; flex-direction: column; gap: .7rem; }
+  .footer__col h4 { font-size: .68rem; letter-spacing: .3em; text-transform: uppercase; color: var(--fg-3); margin-bottom: .3rem; }
+  .footer__col a { color: var(--fg-2); font-size: .88rem; transition: color var(--dur) var(--ease); }
+  .footer__col a:hover { color: var(--accent); }
+
+  .footer__wordmark { padding: clamp(2rem,6vw,4rem) var(--gutter) 0; overflow: hidden; }
+  .footer__wordmark .display {
+    font-size: clamp(3.5rem, 22vw, 18rem); line-height: .8; letter-spacing: -.03em;
+    color: transparent; -webkit-text-stroke: 1px var(--line-strong);
+    display: block; margin-left: -.04em;
+  }
+
+  .footer__bottom {
+    max-width: var(--wide); margin-inline: auto; padding: 2rem var(--gutter);
+    display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+    font-size: .76rem; color: var(--fg-3); letter-spacing: .06em;
+    border-top: 1px solid var(--line);
+  }
+  .footer__dot { color: var(--line-strong); }
+</style>
