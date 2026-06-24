@@ -94,58 +94,28 @@ func (h Handler) completeUpload(c *gin.Context) {
 }
 
 func (h Handler) validateImport(c *gin.Context) {
-	if uploadID := uploadIDFromRequest(c); uploadID != "" {
-		jobID, err := h.service.StartValidateUpload(uploadID)
-		if err != nil {
-			writeUploadError(c, err)
-			return
-		}
-		c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
+	uploadID, ok := uploadIDFromJSON(c)
+	if !ok {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请先完成分片上传")
 		return
 	}
-	file, err := c.FormFile("file")
+	jobID, err := h.service.StartValidateUpload(uploadID)
 	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "请选择数据包文件")
+		writeUploadError(c, err)
 		return
 	}
-	opened, err := file.Open()
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "无法读取上传文件")
-		return
-	}
-	defer opened.Close()
-	result, err := h.service.ValidatePackage(c.Request.Context(), opened)
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_package", err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
 }
 
 func (h Handler) publishImport(c *gin.Context) {
-	if uploadID := uploadIDFromRequest(c); uploadID != "" {
-		jobID, err := h.service.StartUploadImport(uploadID)
-		if err != nil {
-			writeUploadError(c, err)
-			return
-		}
-		c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
+	uploadID, ok := uploadIDFromJSON(c)
+	if !ok {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请先完成分片上传")
 		return
 	}
-	file, err := c.FormFile("file")
+	jobID, err := h.service.StartUploadImport(uploadID)
 	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "请选择数据包文件")
-		return
-	}
-	opened, err := file.Open()
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "invalid_argument", "无法读取上传文件")
-		return
-	}
-	defer opened.Close()
-	jobID, err := h.service.StartImport(opened)
-	if err != nil {
-		writeError(c, http.StatusBadRequest, "import_failed", err.Error())
+		writeUploadError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
@@ -160,18 +130,18 @@ func (h Handler) getImportJob(c *gin.Context) {
 	c.JSON(http.StatusOK, job)
 }
 
-func uploadIDFromRequest(c *gin.Context) string {
-	contentType := c.GetHeader("Content-Type")
-	if strings.HasPrefix(contentType, "application/json") {
-		var req struct {
-			UploadID string `json:"upload_id"`
-		}
-		if err := c.ShouldBindJSON(&req); err == nil {
-			return strings.TrimSpace(req.UploadID)
-		}
-		return ""
+func uploadIDFromJSON(c *gin.Context) (string, bool) {
+	var req struct {
+		UploadID string `json:"upload_id"`
 	}
-	return strings.TrimSpace(c.PostForm("upload_id"))
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return "", false
+	}
+	uploadID := strings.TrimSpace(req.UploadID)
+	if uploadID == "" {
+		return "", false
+	}
+	return uploadID, true
 }
 
 func writeUploadError(c *gin.Context, err error) {

@@ -113,22 +113,6 @@ func (s *Service) CompleteUpload(id string) (UploadSession, error) {
 	return s.uploads.complete(id)
 }
 
-func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return domain.ImportResult{}, err
-	}
-	return s.validatePackageBytes(ctx, data)
-}
-
-func (s *Service) ValidateUpload(ctx context.Context, uploadID string) (domain.ImportResult, error) {
-	data, err := s.readUploadPackage(uploadID)
-	if err != nil {
-		return domain.ImportResult{}, err
-	}
-	return s.validatePackageBytes(ctx, data)
-}
-
 func (s *Service) StartValidateUpload(uploadID string) (string, error) {
 	if _, err := s.uploads.packagePath(uploadID); err != nil {
 		return "", err
@@ -175,14 +159,6 @@ func (s *Service) StartValidateUpload(uploadID string) (string, error) {
 		})
 	}()
 	return jobID, nil
-}
-
-func (s *Service) StartImport(reader io.Reader) (string, error) {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return "", err
-	}
-	return s.startImportBytes(data)
 }
 
 func (s *Service) StartUploadImport(uploadID string) (string, error) {
@@ -236,12 +212,6 @@ func (s *Service) validatePackageBytes(ctx context.Context, data []byte) (domain
 		Version:  preview.NextVersion,
 		Preview:  &preview,
 	}, nil
-}
-
-func (s *Service) startImportBytes(data []byte) (string, error) {
-	jobID := s.createImportJob()
-	go s.runImportJob(jobID, data)
-	return jobID, nil
 }
 
 func (s *Service) createImportJob() string {
