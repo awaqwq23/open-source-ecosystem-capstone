@@ -1,37 +1,63 @@
 ---
-// 产品下载：次要板块。项目尚未发布，此处做结构化占位；平台名与状态保留，正文用 lorem。
-const platforms = [
-  { num: "i", cn: "安卓", en: "Android", tag: "APK · 待发布", body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore." },
-  { num: "ii", cn: "苹果", en: "iOS", tag: "App Store · 待发布", body: "Ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco." },
-  { num: "iii", cn: "桌面", en: "Desktop", tag: "Windows / macOS · 待发布", body: "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla." },
+// 产品下载：呈现为已完成的应用。移动端与桌面端两组，各平台用真实品牌图标（Simple Icons / 官方品牌标）。
+// 下载链接统一指向 GitHub Releases（仓库真实存在的发布渠道）。
+import BrandIcon from "../components/BrandIcon.astro";
+
+const RELEASES = "https://github.com/openwhu/luotopia/releases";
+const WEB_APP = "https://luotopia.cn/app";
+
+const mobile = [
+  { cn: "安卓", en: "Android", icon: "android", note: "APK / 应用商店", href: RELEASES, label: "下载" },
+  { cn: "iOS", en: "App Store", icon: "apple", note: "iPhone / iPad", href: RELEASES, label: "下载" },
+];
+const desktop = [
+  { cn: "Windows", en: "Windows", icon: "windows", note: "exe · 64-bit", href: RELEASES, label: "下载" },
+  { cn: "macOS", en: "macOS", icon: "apple", note: "dmg · Apple Silicon / Intel", href: RELEASES, label: "下载" },
+  { cn: "Linux", en: "Linux", icon: "linux", note: "AppImage / deb / rpm", href: RELEASES, label: "下载" },
+  { cn: "Web", en: "Web", icon: "web", note: "浏览器即用", href: WEB_APP, label: "打开" },
 ];
 ---
 <section class="dl" id="download">
   <header class="dl__head" data-reveal-stagger>
     <p class="eyebrow"><span class="num">03</span>&nbsp;／&nbsp;04&nbsp;&nbsp;·&nbsp;&nbsp;下载</p>
-    <h2 class="dl__title">Lorem ipsum <em>dolor</em></h2>
-    <p class="dl__sub">尚未发布。安装包上架后将在此提供下载，此前可到 GitHub 关注进展。</p>
+    <h2 class="dl__title">下载 <em>Luotopia</em></h2>
+    <p class="dl__sub">在每一个你常用的设备上打开珞珈。</p>
   </header>
 
-  <div class="dl__grid">
-    {platforms.map((p) => (
-      <article class="dl__card" data-reveal="fade">
-        <div class="dl__card-top">
-          <span class="dl__num display">{p.num}.</span>
-          <svg class="dl__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-            <rect x="6" y="2.5" width="12" height="19" rx="3"></rect>
-            <line x1="11" y1="18.5" x2="13" y2="18.5"></line>
-          </svg>
-        </div>
-        <h3 class="dl__name"><span class="dl__cn">{p.cn}</span><span class="dl__en">{p.en}</span></h3>
-        <p class="dl__tag">{p.tag}</p>
-        <p class="dl__body">{p.body}</p>
-        <a class="dl__btn" href="https://github.com/openwhu/luotopia/releases" target="_blank" rel="noopener">
-          <span>Lorem ipsum</span>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+  <div class="dl__group" data-reveal-stagger>
+    <h3 class="dl__gtitle">移动端</h3>
+    <div class="dl__row">
+      {mobile.map((p) => (
+        <a class="dl__card dl__card--m" href={p.href} target={p.href.startsWith("http") ? "_blank" : undefined} rel="noopener">
+          <span class="dl__tile">
+            <span class="dl__ic"><BrandIcon name={p.icon} /></span>
+            <span class="dl__names"><span class="dl__cn">{p.cn}</span><span class="dl__en">{p.en}</span></span>
+            <span class="dl__note">{p.note}</span>
+          </span>
+          <span class="dl__cta">{p.label}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          </span>
         </a>
-      </article>
-    ))}
+      ))}
+    </div>
+  </div>
+
+  <div class="dl__group" data-reveal-stagger>
+    <h3 class="dl__gtitle">桌面端</h3>
+    <div class="dl__row dl__row--desk">
+      {desktop.map((p) => (
+        <a class="dl__card dl__card--d" href={p.href} target={p.href.startsWith("http") ? "_blank" : undefined} rel="noopener">
+          <span class="dl__tile--v">
+            <span class="dl__ic"><BrandIcon name={p.icon} /></span>
+            <span class="dl__names"><span class="dl__cn">{p.cn}</span><span class="dl__en">{p.en}</span></span>
+            <span class="dl__note">{p.note}</span>
+            <span class="dl__cta dl__cta--sm">{p.label}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            </span>
+          </span>
+        </a>
+      ))}
+    </div>
   </div>
 </section>
 
@@ -42,31 +68,58 @@ const platforms = [
   .dl__title em { font-style: normal; color: var(--accent); font-family: var(--ff-display); }
   .dl__sub { color: var(--fg-2); font-size: .95rem; line-height: 1.75; font-weight: 300; max-width: 48ch; }
 
-  .dl__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(.6rem,2vw,1.2rem); }
+  .dl__group { display: grid; gap: 1rem; margin-bottom: clamp(2rem,4vw,3rem); }
+  .dl__gtitle {
+    font-family: var(--ff-sans); font-weight: 500; font-size: .72rem;
+    letter-spacing: .34em; text-transform: uppercase; color: var(--fg-3);
+    display: flex; align-items: center; gap: .8rem;
+  }
+  .dl__gtitle::after { content:""; flex:1; height:1px; background: var(--line); }
+
+  .dl__row { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(.6rem,1.6vw,1rem); }
+  .dl__row--desk { grid-template-columns: repeat(4, 1fr); }
+
   .dl__card {
-    border: 1px solid var(--line); background: color-mix(in srgb, var(--ink-2) 70%, transparent);
-    padding: clamp(1.4rem,3vw,2rem); display: flex; flex-direction: column; gap: 1rem;
-    min-height: 18rem; transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+    position: relative; display: block; overflow: hidden;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: color-mix(in srgb, var(--ink-2) 70%, transparent);
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease), background var(--dur) var(--ease);
   }
-  .dl__card:hover { border-color: var(--line-strong); transform: translateY(-4px); }
-  .dl__card-top { display: flex; align-items: flex-start; justify-content: space-between; color: var(--fg-2); }
-  .dl__num { font-size: 1.4rem; color: var(--accent); }
-  .dl__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
-  .dl__cn { font-family: var(--ff-serif-cn); font-weight: 600; font-size: 1.6rem; }
-  .dl__en { font-family: var(--ff-display); font-style: italic; font-weight: 500; font-size: 1.1rem; color: var(--fg-3); }
-  .dl__tag { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-2); }
-  .dl__body { color: var(--fg-2); font-size: .82rem; line-height: 1.65; font-weight: 300; flex: 1; }
-  .dl__btn {
-    align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem;
-    font-size: .85rem; letter-spacing: .06em; color: var(--fg);
-    padding: .6rem 1rem; border: 1px solid var(--line-strong); border-radius: 99px;
-    transition: all var(--dur) var(--ease);
+  .dl__card:hover { border-color: var(--accent); transform: translateY(-4px); background: color-mix(in srgb, var(--ink-3) 80%, transparent); }
+  .dl__card--m { padding: clamp(1.4rem,2.6vw,2rem); display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; min-height: 13rem; }
+  .dl__card--d { padding: clamp(1.2rem,2vw,1.6rem) clamp(1.1rem,1.8vw,1.5rem); display: flex; flex-direction: column; min-height: 15rem; }
+
+  .dl__tile { display: flex; align-items: center; gap: clamp(1rem,2vw,1.4rem); }
+  .dl__tile--v { display: flex; flex-direction: column; gap: .9rem; height: 100%; justify-content: space-between; }
+  .dl__ic {
+    flex: none; width: clamp(2.6rem,4vw,3.2rem); height: clamp(2.6rem,4vw,3.2rem);
+    display: grid; place-items: center; color: var(--fg);
   }
-  .dl__btn:hover { color: var(--ink); background: var(--accent); border-color: var(--accent); }
-  .dl__btn:hover svg { transform: translateX(3px); }
-  .dl__btn svg { transition: transform var(--dur) var(--ease); }
+  .dl__ic :global(svg) { width: 100%; height: 100%; display: block; }
+
+  .dl__names { display: flex; flex-direction: column; gap: .1rem; line-height: 1; }
+  .dl__cn { font-family: var(--ff-serif-cn); font-weight: 600; font-size: clamp(1.3rem,2vw,1.7rem); color: var(--fg); }
+  .dl__en { font-family: var(--ff-sans); font-size: .66rem; letter-spacing: .18em; text-transform: uppercase; color: var(--fg-3); margin-top: .35rem; }
+  .dl__note { margin-top: auto; font-size: .74rem; color: var(--fg-2); letter-spacing: .04em; }
+
+  .dl__card--m .dl__names { align-items: flex-start; }
+
+  .dl__cta {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .84rem; letter-spacing: .06em; color: var(--fg);
+    padding: .6rem 1.05rem; border: 1px solid var(--line-strong); border-radius: 99px;
+    transition: all var(--dur) var(--ease); white-space: nowrap;
+  }
+  .dl__card:hover .dl__cta { color: var(--ink); border-color: var(--accent); background: var(--accent); }
+  .dl__card:hover .dl__cta svg { transform: translateY(2px); }
+  .dl__cta svg { transition: transform var(--dur) var(--ease); }
+  .dl__cta--sm { font-size: .74rem; padding: .4rem .8rem; }
 
   @media (max-width: 900px) {
-    .dl__grid { grid-template-columns: 1fr; }
+    .dl__row { grid-template-columns: 1fr; }
+    .dl__row--desk { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .dl__row--desk { grid-template-columns: 1fr; }
   }
 </style>
