@@ -154,6 +154,21 @@ function uploadRawWithProgress(path, body, headers, onProgress, retry = true) {
   });
 }
 
+async function uploadRawWithRetry(path, body, headers, onProgress) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await uploadRawWithProgress(path, body, headers, onProgress);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, attempt * 1000));
+      }
+    }
+  }
+  throw lastError || new Error("上传失败");
+}
+
 async function refreshSession() {
   const response = await fetch("/api/v1/auth/token/refresh", {
     method: "POST",
@@ -441,7 +456,7 @@ async function ensureSchoolTimetableUpload() {
     const start = index * chunkSize;
     const end = Math.min(file.size, start + chunkSize);
     const chunk = file.slice(start, end);
-    await uploadRawWithProgress(`/admin/api/v1/school-timetable/uploads/${upload.upload_id}/chunks/${index}`, chunk, {
+    await uploadRawWithRetry(`/admin/api/v1/school-timetable/uploads/${upload.upload_id}/chunks/${index}`, chunk, {
       "Content-Type": "application/octet-stream",
       "Content-Range": `bytes ${start}-${end - 1}/${file.size}`,
     }, (loaded) => {

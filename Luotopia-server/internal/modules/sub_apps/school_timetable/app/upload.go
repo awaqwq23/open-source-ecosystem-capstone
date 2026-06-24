@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const defaultUploadChunkSize int64 = 4 * 1024 * 1024
+const defaultUploadChunkSize int64 = 512 * 1024
 
 var ErrUploadIncomplete = errors.New("school timetable: upload incomplete")
 
