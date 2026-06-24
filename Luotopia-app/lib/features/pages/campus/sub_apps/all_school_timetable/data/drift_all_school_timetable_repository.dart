@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
@@ -212,7 +213,55 @@ class DriftAllSchoolTimetableRepository
                 variables: [Variable.withString(termKey), ...filterVariables],
               )
               .get();
-    return rows.map(_termCourseFromRow).toList(growable: false);
+    final heads = rows.map(_termCourseFromRow).toList(growable: false);
+    // 临时诊断：仅在"有关键词但搜不到结果"时打印，帮助定位 FTS/CJK/term_key 真因。
+    if (keyword.isNotEmpty && heads.isEmpty) {
+      try {
+        final ftsCount = (await _db
+                .customSelect(
+                  'SELECT COUNT(*) AS c FROM school_timetable_search_fts',
+                )
+                .getSingle())
+            .read<int>('c');
+        final termCourseCount = (await _db
+                .customSelect(
+                  "SELECT COUNT(*) AS c FROM school_timetable_course_terms WHERE term_key = ?",
+                  variables: [Variable.withString(termKey)],
+                )
+                .getSingle())
+            .read<int>('c');
+        final plainMatchCount = (await _db
+                .customSelect(
+                  '''
+              SELECT COUNT(*) AS c
+              FROM school_timetable_course_terms c
+              JOIN school_timetable_courses cc ON cc.id = c.course_id
+              WHERE c.term_key = ?
+                $professionalClause
+              ''',
+                  variables: [Variable.withString(termKey), ...filterVariables],
+                )
+                .getSingle())
+            .read<int>('c');
+        final sampleTermKey = (await _db
+                .customSelect(
+                  'SELECT term_key AS k FROM school_timetable_course_terms LIMIT 1',
+                )
+                .getSingleOrNull())
+            ?.read<String>('k');
+        debugPrint(
+          '[chool-timetable 诊断] termKey=$termKey '
+          'keyword=$keyword ftsQuery=${_ftsQuery(keyword)} '
+          'ftsRows=$ftsCount termCourseRows=$termCourseCount '
+          'plainMatchRows=$plainMatchCount '
+          'sampleTermKeyInDB=$sampleTermKey '
+          'professionalClause=[$professionalClause]',
+        );
+      } catch (e) {
+        debugPrint('[school-timetable 诊断] 诊断查询失败: $e');
+      }
+    }
+    return heads;
   }
 
   @override
