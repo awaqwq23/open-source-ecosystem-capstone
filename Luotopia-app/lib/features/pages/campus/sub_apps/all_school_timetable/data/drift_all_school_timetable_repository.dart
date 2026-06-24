@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/repositories/all_school_timetable_repository.dart';
@@ -170,31 +169,60 @@ class DriftAllSchoolTimetableRepository
       tables,
     );
     final rows = keyword.isNotEmpty
-        ? await db
-              .customSelect(
-                '''
+        ? await db.customSelect(
+            '''
           SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
                  cc.credits, c.course_nature, c.course_category, c.open_type,
                  c.teaching_class_count, c.teacher_summary, c.weekday_summary,
                  c.search_text
-          FROM ${tables.searchTable}
-          JOIN ${tables.termCourseTable} c
-            ON c.id = ${tables.searchTable}.term_course_id
+          FROM ${tables.termCourseTable} c
           JOIN ${tables.courseTable} cc
             ON cc.id = c.${tables.courseIdColumn}
-          WHERE ${tables.searchTable}.term_key = ?
-            AND ${tables.searchTable} MATCH ?
+          WHERE c.term_key = ?
+            AND (
+              c.id IN (
+                SELECT term_course_id
+                FROM ${tables.searchTable}
+                WHERE term_key = ?
+                  AND ${tables.searchTable} MATCH ?
+              )
+              OR cc.course_name LIKE ? ESCAPE char(92)
+              OR cc.course_no LIKE ? ESCAPE char(92)
+              OR cc.search_text LIKE ? ESCAPE char(92)
+              OR c.open_college LIKE ? ESCAPE char(92)
+              OR c.course_nature LIKE ? ESCAPE char(92)
+              OR c.course_category LIKE ? ESCAPE char(92)
+              OR c.teacher_summary LIKE ? ESCAPE char(92)
+              OR c.weekday_summary LIKE ? ESCAPE char(92)
+              OR c.search_text LIKE ? ESCAPE char(92)
+            )
             $professionalClause
-          ORDER BY bm25(${tables.searchTable}), c.teaching_class_count DESC
+          ORDER BY
+            CASE
+              WHEN cc.course_name = ? OR cc.course_no = ? THEN 0
+              WHEN cc.course_name LIKE ? ESCAPE char(92)
+                OR cc.course_no LIKE ? ESCAPE char(92) THEN 1
+              WHEN cc.course_name LIKE ? ESCAPE char(92)
+                OR cc.course_no LIKE ? ESCAPE char(92)
+                OR cc.search_text LIKE ? ESCAPE char(92)
+                OR c.open_college LIKE ? ESCAPE char(92)
+                OR c.course_nature LIKE ? ESCAPE char(92)
+                OR c.course_category LIKE ? ESCAPE char(92)
+                OR c.teacher_summary LIKE ? ESCAPE char(92)
+                OR c.weekday_summary LIKE ? ESCAPE char(92)
+                OR c.search_text LIKE ? ESCAPE char(92) THEN 2
+              ELSE 3
+            END,
+            c.teaching_class_count DESC,
+            cc.course_name ASC
           LIMIT 80
           ''',
-                variables: [
-                  Variable.withString(termKey),
-                  Variable.withString(_ftsQuery(keyword)),
-                  ...filterVariables,
-                ],
-              )
-              .get()
+            variables: _courseSearchVariables(
+              termKey: termKey,
+              keyword: keyword,
+              filterVariables: filterVariables,
+            ),
+          ).get()
         : await db
               .customSelect(
                 '''
@@ -213,55 +241,7 @@ class DriftAllSchoolTimetableRepository
                 variables: [Variable.withString(termKey), ...filterVariables],
               )
               .get();
-    final heads = rows.map(_termCourseFromRow).toList(growable: false);
-    // 临时诊断：仅在"有关键词但搜不到结果"时打印，帮助定位 FTS/CJK/term_key 真因。
-    if (keyword.isNotEmpty && heads.isEmpty) {
-      try {
-        final ftsCount = (await _db
-                .customSelect(
-                  'SELECT COUNT(*) AS c FROM school_timetable_search_fts',
-                )
-                .getSingle())
-            .read<int>('c');
-        final termCourseCount = (await _db
-                .customSelect(
-                  "SELECT COUNT(*) AS c FROM school_timetable_course_terms WHERE term_key = ?",
-                  variables: [Variable.withString(termKey)],
-                )
-                .getSingle())
-            .read<int>('c');
-        final plainMatchCount = (await _db
-                .customSelect(
-                  '''
-              SELECT COUNT(*) AS c
-              FROM school_timetable_course_terms c
-              JOIN school_timetable_courses cc ON cc.id = c.course_id
-              WHERE c.term_key = ?
-                $professionalClause
-              ''',
-                  variables: [Variable.withString(termKey), ...filterVariables],
-                )
-                .getSingle())
-            .read<int>('c');
-        final sampleTermKey = (await _db
-                .customSelect(
-                  'SELECT term_key AS k FROM school_timetable_course_terms LIMIT 1',
-                )
-                .getSingleOrNull())
-            ?.read<String>('k');
-        debugPrint(
-          '[chool-timetable 诊断] termKey=$termKey '
-          'keyword=$keyword ftsQuery=${_ftsQuery(keyword)} '
-          'ftsRows=$ftsCount termCourseRows=$termCourseCount '
-          'plainMatchRows=$plainMatchCount '
-          'sampleTermKeyInDB=$sampleTermKey '
-          'professionalClause=[$professionalClause]',
-        );
-      } catch (e) {
-        debugPrint('[school-timetable 诊断] 诊断查询失败: $e');
-      }
-    }
-    return heads;
+    return rows.map(_termCourseFromRow).toList(growable: false);
   }
 
   @override
@@ -660,6 +640,35 @@ class DriftAllSchoolTimetableRepository
       return '""';
     }
     return tokens.map((part) => '"$part"').join(' ');
+  }
+
+  List<Variable> _courseSearchVariables({
+    required String termKey,
+    required String keyword,
+    required List<Variable> filterVariables,
+  }) {
+    final containsPattern = _likePattern(keyword);
+    final prefixPattern = _likePattern(keyword, suffixOnly: true);
+    return [
+      Variable.withString(termKey),
+      Variable.withString(termKey),
+      Variable.withString(_ftsQuery(keyword)),
+      for (var i = 0; i < 9; i++) Variable.withString(containsPattern),
+      ...filterVariables,
+      Variable.withString(keyword),
+      Variable.withString(keyword),
+      Variable.withString(prefixPattern),
+      Variable.withString(prefixPattern),
+      for (var i = 0; i < 9; i++) Variable.withString(containsPattern),
+    ];
+  }
+
+  String _likePattern(String keyword, {bool suffixOnly = false}) {
+    final escaped = keyword
+        .replaceAll('\\', r'\\')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
+    return suffixOnly ? '$escaped%' : '%$escaped%';
   }
 
   SchoolCourseHead _termCourseFromRow(QueryRow row) {
