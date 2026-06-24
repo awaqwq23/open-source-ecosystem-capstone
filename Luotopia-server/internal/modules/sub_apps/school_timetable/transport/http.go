@@ -1,7 +1,10 @@
 package transport
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
@@ -23,6 +26,10 @@ func (h Handler) RegisterClient(router gin.IRouter) {
 func (h Handler) RegisterAdmin(router gin.IRouter) {
 	group := router.Group(contract.ClientBase)
 	group.GET("/terms", h.listTerms)
+	group.POST("/uploads", h.createUpload)
+	group.GET("/uploads/:id", h.getUpload)
+	group.PUT("/uploads/:id/chunks/:index", h.putUploadChunk)
+	group.POST("/uploads/:id/complete", h.completeUpload)
 	group.POST("/imports/validate", h.validateImport)
 	group.POST("/imports/publish", h.publishImport)
 	group.GET("/imports/jobs/:id", h.getImportJob)
@@ -37,7 +44,65 @@ func (h Handler) listTerms(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"items": terms})
 }
 
+func (h Handler) createUpload(c *gin.Context) {
+	var req struct {
+		FileName string `json:"file_name"`
+		Size     int64  `json:"size"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "请求参数无效")
+		return
+	}
+	session, err := h.service.CreateUpload(req.FileName, req.Size)
+	if err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", err.Error())
+		return
+	}
+	c.JSON(http.StatusCreated, session)
+}
+
+func (h Handler) getUpload(c *gin.Context) {
+	session, err := h.service.GetUpload(c.Param("id"))
+	if err != nil {
+		writeUploadError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, session)
+}
+
+func (h Handler) putUploadChunk(c *gin.Context) {
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		writeError(c, http.StatusBadRequest, "invalid_argument", "分片序号无效")
+		return
+	}
+	session, err := h.service.SaveUploadChunk(c.Param("id"), index, c.Request.Body)
+	if err != nil {
+		writeUploadError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, session)
+}
+
+func (h Handler) completeUpload(c *gin.Context) {
+	session, err := h.service.CompleteUpload(c.Param("id"))
+	if err != nil {
+		writeUploadError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, session)
+}
+
 func (h Handler) validateImport(c *gin.Context) {
+	if uploadID := uploadIDFromRequest(c); uploadID != "" {
+		result, err := h.service.ValidateUpload(c.Request.Context(), uploadID)
+		if err != nil {
+			writeUploadError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+		return
+	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		writeError(c, http.StatusBadRequest, "invalid_argument", "请选择数据包文件")
@@ -58,6 +123,15 @@ func (h Handler) validateImport(c *gin.Context) {
 }
 
 func (h Handler) publishImport(c *gin.Context) {
+	if uploadID := uploadIDFromRequest(c); uploadID != "" {
+		jobID, err := h.service.StartUploadImport(uploadID)
+		if err != nil {
+			writeUploadError(c, err)
+			return
+		}
+		c.JSON(http.StatusAccepted, gin.H{"job_id": jobID})
+		return
+	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		writeError(c, http.StatusBadRequest, "invalid_argument", "请选择数据包文件")
@@ -84,6 +158,33 @@ func (h Handler) getImportJob(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, job)
+}
+
+func uploadIDFromRequest(c *gin.Context) string {
+	contentType := c.GetHeader("Content-Type")
+	if strings.HasPrefix(contentType, "application/json") {
+		var req struct {
+			UploadID string `json:"upload_id"`
+		}
+		if err := c.ShouldBindJSON(&req); err == nil {
+			return strings.TrimSpace(req.UploadID)
+		}
+		return ""
+	}
+	return strings.TrimSpace(c.PostForm("upload_id"))
+}
+
+func writeUploadError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, app.ErrNotFound):
+		writeError(c, http.StatusNotFound, "not_found", "上传会话不存在")
+	case errors.Is(err, app.ErrUploadIncomplete):
+		writeError(c, http.StatusBadRequest, "upload_incomplete", "文件尚未上传完成")
+	case errors.Is(err, app.ErrInvalidPackage):
+		writeError(c, http.StatusBadRequest, "invalid_package", err.Error())
+	default:
+		writeError(c, http.StatusInternalServerError, "internal_error", err.Error())
+	}
 }
 
 func writeError(c *gin.Context, status int, code string, message string) {

@@ -4,6 +4,7 @@ const state = {
   token: localStorage.getItem(tokenKey) || "",
   refreshToken: localStorage.getItem(refreshTokenKey) || "",
   view: "dashboard",
+  schoolTimetableUpload: null,
 };
 
 const titles = {
@@ -89,6 +90,68 @@ async function apiForm(path, formData, retry = true) {
     throw new Error(message);
   }
   return data;
+}
+
+async function apiRaw(path, options = {}, retry = true) {
+  const response = await fetch(path, {
+    ...options,
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${state.token}`,
+      ...(options.headers || {}),
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && retry && state.refreshToken) {
+    await refreshSession();
+    return apiRaw(path, options, false);
+  }
+  if (!response.ok) {
+    const message = data?.error?.message || `请求失败（${response.status}）`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+function uploadRawWithProgress(path, body, headers, onProgress, retry = true) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", path);
+    request.setRequestHeader("Accept", "application/json");
+    request.setRequestHeader("Authorization", `Bearer ${state.token}`);
+    for (const [key, value] of Object.entries(headers || {})) {
+      request.setRequestHeader(key, value);
+    }
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(event.loaded, event.total);
+      }
+    };
+    request.onload = async () => {
+      let data = {};
+      try {
+        data = request.responseText ? JSON.parse(request.responseText) : {};
+      } catch (_) {
+        data = {};
+      }
+      if (request.status === 401 && retry && state.refreshToken) {
+        try {
+          await refreshSession();
+          resolve(uploadRawWithProgress(path, body, headers, onProgress, false));
+        } catch (error) {
+          reject(error);
+        }
+        return;
+      }
+      if (request.status < 200 || request.status >= 300) {
+        reject(new Error(data?.error?.message || `请求失败（${request.status}）`));
+        return;
+      }
+      resolve(data);
+    };
+    request.onerror = () => reject(new Error("上传失败，请检查网络连接"));
+    request.send(body);
+  });
 }
 
 async function refreshSession() {
@@ -294,6 +357,7 @@ async function refreshWeather() {
 }
 
 async function renderSchoolTimetable() {
+  state.schoolTimetableUpload = null;
   const terms = await api("/admin/api/v1/school-timetable/terms");
   $("content").innerHTML = `
     <section class="panel">
@@ -304,7 +368,7 @@ async function renderSchoolTimetable() {
           <button class="secondary" type="button" onclick="validateSchoolTimetable()">预检</button>
           <button class="primary" type="submit">发布数据集增量</button>
         </div>
-        <pre id="school-timetable-preview" class="muted">请选择由处理工具导出的 .sqlite.gz 数据库包。</pre>
+        <pre id="school-timetable-preview" class="muted">请选择由处理工具导出的 .sqlite.gz 数据库包。预检和发布会复用同一次上传。</pre>
       </form>
     </section>
     <section id="school-timetable-terms" class="table-panel">
@@ -326,21 +390,91 @@ function refreshSchoolTimetableTerms(terms) {
   ]));
 }
 
-function schoolTimetableFormData() {
+function schoolTimetableSelectedFile() {
   const form = $("school-timetable-form");
   if (!form) throw new Error("上传表单不存在");
   const file = new FormData(form).get("file");
   if (!(file instanceof File) || !file.name) {
     throw new Error("请选择数据包文件");
   }
-  const body = new FormData();
-  body.append("file", file);
-  return body;
+  return file;
+}
+
+function isSameSchoolTimetableFile(file, upload) {
+  return upload
+    && upload.file
+    && upload.file.name === file.name
+    && upload.file.size === file.size
+    && upload.file.lastModified === file.lastModified
+    && upload.completed
+    && upload.upload_id;
+}
+
+function setSchoolTimetableStatus(text) {
+  const target = $("school-timetable-preview");
+  if (target) {
+    target.textContent = text;
+    target.className = "muted";
+  }
+}
+
+async function ensureSchoolTimetableUpload() {
+  const file = schoolTimetableSelectedFile();
+  if (isSameSchoolTimetableFile(file, state.schoolTimetableUpload)) {
+    return state.schoolTimetableUpload;
+  }
+  const session = await api("/admin/api/v1/school-timetable/uploads", {
+    method: "POST",
+    body: JSON.stringify({file_name: file.name, size: file.size}),
+  });
+  const chunkSize = session.chunk_size || (4 * 1024 * 1024);
+  const totalChunks = Math.ceil(file.size / chunkSize);
+  const upload = {
+    file,
+    upload_id: session.upload_id,
+    chunk_size: chunkSize,
+    total_chunks: totalChunks,
+    completed: false,
+  };
+  state.schoolTimetableUpload = upload;
+  for (let index = 0; index < totalChunks; index += 1) {
+    const start = index * chunkSize;
+    const end = Math.min(file.size, start + chunkSize);
+    const chunk = file.slice(start, end);
+    await uploadRawWithProgress(`/admin/api/v1/school-timetable/uploads/${upload.upload_id}/chunks/${index}`, chunk, {
+      "Content-Type": "application/octet-stream",
+      "Content-Range": `bytes ${start}-${end - 1}/${file.size}`,
+    }, (loaded) => {
+      const uploadedBytes = Math.min(file.size, start + loaded);
+      const pct = file.size > 0 ? Math.round(uploadedBytes * 100 / file.size) : 100;
+      setSchoolTimetableStatus([
+        `上传中：${pct}%（${formatBytes(uploadedBytes)} / ${formatBytes(file.size)}）`,
+        `分片：${index + 1} / ${totalChunks}`,
+        `文件：${file.name}`,
+      ].join("\n"));
+    });
+    const uploadedBytes = end;
+    const pct = file.size > 0 ? Math.round(uploadedBytes * 100 / file.size) : 100;
+    setSchoolTimetableStatus([
+      `上传中：${pct}%（${formatBytes(uploadedBytes)} / ${formatBytes(file.size)}）`,
+      `分片：${index + 1} / ${totalChunks}`,
+      `文件：${file.name}`,
+    ].join("\n"));
+  }
+  await apiRaw(`/admin/api/v1/school-timetable/uploads/${upload.upload_id}/complete`, {method: "POST"});
+  upload.completed = true;
+  setSchoolTimetableStatus(`上传完成：${file.name}\n大小：${formatBytes(file.size)}\n可以预检或发布。`);
+  return upload;
 }
 
 async function validateSchoolTimetable() {
   try {
-    const result = await apiForm("/admin/api/v1/school-timetable/imports/validate", schoolTimetableFormData());
+    const upload = await ensureSchoolTimetableUpload();
+    setSchoolTimetableStatus("预检中：服务端正在解析数据包...");
+    const result = await api("/admin/api/v1/school-timetable/imports/validate", {
+      method: "POST",
+      body: JSON.stringify({upload_id: upload.upload_id}),
+    });
     renderSchoolTimetablePreview(result);
     showMessage("数据包预检通过");
   } catch (error) {
@@ -352,7 +486,11 @@ async function publishSchoolTimetable(event) {
   event.preventDefault();
   const target = $("school-timetable-preview");
   try {
-    const { job_id } = await apiForm("/admin/api/v1/school-timetable/imports/publish", schoolTimetableFormData());
+    const upload = await ensureSchoolTimetableUpload();
+    const { job_id } = await api("/admin/api/v1/school-timetable/imports/publish", {
+      method: "POST",
+      body: JSON.stringify({upload_id: upload.upload_id}),
+    });
     target.textContent = "已提交，等待处理...";
     target.className = "muted";
     for (;;) {
@@ -550,6 +688,13 @@ function formatDuration(seconds) {
   if (value < 60) return `${value} 秒`;
   if (value < 3600) return `${Math.floor(value / 60)} 分钟`;
   return `${Math.floor(value / 3600)} 小时`;
+}
+
+function formatBytes(value) {
+  const bytes = Number(value) || 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
 }
 
 function escapeHtml(value) {

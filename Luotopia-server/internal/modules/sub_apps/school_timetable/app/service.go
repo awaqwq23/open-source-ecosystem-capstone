@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -80,14 +82,35 @@ type Service struct {
 	repo        Repository
 	bundleStore BundleStore
 	jobs        *jobManager
+	uploads     *uploadManager
 }
 
 func NewService(repo Repository) *Service {
-	return &Service{repo: repo, jobs: newJobManager()}
+	return &Service{repo: repo, jobs: newJobManager(), uploads: newUploadManager("")}
 }
 
 func NewServiceWithBundleStore(repo Repository, store BundleStore) *Service {
-	return &Service{repo: repo, bundleStore: store, jobs: newJobManager()}
+	return &Service{repo: repo, bundleStore: store, jobs: newJobManager(), uploads: newUploadManager("")}
+}
+
+func (s *Service) CreateUpload(fileName string, size int64) (UploadSession, error) {
+	return s.uploads.create(fileName, size)
+}
+
+func (s *Service) GetUpload(id string) (UploadSession, error) {
+	session, ok := s.uploads.get(id)
+	if !ok {
+		return UploadSession{}, ErrNotFound
+	}
+	return session, nil
+}
+
+func (s *Service) SaveUploadChunk(id string, index int, reader io.Reader) (UploadSession, error) {
+	return s.uploads.saveChunk(id, index, reader)
+}
+
+func (s *Service) CompleteUpload(id string) (UploadSession, error) {
+	return s.uploads.complete(id)
 }
 
 func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain.ImportResult, error) {
@@ -95,6 +118,43 @@ func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain
 	if err != nil {
 		return domain.ImportResult{}, err
 	}
+	return s.validatePackageBytes(ctx, data)
+}
+
+func (s *Service) ValidateUpload(ctx context.Context, uploadID string) (domain.ImportResult, error) {
+	data, err := s.readUploadPackage(uploadID)
+	if err != nil {
+		return domain.ImportResult{}, err
+	}
+	return s.validatePackageBytes(ctx, data)
+}
+
+func (s *Service) StartImport(reader io.Reader) (string, error) {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	return s.startImportBytes(data)
+}
+
+func (s *Service) StartUploadImport(uploadID string) (string, error) {
+	data, err := s.readUploadPackage(uploadID)
+	if err != nil {
+		return "", err
+	}
+	return s.startImportBytes(data)
+}
+
+func (s *Service) readUploadPackage(uploadID string) ([]byte, error) {
+	path, err := s.uploads.packagePath(uploadID)
+	if err != nil {
+		return nil, err
+	}
+	cleanPath := filepath.Clean(path)
+	return os.ReadFile(cleanPath)
+}
+
+func (s *Service) validatePackageBytes(ctx context.Context, data []byte) (domain.ImportResult, error) {
 	pkg, err := ParsePackage(ctx, bytes.NewReader(data))
 	if err != nil {
 		return domain.ImportResult{}, err
@@ -115,11 +175,7 @@ func (s *Service) ValidatePackage(ctx context.Context, reader io.Reader) (domain
 	}, nil
 }
 
-func (s *Service) StartImport(reader io.Reader) (string, error) {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return "", err
-	}
+func (s *Service) startImportBytes(data []byte) (string, error) {
 	jobID := s.jobs.create(domain.ImportJob{
 		Status:    domain.JobStatusPending,
 		Progress:  "等待处理",
