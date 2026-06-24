@@ -186,11 +186,26 @@ func (s *Service) StartImport(reader io.Reader) (string, error) {
 }
 
 func (s *Service) StartUploadImport(uploadID string) (string, error) {
-	data, err := s.readUploadPackage(uploadID)
-	if err != nil {
+	if _, err := s.uploads.packagePath(uploadID); err != nil {
 		return "", err
 	}
-	return s.startImportBytes(data)
+	jobID := s.createImportJob()
+	go func() {
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusRunning
+			job.Progress = "读取数据包"
+		})
+		data, err := s.readUploadPackage(uploadID)
+		if err != nil {
+			s.jobs.update(jobID, func(job *domain.ImportJob) {
+				job.Status = domain.JobStatusFailed
+				job.Error = err.Error()
+			})
+			return
+		}
+		s.runImportJob(jobID, data)
+	}()
+	return jobID, nil
 }
 
 func (s *Service) readUploadPackage(uploadID string) ([]byte, error) {
@@ -224,90 +239,96 @@ func (s *Service) validatePackageBytes(ctx context.Context, data []byte) (domain
 }
 
 func (s *Service) startImportBytes(data []byte) (string, error) {
-	jobID := s.jobs.create(domain.ImportJob{
+	jobID := s.createImportJob()
+	go s.runImportJob(jobID, data)
+	return jobID, nil
+}
+
+func (s *Service) createImportJob() string {
+	return s.jobs.create(domain.ImportJob{
 		Status:    domain.JobStatusPending,
 		Progress:  "等待处理",
 		CreatedAt: time.Now().UnixMilli(),
 		UpdatedAt: time.Now().UnixMilli(),
 	})
-	go func() {
-		ctx := context.Background()
-		report := func(progress string) {
-			s.jobs.update(jobID, func(job *domain.ImportJob) {
-				job.Status = domain.JobStatusRunning
-				job.Progress = progress
-			})
-		}
-		fail := func(err error) {
-			s.jobs.update(jobID, func(job *domain.ImportJob) {
-				job.Status = domain.JobStatusFailed
-				job.Error = err.Error()
-			})
-		}
-		report("解析数据包")
-		pkg, err := ParsePackage(ctx, bytes.NewReader(data))
-		if err != nil {
-			fail(fmt.Errorf("解析数据包失败: %w", err))
-			return
-		}
-		if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
-			fail(fmt.Errorf("数据包校验失败: %w", err))
-			return
-		}
-		report("生成变更集")
-		rawChecksum := PackageChecksum(data)
-		preview, err := s.previewImport(ctx, pkg, rawChecksum, 0)
-		if err != nil {
-			fail(fmt.Errorf("变更集生成失败: %w", err))
-			return
-		}
-		report("写入数据库")
-		progress := func(current, total int, message string) {
-			pct := 0
-			if total > 0 {
-				pct = current * 100 / total
-			}
-			s.jobs.update(jobID, func(job *domain.ImportJob) {
-				job.Status = domain.JobStatusRunning
-				job.Progress = fmt.Sprintf("写入数据库 %d%%（%d/%d）", pct, current, total)
-			})
-		}
-		if err := s.repo.ApplyImport(ctx, pkg, preview, progress); err != nil {
-			fail(fmt.Errorf("写入数据库失败: %w", err))
-			return
-		}
-		report("构建并上传离线包")
-		bundleProgress := func(current, total int, message string) {
-			pct := 0
-			if total > 0 {
-				pct = current * 100 / total
-			}
-			s.jobs.update(jobID, func(job *domain.ImportJob) {
-				job.Status = domain.JobStatusRunning
-				job.Progress = fmt.Sprintf("构建离线包 %d%%（%s）", pct, message)
-			})
-		}
-		if err := s.publishBundle(ctx, preview.NextVersion, bundleProgress); err != nil {
-			fail(fmt.Errorf("发布离线包失败: %w", err))
-			return
-		}
-		if len(preview.Changes) > 100 {
-			preview.Changes = preview.Changes[:100]
-		}
-		preview.AllChanges = nil
+}
+
+func (s *Service) runImportJob(jobID string, data []byte) {
+	ctx := context.Background()
+	report := func(progress string) {
 		s.jobs.update(jobID, func(job *domain.ImportJob) {
-			job.Status = domain.JobStatusCompleted
-			job.Progress = "完成"
-			job.Result = &domain.ImportResult{
-				Manifest: pkg.Manifest,
-				Checksum: rawChecksum,
-				RowCount: len(pkg.Rows),
-				Version:  preview.NextVersion,
-				Preview:  &preview,
-			}
+			job.Status = domain.JobStatusRunning
+			job.Progress = progress
 		})
-	}()
-	return jobID, nil
+	}
+	fail := func(err error) {
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusFailed
+			job.Error = err.Error()
+		})
+	}
+	report("解析数据包")
+	pkg, err := ParsePackage(ctx, bytes.NewReader(data))
+	if err != nil {
+		fail(fmt.Errorf("解析数据包失败: %w", err))
+		return
+	}
+	if err := validateFirstWeekMonday(pkg.Manifest.FirstWeekMonday); err != nil {
+		fail(fmt.Errorf("数据包校验失败: %w", err))
+		return
+	}
+	report("生成变更集")
+	rawChecksum := PackageChecksum(data)
+	preview, err := s.previewImport(ctx, pkg, rawChecksum, 0)
+	if err != nil {
+		fail(fmt.Errorf("变更集生成失败: %w", err))
+		return
+	}
+	report("写入数据库")
+	progress := func(current, total int, message string) {
+		pct := 0
+		if total > 0 {
+			pct = current * 100 / total
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusRunning
+			job.Progress = fmt.Sprintf("写入数据库 %d%%（%d/%d）", pct, current, total)
+		})
+	}
+	if err := s.repo.ApplyImport(ctx, pkg, preview, progress); err != nil {
+		fail(fmt.Errorf("写入数据库失败: %w", err))
+		return
+	}
+	report("构建并上传离线包")
+	bundleProgress := func(current, total int, message string) {
+		pct := 0
+		if total > 0 {
+			pct = current * 100 / total
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusRunning
+			job.Progress = fmt.Sprintf("构建离线包 %d%%（%s）", pct, message)
+		})
+	}
+	if err := s.publishBundle(ctx, preview.NextVersion, bundleProgress); err != nil {
+		fail(fmt.Errorf("发布离线包失败: %w", err))
+		return
+	}
+	if len(preview.Changes) > 100 {
+		preview.Changes = preview.Changes[:100]
+	}
+	preview.AllChanges = nil
+	s.jobs.update(jobID, func(job *domain.ImportJob) {
+		job.Status = domain.JobStatusCompleted
+		job.Progress = "完成"
+		job.Result = &domain.ImportResult{
+			Manifest: pkg.Manifest,
+			Checksum: rawChecksum,
+			RowCount: len(pkg.Rows),
+			Version:  preview.NextVersion,
+			Preview:  &preview,
+		}
+	})
 }
 
 func (s *Service) GetImportJob(ctx context.Context, id string) (*domain.ImportJob, error) {
