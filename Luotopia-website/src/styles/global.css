@@ -1,42 +1,42 @@
 /* ============================================================
    Luotopia.cn 主站全局样式
-   配色：武汉大学标准色卡（见 docs/前端网页设计/用色.md）
-   理念：克制的色 × 放肆的版 —— 深色底场，hairline 分割，
+   配色：以武汉大学珞珈绿为主导的深绿底场（色卡见 docs/前端网页设计/用色.md）
+   理念：克制的色 × 放肆的版 —— 深绿底场，hairline 分割，
         流体巨字，出血错位，杂志感艺术排印。
    字体：Cormorant Garamond（拉丁衬线展示）/ Inter（拉丁无衬线）
-        Noto Serif SC（中文标题）/ Noto Sans SC（中文正文）
+        Noto Serif SC（中文标题）/ 系统中文黑体（正文）
    ============================================================ */
 
 /* ---------- 字体（在 Layout 以 ES import 引入，此处仅 token） ---------- */
 
 :root {
-  /* —— 武大主色 —— */
-  --luojia-blue: #002554;      /* 珞珈蓝：主色 / 深底 / 标题 */
-  --luojia-green: #115740;    /* 珞珈绿：辅色 / 强调 / 按钮 */
-  /* —— 武大辅助色（点睛分寸使用） —— */
-  --luojia-pink: #f8a3bc;     /* 珞樱粉：高光点睛 */
-  --donghu-blue: #41b6e6;     /* 东湖蓝 */
+  /* —— 武大标准色卡（见 docs/前端网页设计/用色.md） —— */
+  --luojia-blue: #002554;       /* 珞珈蓝 */
+  --luojia-green: #115740;     /* 珞珈绿：本项目主色 —— 以绿为主 */
+  /* —— 辅助色 —— */
+  --luojia-pink: #f8a3bc;      /* 珞樱粉 */
+  --donghu-blue: #41b6e6;      /* 东湖蓝 */
   --osmanthus: #ffa300;       /* 秋桂黄 */
-  --wisteria: #33058d;        /* 春藤紫 */
+  --wisteria: #33058d;         /* 春藤紫 */
   --tile-green: #00797c;      /* 黄瓦绿 */
-  --frost-red: #e10800;       /* 霜叶红 */
-  --mist-gray: #c1c6c8;       /* 晨雾灰：次要文字 / 细线 */
+  --frost-red: #e10800;        /* 霜叶红 */
+  --mist-gray: #c1c6c8;       /* 晨雾灰 */
 
-  /* —— 派生底场（由珞珈蓝过渡到近黑） —— */
-  --ink: #050b16;             /* 最深底，比珞珈蓝更沉 */
-  --ink-2: #0a1428;           /* 次深底 */
-  --ink-3: #10203c;           /* 卡片底 */
+  /* —— 派生底场（由珞珈绿过渡到近黑的墨绿） —— */
+  --ink: #04120b;              /* 最深底：墨绿黑 */
+  --ink-2: #071d13;            /* 次深底 */
+  --ink-3: #0d2a1b;            /* 卡片底 */
   --line: rgba(193, 198, 200, 0.16);   /* hairline 细线 */
-  --line-strong: rgba(193, 198, 200, 0.32);
-  --paper: #f4efe6;           /* 偶用的暖纸浅底（反白段落） */
-  --paper-ink: #0c1a2e;       /* 纸上墨色文字 */
+  --line-strong: rgba(193, 198, 200, 0.30);
+  --paper: #f4efe6;            /* 偶用的暖纸浅底（反白段落） */
+  --paper-ink: #0c1a2e;        /* 纸上墨色文字 */
 
   /* —— 文字层级 —— */
-  --fg: #eef2f6;              /* 主文字（深底上） */
-  --fg-2: #b9c4cf;            /* 次文字 */
-  --fg-3: #7e8a99;            /* 弱化文字 / label */
-  --accent: var(--osmanthus); /* 默认点睛：秋桂黄 */
-  --accent-2: var(--luojia-pink);
+  --fg: #eef5f1;               /* 主文字（绿底上） */
+  --fg-2: #aecbb8;             /* 次文字 */
+  --fg-3: #6e8a78;             /* 弱化文字 / label */
+  --accent: #3fbf7a;           /* 默认点睛：明青绿（绿系高光） */
+  --accent-2: var(--tile-green);
 
   /* —— 字体族 —— */
   --ff-display: "Cormorant Garamond", "Noto Serif SC", "Songti SC", "Source Han Serif SC", serif;

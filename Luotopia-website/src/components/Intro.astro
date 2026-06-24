@@ -1,30 +1,25 @@
 ---
-// 项目介绍主体：克制几句话 + 杂志感艺术排印（流体巨字、首字下沉、sticky 章节号、中英并置）
+// 项目介绍：极简。确定的字面（openwhu、板块名）保留；其余占位用 lorem ipsum。
 ---
 <section class="intro" id="intro">
   <div class="intro__grid">
     <aside class="intro__side" data-reveal-stagger>
       <p class="intro__num">01<span>／04</span></p>
       <p class="intro__label">Project</p>
-      <p class="intro__meta">开源 · openwhu 社区共建</p>
+      <p class="intro__meta">openwhu · 开源</p>
       <hr class="rule intro__rule" />
     </aside>
 
     <div class="intro__body">
       <p class="intro__quote" data-reveal="clip">
-        <span class="display intro__en">A campus, quietly woven.</span>
+        <span class="display intro__en">Lorem ipsum dolor sit amet.</span>
       </p>
 
-      <h2 class="intro__cn dropcap" data-reveal-stagger>
-        <span>珞珈山下的孩子，做了一件小事。</span>
-        <span>Luotopia 把课表、教室、图书馆、课程评价与</span>
-        <span>珞珈防空洞这些散落的校园日常，拢进同一个从容的界面。</span>
-        <span>不为热闹——只为让珞珈的清晨与深夜里，少些卡顿，多些从容。</span>
+      <h2 class="intro__cn" data-reveal-stagger>
+        <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
+        <span>Sed do eiusmod tempor incididunt ut labore et dolore magna.</span>
+        <span class="intro__cn-muted">Ut enim ad minim veniam, quis nostrud exercitation.</span>
       </h2>
-
-      <p class="intro__note" data-reveal="fade">
-        Open source · 由 openwhu 社区与武大学生共同构建。
-      </p>
     </div>
   </div>
 </section>
@@ -35,7 +30,6 @@
     display: grid; grid-template-columns: 1fr 8fr 1fr; gap: clamp(1rem, 4vw, 3rem);
     max-width: var(--wide); margin-inline: auto; align-items: start;
   }
-  /* 左侧 sticky 章节号 */
   .intro__side {
     position: sticky; top: calc(var(--nav-h) + 2rem);
     display: flex; flex-direction: column; gap: .7rem;
@@ -58,8 +52,7 @@
     display: flex; flex-direction: column; gap: .1em;
   }
   .intro__cn span { display: block; }
-
-  .intro__note { color: var(--fg-3); font-size: .85rem; letter-spacing: .04em; padding-top: 1.4rem; border-top: 1px solid var(--line); }
+  .intro__cn-muted { color: var(--fg-3) !important; }
 
   @media (max-width: 900px) {
     .intro__grid { grid-template-columns: 1fr; }

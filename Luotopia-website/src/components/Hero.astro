@@ -16,14 +16,13 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
   <div class="hero__vignette" aria-hidden="true"></div>
 
   <div class="hero__inner">
-    <p class="hero__eyebrow"><span class="dot"></span>Luotopia&nbsp;·&nbsp;est. 珞珈</p>
+    <p class="hero__eyebrow"><span class="dot"></span>Luotopia</p>
     <h1 class="hero__title">
       <span class="display">Luotopia</span>
-      <span class="hero__cn">珞珈山下的<br/><em>数字校园</em></span>
+      <span class="hero__cn">珞珈山下的<br/><em>校园应用</em></span>
     </h1>
-    <p class="hero__desc">为武大学子打造的校园生活圈——课表、教室、课程评价、珞珈防空洞，一应用尽。</p>
     <div class="hero__cta">
-      <a class="btn btn--solid" href="#download"><span>下载 APP</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></a>
+      <a class="btn btn--solid" href="#download"><span>下载</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></a>
       <a class="btn btn--ghost" href="#intro"><span>了解更多</span></a>
     </div>
   </div>
@@ -32,11 +31,6 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
     <span class="hero__scroll-line"></span>
     <span class="hero__scroll-txt">scroll</span>
   </a>
-
-  <div class="hero__corner" aria-hidden="true">
-    <span>武 汉 大 学</span>
-    <span class="hero__corner-en">WUHAN UNIVERSITY</span>
-  </div>
 </section>
 
 <style>
@@ -45,12 +39,12 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
   .hero__grad {
     position: absolute; inset: 0; z-index: 1;
     background:
-      linear-gradient(105deg, rgba(0,37,84,.86) 0%, rgba(5,11,22,.66) 42%, rgba(5,11,22,.2) 78%, transparent 100%),
-      linear-gradient(0deg, var(--ink) 2%, transparent 38%, transparent 64%, rgba(5,11,22,.55) 100%);
+      linear-gradient(105deg, rgba(17,87,64,.82) 0%, rgba(4,18,11,.66) 44%, rgba(4,18,11,.22) 78%, transparent 100%),
+      linear-gradient(0deg, var(--ink) 2%, transparent 38%, transparent 64%, rgba(4,18,11,.55) 100%);
   }
   .hero__vignette {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: radial-gradient(120% 90% at 28% 42%, transparent 40%, rgba(5,11,22,.55) 100%);
+    background: radial-gradient(120% 90% at 28% 42%, transparent 40%, rgba(4,18,11,.55) 100%);
   }
 
   .hero__inner { position: relative; z-index: 3; padding-inline: var(--gutter); max-width: var(--wide); margin-inline: auto; width: 100%; }
@@ -58,13 +52,12 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
     display: inline-flex; align-items: center; gap: .6rem; margin-bottom: clamp(1.5rem, 4vw, 2.6rem);
     font-family: var(--ff-sans); letter-spacing: .34em; text-transform: uppercase; font-size: .72rem; color: var(--fg-2);
   }
-  .hero__eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(255,163,0,.18); }
+  .hero__eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(63,191,122,.2); }
 
   .hero__title { display: flex; flex-direction: column; gap: .4rem; max-width: 18ch; }
   .hero__title > .display {
     font-size: clamp(3.4rem, 12.5vw, 12rem); line-height: .86; letter-spacing: -.02em; color: var(--fg);
     margin-left: -.04em;
-    /* 略向画外出血：右侧轻微裁切感 */
   }
   .hero__cn {
     font-family: var(--ff-serif-cn); font-weight: 600; font-size: clamp(1.6rem, 4.4vw, 3.2rem);
@@ -72,8 +65,6 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
     margin-top: .3rem;
   }
   .hero__cn em { font-style: normal; color: var(--accent); font-family: var(--ff-display); font-weight: 600; letter-spacing: .02em; padding-inline: .12em; }
-
-  .hero__desc { margin-top: clamp(1.6rem, 4vw, 2.4rem); max-width: var(--measure); color: var(--fg-2); font-size: var(--step-1); font-weight: 300; }
 
   .hero__cta { display: flex; gap: 1rem; margin-top: clamp(2rem,5vw,3rem); flex-wrap: wrap; }
 
@@ -92,15 +83,8 @@ import heroImg from "../assets/scenery/sakura-castle.jpg";
   .hero__scroll-line::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 14px; background: var(--fg); animation: scrolldrop 2.4s var(--ease) infinite; }
   @keyframes scrolldrop { 0%{transform:translateY(-16px)} 60%,100%{transform:translateY(48px)} }
 
-  .hero__corner {
-    position: absolute; right: var(--gutter); bottom: 2.2rem; z-index: 3; text-align: right;
-    display: flex; flex-direction: column; gap: .25rem; color: var(--fg-3);
-  }
-  .hero__corner span { font-family: var(--ff-serif-cn); font-size: .9rem; letter-spacing: .5em; }
-  .hero__corner-en { font-family: var(--ff-sans) !important; font-size: .6rem !important; letter-spacing: .34em !important; color: var(--fg-3); }
-
   @media (max-width: 720px) {
-    .hero__scroll, .hero__corner { display: none; }
+    .hero__scroll { display: none; }
     .hero__title > .display { font-size: clamp(3rem, 19vw, 7rem); }
   }
 </style>

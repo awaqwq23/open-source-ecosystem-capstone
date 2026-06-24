@@ -1,17 +1,17 @@
 ---
-// 团队介绍：次要板块。团队信息未公开，做 monochrome 杂志感网格占位（lorem 假名/职务），后续替换为真实成员。
+// 团队介绍：次要板块。团队信息未公开，做 monochrome 杂志感网格占位（lorem），后续替换为真实成员。
 const members = [
-  { name: "Loris Vane", role_cn: "发起 / 产品", role_en: "Founder", initials: "LV" },
-  { name: "Iruma Sato", role_cn: "客户端 / Flutter", role_en: "Client Lead", initials: "IS" },
-  { name: "Pell Reim", role_cn: "服务端 / Go", role_en: "Backend Lead", initials: "PR" },
-  { name: "Vela Nori", role_cn: "设计 / 视觉", role_en: "Design", initials: "VN" },
+  { name: "Lorem Ipsum", role_cn: "占位", role_en: "Placeholder", initials: "LI" },
+  { name: "Dolor Sit", role_cn: "占位", role_en: "Placeholder", initials: "DS" },
+  { name: "Amet Conset", role_cn: "占位", role_en: "Placeholder", initials: "AC" },
+  { name: "Adipiscing", role_cn: "占位", role_en: "Placeholder", initials: "AD" },
 ];
 ---
 <section class="team" id="team">
   <header class="team__head" data-reveal-stagger>
     <p class="eyebrow"><span class="num">04</span>&nbsp;／&nbsp;04&nbsp;&nbsp;·&nbsp;&nbsp;团队</p>
-    <h2 class="team__title">一群<em>珞珈山下</em>的人</h2>
-    <p class="team__sub">这里暂以代号占位。待团队信息公开后，将以真实姓名与职责替换下列卡片。</p>
+    <h2 class="team__title">Lorem <em>ipsum</em></h2>
+    <p class="team__sub">团队信息待公开，下列卡片暂为占位。</p>
   </header>
 
   <div class="team__grid">
@@ -25,7 +25,7 @@ const members = [
     ))}
   </div>
 
-  <p class="team__foot" data-reveal="fade">openwhu 社区 · 由武大学生与校外贡献者共同维护</p>
+  <p class="team__foot" data-reveal="fade">openwhu 社区</p>
 </section>
 
 <style>
@@ -48,7 +48,7 @@ const members = [
     display: grid; place-items: center;
     font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: 1.4rem;
     color: var(--fg); border: 1px solid var(--line-strong);
-    background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--luojia-blue) 60%, var(--ink-3)), var(--ink));
+    background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--luojia-green) 60%, var(--ink-3)), var(--ink));
     margin-bottom: .6rem;
   }
   .team__name { font-family: var(--ff-display); font-style: italic; font-weight: 600; font-size: 1.4rem; color: var(--fg); }
