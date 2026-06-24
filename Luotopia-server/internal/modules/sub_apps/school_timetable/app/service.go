@@ -254,6 +254,42 @@ func (s *Service) runImportJob(jobID string, data []byte) {
 		fail(fmt.Errorf("变更集生成失败: %w", err))
 		return
 	}
+	// 无变更：不推进版本、不写库（同包重复发布为 no-op）。
+	// 但若当前激活发行缺离线包，补算一次（用当前版本），保证客户端降级整包可用。
+	emptyChanges := len(preview.AllChanges) == 0 && len(preview.Changes) == 0
+	if emptyChanges {
+		current, _ := s.CurrentBundle(ctx)
+		if current == nil || current.Href == "" {
+			report("补算离线包")
+			bundleProgress := func(current2, total int, message string) {
+				pct := 0
+				if total > 0 {
+					pct = current2 * 100 / total
+				}
+				s.jobs.update(jobID, func(job *domain.ImportJob) {
+					job.Status = domain.JobStatusRunning
+					job.Progress = fmt.Sprintf("构建离线包 %d%%（%s）", pct, message)
+				})
+			}
+			curState, err := s.repo.CurrentDataset(ctx)
+			if err == nil && curState.Version > 0 {
+				if err := s.publishBundle(ctx, curState.Version, bundleProgress); err != nil {
+					fail(fmt.Errorf("补算离线包失败: %w", err))
+					return
+				}
+			}
+		}
+		s.jobs.update(jobID, func(job *domain.ImportJob) {
+			job.Status = domain.JobStatusCompleted
+			job.Progress = "完成（无变更）"
+			job.Result = &domain.ImportResult{
+				Manifest: pkg.Manifest, Checksum: rawChecksum,
+				RowCount: pkg.Manifest.RowCount, Version: preview.BaseVersion,
+				Preview: &preview,
+			}
+		})
+		return
+	}
 	report("写入数据库")
 	progress := func(current, total int, message string) {
 		pct := 0

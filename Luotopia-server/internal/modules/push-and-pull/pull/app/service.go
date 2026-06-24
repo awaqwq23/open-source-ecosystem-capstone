@@ -138,9 +138,11 @@ func (s *Service) Pull(ctx context.Context, userID string, req domain.PullReques
 				MinReplayableVersion: state.MinReplayableVersion,
 			}
 			if changed {
-				// 断层检测：若客户端版本早于可回放基线（该版本前的 changes 已归档），
-				// 不可 apply 增量，直接降级整包；客户端应据此重建本地数据集。
-				broken := state.MinReplayableVersion > 0 && clientVersion < state.MinReplayableVersion
+				// 断层/空洞检测：
+				// 1) 客户端版本早于可回放基线（min_replayable_version 之后的 changes 已归档）。
+				// 2) 有更版但 ChangesAfter 返回 0 条 changes（版本号涨过但无对应事件，如无变更导入）。
+				// 两种都不可 apply 增量，直接降级整包；客户端应据此重建本地数据集。
+				broken := (state.MinReplayableVersion > 0 && clientVersion < state.MinReplayableVersion) || len(changes) == 0
 				if !broken && len(changes) > changesLimit {
 					bundle, bundleErr := s.schoolTimetableSvc.CurrentBundle(ctx)
 					if bundleErr == nil && bundle != nil && bundle.Href != "" {
