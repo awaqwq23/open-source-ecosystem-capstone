@@ -208,7 +208,7 @@ func (s *Service) validatePackageBytes(ctx context.Context, data []byte) (domain
 	return domain.ImportResult{
 		Manifest: pkg.Manifest,
 		Checksum: PackageChecksum(data),
-		RowCount: len(pkg.Rows),
+		RowCount: packageRowCount(pkg),
 		Version:  preview.NextVersion,
 		Preview:  &preview,
 	}, nil
@@ -294,7 +294,7 @@ func (s *Service) runImportJob(jobID string, data []byte) {
 		job.Result = &domain.ImportResult{
 			Manifest: pkg.Manifest,
 			Checksum: rawChecksum,
-			RowCount: len(pkg.Rows),
+			RowCount: packageRowCount(pkg),
 			Version:  preview.NextVersion,
 			Preview:  &preview,
 		}
@@ -426,7 +426,7 @@ func flattenRecords(pkg domain.Package, records Records) (map[string]domain.Enti
 	termPayload := map[string]any{
 		"term_key": pkg.Manifest.TermKey, "school_year": pkg.Manifest.SchoolYear,
 		"term": pkg.Manifest.Term, "first_week_monday": pkg.Manifest.FirstWeekMonday,
-		"row_count": len(pkg.Rows), "source": pkg.Manifest.Source,
+		"row_count": packageRowCount(pkg), "source": pkg.Manifest.Source,
 		"source_checksum": pkg.Manifest.SourceChecksum,
 	}
 	if err := add("term", pkg.Manifest.TermKey, pkg.Manifest.TermKey, termPayload); err != nil {
@@ -474,6 +474,16 @@ func flattenRecords(pkg domain.Package, records Records) (map[string]domain.Enti
 		}
 	}
 	return entities, counts, nil
+}
+
+func packageRowCount(pkg domain.Package) int {
+	if pkg.Manifest.RowCount > 0 {
+		return pkg.Manifest.RowCount
+	}
+	if len(pkg.SourceRows) > 0 {
+		return len(pkg.SourceRows)
+	}
+	return len(pkg.Rows)
 }
 
 func entityKey(entityType, entityID string) string {
