@@ -17,6 +17,10 @@ import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.da
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/all_school_timetable_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/course_head_classes_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/pages/teaching_class_detail_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/course_review/presentation/pages/course_review_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/course_review/presentation/pages/course_review_subject_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/course_review/presentation/pages/course_review_wallet_page.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/course_review/presentation/pages/course_review_write_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/empty_classroom/presentation/pages/empty_classroom_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/luojia_ecard/presentation/pages/luojia_ecard_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/presentation/pages/score_page.dart';
@@ -294,6 +298,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                             : const _MissingAllSchoolTimetableArgsPage(),
                       );
                     },
+                  ),
+                  GoRoute(
+                    path: 'course-review',
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const CourseReviewPage(),
+                        ),
+                  ),
+                  GoRoute(
+                    path: 'course-review/subject',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<void>(
+                        context,
+                        state,
+                        args is CourseReviewSubjectPageArgs
+                            ? CourseReviewSubjectPage(args: args)
+                            : const _MissingCourseReviewArgsPage(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'course-review/write',
+                    pageBuilder: (context, state) {
+                      final args = state.extra;
+                      return AppRouteTransitions.sharedAxisPage<void>(
+                        context,
+                        state,
+                        args is CourseReviewWritePageArgs
+                            ? CourseReviewWritePage(args: args)
+                            : const _MissingCourseReviewArgsPage(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'course-review/wallet',
+                    pageBuilder: (context, state) =>
+                        AppRouteTransitions.sharedAxisPage<void>(
+                          context,
+                          state,
+                          const CourseReviewWalletPage(),
+                        ),
                   ),
                 ],
               ),
@@ -604,5 +652,14 @@ class _MissingAllSchoolTimetableArgsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(child: Text('课表参数缺失，请返回重新选择。'));
+  }
+}
+
+class _MissingCourseReviewArgsPage extends StatelessWidget {
+  const _MissingCourseReviewArgsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('评价参数缺失，请返回重新选择。'));
   }
 }

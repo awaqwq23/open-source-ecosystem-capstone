@@ -24,6 +24,10 @@ abstract final class AppRoutePaths {
       '/campus/all-school-timetable/head';
   static const campusAllSchoolTimetableClass =
       '/campus/all-school-timetable/class';
+  static const campusCourseReview = '/campus/course-review';
+  static const campusCourseReviewSubject = '/campus/course-review/subject';
+  static const campusCourseReviewWrite = '/campus/course-review/write';
+  static const campusCourseReviewWallet = '/campus/course-review/wallet';
   static const campusTimetableManage = '/campus/timetable/manage';
   static const campusTimetableImportWhu = '/campus/timetable/import/whu';
   static const campusTimetableImportWakeup = '/campus/timetable/import/wakeup';

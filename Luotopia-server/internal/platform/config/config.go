@@ -20,6 +20,7 @@ type Config struct {
 	Admin           AdminConfig
 	Weather         WeatherConfig
 	SchoolTimetable SchoolTimetableConfig
+	CourseReview    CourseReviewConfig
 	SMS             SMSConfig
 	Email           EmailConfig
 }
@@ -32,6 +33,16 @@ type WeatherConfig struct {
 }
 
 type SchoolTimetableConfig struct {
+}
+
+// CourseReviewConfig 课程评价系统业务策略数值，均可缺省，不写死在数据库。
+type CourseReviewConfig struct {
+	// PointsPerReview 发一条评价奖励的积分。
+	PointsPerReview int
+	// AccessCostPerDay 兑换查询权限的每日积分单价。
+	AccessCostPerDay int
+	// MaxRedeemDays 单次兑换最长天数（0 表示不限制）。
+	MaxRedeemDays int
 }
 
 type HTTPConfig struct {
@@ -127,6 +138,11 @@ func Load() Config {
 			CacheTTL: requiredDurationEnv("LUOTOPIA_WEATHER_CACHE_TTL"),
 		},
 		SchoolTimetable: SchoolTimetableConfig{},
+		CourseReview: CourseReviewConfig{
+			PointsPerReview:  optionalIntEnv("LUOTOPIA_COURSE_REVIEW_POINTS_PER_REVIEW", 100),
+			AccessCostPerDay: optionalIntEnv("LUOTOPIA_COURSE_REVIEW_ACCESS_COST_PER_DAY", 3),
+			MaxRedeemDays:    optionalIntEnv("LUOTOPIA_COURSE_REVIEW_MAX_REDEEM_DAYS", 90),
+		},
 		SMS: SMSConfig{
 			TencentSecretID:   declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_ID"),
 			TencentSecretKey:  declaredEnv("LUOTOPIA_TENCENT_SMS_SECRET_KEY"),
@@ -187,6 +203,18 @@ func optionalBoolEnv(key string, fallback bool) bool {
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
 		panic(fmt.Sprintf("环境变量 %s 必须是布尔值", key))
+	}
+	return parsed
+}
+
+func optionalIntEnv(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		panic(fmt.Sprintf("环境变量 %s 必须是整数", key))
 	}
 	return parsed
 }

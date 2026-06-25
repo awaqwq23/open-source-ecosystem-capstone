@@ -122,6 +122,18 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    bool withAuth = true,
+  }) async {
+    return _request(
+      _client.delete(
+        Uri.parse('$baseUrl$path'),
+        headers: withAuth ? _authHeaders : _jsonHeaders,
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> _request(Future<http.Response> future) async {
     final response = await future.timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {

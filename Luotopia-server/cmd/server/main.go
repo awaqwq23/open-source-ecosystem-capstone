@@ -30,6 +30,9 @@ import (
 	statsinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/user-stats/infra"
 	weatherapp "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/app"
 	weatherinfra "github.com/openwhu/luotopia/server/internal/modules/push-and-pull/weather/infra"
+	coursereviewapp "github.com/openwhu/luotopia/server/internal/modules/sub_apps/course_review/app"
+	coursereviewinfra "github.com/openwhu/luotopia/server/internal/modules/sub_apps/course_review/infra"
+	coursereviewtransport "github.com/openwhu/luotopia/server/internal/modules/sub_apps/course_review/transport"
 	schoolapp "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/app"
 	schoolinfra "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/infra"
 	schooltransport "github.com/openwhu/luotopia/server/internal/modules/sub_apps/school_timetable/transport"
@@ -65,6 +68,7 @@ func main() {
 	registerPull(server, cfg, db, weatherSvc, schoolTimetableSvc)
 	registerAdmin(server, cfg, db, weatherSvc, schoolTimetableSvc)
 	registerSchoolTimetableAPI(server, schoolTimetableSvc)
+	registerCourseReviewAPI(server, cfg, db)
 	registerNotificationAPI(server, cfg, db)
 	registerHotUpdateAPI(server, cfg, db)
 	registerWeatherRefresh(ctx, cfg, weatherSvc, log)
@@ -199,6 +203,20 @@ func registerSchoolTimetableAPI(server *httpserver.Server, schoolTimetableSvc *s
 		return
 	}
 	schooltransport.NewHandler(schoolTimetableSvc).RegisterClient(server.ClientAPI())
+}
+
+func registerCourseReviewAPI(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	repo := coursereviewinfra.NewGormRepository(db)
+	svc := coursereviewapp.NewService(coursereviewapp.ServiceConfig{
+		Repo:             repo,
+		PointsPerReview:  cfg.CourseReview.PointsPerReview,
+		AccessCostPerDay: cfg.CourseReview.AccessCostPerDay,
+		MaxRedeemDays:    cfg.CourseReview.MaxRedeemDays,
+	})
+	coursereviewtransport.NewHandler(svc, cfg.Auth.AccessTokenSecret).Register(server.ClientAPI())
 }
 
 func registerNotificationAPI(server *httpserver.Server, cfg config.Config, db *gorm.DB) {
