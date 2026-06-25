@@ -42,6 +42,31 @@ python convert_saved_html.py --term-key 2025-2026-2 --school-year 2025-2026 --te
 
 离线转换会输出 HTML 中解析到的全部课程行，并在命令行报告不完整或无上课时间的行数；这些行由服务端归档为原始源行，只有字段足以构造课程实体的行会进入查询实体。
 
+## 构建上传包
+
+抓取/转换得到 `.ndjson.gz` 后，用 `build_sqlite.py` 构建服务端导入的 `.sqlite.gz`：
+
+```powershell
+python build_sqlite.py --output output\2025-2026-2.sqlite.gz output\2025-2026-2.ndjson.gz
+```
+
+数据模型以教学班（offering）为唯一核心：跨学期共享 `course`/`teacher`，每学期 `offering` 下挂 `offering_teacher`（多对多教师）、`audience`（面向对象）、`meeting`（排课，地点与周次都在此）。源 jqGrid 的有内容原始列都会晋升为类型列；完整原文仅保存在 `source_row` 归档（不下发客户端）。
+
+教师默认按姓名合并（源数据无工号）。要手动区分同名的不同教师，可传入覆盖表：
+
+```powershell
+python build_sqlite.py --output out.sqlite.gz --teacher-overrides teacher_overrides.json in.ndjson.gz
+```
+
+覆盖表是规则数组，命中 `name` 且其余键（如 `open_college`、`course_no`）与教学班上下文相等时，给该教师分配独立 `seq`，从而生成不同的稳定 `teacher_id`：
+
+```json
+[
+  {"name": "王伟", "open_college": "计算机学院", "seq": 1},
+  {"name": "王伟", "course_no": "1234567", "seq": 2}
+]
+```
+
 ## 输出格式
 
 输出文件是 gzip 压缩的 NDJSON：
