@@ -28,7 +28,7 @@ func (r *GormRepository) CurrentDataset(ctx context.Context) (domain.DatasetStat
 	var ds datasetModel
 	err := r.db.WithContext(ctx).First(&ds, "id = ?", 1).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.DatasetState{SchemaVersion: 1, TermKeys: []string{}}, nil
+		return domain.DatasetState{SchemaVersion: 2, TermKeys: []string{}}, nil
 	}
 	if err != nil {
 		return domain.DatasetState{}, err
@@ -79,7 +79,7 @@ func (r *GormRepository) ListEntities(ctx context.Context) ([]domain.EntityRecor
 func (r *GormRepository) ListEntitiesByTerm(ctx context.Context, termKey string) ([]domain.EntityRecord, error) {
 	var rows []entityModel
 	err := r.db.WithContext(ctx).
-		Where("term_key = ? OR (term_key = '' AND entity_type IN ?)", termKey, []string{"course", "instructor_course"}).
+		Where("term_key = ? OR (term_key = '' AND entity_type IN ?)", termKey, []string{"course", "teacher"}).
 		Order("entity_type, entity_id").
 		Find(&rows).Error
 	if err != nil {
@@ -142,7 +142,7 @@ func (r *GormRepository) ApplyImport(ctx context.Context, pkg domain.Package, pr
 		_ = tx.First(&priorDataset, "id = ?", 1).Error
 		dataset := datasetModel{
 			ID: 1, Version: preview.NextVersion, Checksum: checksum,
-			SchemaVersion: 1, MinReplayableVersion: priorDataset.MinReplayableVersion,
+			SchemaVersion: 2, MinReplayableVersion: priorDataset.MinReplayableVersion,
 			PublishedAt: now, UpdatedAt: now,
 		}
 		if err := tx.Save(&dataset).Error; err != nil {
@@ -190,8 +190,9 @@ func (r *GormRepository) ChangesAfter(ctx context.Context, version int64, limit 
 		limit = 5000
 	}
 	var rows []changeModel
+	// source_row 仅服务端归档，不下发客户端：从 changes 流中排除。
 	err = r.db.WithContext(ctx).
-		Where("version > ?", version).
+		Where("version > ? AND entity_type <> ?", version, "source_row").
 		Order("version, sequence").
 		Limit(limit).
 		Find(&rows).Error

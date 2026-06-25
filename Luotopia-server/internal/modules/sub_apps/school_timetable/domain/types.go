@@ -11,6 +11,8 @@ type Manifest struct {
 	TermKey         string   `json:"term_key"`
 	SchoolYear      string   `json:"school_year"`
 	Term            string   `json:"term"`
+	SchoolYearCode  string   `json:"school_year_code"`
+	TermCode        string   `json:"term_code"`
 	FirstWeekMonday string   `json:"first_week_monday"`
 	FieldCodes      []string `json:"field_codes"`
 	RowCount        int      `json:"row_count"`
@@ -19,24 +21,28 @@ type Manifest struct {
 	SourceChecksum  string   `json:"source_checksum"`
 }
 
+// Package 是单学期上传包解析后的内存表示。数据模型以教学班（offering）为唯一核心：
+// 跨学期共享 Course/Teacher，每学期 Offering 下挂 OfferingTeacher（多对多教师）、
+// Audience（面向对象）、Meeting（排课，地点与周次都在此）。SourceRow 为可追溯归档。
 type Package struct {
-	Manifest          Manifest
-	Catalogs          []CourseCatalog
-	TermCourses       []TermCourse
-	InstructorCourses []InstructorCourse
-	Offerings         []CourseOffering
-	Audiences         []CourseAudience
-	CourseInstances   []CourseInstance
-	SourceRows        []SourceRow
+	Manifest         Manifest
+	Courses          []Course
+	Teachers         []Teacher
+	Offerings        []CourseOffering
+	OfferingTeachers []OfferingTeacher
+	Audiences        []CourseAudience
+	Meetings         []Meeting
+	SourceRows       []SourceRow
 }
 
 // Term 是某学期的“当前激活发行版本”视图，供管理端学期列表展示。
-// Version/PublishedAt/RowCount 取自该学期当前 active=true 的发行版本（见 Release），而非数据集全局版本或单一实体版本。
-// TermKey/SchoolYear/Term/FirstWeekMonday/Source/SourceChecksum 直接来自数据包 Manifest。
+// Version/PublishedAt/RowCount 取自该学期当前 active=true 的发行版本（见 Release）。
 type Term struct {
 	TermKey         string    `json:"term_key"`
 	SchoolYear      string    `json:"school_year"`
 	Term            string    `json:"term"`
+	SchoolYearCode  string    `json:"school_year_code,omitempty"`
+	TermCode        string    `json:"term_code,omitempty"`
 	FirstWeekMonday string    `json:"first_week_monday"`
 	RowCount        int       `json:"row_count"`
 	Source          string    `json:"source,omitempty"`
@@ -47,7 +53,6 @@ type Term struct {
 
 // Release 表示某学期某个数据集发行版本：唯一承载该版本的学期元维度、源数据行数、
 // 离线包定位与激活状态。每学期恰好一行 Active=true 为当前激活版本；历史版本予以保留。
-// RowCount 语义为“源数据行数”（source_row 实体计数），与离线包、entities 内嵌 term payload 同源。
 type Release struct {
 	TermKey         string         `json:"term_key"`
 	Version         int64          `json:"version"`
@@ -63,116 +68,85 @@ type Release struct {
 	PublishedAt     time.Time      `json:"published_at"`
 }
 
-type CourseCatalog struct {
+// Course 跨学期共享的课程目录项。
+type Course struct {
 	ID         string `json:"id"`
-	CatalogKey string `json:"catalog_key"`
 	CourseNo   string `json:"course_no"`
 	CourseName string `json:"course_name"`
 	Credits    string `json:"credits"`
-	SearchText string `json:"search_text"`
 }
 
-type TermCourse struct {
-	ID                 string `json:"id"`
-	TermKey            string `json:"term_key"`
-	CatalogID          string `json:"catalog_id"`
-	CourseNo           string `json:"course_no"`
-	CourseName         string `json:"course_name"`
-	OpenCollege        string `json:"open_college"`
-	Credits            string `json:"credits"`
-	CourseNature       string `json:"course_nature"`
-	CourseCategory     string `json:"course_category"`
-	OpenType           string `json:"open_type"`
-	TeachingClassCount int    `json:"teaching_class_count"`
-	TeacherSummary     string `json:"teacher_summary"`
-	WeekdaySummary     string `json:"weekday_summary"`
-	SearchText         string `json:"search_text"`
+// Teacher 跨学期共享的教师身份。ID 采用可扩展编码（name_key + seq），seq 默认 0，
+// 靠 build 阶段的覆盖表手动区分同名的不同教师。
+type Teacher struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	NameKey string `json:"name_key"`
+	Seq     int    `json:"seq"`
 }
 
-type InstructorCourse struct {
-	ID                  string `json:"id"`
-	CatalogID           string `json:"catalog_id"`
-	CourseNo            string `json:"course_no"`
-	CourseName          string `json:"course_name"`
-	Credits             string `json:"credits"`
-	InstructorName      string `json:"instructor_name"`
-	InstructorNameKey   string `json:"instructor_name_key"`
-	OfferingCount       int    `json:"offering_count"`
-	LatestTermKey       string `json:"latest_term_key"`
-	LatestOpenCollege   string `json:"latest_open_college"`
-	LatestTeachingTitle string `json:"latest_teaching_title"`
-	SearchText          string `json:"search_text"`
+// OfferingTeacher 教学班与教师的多对多链接。role: main(主讲) / other(其他)。
+type OfferingTeacher struct {
+	ID         string `json:"id"`
+	TermKey    string `json:"term_key"`
+	OfferingID string `json:"offering_id"`
+	TeacherID  string `json:"teacher_id"`
+	Role       string `json:"role"`
+	Title      string `json:"title"`
+	Ordinal    int    `json:"ordinal"`
 }
 
+// CourseOffering 教学班，模型的唯一核心。所有单值内容内联于此；课程身份引用 Course，
+// 教师经 OfferingTeacher 关联，地点/周次在 Meeting。term_course_id 为分组哈希，供课程头聚合与跨模块关联。
 type CourseOffering struct {
-	ID                 string            `json:"id"`
-	TermKey            string            `json:"term_key"`
-	SchoolYear         string            `json:"school_year"`
-	Term               string            `json:"term"`
-	TermCourseID       string            `json:"term_course_id"`
-	CatalogID          string            `json:"catalog_id"`
-	InstructorCourseID string            `json:"instructor_course_id"`
-	SourceKey          string            `json:"source_key"`
-	TeachingClassName  string            `json:"teaching_class_name"`
-	CourseNo           string            `json:"course_no"`
-	CourseName         string            `json:"course_name"`
-	OpenCollege        string            `json:"open_college"`
-	Credits            string            `json:"credits"`
-	CourseNature       string            `json:"course_nature"`
-	CourseCategory     string            `json:"course_category"`
-	OpenType           string            `json:"open_type"`
-	Instructor         string            `json:"instructor"`
-	InstructorKey      string            `json:"instructor_key"`
-	InstructorSetKey   string            `json:"instructor_set_key"`
-	Title              string            `json:"title"`
-	PeopleRaw          string            `json:"people_raw"`
-	Capacity           int               `json:"capacity"`
-	SelectedCount      int               `json:"selected_count"`
-	TheoryHours        string            `json:"theory_hours"`
-	ComputerHours      string            `json:"computer_hours"`
-	ExperimentHours    string            `json:"experiment_hours"`
-	PracticeHours      string            `json:"practice_hours"`
-	Remark             string            `json:"remark"`
-	OtherTeachers      string            `json:"other_teachers"`
-	Textbook           string            `json:"textbook"`
-	Publisher          string            `json:"publisher"`
-	ScheduleSignature  string            `json:"schedule_signature"`
-	ScheduleKey        string            `json:"schedule_key"`
-	ScheduleSummary    string            `json:"schedule_summary"`
-	WeekdaySummary     string            `json:"weekday_summary"`
-	AudienceSummary    string            `json:"audience_summary"`
-	GradeSummary       string            `json:"grade_summary"`
-	MajorSummary       string            `json:"major_summary"`
-	PlanCollegeSummary string            `json:"plan_college_summary"`
-	SourceRowCount     int               `json:"source_row_count"`
-	SearchText         string            `json:"search_text"`
-	Fields             map[string]string `json:"fields,omitempty"`
+	ID                string `json:"id"`
+	TermKey           string `json:"term_key"`
+	CourseID          string `json:"course_id"`
+	TermCourseID      string `json:"term_course_id"`
+	SourceKey         string `json:"source_key"`
+	TeachingClassName string `json:"teaching_class_name"`
+	OpenCollege       string `json:"open_college"`
+	CollegeID         string `json:"college_id"`
+	OpenDeptID        string `json:"open_dept_id"`
+	CourseNature      string `json:"course_nature"`
+	CourseCategory    string `json:"course_category"`
+	OpenType          string `json:"open_type"`
+	PeopleRaw         string `json:"people_raw"`
+	Capacity          int    `json:"capacity"`
+	SelectedCount     int    `json:"selected_count"`
+	TheoryHours       string `json:"theory_hours"`
+	ComputerHours     string `json:"computer_hours"`
+	ExperimentHours   string `json:"experiment_hours"`
+	PracticeHours     string `json:"practice_hours"`
+	Remark            string `json:"remark"`
+	Note              string `json:"note"`
+	OtherTeachers     string `json:"other_teachers"`
+	Textbook          string `json:"textbook"`
+	Publisher         string `json:"publisher"`
+	SearchText        string `json:"search_text"`
 }
 
+// CourseAudience 教学班面向的学生范围切片。名称在 offering，代码在此用于筛选。
 type CourseAudience struct {
 	ID                 string `json:"id"`
 	TermKey            string `json:"term_key"`
 	OfferingID         string `json:"offering_id"`
-	TermCourseID       string `json:"term_course_id"`
-	CatalogID          string `json:"catalog_id"`
 	Grade              string `json:"grade"`
+	GradeCode          string `json:"grade_code"`
 	Major              string `json:"major"`
+	MajorCode          string `json:"major_code"`
 	PlanCollege        string `json:"plan_college"`
-	CourseNature       string `json:"course_nature"`
 	CourseNatureCode   string `json:"course_nature_code"`
-	CourseCategory     string `json:"course_category"`
 	CourseCategoryCode string `json:"course_category_code"`
-	OpenType           string `json:"open_type"`
 	OpenTypeCode       string `json:"open_type_code"`
 	ConditionCode      string `json:"condition_code"`
 }
 
-type CourseInstance struct {
+// Meeting 教学班的一条上课规则。地点与周次都在此粒度；周次以 WeekIndexes 数组承载（不再单列实体）。
+type Meeting struct {
 	ID             string `json:"id"`
 	OfferingID     string `json:"offering_id"`
 	TermKey        string `json:"term_key"`
-	TermCourseID   string `json:"term_course_id"`
-	CatalogID      string `json:"catalog_id"`
 	Weekday        int    `json:"weekday"`
 	DayField       string `json:"day_field"`
 	SegmentIndex   int    `json:"segment_index"`
@@ -188,6 +162,7 @@ type CourseInstance struct {
 	ParseStatus    string `json:"parse_status"`
 }
 
+// SourceRow 原始教务行归档，供追溯排错。服务端留档，不下发客户端。
 type SourceRow struct {
 	ID           string            `json:"id"`
 	TermKey      string            `json:"term_key"`
@@ -227,14 +202,13 @@ type ImportJob struct {
 }
 
 type DatasetState struct {
-	Version   int64     `json:"version"`
-	Checksum  string    `json:"checksum"`
-	SchemaVersion int   `json:"schema_version"`
-	TermKeys  []string  `json:"term_keys"`
-	PublishedAt  time.Time `json:"published_at"`
+	Version       int64     `json:"version"`
+	Checksum      string    `json:"checksum"`
+	SchemaVersion int       `json:"schema_version"`
+	TermKeys      []string  `json:"term_keys"`
+	PublishedAt   time.Time `json:"published_at"`
 	// MinReplayableVersion：该版本及其之后的 changes 可被客户端从 base 安全增量回放。
-	// 早于此版本的 changes 已被归档清理；客户端 clientVersion < 该值时必须拉整包，不可 apply 增量。
-	MinReplayableVersion int64           `json:"min_replayable_version,omitempty"`
+	MinReplayableVersion int64 `json:"min_replayable_version,omitempty"`
 	Bundle               *DatasetBundle
 }
 
@@ -265,7 +239,6 @@ type EntityChange struct {
 	TermKey    string          `json:"term_key"`
 	Payload    json.RawMessage `json:"payload,omitempty"`
 	// BaseVersion：该 change 所属连续段的基底版本（导入时 = 导入前的数据集版本）。
-	// 客户端 base < BaseVersion 时，该 change 不可直接 apply（除非该段基底仍在回放窗口内）。
 	BaseVersion int64 `json:"base_version,omitempty"`
 }
 

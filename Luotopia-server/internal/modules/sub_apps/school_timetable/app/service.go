@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -470,25 +469,21 @@ func flattenRecords(pkg domain.Package, records Records) (map[string]domain.Enti
 	}
 	termPayload := map[string]any{
 		"term_key": pkg.Manifest.TermKey, "school_year": pkg.Manifest.SchoolYear,
-		"term": pkg.Manifest.Term, "first_week_monday": pkg.Manifest.FirstWeekMonday,
+		"term": pkg.Manifest.Term, "school_year_code": pkg.Manifest.SchoolYearCode,
+		"term_code": pkg.Manifest.TermCode, "first_week_monday": pkg.Manifest.FirstWeekMonday,
 		"row_count": pkg.Manifest.RowCount, "source": pkg.Manifest.Source,
 		"source_checksum": pkg.Manifest.SourceChecksum,
 	}
 	if err := add("term", pkg.Manifest.TermKey, pkg.Manifest.TermKey, termPayload); err != nil {
 		return nil, nil, err
 	}
-	for _, item := range records.Catalogs {
+	for _, item := range records.Courses {
 		if err := add("course", item.ID, "", item); err != nil {
 			return nil, nil, err
 		}
 	}
-	for _, item := range records.TermCourses {
-		if err := add("term_course", item.ID, item.TermKey, item); err != nil {
-			return nil, nil, err
-		}
-	}
-	for _, item := range records.InstructorCourses {
-		if err := add("instructor_course", item.ID, "", item); err != nil {
+	for _, item := range records.Teachers {
+		if err := add("teacher", item.ID, "", item); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -497,20 +492,19 @@ func flattenRecords(pkg domain.Package, records Records) (map[string]domain.Enti
 			return nil, nil, err
 		}
 	}
+	for _, item := range records.OfferingTeachers {
+		if err := add("offering_teacher", item.ID, item.TermKey, item); err != nil {
+			return nil, nil, err
+		}
+	}
 	for _, item := range records.Audiences {
 		if err := add("audience", item.ID, item.TermKey, item); err != nil {
 			return nil, nil, err
 		}
 	}
-	for _, item := range records.CourseInstances {
-		if err := add("meeting_rule", item.ID, item.TermKey, item); err != nil {
+	for _, item := range records.Meetings {
+		if err := add("meeting", item.ID, item.TermKey, item); err != nil {
 			return nil, nil, err
-		}
-		for _, week := range item.WeekIndexes {
-			payload := map[string]any{"meeting_rule_id": item.ID, "week_index": week, "term_key": item.TermKey}
-			if err := add("meeting_week", item.ID+":"+strconv.Itoa(week), item.TermKey, payload); err != nil {
-				return nil, nil, err
-			}
 		}
 	}
 	for _, item := range records.SourceRows {
@@ -540,28 +534,34 @@ func entityKey(entityType, entityID string) string {
 }
 
 func isSharedSchoolTimetableEntity(entityType string) bool {
-	return entityType == "course" || entityType == "instructor_course"
+	return entityType == "course" || entityType == "teacher"
+}
+
+// isNonSyncSchoolTimetableEntity 标记仅服务端留档、不下发客户端的实体（目前为 source_row）：
+// 不进客户端 bundle，也不出现在下发给客户端的 changes 流里。
+func isNonSyncSchoolTimetableEntity(entityType string) bool {
+	return entityType == "source_row"
 }
 
 type Records struct {
-	Catalogs          []domain.CourseCatalog
-	TermCourses       []domain.TermCourse
-	InstructorCourses []domain.InstructorCourse
-	Offerings         []domain.CourseOffering
-	Audiences         []domain.CourseAudience
-	SourceRows        []domain.SourceRow
-	CourseInstances   []domain.CourseInstance
+	Courses          []domain.Course
+	Teachers         []domain.Teacher
+	Offerings        []domain.CourseOffering
+	OfferingTeachers []domain.OfferingTeacher
+	Audiences        []domain.CourseAudience
+	Meetings         []domain.Meeting
+	SourceRows       []domain.SourceRow
 }
 
 func BuildRecords(pkg domain.Package, version int) Records {
 	return Records{
-		Catalogs:          pkg.Catalogs,
-		TermCourses:       pkg.TermCourses,
-		InstructorCourses: pkg.InstructorCourses,
-		Offerings:         pkg.Offerings,
-		Audiences:         pkg.Audiences,
-		SourceRows:        pkg.SourceRows,
-		CourseInstances:   pkg.CourseInstances,
+		Courses:          pkg.Courses,
+		Teachers:         pkg.Teachers,
+		Offerings:        pkg.Offerings,
+		OfferingTeachers: pkg.OfferingTeachers,
+		Audiences:        pkg.Audiences,
+		Meetings:         pkg.Meetings,
+		SourceRows:       pkg.SourceRows,
 	}
 }
 
