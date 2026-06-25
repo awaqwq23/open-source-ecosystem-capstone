@@ -10,7 +10,7 @@ class ItemCourseDetails {
     this.weekMeta = '',
     this.termCourseId = '',
     this.offeringId = '',
-    this.instructorCourseId = '',
+    this.teacherId = '',
     this.occurrenceId = '',
   });
 
@@ -22,7 +22,7 @@ class ItemCourseDetails {
   final String weekMeta;
   final String termCourseId;
   final String offeringId;
-  final String instructorCourseId;
+  final String teacherId;
   final String occurrenceId;
 
   ItemCourseDetails copyWith({
@@ -34,7 +34,7 @@ class ItemCourseDetails {
     String? weekMeta,
     String? termCourseId,
     String? offeringId,
-    String? instructorCourseId,
+    String? teacherId,
     String? occurrenceId,
   }) {
     return ItemCourseDetails(
@@ -46,7 +46,7 @@ class ItemCourseDetails {
       weekMeta: weekMeta ?? this.weekMeta,
       termCourseId: termCourseId ?? this.termCourseId,
       offeringId: offeringId ?? this.offeringId,
-      instructorCourseId: instructorCourseId ?? this.instructorCourseId,
+      teacherId: teacherId ?? this.teacherId,
       occurrenceId: occurrenceId ?? this.occurrenceId,
     );
   }

@@ -565,7 +565,7 @@ class UserDataMutationService {
                 weekMeta: Value(course.weekMeta),
                 termCourseId: Value(course.termCourseId),
                 offeringId: Value(course.offeringId),
-                instructorCourseId: Value(course.instructorCourseId),
+                teacherId: Value(course.teacherId),
                 occurrenceId: Value(course.occurrenceId),
               ),
             );
@@ -663,7 +663,7 @@ class UserDataMutationService {
         weekMeta: row.weekMeta,
         termCourseId: row.termCourseId,
         offeringId: row.offeringId,
-        instructorCourseId: row.instructorCourseId,
+        teacherId: row.teacherId,
         occurrenceId: row.occurrenceId,
       ),
     );

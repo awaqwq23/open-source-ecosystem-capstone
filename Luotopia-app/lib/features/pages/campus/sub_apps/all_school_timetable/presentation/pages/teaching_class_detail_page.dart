@@ -110,12 +110,12 @@ class _TeachingClassDetailContent extends StatelessWidget {
           title: '教材备注',
           rows: [
             _InfoRow('选课备注', teachingClass.remark),
+            _InfoRow('备注', teachingClass.note),
             _InfoRow('其他教师', teachingClass.otherTeachers),
             _InfoRow('教材名称', teachingClass.textbook),
             _InfoRow('出版社', teachingClass.publisher),
           ],
         ),
-        _OriginalFieldsSection(fields: teachingClass.originalFields),
       ],
     );
   }
@@ -162,97 +162,19 @@ class _MeetingSection extends StatelessWidget {
   }
 }
 
-class _OriginalFieldsSection extends StatelessWidget {
-  const _OriginalFieldsSection({required this.fields});
-
-  final Map<String, String> fields;
-
-  @override
-  Widget build(BuildContext context) {
-    const orderedFields = [
-      _FieldLabel('xn', '学年'),
-      _FieldLabel('xq', '学期'),
-      _FieldLabel('jxbmc', '教学班'),
-      _FieldLabel('yskch', '课程号'),
-      _FieldLabel('kcmc', '课程名称'),
-      _FieldLabel('skxy', '开课学院'),
-      _FieldLabel('jhxy', '计划学院'),
-      _FieldLabel('kcxf', '学分'),
-      _FieldLabel('kcxzmc', '课程性质'),
-      _FieldLabel('kclbmc', '课程类别名称'),
-      _FieldLabel('kklxmc', '开课类型'),
-      _FieldLabel('nj', '年级'),
-      _FieldLabel('jszy', '专业'),
-      _FieldLabel('jsxm', '成绩录入老师'),
-      _FieldLabel('jszc', '职称'),
-      _FieldLabel('skrs', '上课人数'),
-      _FieldLabel('xsdm_01', '理论'),
-      _FieldLabel('xsdm_02', '上机'),
-      _FieldLabel('xsdm_03', '实验'),
-      _FieldLabel('xsdm_04', '实践'),
-      _FieldLabel('sun', '周日'),
-      _FieldLabel('mon', '周一'),
-      _FieldLabel('tue', '周二'),
-      _FieldLabel('key', '主键'),
-      _FieldLabel('wen', '周三'),
-      _FieldLabel('thu', '周四'),
-      _FieldLabel('kkbm_id', '开课部门代码'),
-      _FieldLabel('jg_id', '学院代码'),
-      _FieldLabel('fri', '周五'),
-      _FieldLabel('sat', '周六'),
-      _FieldLabel('zyh_id', '专业代码'),
-      _FieldLabel('xkbz', '选课备注'),
-      _FieldLabel('njdm_id', '年级代码'),
-      _FieldLabel('xnm', '学年代码'),
-      _FieldLabel('bz', '备注'),
-      _FieldLabel('xqm', '学期代码'),
-      _FieldLabel('kclbdm', '课程类别代码'),
-      _FieldLabel('kkbm_id2', '条件'),
-      _FieldLabel('qtjs', '其他教师'),
-      _FieldLabel('jcmc', '教材名称'),
-      _FieldLabel('cbs', '出版社'),
-      _FieldLabel('kklxdm', '开课类型代码'),
-      _FieldLabel('kcxzdm', '课程性质代码'),
-    ];
-    final orderedKeys = orderedFields.map((field) => field.key).toSet();
-    return _DetailSection(
-      title: '原表字段',
-      rows: [
-        for (final field in orderedFields)
-          if (fields.containsKey(field.key))
-            _InfoRow('${field.label} (${field.key})', fields[field.key] ?? ''),
-        for (final entry in fields.entries)
-          if (!orderedKeys.contains(entry.key))
-            _InfoRow(entry.key, entry.value),
-      ],
-      showEmptyValues: true,
-    );
-  }
-}
-
-class _FieldLabel {
-  const _FieldLabel(this.key, this.label);
-
-  final String key;
-  final String label;
-}
-
 class _DetailSection extends StatelessWidget {
   const _DetailSection({
     required this.title,
     required this.rows,
-    this.showEmptyValues = false,
   });
 
   final String title;
   final List<_InfoRow> rows;
-  final bool showEmptyValues;
 
   @override
   Widget build(BuildContext context) {
-    final visibleRows = showEmptyValues
-        ? rows
-        : rows.where((row) => row.value.trim().isNotEmpty).toList();
+    final visibleRows =
+        rows.where((row) => row.value.trim().isNotEmpty).toList();
     if (visibleRows.isEmpty) {
       return const SizedBox.shrink();
     }

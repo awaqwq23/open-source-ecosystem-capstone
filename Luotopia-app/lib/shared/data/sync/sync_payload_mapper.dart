@@ -65,7 +65,7 @@ class SyncPayloadMapper {
           'week_meta': detail.weekMeta,
           'term_course_id': detail.termCourseId,
           'offering_id': detail.offeringId,
-          'instructor_course_id': detail.instructorCourseId,
+          'teacher_id': detail.teacherId,
           'occurrence_id': detail.occurrenceId,
         };
       case 'memo':

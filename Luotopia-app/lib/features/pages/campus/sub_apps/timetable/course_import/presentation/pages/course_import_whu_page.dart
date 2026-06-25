@@ -305,7 +305,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
               courseDetails: entry.draft.courseDetails.copyWith(
                 termCourseId: link.termCourseId,
                 offeringId: link.offeringId,
-                instructorCourseId: link.instructorCourseId,
+                teacherId: link.teacherId,
                 occurrenceId: link.occurrenceId,
               ),
             ),

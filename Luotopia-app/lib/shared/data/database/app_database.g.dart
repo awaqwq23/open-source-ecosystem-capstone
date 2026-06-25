@@ -1909,18 +1909,18 @@ class $CourseItemDetailRowsTable extends CourseItemDetailRows
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
-  static const VerificationMeta _instructorCourseIdMeta =
-      const VerificationMeta('instructorCourseId');
+  static const VerificationMeta _teacherIdMeta = const VerificationMeta(
+    'teacherId',
+  );
   @override
-  late final GeneratedColumn<String> instructorCourseId =
-      GeneratedColumn<String>(
-        'instructor_course_id',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-        defaultValue: const Constant(''),
-      );
+  late final GeneratedColumn<String> teacherId = GeneratedColumn<String>(
+    'teacher_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _occurrenceIdMeta = const VerificationMeta(
     'occurrenceId',
   );
@@ -1947,7 +1947,7 @@ class $CourseItemDetailRowsTable extends CourseItemDetailRows
     weekMeta,
     termCourseId,
     offeringId,
-    instructorCourseId,
+    teacherId,
     occurrenceId,
   ];
   @override
@@ -2052,13 +2052,10 @@ class $CourseItemDetailRowsTable extends CourseItemDetailRows
         offeringId.isAcceptableOrUnknown(data['offering_id']!, _offeringIdMeta),
       );
     }
-    if (data.containsKey('instructor_course_id')) {
+    if (data.containsKey('teacher_id')) {
       context.handle(
-        _instructorCourseIdMeta,
-        instructorCourseId.isAcceptableOrUnknown(
-          data['instructor_course_id']!,
-          _instructorCourseIdMeta,
-        ),
+        _teacherIdMeta,
+        teacherId.isAcceptableOrUnknown(data['teacher_id']!, _teacherIdMeta),
       );
     }
     if (data.containsKey('occurrence_id')) {
@@ -2127,9 +2124,9 @@ class $CourseItemDetailRowsTable extends CourseItemDetailRows
         DriftSqlType.string,
         data['${effectivePrefix}offering_id'],
       )!,
-      instructorCourseId: attachedDatabase.typeMapping.read(
+      teacherId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}instructor_course_id'],
+        data['${effectivePrefix}teacher_id'],
       )!,
       occurrenceId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2158,7 +2155,7 @@ class CourseItemDetailRow extends DataClass
   final String weekMeta;
   final String termCourseId;
   final String offeringId;
-  final String instructorCourseId;
+  final String teacherId;
   final String occurrenceId;
   const CourseItemDetailRow({
     required this.itemId,
@@ -2173,7 +2170,7 @@ class CourseItemDetailRow extends DataClass
     required this.weekMeta,
     required this.termCourseId,
     required this.offeringId,
-    required this.instructorCourseId,
+    required this.teacherId,
     required this.occurrenceId,
   });
   @override
@@ -2191,7 +2188,7 @@ class CourseItemDetailRow extends DataClass
     map['week_meta'] = Variable<String>(weekMeta);
     map['term_course_id'] = Variable<String>(termCourseId);
     map['offering_id'] = Variable<String>(offeringId);
-    map['instructor_course_id'] = Variable<String>(instructorCourseId);
+    map['teacher_id'] = Variable<String>(teacherId);
     map['occurrence_id'] = Variable<String>(occurrenceId);
     return map;
   }
@@ -2210,7 +2207,7 @@ class CourseItemDetailRow extends DataClass
       weekMeta: Value(weekMeta),
       termCourseId: Value(termCourseId),
       offeringId: Value(offeringId),
-      instructorCourseId: Value(instructorCourseId),
+      teacherId: Value(teacherId),
       occurrenceId: Value(occurrenceId),
     );
   }
@@ -2233,9 +2230,7 @@ class CourseItemDetailRow extends DataClass
       weekMeta: serializer.fromJson<String>(json['weekMeta']),
       termCourseId: serializer.fromJson<String>(json['termCourseId']),
       offeringId: serializer.fromJson<String>(json['offeringId']),
-      instructorCourseId: serializer.fromJson<String>(
-        json['instructorCourseId'],
-      ),
+      teacherId: serializer.fromJson<String>(json['teacherId']),
       occurrenceId: serializer.fromJson<String>(json['occurrenceId']),
     );
   }
@@ -2255,7 +2250,7 @@ class CourseItemDetailRow extends DataClass
       'weekMeta': serializer.toJson<String>(weekMeta),
       'termCourseId': serializer.toJson<String>(termCourseId),
       'offeringId': serializer.toJson<String>(offeringId),
-      'instructorCourseId': serializer.toJson<String>(instructorCourseId),
+      'teacherId': serializer.toJson<String>(teacherId),
       'occurrenceId': serializer.toJson<String>(occurrenceId),
     };
   }
@@ -2273,7 +2268,7 @@ class CourseItemDetailRow extends DataClass
     String? weekMeta,
     String? termCourseId,
     String? offeringId,
-    String? instructorCourseId,
+    String? teacherId,
     String? occurrenceId,
   }) => CourseItemDetailRow(
     itemId: itemId ?? this.itemId,
@@ -2288,7 +2283,7 @@ class CourseItemDetailRow extends DataClass
     weekMeta: weekMeta ?? this.weekMeta,
     termCourseId: termCourseId ?? this.termCourseId,
     offeringId: offeringId ?? this.offeringId,
-    instructorCourseId: instructorCourseId ?? this.instructorCourseId,
+    teacherId: teacherId ?? this.teacherId,
     occurrenceId: occurrenceId ?? this.occurrenceId,
   );
   CourseItemDetailRow copyWithCompanion(CourseItemDetailRowsCompanion data) {
@@ -2319,9 +2314,7 @@ class CourseItemDetailRow extends DataClass
       offeringId: data.offeringId.present
           ? data.offeringId.value
           : this.offeringId,
-      instructorCourseId: data.instructorCourseId.present
-          ? data.instructorCourseId.value
-          : this.instructorCourseId,
+      teacherId: data.teacherId.present ? data.teacherId.value : this.teacherId,
       occurrenceId: data.occurrenceId.present
           ? data.occurrenceId.value
           : this.occurrenceId,
@@ -2343,7 +2336,7 @@ class CourseItemDetailRow extends DataClass
           ..write('weekMeta: $weekMeta, ')
           ..write('termCourseId: $termCourseId, ')
           ..write('offeringId: $offeringId, ')
-          ..write('instructorCourseId: $instructorCourseId, ')
+          ..write('teacherId: $teacherId, ')
           ..write('occurrenceId: $occurrenceId')
           ..write(')'))
         .toString();
@@ -2363,7 +2356,7 @@ class CourseItemDetailRow extends DataClass
     weekMeta,
     termCourseId,
     offeringId,
-    instructorCourseId,
+    teacherId,
     occurrenceId,
   );
   @override
@@ -2382,7 +2375,7 @@ class CourseItemDetailRow extends DataClass
           other.weekMeta == this.weekMeta &&
           other.termCourseId == this.termCourseId &&
           other.offeringId == this.offeringId &&
-          other.instructorCourseId == this.instructorCourseId &&
+          other.teacherId == this.teacherId &&
           other.occurrenceId == this.occurrenceId);
 }
 
@@ -2400,7 +2393,7 @@ class CourseItemDetailRowsCompanion
   final Value<String> weekMeta;
   final Value<String> termCourseId;
   final Value<String> offeringId;
-  final Value<String> instructorCourseId;
+  final Value<String> teacherId;
   final Value<String> occurrenceId;
   final Value<int> rowid;
   const CourseItemDetailRowsCompanion({
@@ -2416,7 +2409,7 @@ class CourseItemDetailRowsCompanion
     this.weekMeta = const Value.absent(),
     this.termCourseId = const Value.absent(),
     this.offeringId = const Value.absent(),
-    this.instructorCourseId = const Value.absent(),
+    this.teacherId = const Value.absent(),
     this.occurrenceId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2433,7 +2426,7 @@ class CourseItemDetailRowsCompanion
     this.weekMeta = const Value.absent(),
     this.termCourseId = const Value.absent(),
     this.offeringId = const Value.absent(),
-    this.instructorCourseId = const Value.absent(),
+    this.teacherId = const Value.absent(),
     this.occurrenceId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : itemId = Value(itemId),
@@ -2452,7 +2445,7 @@ class CourseItemDetailRowsCompanion
     Expression<String>? weekMeta,
     Expression<String>? termCourseId,
     Expression<String>? offeringId,
-    Expression<String>? instructorCourseId,
+    Expression<String>? teacherId,
     Expression<String>? occurrenceId,
     Expression<int>? rowid,
   }) {
@@ -2469,8 +2462,7 @@ class CourseItemDetailRowsCompanion
       if (weekMeta != null) 'week_meta': weekMeta,
       if (termCourseId != null) 'term_course_id': termCourseId,
       if (offeringId != null) 'offering_id': offeringId,
-      if (instructorCourseId != null)
-        'instructor_course_id': instructorCourseId,
+      if (teacherId != null) 'teacher_id': teacherId,
       if (occurrenceId != null) 'occurrence_id': occurrenceId,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2489,7 +2481,7 @@ class CourseItemDetailRowsCompanion
     Value<String>? weekMeta,
     Value<String>? termCourseId,
     Value<String>? offeringId,
-    Value<String>? instructorCourseId,
+    Value<String>? teacherId,
     Value<String>? occurrenceId,
     Value<int>? rowid,
   }) {
@@ -2506,7 +2498,7 @@ class CourseItemDetailRowsCompanion
       weekMeta: weekMeta ?? this.weekMeta,
       termCourseId: termCourseId ?? this.termCourseId,
       offeringId: offeringId ?? this.offeringId,
-      instructorCourseId: instructorCourseId ?? this.instructorCourseId,
+      teacherId: teacherId ?? this.teacherId,
       occurrenceId: occurrenceId ?? this.occurrenceId,
       rowid: rowid ?? this.rowid,
     );
@@ -2551,8 +2543,8 @@ class CourseItemDetailRowsCompanion
     if (offeringId.present) {
       map['offering_id'] = Variable<String>(offeringId.value);
     }
-    if (instructorCourseId.present) {
-      map['instructor_course_id'] = Variable<String>(instructorCourseId.value);
+    if (teacherId.present) {
+      map['teacher_id'] = Variable<String>(teacherId.value);
     }
     if (occurrenceId.present) {
       map['occurrence_id'] = Variable<String>(occurrenceId.value);
@@ -2578,7 +2570,7 @@ class CourseItemDetailRowsCompanion
           ..write('weekMeta: $weekMeta, ')
           ..write('termCourseId: $termCourseId, ')
           ..write('offeringId: $offeringId, ')
-          ..write('instructorCourseId: $instructorCourseId, ')
+          ..write('teacherId: $teacherId, ')
           ..write('occurrenceId: $occurrenceId, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5612,7 +5604,7 @@ typedef $$CourseItemDetailRowsTableCreateCompanionBuilder =
       Value<String> weekMeta,
       Value<String> termCourseId,
       Value<String> offeringId,
-      Value<String> instructorCourseId,
+      Value<String> teacherId,
       Value<String> occurrenceId,
       Value<int> rowid,
     });
@@ -5630,7 +5622,7 @@ typedef $$CourseItemDetailRowsTableUpdateCompanionBuilder =
       Value<String> weekMeta,
       Value<String> termCourseId,
       Value<String> offeringId,
-      Value<String> instructorCourseId,
+      Value<String> teacherId,
       Value<String> occurrenceId,
       Value<int> rowid,
     });
@@ -5735,8 +5727,8 @@ class $$CourseItemDetailRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get instructorCourseId => $composableBuilder(
-    column: $table.instructorCourseId,
+  ColumnFilters<String> get teacherId => $composableBuilder(
+    column: $table.teacherId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5833,8 +5825,8 @@ class $$CourseItemDetailRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get instructorCourseId => $composableBuilder(
-    column: $table.instructorCourseId,
+  ColumnOrderings<String> get teacherId => $composableBuilder(
+    column: $table.teacherId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5923,10 +5915,8 @@ class $$CourseItemDetailRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get instructorCourseId => $composableBuilder(
-    column: $table.instructorCourseId,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get teacherId =>
+      $composableBuilder(column: $table.teacherId, builder: (column) => column);
 
   GeneratedColumn<String> get occurrenceId => $composableBuilder(
     column: $table.occurrenceId,
@@ -6005,7 +5995,7 @@ class $$CourseItemDetailRowsTableTableManager
                 Value<String> weekMeta = const Value.absent(),
                 Value<String> termCourseId = const Value.absent(),
                 Value<String> offeringId = const Value.absent(),
-                Value<String> instructorCourseId = const Value.absent(),
+                Value<String> teacherId = const Value.absent(),
                 Value<String> occurrenceId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CourseItemDetailRowsCompanion(
@@ -6021,7 +6011,7 @@ class $$CourseItemDetailRowsTableTableManager
                 weekMeta: weekMeta,
                 termCourseId: termCourseId,
                 offeringId: offeringId,
-                instructorCourseId: instructorCourseId,
+                teacherId: teacherId,
                 occurrenceId: occurrenceId,
                 rowid: rowid,
               ),
@@ -6039,7 +6029,7 @@ class $$CourseItemDetailRowsTableTableManager
                 Value<String> weekMeta = const Value.absent(),
                 Value<String> termCourseId = const Value.absent(),
                 Value<String> offeringId = const Value.absent(),
-                Value<String> instructorCourseId = const Value.absent(),
+                Value<String> teacherId = const Value.absent(),
                 Value<String> occurrenceId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CourseItemDetailRowsCompanion.insert(
@@ -6055,7 +6045,7 @@ class $$CourseItemDetailRowsTableTableManager
                 weekMeta: weekMeta,
                 termCourseId: termCourseId,
                 offeringId: offeringId,
-                instructorCourseId: instructorCourseId,
+                teacherId: teacherId,
                 occurrenceId: occurrenceId,
                 rowid: rowid,
               ),

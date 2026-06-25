@@ -226,7 +226,7 @@ class InMemoryAgendaItemRepository extends Notifier<List<AgendaItem>>
         weekMeta: row.weekMeta,
         termCourseId: row.termCourseId,
         offeringId: row.offeringId,
-        instructorCourseId: row.instructorCourseId,
+        teacherId: row.teacherId,
         occurrenceId: row.occurrenceId,
       ),
     );

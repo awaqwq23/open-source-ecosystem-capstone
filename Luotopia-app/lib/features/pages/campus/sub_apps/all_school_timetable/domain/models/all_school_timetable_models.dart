@@ -75,11 +75,13 @@ class AllSchoolTimetableQuery {
   }
 }
 
+/// 全校课表搜索结果中的「课程头」：某课程（按 term_course_id 分组）在某学期的聚合。
+/// teaching_class_count / teacher_summary / weekday_summary 均由查询时从 offerings 聚合得到。
 class SchoolCourseHead {
   const SchoolCourseHead({
     required this.id,
     required this.termKey,
-    required this.catalogId,
+    required this.courseId,
     required this.courseNo,
     required this.courseName,
     required this.openCollege,
@@ -94,7 +96,7 @@ class SchoolCourseHead {
 
   final String id;
   final String termKey;
-  final String catalogId;
+  final String courseId;
   final String courseNo;
   final String courseName;
   final String openCollege;
@@ -113,8 +115,7 @@ class SchoolTeachingClass {
     required this.termKey,
     required this.sourceKey,
     required this.termCourseId,
-    required this.catalogId,
-    required this.instructorCourseId,
+    required this.courseId,
     required this.teachingClassName,
     required this.courseNo,
     required this.courseName,
@@ -136,20 +137,19 @@ class SchoolTeachingClass {
     required this.experimentHours,
     required this.practiceHours,
     required this.remark,
+    required this.note,
     required this.otherTeachers,
     required this.textbook,
     required this.publisher,
     required this.scheduleSummary,
     required this.weekdaySummary,
-    required this.originalFields,
   });
 
   final String id;
   final String termKey;
   final String sourceKey;
   final String termCourseId;
-  final String catalogId;
-  final String instructorCourseId;
+  final String courseId;
   final String teachingClassName;
   final String courseNo;
   final String courseName;
@@ -161,7 +161,9 @@ class SchoolTeachingClass {
   final String openType;
   final String grade;
   final String major;
+  /// 主讲教师名（由 offering_teacher→teacher 聚合得到）。
   final String instructor;
+  /// 主讲教师职称。
   final String title;
   final int? capacity;
   final int? selectedCount;
@@ -171,12 +173,14 @@ class SchoolTeachingClass {
   final int? experimentHours;
   final int? practiceHours;
   final String remark;
+  final String note;
   final String otherTeachers;
   final String textbook;
   final String publisher;
+  /// 排课摘要，由查询时从 meetings 拼接。
   final String scheduleSummary;
+  /// 上课星期摘要，由查询时从 meetings 聚合。
   final String weekdaySummary;
-  final Map<String, String> originalFields;
 }
 
 class SchoolClassMeeting {
@@ -189,8 +193,7 @@ class SchoolClassMeeting {
     required this.weekText,
     required this.sectionText,
     required this.locationText,
-    required this.building,
-    required this.room,
+    required this.weekIndexes,
   });
 
   final String id;
@@ -201,8 +204,7 @@ class SchoolClassMeeting {
   final String weekText;
   final String sectionText;
   final String locationText;
-  final String building;
-  final String room;
+  final List<int> weekIndexes;
 }
 
 class PersonalCourseMatchQuery {
@@ -233,13 +235,13 @@ class CourseEntityLink {
   const CourseEntityLink({
     this.termCourseId = '',
     this.offeringId = '',
-    this.instructorCourseId = '',
+    this.teacherId = '',
     this.occurrenceId = '',
   });
 
   final String termCourseId;
   final String offeringId;
-  final String instructorCourseId;
+  final String teacherId;
   final String occurrenceId;
 
   bool get hasCourse => termCourseId.isNotEmpty;

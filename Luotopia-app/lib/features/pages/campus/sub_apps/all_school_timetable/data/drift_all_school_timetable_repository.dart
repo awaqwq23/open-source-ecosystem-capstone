@@ -95,7 +95,6 @@ class DriftAllSchoolTimetableRepository
       // 规范做法：ATTACH/DETACH 是“数据源管理”动作，须在业务事务之外执行。
       // SQLite 规定“事务活动期不允许 DETACH 仍被使用的附加库”（否则报 database bundle is locked），
       // 故只把“清表+复制+建索引+写元数据”这些纯业务写包进事务，ATTACH 与 DETACH 放事务外。
-      //
       await _db.customStatement(
         'ATTACH DATABASE ${_sqlString(sqliteFile.path)} AS bundle',
       );
@@ -129,7 +128,7 @@ class DriftAllSchoolTimetableRepository
     final rows = await _db.customSelect('''
           SELECT term_key, school_year, term, first_week_monday, source_version,
                  row_count, imported_at, updated_at
-          FROM school_timetable_term_rows
+          FROM school_timetable_terms
           ORDER BY term_key DESC
           ''').get();
     return rows
@@ -148,6 +147,8 @@ class DriftAllSchoolTimetableRepository
         .toList(growable: false);
   }
 
+  /// 课程头搜索：以 school_timetable_offerings 为主表，GROUP BY term_course_id 聚合。
+  /// teaching_class_count / teacher_summary / weekday_summary 均查询时聚合得到。
   @override
   Future<List<SchoolCourseHead>> searchCourseHeads(
     AllSchoolTimetableQuery query,
@@ -160,43 +161,41 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
-    const tables = _SchoolTimetableTables();
     final keyword = query.keyword.trim();
-    final filterVariables = <Variable>[];
-    final professionalClause = _professionalExistsClause(
-      query,
-      filterVariables,
-      tables,
-    );
+    final teacherAgg = _teacherAggregateSelect();
+    final weekdayAgg = _weekdayAggregateSelect();
+    final professionalClause = _professionalExistsClause(query);
+
     final rows = keyword.isNotEmpty
         ? await db.customSelect(
             '''
-          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
-                 cc.credits, c.course_nature, c.course_category, c.open_type,
-                 c.teaching_class_count, c.teacher_summary, c.weekday_summary,
-                 c.search_text
-          FROM ${tables.termCourseTable} c
-          JOIN ${tables.courseTable} cc
-            ON cc.id = c.${tables.courseIdColumn}
-          WHERE c.term_key = ?
+          SELECT o.term_course_id AS id, o.term_key, o.course_id, cc.course_no, cc.course_name,
+                 o.open_college, cc.credits, o.course_nature, o.course_category, o.open_type,
+                 COUNT(*) AS teaching_class_count,
+                 $teacherAgg AS teacher_summary,
+                 $weekdayAgg AS weekday_summary,
+                 MAX(o.search_text) AS search_text
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
+          WHERE o.term_key = ?
             AND (
-              c.id IN (
+              o.term_course_id IN (
                 SELECT term_course_id
-                FROM ${tables.searchTable}
+                FROM school_timetable_search_fts
                 WHERE term_key = ?
-                  AND ${tables.searchTable} MATCH ?
+                  AND school_timetable_search_fts MATCH ?
               )
               OR cc.course_name LIKE ? ESCAPE char(92)
               OR cc.course_no LIKE ? ESCAPE char(92)
-              OR cc.search_text LIKE ? ESCAPE char(92)
-              OR c.open_college LIKE ? ESCAPE char(92)
-              OR c.course_nature LIKE ? ESCAPE char(92)
-              OR c.course_category LIKE ? ESCAPE char(92)
-              OR c.teacher_summary LIKE ? ESCAPE char(92)
-              OR c.weekday_summary LIKE ? ESCAPE char(92)
-              OR c.search_text LIKE ? ESCAPE char(92)
+              OR o.search_text LIKE ? ESCAPE char(92)
+              OR o.open_college LIKE ? ESCAPE char(92)
+              OR o.course_nature LIKE ? ESCAPE char(92)
+              OR o.course_category LIKE ? ESCAPE char(92)
+              OR o.teaching_class_name LIKE ? ESCAPE char(92)
+              OR o.search_text LIKE ? ESCAPE char(92)
             )
             $professionalClause
+          GROUP BY o.term_course_id
           ORDER BY
             CASE
               WHEN cc.course_name = ? OR cc.course_no = ? THEN 0
@@ -204,44 +203,45 @@ class DriftAllSchoolTimetableRepository
                 OR cc.course_no LIKE ? ESCAPE char(92) THEN 1
               WHEN cc.course_name LIKE ? ESCAPE char(92)
                 OR cc.course_no LIKE ? ESCAPE char(92)
-                OR cc.search_text LIKE ? ESCAPE char(92)
-                OR c.open_college LIKE ? ESCAPE char(92)
-                OR c.course_nature LIKE ? ESCAPE char(92)
-                OR c.course_category LIKE ? ESCAPE char(92)
-                OR c.teacher_summary LIKE ? ESCAPE char(92)
-                OR c.weekday_summary LIKE ? ESCAPE char(92)
-                OR c.search_text LIKE ? ESCAPE char(92) THEN 2
+                OR o.search_text LIKE ? ESCAPE char(92)
+                OR o.open_college LIKE ? ESCAPE char(92)
+                OR o.course_nature LIKE ? ESCAPE char(92)
+                OR o.course_category LIKE ? ESCAPE char(92)
+                OR o.teaching_class_name LIKE ? ESCAPE char(92)
+                OR o.search_text LIKE ? ESCAPE char(92) THEN 2
               ELSE 3
             END,
-            c.teaching_class_count DESC,
+            teaching_class_count DESC,
             cc.course_name ASC
           LIMIT 80
           ''',
-            variables: _courseSearchVariables(
-              termKey: termKey,
-              keyword: keyword,
-              filterVariables: filterVariables,
-            ),
+            variables: _courseSearchVariables(termKey: termKey, keyword: keyword),
           ).get()
         : await db
               .customSelect(
                 '''
-          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
-                 cc.credits, c.course_nature, c.course_category, c.open_type,
-                 teaching_class_count, teacher_summary, weekday_summary,
-                 search_text
-          FROM ${tables.termCourseTable} c
-          JOIN ${tables.courseTable} cc
-            ON cc.id = c.${tables.courseIdColumn}
-          WHERE c.term_key = ?
+          SELECT o.term_course_id AS id, o.term_key, o.course_id, cc.course_no, cc.course_name,
+                 o.open_college, cc.credits, o.course_nature, o.course_category, o.open_type,
+                 COUNT(*) AS teaching_class_count,
+                 $teacherAgg AS teacher_summary,
+                 $weekdayAgg AS weekday_summary,
+                 MAX(o.search_text) AS search_text
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
+          WHERE o.term_key = ?
             $professionalClause
+          GROUP BY o.term_course_id
           ORDER BY teaching_class_count DESC
           LIMIT 80
           ''',
-                variables: [Variable.withString(termKey), ...filterVariables],
+                variables: _courseSearchVariables(
+                  termKey: termKey,
+                  keyword: keyword,
+                  noKeyword: true,
+                ),
               )
               .get();
-    return rows.map(_termCourseFromRow).toList(growable: false);
+    return rows.map(_courseHeadFromRow).toList(growable: false);
   }
 
   @override
@@ -253,23 +253,26 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
-    const tables = _SchoolTimetableTables();
+    final teacherAgg = _teacherAggregateSelect();
+    final weekdayAgg = _weekdayAggregateSelect();
     final row = await db
         .customSelect(
           '''
-          SELECT c.id AS id, c.term_key, cc.id AS catalog_id, cc.course_no, cc.course_name, c.open_college,
-                 cc.credits, c.course_nature, c.course_category, c.open_type,
-                 teaching_class_count, teacher_summary, weekday_summary,
-                 search_text
-          FROM ${tables.termCourseTable} c
-          JOIN ${tables.courseTable} cc
-            ON cc.id = c.${tables.courseIdColumn}
-          WHERE c.id = ?
+          SELECT o.term_course_id AS id, o.term_key, o.course_id, cc.course_no, cc.course_name,
+                 o.open_college, cc.credits, o.course_nature, o.course_category, o.open_type,
+                 COUNT(*) AS teaching_class_count,
+                 $teacherAgg AS teacher_summary,
+                 $weekdayAgg AS weekday_summary,
+                 MAX(o.search_text) AS search_text
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
+          WHERE o.term_course_id = ?
+          GROUP BY o.term_course_id
           ''',
           variables: [Variable.withString(id)],
         )
         .getSingleOrNull();
-    return row == null ? null : _termCourseFromRow(row);
+    return row == null ? null : _courseHeadFromRow(row);
   }
 
   @override
@@ -281,32 +284,32 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
-    const tables = _SchoolTimetableTables();
     final rows = await db
         .customSelect(
           '''
-          SELECT o.*, ${tables.detailFieldsSelect} c.id AS term_course_id,
-                 cc.id AS catalog_id,
-                 ic.id AS instructor_course_id,
-                 cc.course_no, cc.course_name, cc.credits, c.open_college,
-                 c.course_nature, c.course_category, c.open_type,
+          SELECT o.*,
+                 cc.id AS course_id, cc.course_no, cc.course_name, cc.credits,
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
-                 COALESCE(a.plan_college, '') AS plan_college
-          FROM ${tables.offeringTable} o
-          JOIN ${tables.termCourseTable} c ON c.id = o.term_course_id
-          JOIN ${tables.courseTable} cc ON cc.id = c.${tables.courseIdColumn}
-          JOIN ${tables.instructorTable} ic ON ic.id = o.${tables.offeringInstructorIdColumn}
+                 COALESCE(a.plan_college, '') AS plan_college,
+                 $teacherAggregateMain AS instructor,
+                 $teacherAggregateMainTitle AS title,
+                 $scheduleAggregateSelect AS schedule_summary,
+                 $weekdayAggregateForOffering AS weekday_summary
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
           LEFT JOIN (
             SELECT offering_id,
                    GROUP_CONCAT(DISTINCT grade) AS grade,
                    GROUP_CONCAT(DISTINCT major) AS major,
                    GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM ${tables.audienceTable}
+            FROM school_timetable_audiences
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
-          WHERE c.id = ?
-          ORDER BY instructor, teaching_class_name
+          LEFT JOIN school_timetable_offering_teachers ot
+            ON ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+          WHERE o.term_course_id = ?
+          ORDER BY instructor, o.teaching_class_name
           ''',
           variables: [Variable.withString(courseHeadId)],
         )
@@ -323,30 +326,30 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
-    const tables = _SchoolTimetableTables();
     final row = await db
         .customSelect(
           '''
-          SELECT o.*, ${tables.detailFieldsSelect} c.id AS term_course_id,
-                 cc.id AS catalog_id,
-                 ic.id AS instructor_course_id,
-                 cc.course_no, cc.course_name, cc.credits, c.open_college,
-                 c.course_nature, c.course_category, c.open_type,
+          SELECT o.*,
+                 cc.id AS course_id, cc.course_no, cc.course_name, cc.credits,
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
-                 COALESCE(a.plan_college, '') AS plan_college
-          FROM ${tables.offeringTable} o
-          JOIN ${tables.termCourseTable} c ON c.id = o.term_course_id
-          JOIN ${tables.courseTable} cc ON cc.id = c.${tables.courseIdColumn}
-          JOIN ${tables.instructorTable} ic ON ic.id = o.${tables.offeringInstructorIdColumn}
+                 COALESCE(a.plan_college, '') AS plan_college,
+                 $teacherAggregateMain AS instructor,
+                 $teacherAggregateMainTitle AS title,
+                 $scheduleAggregateSelect AS schedule_summary,
+                 $weekdayAggregateForOffering AS weekday_summary
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
           LEFT JOIN (
             SELECT offering_id,
                    GROUP_CONCAT(DISTINCT grade) AS grade,
                    GROUP_CONCAT(DISTINCT major) AS major,
                    GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM ${tables.audienceTable}
+            FROM school_timetable_audiences
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
+          LEFT JOIN school_timetable_offering_teachers ot
+            ON ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
           WHERE o.id = ?
           ''',
           variables: [Variable.withString(id)],
@@ -364,20 +367,18 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
-    const tables = _SchoolTimetableTables();
     final rows = await db
         .customSelect(
           '''
-          SELECT r.*, o.id AS offering_id
-          FROM ${tables.meetingRuleTable} r
-          JOIN ${tables.offeringTable} o ON o.id = r.offering_id
-          WHERE o.id = ?
-          ORDER BY weekday, segment_index
+          SELECT m.*
+          FROM school_timetable_meetings m
+          WHERE m.offering_id = ?
+          ORDER BY m.weekday, m.segment_index
           ''',
           variables: [Variable.withString(teachingClassId)],
         )
         .get();
-    return rows.map(_ruleFromRow).toList(growable: false);
+    return rows.map(_meetingFromRow).toList(growable: false);
   }
 
   @override
@@ -393,30 +394,28 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const CourseEntityLink();
     }
-    const tables = _SchoolTimetableTables();
 
-    final termCourseId = await _matchTermCourse(db, query, tables);
+    final termCourseId = await _matchTermCourse(db, query);
     final weekIndex = await _weekIndexForDate(db, query);
     final offering = await _matchOffering(
       db,
       query,
       weekIndex: weekIndex,
-      tables: tables,
     );
     if (offering == null) {
       return CourseEntityLink(termCourseId: termCourseId);
     }
 
-    final instanceId = _readString(offering, 'matched_instance_id');
-    final occurrenceId = instanceId.isEmpty || weekIndex == null
+    final meetingId = _readString(offering, 'matched_meeting_id');
+    final occurrenceId = meetingId.isEmpty || weekIndex == null
         ? ''
-        : '$instanceId:$weekIndex';
+        : '$meetingId:$weekIndex';
     return CourseEntityLink(
       termCourseId: _readString(offering, 'term_course_id').isNotEmpty
           ? _readString(offering, 'term_course_id')
           : termCourseId,
       offeringId: _readString(offering, 'id'),
-      instructorCourseId: _readString(offering, 'instructor_course_id'),
+      teacherId: _readString(offering, 'matched_teacher_id'),
       occurrenceId: occurrenceId,
     );
   }
@@ -424,15 +423,14 @@ class DriftAllSchoolTimetableRepository
   Future<String> _matchTermCourse(
     GeneratedDatabase db,
     PersonalCourseMatchQuery query,
-    _SchoolTimetableTables tables,
   ) async {
     final rows = await db
         .customSelect(
           '''
-          SELECT c.id AS id, cc.course_name
-          FROM ${tables.termCourseTable} c
-          JOIN ${tables.courseTable} cc ON cc.id = c.${tables.courseIdColumn}
-          WHERE c.term_key = ? AND cc.course_no = ?
+          SELECT DISTINCT o.term_course_id AS id, cc.course_name
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
+          WHERE o.term_key = ? AND cc.course_no = ?
           ''',
           variables: [
             Variable.withString(query.termKey.trim()),
@@ -455,51 +453,38 @@ class DriftAllSchoolTimetableRepository
     GeneratedDatabase db,
     PersonalCourseMatchQuery query, {
     required int? weekIndex,
-    required _SchoolTimetableTables tables,
   }) async {
     final sectionRange = _sectionRange(query.sectionText);
-    final ruleClauses = <String>[];
+    final meetingClauses = <String>[];
     final variables = <Variable>[
       Variable.withString(query.termKey.trim()),
       Variable.withString(query.courseNo.trim()),
       Variable.withInt(query.weekday),
     ];
     if (weekIndex != null) {
-      ruleClauses.add('''
-        EXISTS (
-          SELECT 1 FROM ${tables.meetingWeekTable} iw
-          WHERE iw.meeting_rule_id = r.id AND iw.week_index = ?
-        )
-      ''');
-      variables.add(Variable.withInt(weekIndex));
+      meetingClauses.add('m.week_indexes LIKE ?');
+      variables.add(Variable.withString('%"$weekIndex"%'));
     }
     if (sectionRange != null) {
-      ruleClauses.add('''
-        r.section_start <= ? AND r.section_end >= ?
-      ''');
+      meetingClauses.add('m.section_start <= ? AND m.section_end >= ?');
       variables.add(Variable.withInt(sectionRange.end));
       variables.add(Variable.withInt(sectionRange.start));
     }
     final rows = await db.customSelect('''
-          SELECT o.*, ${tables.detailFieldsSelect} c.id AS term_course_id,
-                 ic.id AS instructor_course_id,
-                 cc.course_no, cc.course_name, cc.credits, c.open_college,
-                 c.course_nature, c.course_category, c.open_type,
-                 r.id AS matched_instance_id,
-                 r.location_text AS matched_location_text
-          FROM ${tables.offeringTable} o
-          JOIN ${tables.termCourseTable} c
-            ON c.id = o.term_course_id
-          JOIN ${tables.courseTable} cc
-            ON cc.id = c.${tables.courseIdColumn}
-          JOIN ${tables.instructorTable} ic
-            ON ic.id = o.${tables.offeringInstructorIdColumn}
-          JOIN ${tables.meetingRuleTable} r
-            ON r.offering_id = o.id
+          SELECT o.*, o.term_course_id AS term_course_id,
+                 m.id AS matched_meeting_id,
+                 m.location_text AS matched_location_text,
+                 $teacherAggregateMain AS instructor,
+                 ot.teacher_id AS matched_teacher_id
+          FROM school_timetable_offerings o
+          JOIN school_timetable_courses cc ON cc.id = o.course_id
+          JOIN school_timetable_meetings m ON m.offering_id = o.id
+          LEFT JOIN school_timetable_offering_teachers ot
+            ON ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
           WHERE o.term_key = ?
             AND cc.course_no = ?
-            AND r.weekday = ?
-            ${ruleClauses.isEmpty ? '' : 'AND ${ruleClauses.join(' AND ')}'}
+            AND m.weekday = ?
+            ${meetingClauses.isEmpty ? '' : 'AND ${meetingClauses.join(' AND ')}'}
           ''', variables: variables).get();
     if (rows.isEmpty) {
       return null;
@@ -510,9 +495,9 @@ class DriftAllSchoolTimetableRepository
     if (className.isNotEmpty) {
       candidates = [
         for (final row in candidates)
-          if (_normalizeName(_readString(row, 'teaching_class_name')) ==
+        if (_normalizeName(_readString(row, 'teaching_class_name')) ==
               className)
-            row,
+          row,
       ];
     }
     if (candidates.isEmpty) {
@@ -523,7 +508,7 @@ class DriftAllSchoolTimetableRepository
     if (instructor.isNotEmpty) {
       final teacherMatches = [
         for (final row in candidates)
-          if (_teacherMatches(row, instructor)) row,
+        if (_normalizeName(_readString(row, 'instructor')) == instructor) row,
       ];
       if (teacherMatches.isNotEmpty) {
         candidates = teacherMatches;
@@ -532,11 +517,11 @@ class DriftAllSchoolTimetableRepository
 
     final locationMatches = [
       for (final row in candidates)
-        if (_locationCompatible(
+      if (_locationCompatible(
           _readString(row, 'matched_location_text'),
           query.locationText,
         ))
-          row,
+        row,
     ];
     if (locationMatches.length == 1) {
       return locationMatches.single;
@@ -555,7 +540,7 @@ class DriftAllSchoolTimetableRepository
         .customSelect(
           '''
           SELECT first_week_monday
-          FROM school_timetable_term_rows
+          FROM school_timetable_terms
           WHERE term_key = ?
           ''',
           variables: [Variable.withString(query.termKey.trim())],
@@ -587,15 +572,15 @@ class DriftAllSchoolTimetableRepository
     return days ~/ 7 + 1;
   }
 
-  String _professionalExistsClause(
-    AllSchoolTimetableQuery query,
-    List<Variable> variables,
-    _SchoolTimetableTables tables,
-  ) {
+  /// 专业模式筛选：把课程头（GROUP BY 后的 term_course_id）限制到至少有一个教学班
+  /// 满足开课学院/年级/专业/星期/楼栋条件。该子查询在主 GROUP BY 的 WHERE 上叠加，
+  /// 引用主查询的 o 表别名。
+  String _professionalExistsClause(AllSchoolTimetableQuery query) {
     if (!query.hasProfessionalFilters) {
       return '';
     }
-    final conditions = <String>['o.term_course_id = c.id'];
+    final conditions = <String>[];
+    final variables = <Variable>[];
 
     void addLike(String column, String value) {
       final normalized = value.trim();
@@ -606,29 +591,86 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withString('%$normalized%'));
     }
 
-    addLike('c2.open_college', query.openCollege);
-    addLike('a.grade', query.grade);
-    addLike('a.major', query.major);
+    addLike('sub.open_college', query.openCollege);
+    addLike('aud.grade', query.grade);
+    addLike('aud.major', query.major);
     if (query.weekday != null) {
-      conditions.add('r.weekday = ?');
+      conditions.add('mt.weekday = ?');
       variables.add(Variable.withInt(query.weekday!));
     }
-    addLike('r.location_text', query.building);
+    addLike('mt.location_text', query.building);
+    if (conditions.isEmpty) {
+      return '';
+    }
 
+    // 把筛选变量塞进 _courseSearchVariables 末尾，主查询 WHERE 与 ORDER BY 的占位
+    // 都按 _courseSearchVariables 的顺序消费，故这里只返回 SQL 片段，变量另存于
+    // _professionalFilterVariables 供主查询变量列表追加。
+    _professionalFilterVariables = variables;
     return '''
       AND EXISTS (
         SELECT 1
-        FROM ${tables.offeringTable} o
-        JOIN ${tables.termCourseTable} c2
-          ON c2.id = o.term_course_id
-        LEFT JOIN ${tables.audienceTable} a
-          ON a.offering_id = o.id
-        LEFT JOIN ${tables.meetingRuleTable} r
-          ON r.offering_id = o.id
-        WHERE ${conditions.join(' AND ')}
+        FROM school_timetable_offerings sub
+        LEFT JOIN school_timetable_audiences aud ON aud.offering_id = sub.id
+        LEFT JOIN school_timetable_meetings mt ON mt.offering_id = sub.id
+        WHERE sub.term_course_id = o.term_course_id
+          AND ${conditions.join(' AND ')}
       )
     ''';
   }
+
+  List<Variable> _professionalFilterVariables = const [];
+
+  String _teacherAggregateSelect() {
+    return '''
+      (SELECT GROUP_CONCAT(t.name, '、')
+       FROM (
+         SELECT DISTINCT ot_inner.teacher_id, t_inner.name
+         FROM school_timetable_offering_teachers ot_inner
+         JOIN school_timetable_teachers t_inner ON t_inner.id = ot_inner.teacher_id
+         WHERE ot_inner.offering_id = o.id
+       ) joined
+       JOIN school_timetable_teachers t ON t.id = joined.teacher_id)
+    ''';
+  }
+
+  String _weekdayAggregateSelect() {
+    return '''
+      (SELECT GROUP_CONCAT(DISTINCT m.weekday_label, '、')
+       FROM school_timetable_meetings m
+       WHERE m.offering_id IN (SELECT id FROM school_timetable_offerings WHERE term_course_id = o.term_course_id)
+         AND m.weekday_label != '')
+    ''';
+  }
+
+  String get teacherAggregateMain => '''
+      (SELECT t.name
+       FROM school_timetable_offering_teachers ot
+       JOIN school_timetable_teachers t ON t.id = ot.teacher_id
+       WHERE ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+       LIMIT 1)
+  ''';
+
+  String get teacherAggregateMainTitle => '''
+      (SELECT ot.title
+       FROM school_timetable_offering_teachers ot
+       WHERE ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+       LIMIT 1)
+  ''';
+
+  String get scheduleAggregateSelect => '''
+      (SELECT GROUP_CONCAT(m.weekday_label || ' ' || m.section_text || COALESCE(' ' || NULLIF(m.location_text, ''), ''), '；')
+       FROM school_timetable_meetings m
+       WHERE m.offering_id = o.id
+         AND m.section_text != '')
+  ''';
+
+  String get weekdayAggregateForOffering => '''
+      (SELECT GROUP_CONCAT(DISTINCT m.weekday_label, '、')
+       FROM school_timetable_meetings m
+       WHERE m.offering_id = o.id
+         AND m.weekday_label != '')
+  ''';
 
   String _ftsQuery(String keyword) {
     final tokens = keyword
@@ -645,21 +687,27 @@ class DriftAllSchoolTimetableRepository
   List<Variable> _courseSearchVariables({
     required String termKey,
     required String keyword,
-    required List<Variable> filterVariables,
+    bool noKeyword = false,
   }) {
+    if (noKeyword) {
+      return [
+        Variable.withString(termKey),
+        ..._professionalFilterVariables,
+      ];
+    }
     final containsPattern = _likePattern(keyword);
     final prefixPattern = _likePattern(keyword, suffixOnly: true);
     return [
       Variable.withString(termKey),
       Variable.withString(termKey),
       Variable.withString(_ftsQuery(keyword)),
-      for (var i = 0; i < 9; i++) Variable.withString(containsPattern),
-      ...filterVariables,
+      for (var i = 0; i < 8; i++) Variable.withString(containsPattern),
+      ..._professionalFilterVariables,
       Variable.withString(keyword),
       Variable.withString(keyword),
       Variable.withString(prefixPattern),
       Variable.withString(prefixPattern),
-      for (var i = 0; i < 9; i++) Variable.withString(containsPattern),
+      for (var i = 0; i < 8; i++) Variable.withString(containsPattern),
     ];
   }
 
@@ -671,15 +719,15 @@ class DriftAllSchoolTimetableRepository
     return suffixOnly ? '$escaped%' : '%$escaped%';
   }
 
-  SchoolCourseHead _termCourseFromRow(QueryRow row) {
+  SchoolCourseHead _courseHeadFromRow(QueryRow row) {
     return SchoolCourseHead(
       id: _readString(row, 'id'),
       termKey: _readString(row, 'term_key'),
-      catalogId: _readString(row, 'catalog_id'),
+      courseId: _readString(row, 'course_id'),
       courseNo: _readString(row, 'course_no'),
       courseName: _readString(row, 'course_name'),
       openCollege: _readString(row, 'open_college'),
-      credits: _readDoubleOrNull(row, 'credits'),
+      credits: _readDoubleOrString(row, 'credits'),
       courseNature: _readString(row, 'course_nature'),
       courseCategory: _readString(row, 'course_category'),
       openType: _readString(row, 'open_type'),
@@ -695,14 +743,13 @@ class DriftAllSchoolTimetableRepository
       termKey: _readString(row, 'term_key'),
       sourceKey: _readString(row, 'source_key'),
       termCourseId: _readString(row, 'term_course_id'),
-      catalogId: _readString(row, 'catalog_id'),
-      instructorCourseId: _readString(row, 'instructor_course_id'),
+      courseId: _readString(row, 'course_id'),
       teachingClassName: _readString(row, 'teaching_class_name'),
       courseNo: _readString(row, 'course_no'),
       courseName: _readString(row, 'course_name'),
       openCollege: _readString(row, 'open_college'),
       planCollege: _readString(row, 'plan_college'),
-      credits: _readDoubleOrNull(row, 'credits'),
+      credits: _readDoubleOrString(row, 'credits'),
       courseNature: _readString(row, 'course_nature'),
       courseCategory: _readString(row, 'course_category'),
       openType: _readString(row, 'open_type'),
@@ -713,21 +760,21 @@ class DriftAllSchoolTimetableRepository
       capacity: _readIntOrNull(row, 'capacity'),
       selectedCount: _readIntOrNull(row, 'selected_count'),
       peopleRaw: _readString(row, 'people_raw'),
-      theoryHours: _readIntOrNull(row, 'theory_hours'),
-      computerHours: _readIntOrNull(row, 'computer_hours'),
-      experimentHours: _readIntOrNull(row, 'experiment_hours'),
-      practiceHours: _readIntOrNull(row, 'practice_hours'),
+      theoryHours: _intHoursOrString(row, 'theory_hours'),
+      computerHours: _intHoursOrString(row, 'computer_hours'),
+      experimentHours: _intHoursOrString(row, 'experiment_hours'),
+      practiceHours: _intHoursOrString(row, 'practice_hours'),
       remark: _readString(row, 'remark'),
+      note: _readString(row, 'note'),
       otherTeachers: _readString(row, 'other_teachers'),
       textbook: _readString(row, 'textbook'),
       publisher: _readString(row, 'publisher'),
       scheduleSummary: _readString(row, 'schedule_summary'),
       weekdaySummary: _readString(row, 'weekday_summary'),
-      originalFields: _decodeFields(_readString(row, 'detail_fields_json')),
     );
   }
 
-  SchoolClassMeeting _ruleFromRow(QueryRow row) {
+  SchoolClassMeeting _meetingFromRow(QueryRow row) {
     return SchoolClassMeeting(
       id: _readString(row, 'id'),
       offeringId: _readString(row, 'offering_id'),
@@ -737,15 +784,14 @@ class DriftAllSchoolTimetableRepository
       weekText: _readString(row, 'week_text'),
       sectionText: _readString(row, 'section_text'),
       locationText: _readString(row, 'location_text'),
-      building: '',
-      room: '',
+      weekIndexes: _decodeIntList(_readString(row, 'week_indexes')),
     );
   }
 
   Future<GeneratedDatabase?> _databaseForTerm(String termKey) async {
     final row = await _db
         .customSelect(
-          'SELECT 1 FROM school_timetable_term_rows WHERE term_key = ? LIMIT 1',
+          'SELECT 1 FROM school_timetable_terms WHERE term_key = ? LIMIT 1',
           variables: [Variable.withString(termKey)],
         )
         .getSingleOrNull();
@@ -780,14 +826,17 @@ class DriftAllSchoolTimetableRepository
       case 'term':
         await _db.customStatement(
           '''
-          INSERT OR REPLACE INTO school_timetable_term_rows
-          (term_key, school_year, term, first_week_monday, source_version, row_count, imported_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO school_timetable_terms
+          (term_key, school_year, term, school_year_code, term_code, first_week_monday,
+           source_version, row_count, imported_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
           [
             change.entityId,
             _stringPayload(p, 'school_year'),
             _stringPayload(p, 'term'),
+            _stringPayload(p, 'school_year_code'),
+            _stringPayload(p, 'term_code'),
             _stringPayload(p, 'first_week_monday'),
             change.version.toString(),
             _intPayload(p, 'row_count'),
@@ -799,80 +848,54 @@ class DriftAllSchoolTimetableRepository
         await _db.customStatement(
           '''
           INSERT OR REPLACE INTO school_timetable_courses
-          (id, catalog_key, course_no, course_name, credits, search_text)
-          VALUES (?, ?, ?, ?, ?, ?)
+          (id, course_no, course_name, credits)
+          VALUES (?, ?, ?, ?)
         ''',
           [
             change.entityId,
-            _stringPayload(p, 'catalog_key'),
             _stringPayload(p, 'course_no'),
             _stringPayload(p, 'course_name'),
             _stringPayload(p, 'credits'),
-            _stringPayload(p, 'search_text'),
           ],
         );
-      case 'term_course':
+      case 'teacher':
         await _db.customStatement(
           '''
-          INSERT OR REPLACE INTO school_timetable_course_terms
-          (id, term_key, course_id, open_college, course_nature, course_category, open_type,
-           teaching_class_count, teacher_summary, weekday_summary, search_text)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO school_timetable_teachers
+          (id, name, name_key, seq)
+          VALUES (?, ?, ?, ?)
         ''',
           [
             change.entityId,
-            _stringPayload(p, 'term_key'),
-            _stringPayload(p, 'catalog_id'),
-            _stringPayload(p, 'open_college'),
-            _stringPayload(p, 'course_nature'),
-            _stringPayload(p, 'course_category'),
-            _stringPayload(p, 'open_type'),
-            _intPayload(p, 'teaching_class_count'),
-            _stringPayload(p, 'teacher_summary'),
-            _stringPayload(p, 'weekday_summary'),
-            _stringPayload(p, 'search_text'),
-          ],
-        );
-      case 'instructor_course':
-        await _db.customStatement(
-          '''
-          INSERT OR REPLACE INTO school_timetable_instructors
-          (id, course_id, instructor_name, instructor_name_key, offering_count,
-           latest_term_key, latest_open_college, latest_teaching_title, search_text)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-          [
-            change.entityId,
-            _stringPayload(p, 'catalog_id'),
-            _stringPayload(p, 'instructor_name'),
-            _stringPayload(p, 'instructor_name_key'),
-            _intPayload(p, 'offering_count'),
-            _stringPayload(p, 'latest_term_key'),
-            _stringPayload(p, 'latest_open_college'),
-            _stringPayload(p, 'latest_teaching_title'),
-            _stringPayload(p, 'search_text'),
+            _stringPayload(p, 'name'),
+            _stringPayload(p, 'name_key'),
+            _intPayload(p, 'seq'),
           ],
         );
       case 'offering':
         await _db.customStatement(
           '''
           INSERT OR REPLACE INTO school_timetable_offerings
-          (id, term_key, term_course_id, course_id, instructor_id, source_key, teaching_class_name,
-           instructor, title, people_raw, capacity, selected_count, theory_hours, computer_hours,
-           experiment_hours, practice_hours, remark, other_teachers, textbook, publisher,
-           schedule_summary, weekday_summary, detail_fields_json, search_text)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, term_key, course_id, term_course_id, source_key, teaching_class_name,
+           open_college, college_id, open_dept_id, course_nature, course_category, open_type,
+           people_raw, capacity, selected_count, theory_hours, computer_hours,
+           experiment_hours, practice_hours, remark, note, other_teachers,
+           textbook, publisher, search_text)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
           [
             change.entityId,
             _stringPayload(p, 'term_key'),
+            _stringPayload(p, 'course_id'),
             _stringPayload(p, 'term_course_id'),
-            _stringPayload(p, 'catalog_id'),
-            _stringPayload(p, 'instructor_course_id'),
             _stringPayload(p, 'source_key'),
             _stringPayload(p, 'teaching_class_name'),
-            _stringPayload(p, 'instructor'),
-            _stringPayload(p, 'title'),
+            _stringPayload(p, 'open_college'),
+            _stringPayload(p, 'college_id'),
+            _stringPayload(p, 'open_dept_id'),
+            _stringPayload(p, 'course_nature'),
+            _stringPayload(p, 'course_category'),
+            _stringPayload(p, 'open_type'),
             _stringPayload(p, 'people_raw'),
             _intPayload(p, 'capacity'),
             _intPayload(p, 'selected_count'),
@@ -881,64 +904,60 @@ class DriftAllSchoolTimetableRepository
             _stringPayload(p, 'experiment_hours'),
             _stringPayload(p, 'practice_hours'),
             _stringPayload(p, 'remark'),
+            _stringPayload(p, 'note'),
             _stringPayload(p, 'other_teachers'),
             _stringPayload(p, 'textbook'),
             _stringPayload(p, 'publisher'),
-            _stringPayload(p, 'schedule_summary'),
-            _stringPayload(p, 'weekday_summary'),
-            jsonEncode(p['fields'] is Map ? p['fields'] : const {}),
             _stringPayload(p, 'search_text'),
+          ],
+        );
+      case 'offering_teacher':
+        await _db.customStatement(
+          '''
+          INSERT OR REPLACE INTO school_timetable_offering_teachers
+          (id, offering_id, teacher_id, role, title, ordinal)
+          VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+          [
+            change.entityId,
+            _stringPayload(p, 'offering_id'),
+            _stringPayload(p, 'teacher_id'),
+            _stringPayload(p, 'role'),
+            _stringPayload(p, 'title'),
+            _intPayload(p, 'ordinal'),
           ],
         );
       case 'audience':
         await _db.customStatement(
           '''
           INSERT OR REPLACE INTO school_timetable_audiences
-          (id, term_key, offering_id, grade, major, plan_college, course_nature, course_nature_code,
-           course_category, course_category_code, open_type, open_type_code, condition_code)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, term_key, offering_id, grade, grade_code, major, major_code, plan_college,
+           course_nature_code, course_category_code, open_type_code, condition_code)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
           [
             change.entityId,
             _stringPayload(p, 'term_key'),
             _stringPayload(p, 'offering_id'),
             _stringPayload(p, 'grade'),
+            _stringPayload(p, 'grade_code'),
             _stringPayload(p, 'major'),
+            _stringPayload(p, 'major_code'),
             _stringPayload(p, 'plan_college'),
-            _stringPayload(p, 'course_nature'),
             _stringPayload(p, 'course_nature_code'),
-            _stringPayload(p, 'course_category'),
             _stringPayload(p, 'course_category_code'),
-            _stringPayload(p, 'open_type'),
             _stringPayload(p, 'open_type_code'),
             _stringPayload(p, 'condition_code'),
           ],
         );
-      case 'source_row':
+      case 'meeting':
         await _db.customStatement(
           '''
-          INSERT OR REPLACE INTO school_timetable_source_rows
-          (id, term_key, term_course_id, offering_id, source_key, package_index, source_status, raw_fields_json)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
-          [
-            change.entityId,
-            _stringPayload(p, 'term_key'),
-            _stringPayload(p, 'term_course_id'),
-            _stringPayload(p, 'offering_id'),
-            _stringPayload(p, 'source_key'),
-            _intPayload(p, 'package_index'),
-            _stringPayload(p, 'status'),
-            jsonEncode(p['fields'] is Map ? p['fields'] : const {}),
-          ],
-        );
-      case 'meeting_rule':
-        await _db.customStatement(
-          '''
-          INSERT OR REPLACE INTO school_timetable_meeting_rules
-          (id, offering_id, term_key, weekday, day_field, segment_index, weekday_label, raw_day_text,
-           raw_segment_text, week_text, section_text, section_start, section_end, location_text, parse_status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT OR REPLACE INTO school_timetable_meetings
+          (id, offering_id, term_key, weekday, day_field, segment_index, weekday_label,
+           raw_day_text, raw_segment_text, week_text, section_text, section_start,
+           section_end, location_text, week_indexes, parse_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
           [
             change.entityId,
@@ -955,17 +974,9 @@ class DriftAllSchoolTimetableRepository
             _intPayload(p, 'section_start'),
             _intPayload(p, 'section_end'),
             _stringPayload(p, 'location_text'),
+            jsonEncode(p['week_indexes'] is List ? p['week_indexes'] : const []),
             _stringPayload(p, 'parse_status'),
           ],
-        );
-      case 'meeting_week':
-        await _db.customStatement(
-          '''
-          INSERT OR REPLACE INTO school_timetable_meeting_weeks
-          (meeting_rule_id, week_index)
-          VALUES (?, ?)
-        ''',
-          [_stringPayload(p, 'meeting_rule_id'), _intPayload(p, 'week_index')],
         );
     }
   }
@@ -974,7 +985,7 @@ class DriftAllSchoolTimetableRepository
     switch (entityType) {
       case 'term':
         await _db.customStatement(
-          'DELETE FROM school_timetable_term_rows WHERE term_key = ?',
+          'DELETE FROM school_timetable_terms WHERE term_key = ?',
           [entityId],
         );
       case 'course':
@@ -982,14 +993,9 @@ class DriftAllSchoolTimetableRepository
           'DELETE FROM school_timetable_courses WHERE id = ?',
           [entityId],
         );
-      case 'term_course':
+      case 'teacher':
         await _db.customStatement(
-          'DELETE FROM school_timetable_course_terms WHERE id = ?',
-          [entityId],
-        );
-      case 'instructor_course':
-        await _db.customStatement(
-          'DELETE FROM school_timetable_instructors WHERE id = ?',
+          'DELETE FROM school_timetable_teachers WHERE id = ?',
           [entityId],
         );
       case 'offering':
@@ -997,36 +1003,21 @@ class DriftAllSchoolTimetableRepository
           'DELETE FROM school_timetable_offerings WHERE id = ?',
           [entityId],
         );
+      case 'offering_teacher':
+        await _db.customStatement(
+          'DELETE FROM school_timetable_offering_teachers WHERE id = ?',
+          [entityId],
+        );
       case 'audience':
         await _db.customStatement(
           'DELETE FROM school_timetable_audiences WHERE id = ?',
           [entityId],
         );
-      case 'source_row':
+      case 'meeting':
         await _db.customStatement(
-          'DELETE FROM school_timetable_source_rows WHERE id = ?',
+          'DELETE FROM school_timetable_meetings WHERE id = ?',
           [entityId],
         );
-      case 'meeting_rule':
-        await _db.customStatement(
-          'DELETE FROM school_timetable_meeting_rules WHERE id = ?',
-          [entityId],
-        );
-        await _db.customStatement(
-          'DELETE FROM school_timetable_meeting_weeks WHERE meeting_rule_id = ?',
-          [entityId],
-        );
-      case 'meeting_week':
-        final separator = entityId.lastIndexOf(':');
-        if (separator > 0) {
-          await _db.customStatement(
-            'DELETE FROM school_timetable_meeting_weeks WHERE meeting_rule_id = ? AND week_index = ?',
-            [
-              entityId.substring(0, separator),
-              int.tryParse(entityId.substring(separator + 1)) ?? 0,
-            ],
-          );
-        }
     }
   }
 
@@ -1034,13 +1025,12 @@ class DriftAllSchoolTimetableRepository
     await _db.customStatement('DELETE FROM school_timetable_search_fts');
     await _db.customStatement('''
       INSERT INTO school_timetable_search_fts
-      (term_course_id, term_key, course_name, course_no, open_college, course_nature,
-       course_category, teacher_summary, weekday_summary, search_text)
-      SELECT c.id, c.term_key, cc.course_name, cc.course_no, c.open_college,
-             c.course_nature, c.course_category, c.teacher_summary,
-             c.weekday_summary, c.search_text
-      FROM school_timetable_course_terms c
-      JOIN school_timetable_courses cc ON cc.id = c.course_id
+      (offering_id, term_key, term_course_id, course_name, course_no, open_college,
+       teaching_class_name, search_text)
+      SELECT o.id, o.term_key, o.term_course_id, c.course_name, c.course_no,
+             o.open_college, o.teaching_class_name, o.search_text
+      FROM school_timetable_offerings o
+      JOIN school_timetable_courses c ON c.id = o.course_id
     ''');
   }
 
@@ -1075,11 +1065,19 @@ class DriftAllSchoolTimetableRepository
     return int.tryParse(value.toString());
   }
 
-  double? _readDoubleOrNull(QueryRow row, String column) {
+  double? _readDoubleOrString(QueryRow row, String column) {
     final value = row.data[column];
     if (value == null) return null;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
+  }
+
+  int? _intHoursOrString(QueryRow row, String column) {
+    final value = row.data[column];
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   DateTime _dateTimeFromMillis(Object? value) {
@@ -1092,35 +1090,18 @@ class DriftAllSchoolTimetableRepository
         DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  Map<String, String> _decodeFields(String raw) {
-    final decoded = jsonDecode(raw);
-    return {
-      if (decoded is Map)
-        for (final entry in decoded.entries)
-          entry.key.toString(): entry.value?.toString() ?? '',
-    };
-  }
-
-  bool _teacherMatches(QueryRow row, String instructor) {
-    final normalizedInstructor = _normalizeName(instructor);
-    if (normalizedInstructor.isEmpty) {
-      return false;
+  List<int> _decodeIntList(String raw) {
+    if (raw.isEmpty) {
+      return const [];
     }
-    final teachers = [
-      _readString(row, 'instructor'),
-      _readString(row, 'title'),
-      _readString(row, 'other_teachers'),
-    ].expand((value) => _splitTeacherNames(value));
-    return teachers.any(
-      (teacher) => _normalizeName(teacher) == normalizedInstructor,
-    );
-  }
-
-  Iterable<String> _splitTeacherNames(String value) {
-    return value
-        .split(RegExp(r'[,，;；、/\s]+'))
-        .map((part) => part.trim())
-        .where((part) => part.isNotEmpty);
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) {
+      return const [];
+    }
+    return decoded
+        .map((item) => item is int ? item : int.tryParse('$item') ?? 0)
+        .whereType<int>()
+        .toList(growable: false);
   }
 
   _SectionRange? _sectionRange(String value) {
@@ -1166,22 +1147,6 @@ class DriftAllSchoolTimetableRepository
   }
 }
 
-class _SchoolTimetableTables {
-  const _SchoolTimetableTables();
-
-  String get courseTable => 'school_timetable_courses';
-  String get termCourseTable => 'school_timetable_course_terms';
-  String get instructorTable => 'school_timetable_instructors';
-  String get offeringTable => 'school_timetable_offerings';
-  String get audienceTable => 'school_timetable_audiences';
-  String get meetingRuleTable => 'school_timetable_meeting_rules';
-  String get meetingWeekTable => 'school_timetable_meeting_weeks';
-  String get searchTable => 'school_timetable_search_fts';
-  String get courseIdColumn => 'course_id';
-  String get offeringInstructorIdColumn => 'instructor_id';
-  String get detailFieldsSelect => "'{}' AS detail_fields_json,";
-}
-
 class _SectionRange {
   const _SectionRange({required this.start, required this.end});
 
@@ -1190,15 +1155,13 @@ class _SectionRange {
 }
 
 const _bundleCopyTables = [
-  'school_timetable_term_rows',
+  'school_timetable_terms',
   'school_timetable_courses',
-  'school_timetable_course_terms',
-  'school_timetable_instructors',
+  'school_timetable_teachers',
   'school_timetable_offerings',
+  'school_timetable_offering_teachers',
   'school_timetable_audiences',
-  'school_timetable_source_rows',
-  'school_timetable_meeting_rules',
-  'school_timetable_meeting_weeks',
+  'school_timetable_meetings',
 ];
 
 String _sqlString(String value) {
