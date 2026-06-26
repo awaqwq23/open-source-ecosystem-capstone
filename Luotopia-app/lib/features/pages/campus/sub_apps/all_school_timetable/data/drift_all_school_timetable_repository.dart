@@ -58,7 +58,10 @@ class DriftAllSchoolTimetableRepository
     required List<SchoolTimetableChange> changes,
   }) async {
     await _db.transaction(() async {
+      final affectedOfferingIds = <String>{};
+      final courseIdsNeedingRebuild = <String>{};
       for (final change in changes) {
+        _collectAffectedOfferings(change, affectedOfferingIds, courseIdsNeedingRebuild);
         if (change.operation == 'delete') {
           await _deleteEntity(change.entityType, change.entityId);
           continue;
@@ -67,7 +70,18 @@ class DriftAllSchoolTimetableRepository
           await _upsertEntity(change);
         }
       }
-      await _rebuildSearchIndex();
+      // 如果课程元数据变了，需要补全该课程下所有教学班的 offering_id。
+      if (courseIdsNeedingRebuild.isNotEmpty) {
+        final placeholders = List.filled(courseIdsNeedingRebuild.length, '?').join(',');
+        final rows = await _db.customSelect(
+          'SELECT id FROM school_timetable_offerings WHERE course_id IN ($placeholders)',
+          variables: courseIdsNeedingRebuild.map((id) => Variable.withString(id)).toList(),
+        ).get();
+        for (final row in rows) {
+          affectedOfferingIds.add(_readString(row, 'id'));
+        }
+      }
+      await _updateSearchIndexForOfferings(affectedOfferingIds);
       await _writeMeta('dataset_version', version.toString());
       await _writeMeta('dataset_checksum', checksum);
       await _writeMeta(
@@ -148,7 +162,7 @@ class DriftAllSchoolTimetableRepository
   }
 
   /// 课程头搜索：以 school_timetable_offerings 为主表，GROUP BY term_course_id 聚合。
-  /// teaching_class_count / teacher_summary / weekday_summary 均查询时聚合得到。
+  /// 使用预聚合 LEFT JOIN 替代关联子查询，避免 N² 性能问题。
   @override
   Future<List<SchoolCourseHead>> searchCourseHeads(
     AllSchoolTimetableQuery query,
@@ -162,8 +176,8 @@ class DriftAllSchoolTimetableRepository
       return const [];
     }
     final keyword = query.keyword.trim();
-    final teacherAgg = _teacherAggregateSelect();
-    final weekdayAgg = _weekdayAggregateSelect();
+    final teacherSub = preAggregatedTeacherSummarySubquery;
+    final weekdaySub = preAggregatedWeekdaySummarySubquery;
     final professional = _professionalExistsClause(query);
     final professionalClause = professional.sql;
     final professionalVariables = professional.variables;
@@ -174,11 +188,13 @@ class DriftAllSchoolTimetableRepository
           SELECT o.term_course_id AS id, o.term_key, o.course_id, cc.course_no, cc.course_name,
                  o.open_college, cc.credits, o.course_nature, o.course_category, o.open_type,
                  COUNT(*) AS teaching_class_count,
-                 $teacherAgg AS teacher_summary,
-                 $weekdayAgg AS weekday_summary,
+                 COALESCE(t_agg.teacher_summary, '') AS teacher_summary,
+                 COALESCE(m_agg.weekday_summary, '') AS weekday_summary,
                  MAX(o.search_text) AS search_text
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
+          LEFT JOIN ($teacherSub) t_agg ON t_agg.offering_id = o.id
+          LEFT JOIN ($weekdaySub) m_agg ON m_agg.offering_id = o.id
           WHERE o.term_key = ?
             AND (
               o.term_course_id IN (
@@ -227,11 +243,13 @@ class DriftAllSchoolTimetableRepository
           SELECT o.term_course_id AS id, o.term_key, o.course_id, cc.course_no, cc.course_name,
                  o.open_college, cc.credits, o.course_nature, o.course_category, o.open_type,
                  COUNT(*) AS teaching_class_count,
-                 $teacherAgg AS teacher_summary,
-                 $weekdayAgg AS weekday_summary,
+                 COALESCE(t_agg.teacher_summary, '') AS teacher_summary,
+                 COALESCE(m_agg.weekday_summary, '') AS weekday_summary,
                  MAX(o.search_text) AS search_text
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
+          LEFT JOIN ($teacherSub) t_agg ON t_agg.offering_id = o.id
+          LEFT JOIN ($weekdaySub) m_agg ON m_agg.offering_id = o.id
           WHERE o.term_key = ?
             $professionalClause
           GROUP BY o.term_course_id
@@ -289,6 +307,9 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
+    final instructorSub = preAggregatedInstructorAndTitleSubquery;
+    final scheduleSub = preAggregatedScheduleSummarySubquery;
+    final weekdaySub = preAggregatedWeekdayForOfferingSubquery;
     final rows = await db
         .customSelect(
           '''
@@ -297,10 +318,10 @@ class DriftAllSchoolTimetableRepository
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college,
-                 $teacherAggregateMain AS instructor,
-                 $teacherAggregateMainTitle AS title,
-                 $scheduleAggregateSelect AS schedule_summary,
-                 $weekdayAggregateForOffering AS weekday_summary
+                 COALESCE(it.instructor, '') AS instructor,
+                 COALESCE(it.title, '') AS title,
+                 COALESCE(sa.schedule_summary, '') AS schedule_summary,
+                 COALESCE(wa.weekday_summary, '') AS weekday_summary
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
           LEFT JOIN (
@@ -311,10 +332,11 @@ class DriftAllSchoolTimetableRepository
             FROM school_timetable_audiences
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
-          LEFT JOIN school_timetable_offering_teachers ot
-            ON ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+          LEFT JOIN ($instructorSub) it ON it.offering_id = o.id
+          LEFT JOIN ($scheduleSub) sa ON sa.offering_id = o.id
+          LEFT JOIN ($weekdaySub) wa ON wa.offering_id = o.id
           WHERE o.term_course_id = ?
-          ORDER BY instructor, o.teaching_class_name
+          ORDER BY COALESCE(it.instructor, ''), o.teaching_class_name
           ''',
           variables: [Variable.withString(courseHeadId)],
         )
@@ -331,6 +353,9 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
+    final instructorSub = preAggregatedInstructorAndTitleSubquery;
+    final scheduleSub = preAggregatedScheduleSummarySubquery;
+    final weekdaySub = preAggregatedWeekdayForOfferingSubquery;
     final row = await db
         .customSelect(
           '''
@@ -339,10 +364,10 @@ class DriftAllSchoolTimetableRepository
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college,
-                 $teacherAggregateMain AS instructor,
-                 $teacherAggregateMainTitle AS title,
-                 $scheduleAggregateSelect AS schedule_summary,
-                 $weekdayAggregateForOffering AS weekday_summary
+                 COALESCE(it.instructor, '') AS instructor,
+                 COALESCE(it.title, '') AS title,
+                 COALESCE(sa.schedule_summary, '') AS schedule_summary,
+                 COALESCE(wa.weekday_summary, '') AS weekday_summary
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
           LEFT JOIN (
@@ -353,8 +378,9 @@ class DriftAllSchoolTimetableRepository
             FROM school_timetable_audiences
             GROUP BY offering_id
           ) a ON a.offering_id = o.id
-          LEFT JOIN school_timetable_offering_teachers ot
-            ON ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+          LEFT JOIN ($instructorSub) it ON it.offering_id = o.id
+          LEFT JOIN ($scheduleSub) sa ON sa.offering_id = o.id
+          LEFT JOIN ($weekdaySub) wa ON wa.offering_id = o.id
           WHERE o.id = ?
           ''',
           variables: [Variable.withString(id)],
@@ -687,6 +713,83 @@ class DriftAllSchoolTimetableRepository
          GROUP BY m.weekday, m.weekday_label
          ORDER BY m.weekday
        ))
+  ''';
+
+  // ── 预聚合子查询片段（供 LEFT JOIN 使用，消除关联子查询的 N² 行为） ──
+
+  /// 按 offering_id 预聚合教师姓名（用于课程头搜索）。
+  /// 返回可嵌入 LEFT JOIN 的子查询 SQL。
+  String get preAggregatedTeacherSummarySubquery => '''
+    SELECT ot_inner.offering_id,
+           GROUP_CONCAT(t_inner.name, '、') AS teacher_summary
+    FROM (
+      SELECT offering_id, teacher_id
+      FROM school_timetable_offering_teachers
+      ORDER BY offering_id, teacher_id
+      LIMIT -1 OFFSET 0
+    ) ot_inner
+    JOIN school_timetable_teachers t_inner ON t_inner.id = ot_inner.teacher_id
+    GROUP BY ot_inner.offering_id
+  ''';
+
+  /// 按 offering_id 预聚合星期标签（用于课程头搜索）。
+  /// 内层去重 + 排序，外层按 offering_id 拼接。
+  String get preAggregatedWeekdaySummarySubquery => '''
+    SELECT offering_id,
+           GROUP_CONCAT(weekday_label, '、') AS weekday_summary
+    FROM (
+      SELECT offering_id, weekday, weekday_label
+      FROM school_timetable_meetings
+      WHERE weekday_label != ''
+      GROUP BY offering_id, weekday, weekday_label
+      ORDER BY offering_id, weekday
+      LIMIT -1 OFFSET 0
+    )
+    GROUP BY offering_id
+  ''';
+
+  /// 按 offering_id 预聚合主讲教师姓名与职称。
+  String get preAggregatedInstructorAndTitleSubquery => '''
+    SELECT ot_main.offering_id,
+           MAX(t_main.name) AS instructor,
+           MAX(ot_main.title) AS title
+    FROM school_timetable_offering_teachers ot_main
+    JOIN school_timetable_teachers t_main ON t_main.id = ot_main.teacher_id
+    WHERE ot_main.role = 'main' AND ot_main.ordinal = 0
+    GROUP BY ot_main.offering_id
+  ''';
+
+  /// 按 offering_id 预聚合课程时间表摘要。
+  /// 内层按 weekday + segment_index 排序，外层 GROUP_CONCAT 保持顺序。
+  String get preAggregatedScheduleSummarySubquery => '''
+    SELECT offering_id,
+           GROUP_CONCAT(schedule_entry, '；') AS schedule_summary
+    FROM (
+      SELECT offering_id,
+             weekday_label || ' ' || section_text
+               || COALESCE(' ' || NULLIF(location_text, ''), '') AS schedule_entry,
+             weekday, segment_index
+      FROM school_timetable_meetings
+      WHERE section_text != ''
+      ORDER BY offering_id, weekday, segment_index
+      LIMIT -1 OFFSET 0
+    )
+    GROUP BY offering_id
+  ''';
+
+  /// 按 offering_id 预聚合星期标签（用于教学班列表/详情）。
+  String get preAggregatedWeekdayForOfferingSubquery => '''
+    SELECT offering_id,
+           GROUP_CONCAT(weekday_label, '、') AS weekday_summary
+    FROM (
+      SELECT offering_id, weekday, weekday_label
+      FROM school_timetable_meetings
+      WHERE weekday_label != ''
+      GROUP BY offering_id, weekday, weekday_label
+      ORDER BY offering_id, weekday
+      LIMIT -1 OFFSET 0
+    )
+    GROUP BY offering_id
   ''';
 
   String _ftsQuery(String keyword) {
@@ -1050,6 +1153,54 @@ class DriftAllSchoolTimetableRepository
       FROM school_timetable_offerings o
       JOIN school_timetable_courses c ON c.id = o.course_id
     ''');
+  }
+
+  /// 收集单次变更影响到的 offering_id（用于增量 FTS 更新）。
+  void _collectAffectedOfferings(
+    SchoolTimetableChange change,
+    Set<String> offeringIds,
+    Set<String> courseIdsNeedingRebuild,
+  ) {
+    final p = change.payload;
+    switch (change.entityType) {
+      case 'offering':
+        offeringIds.add(change.entityId);
+      case 'offering_teacher':
+      case 'audience':
+      case 'meeting':
+        final oid = p['offering_id']?.toString();
+        if (oid != null && oid.isNotEmpty) {
+          offeringIds.add(oid);
+        }
+      case 'course':
+        // 课程名称变更 → 需要重建该课程下所有教学班的 FTS 行。
+        courseIdsNeedingRebuild.add(change.entityId);
+    }
+  }
+
+  /// 仅对受影响的 offering 增量更新 FTS 索引（先删后插）。
+  Future<void> _updateSearchIndexForOfferings(Set<String> offeringIds) async {
+    if (offeringIds.isEmpty) return;
+    final ids = offeringIds.toList();
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final args = ids.cast<dynamic>();
+    await _db.customStatement(
+      'DELETE FROM school_timetable_search_fts WHERE offering_id IN ($placeholders)',
+      args,
+    );
+    await _db.customStatement(
+      '''
+      INSERT INTO school_timetable_search_fts
+      (offering_id, term_key, term_course_id, course_name, course_no, open_college,
+       teaching_class_name, search_text)
+      SELECT o.id, o.term_key, o.term_course_id, c.course_name, c.course_no,
+             o.open_college, o.teaching_class_name, o.search_text
+      FROM school_timetable_offerings o
+      JOIN school_timetable_courses c ON c.id = o.course_id
+      WHERE o.id IN ($placeholders)
+      ''',
+      args,
+    );
   }
 
   String _stringPayload(Map<String, dynamic> payload, String key) {
