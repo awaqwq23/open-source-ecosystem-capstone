@@ -7,7 +7,7 @@ import 'package:luotopia/shared/data/api_client.dart';
 class CourseReviewApi {
   CourseReviewApi(this._api);
 
-  static const String _base = '/course-reviews';
+  static const String _base = '/api/v1/course-reviews';
 
   final ApiClient _api;
 
