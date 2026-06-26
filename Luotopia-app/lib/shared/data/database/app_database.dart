@@ -274,6 +274,12 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_school_timetable_meetings_filter ON school_timetable_meetings(term_key, weekday, section_start, section_end)',
     );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_meetings_offering ON school_timetable_meetings(offering_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_school_timetable_audiences_offering ON school_timetable_audiences(offering_id)',
+    );
   }
 
   Future<void> _dropLegacySchoolTimetableTables() async {

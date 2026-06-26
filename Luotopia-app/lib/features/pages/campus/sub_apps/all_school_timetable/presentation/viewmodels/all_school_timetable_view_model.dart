@@ -254,7 +254,6 @@ final courseHeadDetailProvider =
       args,
     ) async {
       final repository = ref.read(allSchoolTimetableRepositoryProvider);
-      await repository.ensureLocalDataReady();
       final head = await repository.findCourseHead(
         termKey: args.termKey,
         id: args.id,
@@ -292,7 +291,6 @@ final teachingClassDetailProvider =
       args,
     ) async {
       final repository = ref.read(allSchoolTimetableRepositoryProvider);
-      await repository.ensureLocalDataReady();
       final teachingClass = await repository.findTeachingClass(
         termKey: args.termKey,
         id: args.id,

@@ -307,38 +307,53 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return const [];
     }
-    final instructorSub = preAggregatedInstructorAndTitleSubquery;
-    final scheduleSub = preAggregatedScheduleSummarySubquery;
-    final weekdaySub = preAggregatedWeekdayForOfferingSubquery;
+    // 两阶段查询：先取该课程的所有 offering_id，让后续预聚合子查询
+    // 只扫描相关行（配合 offering_id 索引，避免全表聚合）。
+    final idRows = await db.customSelect(
+      'SELECT id FROM school_timetable_offerings WHERE term_course_id = ?',
+      variables: [Variable.withString(courseHeadId)],
+    ).get();
+    if (idRows.isEmpty) {
+      return const [];
+    }
+    final offeringIds = idRows.map((r) => _readString(r, 'id')).toList();
+    final instructorSub = preAggregatedInstructorAndTitleSubquery(offeringIds);
+    final scheduleSub = preAggregatedScheduleSummarySubquery(offeringIds);
+    final weekdaySub = preAggregatedWeekdayForOfferingSubquery(offeringIds);
+    final offeringIdVars = offeringIds.map(Variable.withString).toList();
     final rows = await db
         .customSelect(
           '''
           SELECT o.*,
                  cc.course_no, cc.course_name, cc.credits,
-                 COALESCE(a.grade, '') AS grade,
-                 COALESCE(a.major, '') AS major,
-                 COALESCE(a.plan_college, '') AS plan_college,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT grade)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS grade,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT major)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS major,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT plan_college)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS plan_college,
                  COALESCE(it.instructor, '') AS instructor,
                  COALESCE(it.title, '') AS title,
                  COALESCE(sa.schedule_summary, '') AS schedule_summary,
                  COALESCE(wa.weekday_summary, '') AS weekday_summary
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
-          LEFT JOIN (
-            SELECT offering_id,
-                   GROUP_CONCAT(DISTINCT grade) AS grade,
-                   GROUP_CONCAT(DISTINCT major) AS major,
-                   GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM school_timetable_audiences
-            GROUP BY offering_id
-          ) a ON a.offering_id = o.id
           LEFT JOIN ($instructorSub) it ON it.offering_id = o.id
           LEFT JOIN ($scheduleSub) sa ON sa.offering_id = o.id
           LEFT JOIN ($weekdaySub) wa ON wa.offering_id = o.id
-          WHERE o.term_course_id = ?
+          WHERE o.id IN (${List.filled(offeringIds.length, '?').join(',')})
           ORDER BY COALESCE(it.instructor, ''), o.teaching_class_name
           ''',
-          variables: [Variable.withString(courseHeadId)],
+          variables: [...offeringIdVars, ...offeringIdVars],
         )
         .get();
     return rows.map(_offeringFromRow).toList(growable: false);
@@ -353,31 +368,35 @@ class DriftAllSchoolTimetableRepository
     if (db == null) {
       return null;
     }
-    final instructorSub = preAggregatedInstructorAndTitleSubquery;
-    final scheduleSub = preAggregatedScheduleSummarySubquery;
-    final weekdaySub = preAggregatedWeekdayForOfferingSubquery;
+    final instructorSub = preAggregatedInstructorAndTitleSubquery([id]);
+    final scheduleSub = preAggregatedScheduleSummarySubquery([id]);
+    final weekdaySub = preAggregatedWeekdayForOfferingSubquery([id]);
     final row = await db
         .customSelect(
           '''
           SELECT o.*,
                  cc.course_no, cc.course_name, cc.credits,
-                 COALESCE(a.grade, '') AS grade,
-                 COALESCE(a.major, '') AS major,
-                 COALESCE(a.plan_college, '') AS plan_college,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT grade)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS grade,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT major)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS major,
+                 COALESCE(
+                   (SELECT GROUP_CONCAT(DISTINCT plan_college)
+                    FROM school_timetable_audiences
+                    WHERE offering_id = o.id), ''
+                 ) AS plan_college,
                  COALESCE(it.instructor, '') AS instructor,
                  COALESCE(it.title, '') AS title,
                  COALESCE(sa.schedule_summary, '') AS schedule_summary,
                  COALESCE(wa.weekday_summary, '') AS weekday_summary
           FROM school_timetable_offerings o
           JOIN school_timetable_courses cc ON cc.id = o.course_id
-          LEFT JOIN (
-            SELECT offering_id,
-                   GROUP_CONCAT(DISTINCT grade) AS grade,
-                   GROUP_CONCAT(DISTINCT major) AS major,
-                   GROUP_CONCAT(DISTINCT plan_college) AS plan_college
-            FROM school_timetable_audiences
-            GROUP BY offering_id
-          ) a ON a.offering_id = o.id
           LEFT JOIN ($instructorSub) it ON it.offering_id = o.id
           LEFT JOIN ($scheduleSub) sa ON sa.offering_id = o.id
           LEFT JOIN ($weekdaySub) wa ON wa.offering_id = o.id
@@ -717,6 +736,13 @@ class DriftAllSchoolTimetableRepository
 
   // ── 预聚合子查询片段（供 LEFT JOIN 使用，消除关联子查询的 N² 行为） ──
 
+  String _offeringIdInClause(List<String> offeringIds) {
+    if (offeringIds.length == 1) {
+      return "offering_id = '${offeringIds.single.replaceAll("'", "''")}'";
+    }
+    return 'offering_id IN (${offeringIds.map((id) => "'${id.replaceAll("'", "''")}'").join(', ')})';
+  }
+
   /// 按 offering_id 预聚合教师姓名（用于课程头搜索）。
   /// 返回可嵌入 LEFT JOIN 的子查询 SQL。
   String get preAggregatedTeacherSummarySubquery => '''
@@ -748,20 +774,21 @@ class DriftAllSchoolTimetableRepository
     GROUP BY offering_id
   ''';
 
-  /// 按 offering_id 预聚合主讲教师姓名与职称。
-  String get preAggregatedInstructorAndTitleSubquery => '''
+  /// 按 offering_id 预聚合主讲教师姓名与职称（限定到指定 offering 集合）。
+  String preAggregatedInstructorAndTitleSubquery(List<String> offeringIds) => '''
     SELECT ot_main.offering_id,
            MAX(t_main.name) AS instructor,
            MAX(ot_main.title) AS title
     FROM school_timetable_offering_teachers ot_main
     JOIN school_timetable_teachers t_main ON t_main.id = ot_main.teacher_id
-    WHERE ot_main.role = 'main' AND ot_main.ordinal = 0
+    WHERE ${_offeringIdInClause(offeringIds)}
+      AND ot_main.role = 'main' AND ot_main.ordinal = 0
     GROUP BY ot_main.offering_id
   ''';
 
-  /// 按 offering_id 预聚合课程时间表摘要。
+  /// 按 offering_id 预聚合课程时间表摘要（限定到指定 offering 集合）。
   /// 内层按 weekday + segment_index 排序，外层 GROUP_CONCAT 保持顺序。
-  String get preAggregatedScheduleSummarySubquery => '''
+  String preAggregatedScheduleSummarySubquery(List<String> offeringIds) => '''
     SELECT offering_id,
            GROUP_CONCAT(schedule_entry, '；') AS schedule_summary
     FROM (
@@ -770,21 +797,23 @@ class DriftAllSchoolTimetableRepository
                || COALESCE(' ' || NULLIF(location_text, ''), '') AS schedule_entry,
              weekday, segment_index
       FROM school_timetable_meetings
-      WHERE section_text != ''
+      WHERE ${_offeringIdInClause(offeringIds)}
+        AND section_text != ''
       ORDER BY offering_id, weekday, segment_index
       LIMIT -1 OFFSET 0
     )
     GROUP BY offering_id
   ''';
 
-  /// 按 offering_id 预聚合星期标签（用于教学班列表/详情）。
-  String get preAggregatedWeekdayForOfferingSubquery => '''
+  /// 按 offering_id 预聚合星期标签（限定到指定 offering 集合）。
+  String preAggregatedWeekdayForOfferingSubquery(List<String> offeringIds) => '''
     SELECT offering_id,
            GROUP_CONCAT(weekday_label, '、') AS weekday_summary
     FROM (
       SELECT offering_id, weekday, weekday_label
       FROM school_timetable_meetings
-      WHERE weekday_label != ''
+      WHERE ${_offeringIdInClause(offeringIds)}
+        AND weekday_label != ''
       GROUP BY offering_id, weekday, weekday_label
       ORDER BY offering_id, weekday
       LIMIT -1 OFFSET 0
