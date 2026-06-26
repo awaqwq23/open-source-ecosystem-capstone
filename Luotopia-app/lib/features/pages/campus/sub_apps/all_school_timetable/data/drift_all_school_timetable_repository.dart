@@ -164,7 +164,9 @@ class DriftAllSchoolTimetableRepository
     final keyword = query.keyword.trim();
     final teacherAgg = _teacherAggregateSelect();
     final weekdayAgg = _weekdayAggregateSelect();
-    final professionalClause = _professionalExistsClause(query);
+    final professional = _professionalExistsClause(query);
+    final professionalClause = professional.sql;
+    final professionalVariables = professional.variables;
 
     final rows = keyword.isNotEmpty
         ? await db.customSelect(
@@ -213,7 +215,11 @@ class DriftAllSchoolTimetableRepository
             cc.course_name ASC
           LIMIT 80
           ''',
-            variables: _courseSearchVariables(termKey: termKey, keyword: keyword),
+            variables: _courseSearchVariables(
+              termKey: termKey,
+              keyword: keyword,
+              professionalVariables: professionalVariables,
+            ),
           ).get()
         : await db
               .customSelect(
@@ -236,6 +242,7 @@ class DriftAllSchoolTimetableRepository
                   termKey: termKey,
                   keyword: keyword,
                   noKeyword: true,
+                  professionalVariables: professionalVariables,
                 ),
               )
               .get();
@@ -286,7 +293,7 @@ class DriftAllSchoolTimetableRepository
         .customSelect(
           '''
           SELECT o.*,
-                 cc.id AS course_id, cc.course_no, cc.course_name, cc.credits,
+                 cc.course_no, cc.course_name, cc.credits,
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college,
@@ -328,7 +335,7 @@ class DriftAllSchoolTimetableRepository
         .customSelect(
           '''
           SELECT o.*,
-                 cc.id AS course_id, cc.course_no, cc.course_name, cc.credits,
+                 cc.course_no, cc.course_name, cc.credits,
                  COALESCE(a.grade, '') AS grade,
                  COALESCE(a.major, '') AS major,
                  COALESCE(a.plan_college, '') AS plan_college,
@@ -469,7 +476,7 @@ class DriftAllSchoolTimetableRepository
       variables.add(Variable.withInt(sectionRange.start));
     }
     final rows = await db.customSelect('''
-          SELECT o.*, o.term_course_id AS term_course_id,
+          SELECT o.*,
                  m.id AS matched_meeting_id,
                  m.location_text AS matched_location_text,
                  $teacherAggregateMain AS instructor,
@@ -572,10 +579,12 @@ class DriftAllSchoolTimetableRepository
 
   /// 专业模式筛选：把课程头（GROUP BY 后的 term_course_id）限制到至少有一个教学班
   /// 满足开课学院/年级/专业/星期/楼栋条件。该子查询在主 GROUP BY 的 WHERE 上叠加，
-  /// 引用主查询的 o 表别名。
-  String _professionalExistsClause(AllSchoolTimetableQuery query) {
+  /// 引用主查询的 o 表别名。返回 SQL 片段与对应绑定变量，由调用方显式拼接。
+  ({String sql, List<Variable> variables}) _professionalExistsClause(
+    AllSchoolTimetableQuery query,
+  ) {
     if (!query.hasProfessionalFilters) {
-      return '';
+      return (sql: '', variables: const <Variable>[]);
     }
     final conditions = <String>[];
     final variables = <Variable>[];
@@ -598,14 +607,11 @@ class DriftAllSchoolTimetableRepository
     }
     addLike('mt.location_text', query.building);
     if (conditions.isEmpty) {
-      return '';
+      return (sql: '', variables: const <Variable>[]);
     }
 
-    // 把筛选变量塞进 _courseSearchVariables 末尾，主查询 WHERE 与 ORDER BY 的占位
-    // 都按 _courseSearchVariables 的顺序消费，故这里只返回 SQL 片段，变量另存于
-    // _professionalFilterVariables 供主查询变量列表追加。
-    _professionalFilterVariables = variables;
-    return '''
+    return (
+      sql: '''
       AND EXISTS (
         SELECT 1
         FROM school_timetable_offerings sub
@@ -614,10 +620,10 @@ class DriftAllSchoolTimetableRepository
         WHERE sub.term_course_id = o.term_course_id
           AND ${conditions.join(' AND ')}
       )
-    ''';
+    ''',
+      variables: variables,
+    );
   }
-
-  List<Variable> _professionalFilterVariables = const [];
 
   String _teacherAggregateSelect() {
     return '''
@@ -635,43 +641,51 @@ class DriftAllSchoolTimetableRepository
     return '''
       (SELECT GROUP_CONCAT(weekday_label, '、')
        FROM (
-         SELECT DISTINCT m.weekday_label
+         SELECT m.weekday_label
          FROM school_timetable_meetings m
          WHERE m.offering_id IN (SELECT id FROM school_timetable_offerings WHERE term_course_id = o.term_course_id)
            AND m.weekday_label != ''
+         GROUP BY m.weekday, m.weekday_label
+         ORDER BY m.weekday
        ))
     ''';
   }
 
   String get teacherAggregateMain => '''
-      (SELECT t.name
-       FROM school_timetable_offering_teachers ot
-       JOIN school_timetable_teachers t ON t.id = ot.teacher_id
-       WHERE ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+      (SELECT t_main.name
+       FROM school_timetable_offering_teachers ot_main
+       JOIN school_timetable_teachers t_main ON t_main.id = ot_main.teacher_id
+       WHERE ot_main.offering_id = o.id AND ot_main.role = 'main' AND ot_main.ordinal = 0
        LIMIT 1)
   ''';
 
   String get teacherAggregateMainTitle => '''
-      (SELECT ot.title
-       FROM school_timetable_offering_teachers ot
-       WHERE ot.offering_id = o.id AND ot.role = 'main' AND ot.ordinal = 0
+      (SELECT ot_main.title
+       FROM school_timetable_offering_teachers ot_main
+       WHERE ot_main.offering_id = o.id AND ot_main.role = 'main' AND ot_main.ordinal = 0
        LIMIT 1)
   ''';
 
   String get scheduleAggregateSelect => '''
-      (SELECT GROUP_CONCAT(m.weekday_label || ' ' || m.section_text || COALESCE(' ' || NULLIF(m.location_text, ''), ''), '；')
-       FROM school_timetable_meetings m
-       WHERE m.offering_id = o.id
-         AND m.section_text != '')
+      (SELECT GROUP_CONCAT(schedule_entry, '；')
+       FROM (
+         SELECT m.weekday_label || ' ' || m.section_text || COALESCE(' ' || NULLIF(m.location_text, ''), '') AS schedule_entry
+         FROM school_timetable_meetings m
+         WHERE m.offering_id = o.id
+           AND m.section_text != ''
+         ORDER BY m.weekday, m.segment_index
+       ))
   ''';
 
   String get weekdayAggregateForOffering => '''
       (SELECT GROUP_CONCAT(weekday_label, '、')
        FROM (
-         SELECT DISTINCT m.weekday_label
+         SELECT m.weekday_label
          FROM school_timetable_meetings m
          WHERE m.offering_id = o.id
            AND m.weekday_label != ''
+         GROUP BY m.weekday, m.weekday_label
+         ORDER BY m.weekday
        ))
   ''';
 
@@ -691,11 +705,12 @@ class DriftAllSchoolTimetableRepository
     required String termKey,
     required String keyword,
     bool noKeyword = false,
+    List<Variable> professionalVariables = const [],
   }) {
     if (noKeyword) {
       return [
         Variable.withString(termKey),
-        ..._professionalFilterVariables,
+        ...professionalVariables,
       ];
     }
     final containsPattern = _likePattern(keyword);
@@ -705,7 +720,7 @@ class DriftAllSchoolTimetableRepository
       Variable.withString(termKey),
       Variable.withString(_ftsQuery(keyword)),
       for (var i = 0; i < 7; i++) Variable.withString(containsPattern),
-      ..._professionalFilterVariables,
+      ...professionalVariables,
       Variable.withString(keyword),
       Variable.withString(keyword),
       Variable.withString(prefixPattern),
