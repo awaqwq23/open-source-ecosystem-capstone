@@ -246,6 +246,16 @@ class CourseHeadDetailQuery {
 
   final String termKey;
   final String id;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CourseHeadDetailQuery &&
+          other.termKey == termKey &&
+          other.id == id;
+
+  @override
+  int get hashCode => Object.hash(termKey, id);
 }
 
 final courseHeadDetailProvider =
@@ -283,6 +293,16 @@ class TeachingClassDetailQuery {
 
   final String termKey;
   final String id;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TeachingClassDetailQuery &&
+          other.termKey == termKey &&
+          other.id == id;
+
+  @override
+  int get hashCode => Object.hash(termKey, id);
 }
 
 final teachingClassDetailProvider =
