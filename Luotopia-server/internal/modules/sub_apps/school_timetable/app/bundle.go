@@ -44,7 +44,9 @@ func (s *Service) publishBundle(ctx context.Context, version int64, progress Pro
 	}
 	sum := sha256.Sum256(compressed)
 	checksum := "sha256:" + hex.EncodeToString(sum[:])
-	key := "school-timetable/datasets/v" + strconv.FormatInt(version, 10) + ".sqlite.gz"
+	// key 包含 checksum 前 8 位，确保内容变化时 key 不同，避免 CDN 缓存旧文件
+	checksumPrefix := hex.EncodeToString(sum[:4])
+	key := "school-timetable/datasets/v" + strconv.FormatInt(version, 10) + "-" + checksumPrefix + ".sqlite.gz"
 	if err := s.bundleStore.Put(ctx, storage.Object{
 		Key: key, ContentType: "application/gzip", Size: int64(len(compressed)),
 		Body: io.NopCloser(bytes.NewReader(compressed)),
