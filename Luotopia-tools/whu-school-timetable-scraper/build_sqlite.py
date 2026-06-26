@@ -290,7 +290,7 @@ def build_records(rows, term_key, overrides):
             source_rows.append(OrderedDict([
                 ("id", source_id), ("term_key", term_key), ("term_course_id", ""), ("offering_id", ""),
                 ("source_key", row.get("key", "")), ("package_index", idx + 1), ("status", "incomplete"),
-                ("fields", json.dumps(row, ensure_ascii=False)),
+                ("raw_fields_json", json.dumps(row, ensure_ascii=False)),
             ]))
             continue
         cid = course_id_of(row)
@@ -302,7 +302,7 @@ def build_records(rows, term_key, overrides):
         source_rows.append(OrderedDict([
             ("id", source_id), ("term_key", term_key), ("term_course_id", tc_id), ("offering_id", off_id),
             ("source_key", row.get("key", "")), ("package_index", idx + 1), ("status", "active"),
-            ("fields", json.dumps(row, ensure_ascii=False)),
+            ("raw_fields_json", json.dumps(row, ensure_ascii=False)),
         ]))
 
     courses = {}
@@ -511,7 +511,7 @@ def create_sqlite(db_path, records, manifest):
     ])
     insert_all("school_timetable_source_rows", records["source_rows"],
                ["id", "term_key", "term_course_id", "offering_id", "source_key", "package_index",
-                "status", "fields"])
+                "status", "raw_fields_json"])
 
     conn.commit()
     conn.close()

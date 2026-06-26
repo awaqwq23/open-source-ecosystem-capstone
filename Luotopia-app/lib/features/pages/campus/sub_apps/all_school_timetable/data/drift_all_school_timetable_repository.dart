@@ -192,7 +192,6 @@ class DriftAllSchoolTimetableRepository
               OR o.course_nature LIKE ? ESCAPE char(92)
               OR o.course_category LIKE ? ESCAPE char(92)
               OR o.teaching_class_name LIKE ? ESCAPE char(92)
-              OR o.search_text LIKE ? ESCAPE char(92)
             )
             $professionalClause
           GROUP BY o.term_course_id
@@ -207,8 +206,7 @@ class DriftAllSchoolTimetableRepository
                 OR o.open_college LIKE ? ESCAPE char(92)
                 OR o.course_nature LIKE ? ESCAPE char(92)
                 OR o.course_category LIKE ? ESCAPE char(92)
-                OR o.teaching_class_name LIKE ? ESCAPE char(92)
-                OR o.search_text LIKE ? ESCAPE char(92) THEN 2
+                OR o.teaching_class_name LIKE ? ESCAPE char(92) THEN 2
               ELSE 3
             END,
             teaching_class_count DESC,
@@ -623,23 +621,25 @@ class DriftAllSchoolTimetableRepository
 
   String _teacherAggregateSelect() {
     return '''
-      (SELECT GROUP_CONCAT(t.name, '、')
+      (SELECT GROUP_CONCAT(name, '、')
        FROM (
-         SELECT DISTINCT ot_inner.teacher_id, t_inner.name
+         SELECT DISTINCT t_inner.name
          FROM school_timetable_offering_teachers ot_inner
          JOIN school_timetable_teachers t_inner ON t_inner.id = ot_inner.teacher_id
          WHERE ot_inner.offering_id = o.id
-       ) joined
-       JOIN school_timetable_teachers t ON t.id = joined.teacher_id)
+       ))
     ''';
   }
 
   String _weekdayAggregateSelect() {
     return '''
-      (SELECT GROUP_CONCAT(DISTINCT m.weekday_label, '、')
-       FROM school_timetable_meetings m
-       WHERE m.offering_id IN (SELECT id FROM school_timetable_offerings WHERE term_course_id = o.term_course_id)
-         AND m.weekday_label != '')
+      (SELECT GROUP_CONCAT(weekday_label, '、')
+       FROM (
+         SELECT DISTINCT m.weekday_label
+         FROM school_timetable_meetings m
+         WHERE m.offering_id IN (SELECT id FROM school_timetable_offerings WHERE term_course_id = o.term_course_id)
+           AND m.weekday_label != ''
+       ))
     ''';
   }
 
@@ -666,10 +666,13 @@ class DriftAllSchoolTimetableRepository
   ''';
 
   String get weekdayAggregateForOffering => '''
-      (SELECT GROUP_CONCAT(DISTINCT m.weekday_label, '、')
-       FROM school_timetable_meetings m
-       WHERE m.offering_id = o.id
-         AND m.weekday_label != '')
+      (SELECT GROUP_CONCAT(weekday_label, '、')
+       FROM (
+         SELECT DISTINCT m.weekday_label
+         FROM school_timetable_meetings m
+         WHERE m.offering_id = o.id
+           AND m.weekday_label != ''
+       ))
   ''';
 
   String _ftsQuery(String keyword) {
@@ -701,13 +704,13 @@ class DriftAllSchoolTimetableRepository
       Variable.withString(termKey),
       Variable.withString(termKey),
       Variable.withString(_ftsQuery(keyword)),
-      for (var i = 0; i < 8; i++) Variable.withString(containsPattern),
+      for (var i = 0; i < 7; i++) Variable.withString(containsPattern),
       ..._professionalFilterVariables,
       Variable.withString(keyword),
       Variable.withString(keyword),
       Variable.withString(prefixPattern),
       Variable.withString(prefixPattern),
-      for (var i = 0; i < 8; i++) Variable.withString(containsPattern),
+      for (var i = 0; i < 7; i++) Variable.withString(containsPattern),
     ];
   }
 

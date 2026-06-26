@@ -537,12 +537,6 @@ func isSharedSchoolTimetableEntity(entityType string) bool {
 	return entityType == "course" || entityType == "teacher"
 }
 
-// isNonSyncSchoolTimetableEntity 标记仅服务端留档、不下发客户端的实体（目前为 source_row）：
-// 不进客户端 bundle，也不出现在下发给客户端的 changes 流里。
-func isNonSyncSchoolTimetableEntity(entityType string) bool {
-	return entityType == "source_row"
-}
-
 type Records struct {
 	Courses          []domain.Course
 	Teachers         []domain.Teacher
