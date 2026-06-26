@@ -161,7 +161,7 @@ func insertBundleEntity(ctx context.Context, db *sql.DB, entity domain.EntityRec
 			return err
 		}
 		_, err := db.ExecContext(ctx, `INSERT OR REPLACE INTO school_timetable_terms VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			entity.EntityID, p.SchoolYear, p.Term, p.SchoolYearCode, p.TermCode, p.FirstWeekMonday, strconv.FormatInt(entity.UpdatedVersion, 10), p.RowCount, time.Now().UnixMilli(), time.Now().UnixMilli())
+			entity.EntityID, p.SchoolYear, p.Term, p.SchoolYearCode, p.TermCode, p.FirstWeekMonday, strconv.FormatInt(entity.UpdatedVersion, 10), p.RowCount, entity.UpdatedAt.UnixMilli(), entity.UpdatedAt.UnixMilli())
 		return err
 	default:
 		return insertBundlePayload(ctx, db, entity)

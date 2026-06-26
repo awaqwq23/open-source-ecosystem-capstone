@@ -289,7 +289,7 @@ func (m entityModel) toDomain() domain.EntityRecord {
 	return domain.EntityRecord{
 		EntityType: m.EntityType, EntityID: m.EntityID, TermKey: m.TermKey,
 		Payload: []byte(m.PayloadJSON), PayloadChecksum: m.PayloadChecksum,
-		UpdatedVersion: m.UpdatedVersion,
+		UpdatedVersion: m.UpdatedVersion, UpdatedAt: m.UpdatedAt,
 	}
 }
 

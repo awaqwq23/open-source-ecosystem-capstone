@@ -228,6 +228,7 @@ type EntityRecord struct {
 	Payload         json.RawMessage `json:"payload"`
 	PayloadChecksum string          `json:"payload_checksum"`
 	UpdatedVersion  int64           `json:"updated_version"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 type EntityChange struct {
