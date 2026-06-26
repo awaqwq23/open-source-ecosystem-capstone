@@ -353,7 +353,7 @@ class DriftAllSchoolTimetableRepository
           WHERE o.id IN (${List.filled(offeringIds.length, '?').join(',')})
           ORDER BY COALESCE(it.instructor, ''), o.teaching_class_name
           ''',
-          variables: [...offeringIdVars, ...offeringIdVars],
+          variables: offeringIdVars,
         )
         .get();
     return rows.map(_offeringFromRow).toList(growable: false);
