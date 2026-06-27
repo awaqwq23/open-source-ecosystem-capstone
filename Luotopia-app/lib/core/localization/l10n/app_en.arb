@@ -42,6 +42,15 @@
   "homeGridModeTime": "Time grid",
   "homeGridModeCourse": "Course grid",
   "settingsHomeWideLayout": "Ultra-wide default range",
+  "settingsHomeFirstDayOfWeek": "First day of week",
+  "firstDayMonday": "Monday",
+  "firstDayTuesday": "Tuesday",
+  "firstDayWednesday": "Wednesday",
+  "firstDayThursday": "Thursday",
+  "firstDayFriday": "Friday",
+  "firstDaySaturday": "Saturday",
+  "firstDaySunday": "Sunday",
+  "firstDayToday": "Today (auto)",
   "@settingsMinutesValue": {
     "placeholders": {
       "value": {

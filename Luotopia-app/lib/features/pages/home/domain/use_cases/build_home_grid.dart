@@ -17,7 +17,7 @@ class BuildHomeGridUseCase {
     required HomeSettings settings,
     required List<HomeLaidOutItem> items,
   }) {
-    final visibleRange = visibleDateRange(anchor, scope);
+    final visibleRange = visibleDateRange(anchor, scope, settings.firstDayOfWeek);
     final periodSelection = HomePeriodSelection(
       anchor: visibleRange.start,
       scope: scope,
@@ -56,7 +56,7 @@ class BuildHomeGridUseCase {
     );
   }
 
-  DateTimeRangeValue visibleDateRange(DateTime anchor, HomeDisplayScope scope) {
+  DateTimeRangeValue visibleDateRange(DateTime anchor, HomeDisplayScope scope, [FirstDayOfWeek firstDayOfWeek = FirstDayOfWeek.monday]) {
     if (scope == HomeDisplayScope.month) {
       final start = DateTime(anchor.year, anchor.month, 1);
       return DateTimeRangeValue(
@@ -65,7 +65,16 @@ class BuildHomeGridUseCase {
       );
     }
 
-    final weekdayOffset = anchor.weekday - DateTime.monday;
+    if (firstDayOfWeek == FirstDayOfWeek.today) {
+      final start = DateUtils.dateOnly(anchor);
+      return DateTimeRangeValue(
+        start: start,
+        end: start.add(const Duration(days: 7)),
+      );
+    }
+
+    final firstWeekday = firstDayOfWeek.weekdayValue!;
+    final weekdayOffset = (anchor.weekday - firstWeekday + 7) % 7;
     final start = DateUtils.dateOnly(
       anchor,
     ).subtract(Duration(days: weekdayOffset));

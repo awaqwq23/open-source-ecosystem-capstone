@@ -144,6 +144,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHomeWideLayout => 'Ultra-wide default range';
 
   @override
+  String get settingsHomeFirstDayOfWeek => 'First day of week';
+
+  @override
+  String get firstDayMonday => 'Monday';
+
+  @override
+  String get firstDayTuesday => 'Tuesday';
+
+  @override
+  String get firstDayWednesday => 'Wednesday';
+
+  @override
+  String get firstDayThursday => 'Thursday';
+
+  @override
+  String get firstDayFriday => 'Friday';
+
+  @override
+  String get firstDaySaturday => 'Saturday';
+
+  @override
+  String get firstDaySunday => 'Sunday';
+
+  @override
+  String get firstDayToday => 'Today (auto)';
+
+  @override
   String settingsMinutesValue(int value) {
     return '$value min';
   }

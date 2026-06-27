@@ -350,6 +350,60 @@ abstract class AppLocalizations {
   /// **'Ultra-wide default range'**
   String get settingsHomeWideLayout;
 
+  /// No description provided for @settingsHomeFirstDayOfWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'First day of week'**
+  String get settingsHomeFirstDayOfWeek;
+
+  /// No description provided for @firstDayMonday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get firstDayMonday;
+
+  /// No description provided for @firstDayTuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get firstDayTuesday;
+
+  /// No description provided for @firstDayWednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get firstDayWednesday;
+
+  /// No description provided for @firstDayThursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get firstDayThursday;
+
+  /// No description provided for @firstDayFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get firstDayFriday;
+
+  /// No description provided for @firstDaySaturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get firstDaySaturday;
+
+  /// No description provided for @firstDaySunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get firstDaySunday;
+
+  /// No description provided for @firstDayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today (auto)'**
+  String get firstDayToday;
+
   /// No description provided for @settingsMinutesValue.
   ///
   /// In en, this message translates to:

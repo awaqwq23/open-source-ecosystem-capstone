@@ -63,6 +63,7 @@ class RiverpodSettingsRepository implements SettingsRepository {
         'wideLayoutScope': settings.wideLayoutScope.name,
         'gridMode': settings.gridMode.name,
         'itemOpacityPercent': settings.itemOpacityPercent,
+        'firstDayOfWeek': settings.firstDayOfWeek.name,
       }),
     );
   }

@@ -118,7 +118,8 @@ class HomeHeaderViewModel extends Notifier<HomeHeaderState> {
     DateTime? fallbackSelectedDate,
   }) {
     final normalizedAnchor = DateUtils.dateOnly(anchor);
-    final visibleRange = _gridBuilder.visibleDateRange(normalizedAnchor, scope);
+    final firstDay = ref.read(appHomeSettingsProvider).firstDayOfWeek;
+    final visibleRange = _gridBuilder.visibleDateRange(normalizedAnchor, scope, firstDay);
     final selectedDate = state.selectedDate == null
         ? fallbackSelectedDate
         : _normalizeSelectionWithinRange(

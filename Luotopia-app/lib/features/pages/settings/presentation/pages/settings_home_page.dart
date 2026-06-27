@@ -106,6 +106,30 @@ class SettingsHomePage extends ConsumerWidget {
               ),
             ),
             SettingsFlatTile(
+              title: context.l10n.settingsHomeFirstDayOfWeek,
+              leading: const Icon(Icons.calendar_view_week),
+              trailing: DropdownButtonHideUnderline(
+                child: DropdownButton<FirstDayOfWeek>(
+                  value: settings.firstDayOfWeek,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _saveHomeSettings(
+                        ref,
+                        settings.copyWith(firstDayOfWeek: value),
+                      );
+                    }
+                  },
+                  items: [
+                    for (final day in FirstDayOfWeek.values)
+                      DropdownMenuItem(
+                        value: day,
+                        child: Text(_firstDayLabel(context, day)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            SettingsFlatTile(
               title: context.l10n.settingsHomeDayStart,
               subtitle: MaterialLocalizations.of(
                 context,
@@ -125,6 +149,20 @@ class SettingsHomePage extends ConsumerWidget {
     return ref
         .read(settingsViewModelProvider.notifier)
         .saveHomeSettings(settings);
+  }
+
+  String _firstDayLabel(BuildContext context, FirstDayOfWeek day) {
+    final l10n = context.l10n;
+    return switch (day) {
+      FirstDayOfWeek.monday => l10n.firstDayMonday,
+      FirstDayOfWeek.tuesday => l10n.firstDayTuesday,
+      FirstDayOfWeek.wednesday => l10n.firstDayWednesday,
+      FirstDayOfWeek.thursday => l10n.firstDayThursday,
+      FirstDayOfWeek.friday => l10n.firstDayFriday,
+      FirstDayOfWeek.saturday => l10n.firstDaySaturday,
+      FirstDayOfWeek.sunday => l10n.firstDaySunday,
+      FirstDayOfWeek.today => l10n.firstDayToday,
+    };
   }
 }
 

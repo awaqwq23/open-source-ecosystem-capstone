@@ -104,6 +104,16 @@ class AppBootstrapLoader {
           0,
           100,
         ),
+        firstDayOfWeek: switch (json['firstDayOfWeek'] as String?) {
+          'tuesday' => FirstDayOfWeek.tuesday,
+          'wednesday' => FirstDayOfWeek.wednesday,
+          'thursday' => FirstDayOfWeek.thursday,
+          'friday' => FirstDayOfWeek.friday,
+          'saturday' => FirstDayOfWeek.saturday,
+          'sunday' => FirstDayOfWeek.sunday,
+          'today' => FirstDayOfWeek.today,
+          _ => FirstDayOfWeek.monday,
+        },
       );
     } catch (_) {
       return const HomeSettings.defaults();

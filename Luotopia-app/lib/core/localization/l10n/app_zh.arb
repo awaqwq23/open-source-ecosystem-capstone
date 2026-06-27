@@ -42,6 +42,15 @@
   "homeGridModeTime": "时间方格",
   "homeGridModeCourse": "课程方格",
   "settingsHomeWideLayout": "超宽屏默认范围",
+  "settingsHomeFirstDayOfWeek": "每周首日",
+  "firstDayMonday": "周一",
+  "firstDayTuesday": "周二",
+  "firstDayWednesday": "周三",
+  "firstDayThursday": "周四",
+  "firstDayFriday": "周五",
+  "firstDaySaturday": "周六",
+  "firstDaySunday": "周日",
+  "firstDayToday": "本日（跟随今天）",
   "@settingsMinutesValue": {
     "placeholders": {
       "value": {

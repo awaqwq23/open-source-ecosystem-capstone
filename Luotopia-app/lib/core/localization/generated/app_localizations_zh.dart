@@ -135,6 +135,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHomeWideLayout => '超宽屏默认范围';
 
   @override
+  String get settingsHomeFirstDayOfWeek => '每周首日';
+
+  @override
+  String get firstDayMonday => '周一';
+
+  @override
+  String get firstDayTuesday => '周二';
+
+  @override
+  String get firstDayWednesday => '周三';
+
+  @override
+  String get firstDayThursday => '周四';
+
+  @override
+  String get firstDayFriday => '周五';
+
+  @override
+  String get firstDaySaturday => '周六';
+
+  @override
+  String get firstDaySunday => '周日';
+
+  @override
+  String get firstDayToday => '本日（跟随今天）';
+
+  @override
   String settingsMinutesValue(int value) {
     return '$value 分钟';
   }

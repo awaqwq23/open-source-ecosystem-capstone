@@ -10,6 +10,30 @@ enum HomeGridMode {
   courseGrid,
 }
 
+enum FirstDayOfWeek {
+  monday,
+  tuesday,
+  wednesday,
+  thursday,
+  friday,
+  saturday,
+  sunday,
+  today,
+}
+
+extension FirstDayOfWeekX on FirstDayOfWeek {
+  int? get weekdayValue => switch (this) {
+    FirstDayOfWeek.monday => DateTime.monday,
+    FirstDayOfWeek.tuesday => DateTime.tuesday,
+    FirstDayOfWeek.wednesday => DateTime.wednesday,
+    FirstDayOfWeek.thursday => DateTime.thursday,
+    FirstDayOfWeek.friday => DateTime.friday,
+    FirstDayOfWeek.saturday => DateTime.saturday,
+    FirstDayOfWeek.sunday => DateTime.sunday,
+    FirstDayOfWeek.today => null,
+  };
+}
+
 @immutable
 class HomeSettings {
   const HomeSettings({
@@ -20,6 +44,7 @@ class HomeSettings {
     required this.wideLayoutScope,
     required this.gridMode,
     required this.itemOpacityPercent,
+    required this.firstDayOfWeek,
   });
 
   const HomeSettings.defaults()
@@ -29,7 +54,8 @@ class HomeSettings {
         blockCount = 12,
         wideLayoutScope = HomeWideLayoutScope.month,
         gridMode = HomeGridMode.courseGrid,
-        itemOpacityPercent = 25;
+        itemOpacityPercent = 25,
+        firstDayOfWeek = FirstDayOfWeek.monday;
 
   final TimeOfDay dayStartTime;
   final int blockDurationMinutes;
@@ -38,6 +64,7 @@ class HomeSettings {
   final HomeWideLayoutScope wideLayoutScope;
   final HomeGridMode gridMode;
   final int itemOpacityPercent;
+  final FirstDayOfWeek firstDayOfWeek;
 
   HomeSettings copyWith({
     TimeOfDay? dayStartTime,
@@ -47,6 +74,7 @@ class HomeSettings {
     HomeWideLayoutScope? wideLayoutScope,
     HomeGridMode? gridMode,
     int? itemOpacityPercent,
+    FirstDayOfWeek? firstDayOfWeek,
   }) {
     return HomeSettings(
       dayStartTime: dayStartTime ?? this.dayStartTime,
@@ -56,6 +84,7 @@ class HomeSettings {
       wideLayoutScope: wideLayoutScope ?? this.wideLayoutScope,
       gridMode: gridMode ?? this.gridMode,
       itemOpacityPercent: itemOpacityPercent ?? this.itemOpacityPercent,
+      firstDayOfWeek: firstDayOfWeek ?? this.firstDayOfWeek,
     );
   }
 }
