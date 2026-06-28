@@ -74,8 +74,5 @@ app.*.map.json
 /my-docs/*
 /docs/*
 /.tmp/*
-行数统计.ps1
-/deploy-dev.ps1
-/deploy-dev.ps1.orig
-/deploy-docker.ps1
+/cmd/*
 /Luotopia-tools/whu-school-timetable-scraper/output/*
