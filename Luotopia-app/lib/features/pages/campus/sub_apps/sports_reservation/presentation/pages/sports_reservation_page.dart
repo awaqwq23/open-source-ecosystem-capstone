@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
-import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/data/sports_reservation_data.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/domain/sports_reservation_domain.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/pages/sports_reservation_order_webview_page.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/presentation/viewmodels/sports_reservation_view_model.dart';
@@ -77,19 +76,23 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
       return true;
     }
 
-    final session = await context.push<SportsReservationSession>(
-      AppRoutePaths.campusSportsReservationSession,
-    );
-    if (!mounted) {
-      return false;
-    }
-    if (session == null) {
+    try {
+      final session = await ref
+          .read(sportsReservationAuthServiceProvider)
+          .createSession();
+      if (!mounted) {
+        return false;
+      }
+      viewModel.useSession(session);
+      return true;
+    } catch (error) {
+      if (!mounted) {
+        return false;
+      }
       viewModel.clearGymSession();
-      _showMessage('未完成场馆系统授权。');
+      _showMessage('场馆系统授权失败，请稍后重试。');
       return false;
     }
-    viewModel.useSession(session);
-    return true;
   }
 
   Future<void> _loadInitial({bool forceGymSession = false}) async {

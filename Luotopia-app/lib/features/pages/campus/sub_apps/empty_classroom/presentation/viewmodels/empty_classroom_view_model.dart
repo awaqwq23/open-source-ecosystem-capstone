@@ -44,7 +44,7 @@ class EmptyClassroomState {
   List<Building> get buildings => selectedCampus?.buildings ?? const [];
 
   List<String> get weeks {
-    final maxWeek = int.tryParse(termInfo?.maxWeek ?? '') ?? 18;
+    final maxWeek = int.tryParse(termInfo?.maxWeek ?? '') ?? 20;
     return List.generate(maxWeek, (index) => '${index + 1}');
   }
 
@@ -134,15 +134,36 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
     if (state.isInitialLoading) {
       return;
     }
-    state = state.copyWith(isInitialLoading: true, clearErrorMessage: true);
 
+    // 同步阶段：读取本地缓存，立即展示 UI
+    final savedFilters = ref
+        .read(emptyClassroomFilterPreferencesProvider)
+        .read();
+    if (savedFilters != null) {
+      state = state.copyWith(
+        selectedCampus: savedFilters.campus != null
+            ? CampusBuilding(campus: savedFilters.campus!, buildings: const [])
+            : null,
+        selectedBuilding: savedFilters.building != null
+            ? Building(
+                code: '',
+                name: savedFilters.building!,
+                campus: savedFilters.campus ?? '',
+              )
+            : null,
+        selectedWeek: savedFilters.week ?? '',
+        selectedWeekDay: savedFilters.weekDay ?? '',
+        hasLoadedInitialData: true,
+        clearErrorMessage: true,
+      );
+    }
+
+    // 异步阶段：加载远程筛选选项
+    state = state.copyWith(isInitialLoading: true, clearErrorMessage: true);
     try {
       final filters = await ref
           .read(emptyClassroomRepositoryProvider)
           .loadFilters();
-      final savedFilters = ref
-          .read(emptyClassroomFilterPreferencesProvider)
-          .read();
       final selectedCampus = _savedCampus(
         filters.campuses,
         savedFilters?.campus,

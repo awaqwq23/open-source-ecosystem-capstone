@@ -441,10 +441,6 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
       return EmptyClassroomLoginRequiredView(onLogin: _openLogin);
     }
 
-    if (state.isInitialLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     if (state.hasInitialError && state.errorMessage != null) {
       final authExpired =
           state.errorCode == EmptyClassroomExceptionCode.authExpired;
@@ -455,10 +451,6 @@ class _EmptyClassroomPageState extends ConsumerState<EmptyClassroomPage> {
             : l10n.emptyClassroomRetry,
         onRetry: authExpired ? _openLogin : notifier.loadInitialData,
       );
-    }
-
-    if (!state.hasLoadedInitialData) {
-      return const Center(child: CircularProgressIndicator());
     }
 
     return ListView(
