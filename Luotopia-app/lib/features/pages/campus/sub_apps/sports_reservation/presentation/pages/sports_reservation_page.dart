@@ -228,12 +228,6 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
       );
     }
 
-    if (state.status == SportsReservationViewStatus.loading &&
-        state.projects.isEmpty &&
-        state.venues.isEmpty) {
-      return const _LoadingView();
-    }
-
     if (state.errorMessage != null &&
         state.projects.isEmpty &&
         state.venues.isEmpty) {
@@ -1482,15 +1476,6 @@ class _EmptyAvailabilityView extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _LoadingView extends StatelessWidget {
-  const _LoadingView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
   }
 }
 

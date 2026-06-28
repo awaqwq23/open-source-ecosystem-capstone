@@ -185,37 +185,42 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadScores,
-      child: _isLoading && _allScores.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildSemesterSelector(colors),
-                const SizedBox(height: 16),
-                _buildSummaryCard(colors),
-                const SizedBox(height: 16),
-                if (_filteredScores.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Text(
-                        '该学期暂无成绩数据',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  ..._filteredScores.map(
-                    (s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildScoreCard(s, colors),
-                    ),
+      onRefresh: () => _isLoading ? Future.value() : _loadScores(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildSemesterSelector(colors),
+          if (!_isLoading || _allScores.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildSummaryCard(colors),
+            const SizedBox(height: 16),
+          ],
+          if (_isLoading && _allScores.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_filteredScores.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  '该学期暂无成绩数据',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
                   ),
-              ],
+                ),
+              ),
+            )
+          else
+            ..._filteredScores.map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildScoreCard(s, colors),
+              ),
             ),
+        ],
+      ),
     );
   }
 
