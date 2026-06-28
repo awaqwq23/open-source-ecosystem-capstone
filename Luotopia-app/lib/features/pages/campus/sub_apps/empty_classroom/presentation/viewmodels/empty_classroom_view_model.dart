@@ -135,35 +135,43 @@ class EmptyClassroomViewModel extends Notifier<EmptyClassroomState> {
       return;
     }
 
-    // 同步阶段：读取本地缓存，立即展示 UI
+    final repository = ref.read(emptyClassroomRepositoryProvider);
     final savedFilters = ref
         .read(emptyClassroomFilterPreferencesProvider)
         .read();
-    if (savedFilters != null) {
+
+    // 同步阶段：读取持久缓存，立即展示 UI
+    final cachedFilters = repository.getCachedFilters();
+    if (cachedFilters != null) {
+      final selectedCampus = _savedCampus(
+        cachedFilters.campuses,
+        savedFilters?.campus,
+      );
+      final selectedBuilding = _savedBuilding(
+        selectedCampus,
+        savedFilters?.building,
+      );
+      final normalizedSelectedBuilding =
+          selectedBuilding ?? _firstBuilding(selectedCampus);
       state = state.copyWith(
-        selectedCampus: savedFilters.campus != null
-            ? CampusBuilding(campus: savedFilters.campus!, buildings: const [])
-            : null,
-        selectedBuilding: savedFilters.building != null
-            ? Building(
-                code: '',
-                name: savedFilters.building!,
-                campus: savedFilters.campus ?? '',
-              )
-            : null,
-        selectedWeek: savedFilters.week ?? '',
-        selectedWeekDay: savedFilters.weekDay ?? '',
+        termInfo: cachedFilters.termInfo,
+        campuses: cachedFilters.campuses,
+        selectedCampus: selectedCampus,
+        selectedBuilding: normalizedSelectedBuilding,
+        selectedWeek: _savedWeek(savedFilters?.week, cachedFilters.termInfo),
+        selectedWeekDay: _savedWeekDay(
+          savedFilters?.weekDay,
+          cachedFilters.termInfo,
+        ),
         hasLoadedInitialData: true,
         clearErrorMessage: true,
       );
     }
 
-    // 异步阶段：加载远程筛选选项
+    // 异步阶段：从网络加载最新筛选选项（stale-while-revalidate）
     state = state.copyWith(isInitialLoading: true, clearErrorMessage: true);
     try {
-      final filters = await ref
-          .read(emptyClassroomRepositoryProvider)
-          .loadFilters();
+      final filters = await repository.loadFilters();
       final selectedCampus = _savedCampus(
         filters.campuses,
         savedFilters?.campus,

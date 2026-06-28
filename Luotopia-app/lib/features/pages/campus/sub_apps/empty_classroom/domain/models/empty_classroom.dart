@@ -18,12 +18,23 @@ class TermInfo {
   factory TermInfo.fromJson(Map<String, dynamic> json) {
     return TermInfo(
       weekDay: '${json['weekDay'] ?? ''}',
-      termCode: json['xqm'] as String? ?? '',
-      schoolYear: json['xnmc'] as String? ?? '',
-      currentWeek: '${json['dqzc'] ?? ''}',
-      maxWeek: '${json['zdzc'] ?? ''}',
-      termName: '${json['xqmc'] ?? ''}',
+      termCode: json['termCode'] as String? ?? json['xqm'] as String? ?? '',
+      schoolYear: json['schoolYear'] as String? ?? json['xnmc'] as String? ?? '',
+      currentWeek: json['currentWeek'] as String? ?? json['dqzc']?.toString() ?? '',
+      maxWeek: json['maxWeek'] as String? ?? json['zdzc']?.toString() ?? '',
+      termName: json['termName'] as String? ?? json['xqmc'] as String? ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'weekDay': weekDay,
+      'termCode': termCode,
+      'schoolYear': schoolYear,
+      'currentWeek': currentWeek,
+      'maxWeek': maxWeek,
+      'termName': termName,
+    };
   }
 }
 
@@ -40,10 +51,14 @@ class Building {
 
   factory Building.fromJson(Map<String, dynamic> json) {
     return Building(
-      code: json['jxldm'] as String? ?? '',
-      name: json['jxlmc'] as String? ?? '',
-      campus: json['xqmc'] as String? ?? '',
+      code: json['code'] as String? ?? json['jxldm'] as String? ?? '',
+      name: json['name'] as String? ?? json['jxlmc'] as String? ?? '',
+      campus: json['campus'] as String? ?? json['xqmc'] as String? ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'code': code, 'name': name, 'campus': campus};
   }
 }
 
@@ -54,9 +69,9 @@ class CampusBuilding {
   final List<Building> buildings;
 
   factory CampusBuilding.fromJson(Map<String, dynamic> json) {
-    final rawFloors = json['floors'];
-    final buildings = rawFloors is List
-        ? rawFloors
+    final rawBuildings = json['buildings'] ?? json['floors'];
+    final buildings = rawBuildings is List
+        ? rawBuildings
               .whereType<Map<String, dynamic>>()
               .map(Building.fromJson)
               .toList()
@@ -65,6 +80,13 @@ class CampusBuilding {
       campus: json['campus'] as String? ?? '',
       buildings: buildings,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'campus': campus,
+      'buildings': buildings.map((b) => b.toJson()).toList(),
+    };
   }
 }
 

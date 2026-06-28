@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/data/sports_reservation_data.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/sports_reservation/domain/sports_reservation_domain.dart';
@@ -80,15 +82,46 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
       return;
     }
 
-    state = state.copyWith(
-      status: SportsReservationViewStatus.loading,
-      availability: const [],
-      areaAvailability: const [],
-      clearSelectedAvailability: true,
-      clearSelectedWindow: true,
-      clearError: true,
-      clearSubmitError: true,
-    );
+    // 缓存优先：若有持久缓存则立即展示筛选器
+    final cache = ref.read(sportsReservationCacheProvider);
+    final cachedTypes = cache.readSportsTypes();
+    final cachedVenues = cache.readVenues();
+    final hasCachedData = cachedTypes != null &&
+        cachedTypes.isNotEmpty &&
+        cachedVenues != null &&
+        cachedVenues.isNotEmpty;
+
+    if (hasCachedData) {
+      final selectedProject = _selectProjectFrom(
+        cachedTypes,
+        state.selectedProject,
+      );
+      final selectedVenue = _selectVenueFrom(
+        cachedVenues,
+        state.selectedVenue,
+      );
+      state = state.copyWith(
+        status: SportsReservationViewStatus.refreshing,
+        projects: cachedTypes,
+        venues: cachedVenues,
+        selectedProject: selectedProject,
+        selectedVenue: selectedVenue,
+        clearSelectedProject: selectedProject == null,
+        clearSelectedVenue: selectedVenue == null,
+        clearError: true,
+        clearSubmitError: true,
+      );
+    } else {
+      state = state.copyWith(
+        status: SportsReservationViewStatus.loading,
+        availability: const [],
+        areaAvailability: const [],
+        clearSelectedAvailability: true,
+        clearSelectedWindow: true,
+        clearError: true,
+        clearSubmitError: true,
+      );
+    }
 
     try {
       final service = await _ensureService(force: forceSession);
@@ -102,6 +135,11 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
 
       final projects = results[0] as List<SportsProject>;
       final venues = results[1] as List<SportsVenue>;
+
+      // 网络成功后写缓存（不等待）
+      unawaited(cache.writeSportsTypes(projects));
+      unawaited(cache.writeVenues(venues));
+
       final selectedProject = _selectProjectFrom(
         projects,
         state.selectedProject,

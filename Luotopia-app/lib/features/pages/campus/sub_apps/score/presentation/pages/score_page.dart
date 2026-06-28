@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
+import 'package:luotopia/features/pages/campus/sub_apps/score/data/score_cache.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/data/whu_score_service.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/score/domain/models/score_entity.dart';
 import 'package:luotopia/features/whu_auth/domain/models/whu_auth_state.dart';
@@ -40,6 +41,19 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       return;
     }
 
+    // 缓存优先：若有持久缓存则立即展示
+    final cachedScores = ref.read(scoreCacheProvider).read();
+    if (cachedScores != null && cachedScores.isNotEmpty && _allScores.isEmpty) {
+      final sorted = List<ScoreEntity>.from(cachedScores);
+      final termGroups = _computeTermGroups(sorted);
+      setState(() {
+        _allScores = sorted;
+        _cachedTermGroups = termGroups;
+        _filteredScoresCacheValid = false;
+        _selectedTermKey ??= termGroups.isNotEmpty ? termGroups.first : null;
+      });
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -67,6 +81,10 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       if (!mounted) {
         return;
       }
+
+      // 网络成功后写缓存
+      ref.read(scoreCacheProvider).write(sorted);
+
       final termGroups = _computeTermGroups(sorted);
       setState(() {
         _allScores = sorted;
@@ -81,7 +99,7 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = _allScores.isEmpty ? e.toString() : null;
       });
     }
   }

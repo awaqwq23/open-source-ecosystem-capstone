@@ -5,6 +5,28 @@ class EmptyClassroomFilters {
 
   final TermInfo termInfo;
   final List<CampusBuilding> campuses;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'termInfo': termInfo.toJson(),
+      'campuses': campuses.map((c) => c.toJson()).toList(),
+    };
+  }
+
+  factory EmptyClassroomFilters.fromJson(Map<String, dynamic> json) {
+    final rawCampuses = json['campuses'];
+    return EmptyClassroomFilters(
+      termInfo: TermInfo.fromJson(
+        (json['termInfo'] as Map<String, dynamic>?) ?? {},
+      ),
+      campuses: rawCampuses is List
+          ? rawCampuses
+                .whereType<Map<String, dynamic>>()
+                .map(CampusBuilding.fromJson)
+                .toList()
+          : const [],
+    );
+  }
 }
 
 class EmptyClassroomQuery {
@@ -26,6 +48,7 @@ class EmptyClassroomQuery {
 }
 
 abstract class EmptyClassroomRepository {
+  EmptyClassroomFilters? getCachedFilters();
   Future<EmptyClassroomFilters> loadFilters();
 
   Future<List<EmptyClassroom>> queryRooms(EmptyClassroomQuery query);
