@@ -45,10 +45,6 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       return null;
     }
 
-    setState(() {
-      _errorMessage = null;
-    });
-
     try {
       final session = await SeatReservationAuthService(
         gateway: ref.read(whuAuthGatewayProvider),
@@ -58,6 +54,7 @@ class _SeatReservationPageState extends ConsumerState<SeatReservationPage> {
       }
       await _primeSeatCookies(session);
       setState(() {
+        _errorMessage = null;
         _controller = controller;
       });
       return AppWebViewRequest(

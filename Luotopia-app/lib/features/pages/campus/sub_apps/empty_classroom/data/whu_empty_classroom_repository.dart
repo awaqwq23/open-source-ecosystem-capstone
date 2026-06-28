@@ -47,7 +47,7 @@ class WhuEmptyClassroomRepository implements EmptyClassroomRepository {
     try {
       final service = WhuEmptyRoomService(client: client);
       await service.prepareSession();
-      return service.getEmptyRoom(
+      return await service.getEmptyRoom(
         campus: query.campus,
         schoolYear: query.schoolYear,
         term: query.term,

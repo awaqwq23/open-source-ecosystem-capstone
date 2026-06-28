@@ -22,6 +22,11 @@ class _ScorePageState extends ConsumerState<ScorePage> {
   String? _errorMessage;
   String? _selectedTermKey;
 
+  List<String> _cachedTermGroups = [];
+  List<ScoreEntity> _cachedFilteredScores = [];
+  String? _cachedFilteredTermKey;
+  bool _filteredScoresCacheValid = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,11 +67,13 @@ class _ScorePageState extends ConsumerState<ScorePage> {
       if (!mounted) {
         return;
       }
+      final termGroups = _computeTermGroups(sorted);
       setState(() {
         _allScores = sorted;
         _isLoading = false;
-        // 默认选中第一个学期
-        _selectedTermKey ??= _termGroups.isNotEmpty ? _termGroups.first : null;
+        _cachedTermGroups = termGroups;
+        _filteredScoresCacheValid = false;
+        _selectedTermKey ??= termGroups.isNotEmpty ? termGroups.first : null;
       });
     } catch (e) {
       if (!mounted) {
@@ -79,10 +86,12 @@ class _ScorePageState extends ConsumerState<ScorePage> {
     }
   }
 
-  List<String> get _termGroups {
+  List<String> get _termGroups => _cachedTermGroups;
+
+  static List<String> _computeTermGroups(List<ScoreEntity> scores) {
     final seen = <String>{};
     final result = <String>[];
-    for (final s in _allScores) {
+    for (final s in scores) {
       final key = '${s.year}-${s.semester}';
       if (seen.add(key)) {
         result.add(key);
@@ -92,15 +101,24 @@ class _ScorePageState extends ConsumerState<ScorePage> {
   }
 
   List<ScoreEntity> get _filteredScores {
-    if (_selectedTermKey == null) {
-      return _allScores;
+    if (_filteredScoresCacheValid && _cachedFilteredTermKey == _selectedTermKey) {
+      return _cachedFilteredScores;
     }
-    final parts = _selectedTermKey!.split('-');
-    final year = int.parse(parts[0]);
-    final semester = int.parse(parts[1]);
-    return _allScores
-        .where((s) => s.year == year && s.semester == semester)
-        .toList();
+    List<ScoreEntity> result;
+    if (_selectedTermKey == null) {
+      result = _allScores;
+    } else {
+      final parts = _selectedTermKey!.split('-');
+      final year = int.parse(parts[0]);
+      final semester = int.parse(parts[1]);
+      result = _allScores
+          .where((s) => s.year == year && s.semester == semester)
+          .toList();
+    }
+    _cachedFilteredScores = result;
+    _cachedFilteredTermKey = _selectedTermKey;
+    _filteredScoresCacheValid = true;
+    return result;
   }
 
   @override
@@ -222,7 +240,10 @@ class _ScorePageState extends ConsumerState<ScorePage> {
           }).toList(),
           onChanged: (val) {
             if (val != null) {
-              setState(() => _selectedTermKey = val);
+              setState(() {
+                _selectedTermKey = val;
+                _filteredScoresCacheValid = false;
+              });
             }
           },
         ),

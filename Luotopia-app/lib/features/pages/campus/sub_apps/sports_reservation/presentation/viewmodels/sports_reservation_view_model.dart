@@ -108,17 +108,35 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
       );
       final selectedVenue = _selectVenueFrom(venues, state.selectedVenue);
 
-      final availability = selectedProject == null
-          ? const <SportsVenueAvailability>[]
-          : (await service.fetchAppointmentList(
-              SportsReservationQuery(
-                sportsTypeId: selectedProject.id,
-                appointmentDate: state.selectedDate,
-                venueId: selectedVenue?.id,
-              ),
-            )).items;
-      final reservations = await service.fetchRecentlyStartReservations();
-      final orders = (await service.fetchOrderList()).items;
+      final List<Object> dataResults;
+      if (selectedProject == null) {
+        final results = await Future.wait<Object>([
+          service.fetchRecentlyStartReservations(),
+          service.fetchOrderList().then((r) => r.items),
+        ]);
+        dataResults = [
+          const <SportsVenueAvailability>[],
+          results[0],
+          results[1],
+        ];
+      } else {
+        dataResults = await Future.wait<Object>([
+          service
+              .fetchAppointmentList(
+                SportsReservationQuery(
+                  sportsTypeId: selectedProject.id,
+                  appointmentDate: state.selectedDate,
+                  venueId: selectedVenue?.id,
+                ),
+              )
+              .then((r) => r.items),
+          service.fetchRecentlyStartReservations(),
+          service.fetchOrderList().then((r) => r.items),
+        ]);
+      }
+      final availability = dataResults[0] as List<SportsVenueAvailability>;
+      final reservations = dataResults[1] as List<SportsReservation>;
+      final orders = dataResults[2] as List<SportsReservation>;
       if (!_isCurrentOperation(operation)) {
         return;
       }
