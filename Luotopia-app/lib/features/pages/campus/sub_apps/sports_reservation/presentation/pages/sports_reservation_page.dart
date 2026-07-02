@@ -503,17 +503,9 @@ class _ProjectToggleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      _ProjectToggleSpec(
-        label: '羽毛球',
-        aliases: ['羽毛'],
-        icon: Icons.sports_tennis,
-      ),
-      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓'], icon: Icons.table_bar),
-      _ProjectToggleSpec(
-        label: '健身房',
-        aliases: ['健身'],
-        icon: Icons.fitness_center,
-      ),
+      _ProjectToggleSpec(label: '羽毛球', aliases: ['羽毛']),
+      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓']),
+      _ProjectToggleSpec(label: '健身房', aliases: ['健身']),
     ];
     final matchedProjects = [
       for (final item in items) _matchProject(item, projects),
@@ -534,6 +526,7 @@ class _ProjectToggleBar extends StatelessWidget {
         ),
         disabledChildren: disabledIndexes,
         groupValue: selectedIndex < 0 ? 0 : selectedIndex,
+        padding: const EdgeInsets.all(2),
         onValueChanged: (index) {
           if (index == null) {
             return;
@@ -545,10 +538,7 @@ class _ProjectToggleBar extends StatelessWidget {
         },
         children: {
           for (var index = 0; index < items.length; index++)
-            index: _ProjectSegment(
-              icon: items[index].icon,
-              label: items[index].label,
-            ),
+            index: _ProjectSegment(label: items[index].label),
         },
       ),
     );
@@ -570,40 +560,33 @@ class _ProjectToggleBar extends StatelessWidget {
 }
 
 class _ProjectSegment extends StatelessWidget {
-  const _ProjectSegment({required this.icon, required this.label});
+  const _ProjectSegment({required this.label});
 
-  final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final textStyle = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+        textAlign: TextAlign.center,
       ),
     );
   }
 }
 
 class _ProjectToggleSpec {
-  const _ProjectToggleSpec({
-    required this.label,
-    required this.aliases,
-    required this.icon,
-  });
+  const _ProjectToggleSpec({required this.label, required this.aliases});
 
   final String label;
   final List<String> aliases;
-  final IconData icon;
 }
 
 class _DateNavigator extends StatelessWidget {
