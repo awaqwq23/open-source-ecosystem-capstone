@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
@@ -22,7 +20,6 @@ class AllSchoolTimetablePage extends ConsumerStatefulWidget {
 class _AllSchoolTimetablePageState
     extends ConsumerState<AllSchoolTimetablePage> {
   final _searchController = TextEditingController();
-  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -36,19 +33,14 @@ class _AllSchoolTimetablePageState
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onKeywordChanged(String value) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 260), () {
-      if (!mounted) {
-        return;
-      }
-      ref.read(allSchoolTimetableViewModelProvider.notifier).setKeyword(value);
-    });
+  void _submitSearch() {
+    ref
+        .read(allSchoolTimetableViewModelProvider.notifier)
+        .setKeyword(_searchController.text.trim());
   }
 
   @override
@@ -87,30 +79,15 @@ class _AllSchoolTimetablePageState
         children: [
           _TermStatus(state: state),
           const SizedBox(height: 12),
-          _QueryModeControl(
-            mode: state.query.mode,
-            onChanged: notifier.setMode,
-          ),
-          const SizedBox(height: 12),
-          ui.TextField(
+          _SearchBar(
             controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onChanged: _onKeywordChanged,
-            onSubmitted: notifier.setKeyword,
-            hintText: '搜课程、老师、课程号、教室',
-            features: [
-              const ui.InputLeadingFeature(Icon(Icons.search, size: 16)),
-              if (state.query.keyword.isNotEmpty)
-                ui.InputTrailingFeature(
-                  ui.IconButton.ghost(
-                    onPressed: () {
-                      _searchController.clear();
-                      notifier.clearKeyword();
-                    },
-                    icon: const Icon(Icons.close, size: 16),
-                  ),
-                ),
-            ],
+            hasKeyword: state.query.keyword.isNotEmpty,
+            onClear: () {
+              _searchController.clear();
+              notifier.clearKeyword();
+            },
+            onSubmitted: (_) => _submitSearch(),
+            onSearch: _submitSearch,
           ),
           const SizedBox(height: 10),
           _FilterStrip(state: state, notifier: notifier),
@@ -149,7 +126,7 @@ class _AllSchoolTimetablePageState
               text: state.terms.isEmpty
                   ? '暂无全校课表数据，等待更新'
                   : state.query.keyword.isEmpty &&
-                        !state.query.hasProfessionalFilters
+                        !state.query.hasAdvancedFilters
                   ? '以上是当前学期信息，搜索或筛选以查看课程'
                   : '没有找到符合条件的课程',
             )
@@ -169,33 +146,55 @@ class _AllSchoolTimetablePageState
   }
 }
 
-class _QueryModeControl extends StatelessWidget {
-  const _QueryModeControl({required this.mode, required this.onChanged});
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.hasKeyword,
+    required this.onClear,
+    required this.onSubmitted,
+    required this.onSearch,
+  });
 
-  final AllSchoolTimetableQueryMode mode;
-  final ValueChanged<AllSchoolTimetableQueryMode> onChanged;
+  final TextEditingController controller;
+  final bool hasKeyword;
+  final VoidCallback onClear;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ui.ButtonGroup.horizontal(
-        expands: true,
-        children: [
-          ui.SelectedButton(
-            value: mode == AllSchoolTimetableQueryMode.lightweight,
-            onChanged: (_) =>
-                onChanged(AllSchoolTimetableQueryMode.lightweight),
-            child: const Text('轻量'),
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            textInputAction: TextInputAction.search,
+            onSubmitted: onSubmitted,
+            decoration: InputDecoration(
+              hintText: '搜课程、老师、课程号、教室',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: hasKeyword
+                  ? IconButton(
+                      tooltip: '清空搜索',
+                      icon: const Icon(Icons.close),
+                      onPressed: onClear,
+                    )
+                  : null,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              filled: true,
+              isDense: true,
+            ),
           ),
-          ui.SelectedButton(
-            value: mode == AllSchoolTimetableQueryMode.professional,
-            onChanged: (_) =>
-                onChanged(AllSchoolTimetableQueryMode.professional),
-            child: const Text('专业'),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 10),
+        FilledButton.icon(
+          onPressed: onSearch,
+          icon: const Icon(Icons.search, size: 18),
+          label: const Text('搜索'),
+        ),
+      ],
     );
   }
 }
@@ -234,30 +233,44 @@ class _FilterStrip extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _FilterChip(
-            label: state.selectedTerm?.termKey ?? '学期',
+          _FilterPill(
+            label: state.selectedTerm == null
+                ? '学期'
+                : '${state.selectedTerm!.schoolYear}-${state.selectedTerm!.term}',
             icon: Icons.calendar_month,
+            active: state.selectedTerm != null,
             onTap: () => _showTermPicker(context),
           ),
-          if (query.mode == AllSchoolTimetableQueryMode.lightweight) ...[
-            const _FilterChip(label: '本学期', icon: Icons.auto_awesome),
-            const _FilterChip(label: '时间', icon: Icons.schedule),
-            const _FilterChip(label: '地点', icon: Icons.place),
-          ] else ...[
-            _FilterChip(
-              label: '筛选',
-              icon: Icons.tune,
-              active: query.hasProfessionalFilters,
-              onTap: () => _showProfessionalFilters(context),
+          _FilterPill(
+            label: query.courseNature.isEmpty ? '课程性质' : query.courseNature,
+            icon: Icons.category_outlined,
+            active: query.courseNature.isNotEmpty,
+            onTap: () => _showOptionSheet(
+              context: context,
+              title: '课程性质',
+              options: _courseNatureOptions,
+              value: query.courseNature,
+              onSelected: (value) => notifier.applyAdvancedFilters(
+                courseName: query.courseName,
+                teacher: query.teacher,
+                teachingClass: query.teachingClass,
+                openDepartment: query.openDepartment,
+                studentCollege: query.studentCollege,
+                grade: query.grade,
+                major: query.major,
+                courseCategory: query.courseCategory,
+                departmentOrCollege: query.departmentOrCollege,
+                openType: query.openType,
+                courseNature: value,
+              ),
             ),
-            if (query.openCollege.isNotEmpty)
-              _FilterChip(label: query.openCollege),
-            if (query.grade.isNotEmpty) _FilterChip(label: '${query.grade}级'),
-            if (query.major.isNotEmpty) _FilterChip(label: query.major),
-            if (query.weekday != null)
-              _FilterChip(label: _weekdayLabel(query.weekday!)),
-            if (query.building.isNotEmpty) _FilterChip(label: query.building),
-          ],
+          ),
+          _FilterPill(
+            label: '更多筛选',
+            icon: Icons.tune,
+            active: _hasMoreFilters(query),
+            onTap: () => _showAdvancedFilters(context),
+          ),
         ],
       ),
     );
@@ -321,91 +334,161 @@ class _FilterStrip extends StatelessWidget {
     );
   }
 
-  Future<void> _showProfessionalFilters(BuildContext context) {
-    final openCollege = TextEditingController(text: state.query.openCollege);
-    final grade = TextEditingController(text: state.query.grade);
-    final major = TextEditingController(text: state.query.major);
-    final building = TextEditingController(text: state.query.building);
-    var weekday = state.query.weekday;
-    return ui
-        .openSheet<void>(
-          context: context,
-          position: ui.OverlayPosition.bottom,
-          builder: (sheetContext) => StatefulBuilder(
-            builder: (sheetContext, setSheetState) => AppSheetEntrance(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 12,
-                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-                ),
+  Future<void> _showOptionSheet({
+    required BuildContext context,
+    required String title,
+    required List<String> options,
+    required String value,
+    required ValueChanged<String> onSelected,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          children: [
+            Text(
+              title,
+              style: Theme.of(
+                sheetContext,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            for (final option in options)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(_optionLabel(option)),
+                trailing: value == option ? const Icon(Icons.check) : null,
+                onTap: () {
+                  onSelected(option);
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAdvancedFilters(BuildContext context) {
+    final query = state.query;
+    final courseName = TextEditingController(text: query.courseName);
+    final teacher = TextEditingController(text: query.teacher);
+    final teachingClass = TextEditingController(text: query.teachingClass);
+    final major = TextEditingController(text: query.major);
+    var openDepartment = query.openDepartment;
+    var studentCollege = query.studentCollege;
+    var grade = query.grade;
+    var courseCategory = query.courseCategory;
+    var departmentOrCollege = query.departmentOrCollege;
+    var openType = query.openType;
+    var courseNature = query.courseNature;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '专业筛选',
-                      style: Theme.of(sheetContext).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    ui.TextField(
-                      controller: openCollege,
-                      placeholder: const Text('开课学院'),
-                    ),
-                    const SizedBox(height: 8),
-                    ui.TextField(
-                      controller: grade,
-                      placeholder: const Text('年级'),
-                    ),
-                    const SizedBox(height: 8),
-                    ui.TextField(
-                      controller: major,
-                      placeholder: const Text('专业'),
-                    ),
-                    const SizedBox(height: 8),
-                    ui.TextField(
-                      controller: building,
-                      placeholder: const Text('教学楼'),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (var i = 0; i < 7; i++)
-                          ui.SelectedButton(
-                            value: weekday == i,
-                            onChanged: (selected) {
-                              setSheetState(
-                                () => weekday = selected ? i : null,
-                              );
-                            },
-                            child: Text(_weekdayLabel(i)),
-                          ),
-                      ],
+                      '更多筛选',
+                      style: Theme.of(sheetContext).textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 16),
+                    _SheetTextField(label: '课程名称', controller: courseName),
+                    _SheetTextField(label: '教师', controller: teacher),
+                    _SheetTextField(label: '教学班', controller: teachingClass),
+                    _SheetSelectField(
+                      label: '开课部门',
+                      value: openDepartment,
+                      options: _departmentOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => openDepartment = value),
+                    ),
+                    _SheetSelectField(
+                      label: '学生学院',
+                      value: studentCollege,
+                      options: _departmentOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => studentCollege = value),
+                    ),
+                    _SheetSelectField(
+                      label: '年级',
+                      value: grade,
+                      options: _gradeOptions,
+                      onChanged: (value) => setSheetState(() => grade = value),
+                    ),
+                    _SheetTextField(label: '专业', controller: major),
+                    _SheetSelectField(
+                      label: '课程类别',
+                      value: courseCategory,
+                      options: _courseCategoryOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => courseCategory = value),
+                    ),
+                    _SheetSelectField(
+                      label: '开课部门或学生学院',
+                      value: departmentOrCollege,
+                      options: _departmentOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => departmentOrCollege = value),
+                    ),
+                    _SheetSelectField(
+                      label: '开课类型',
+                      value: openType,
+                      options: _openTypeOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => openType = value),
+                    ),
+                    _SheetSelectField(
+                      label: '课程性质',
+                      value: courseNature,
+                      options: _courseNatureOptions,
+                      onChanged: (value) =>
+                          setSheetState(() => courseNature = value),
+                    ),
+                    const SizedBox(height: 18),
                     Row(
                       children: [
-                        ui.TextButton(
+                        TextButton(
                           onPressed: () {
-                            notifier.clearProfessionalFilters();
-                            ui.closeSheet(sheetContext);
+                            notifier.clearAdvancedFilters();
+                            Navigator.of(sheetContext).pop();
                           },
                           child: const Text('清空'),
                         ),
                         const Spacer(),
-                        ui.PrimaryButton(
+                        FilledButton(
                           onPressed: () {
-                            notifier.applyProfessionalFilters(
-                              openCollege: openCollege.text.trim(),
-                              grade: grade.text.trim(),
+                            notifier.applyAdvancedFilters(
+                              courseName: courseName.text.trim(),
+                              teacher: teacher.text.trim(),
+                              teachingClass: teachingClass.text.trim(),
+                              openDepartment: openDepartment,
+                              studentCollege: studentCollege,
+                              grade: grade,
                               major: major.text.trim(),
-                              building: building.text.trim(),
-                              weekday: weekday,
+                              courseCategory: courseCategory,
+                              departmentOrCollege: departmentOrCollege,
+                              openType: openType,
+                              courseNature: courseNature,
                             );
-                            ui.closeSheet(sheetContext);
+                            Navigator.of(sheetContext).pop();
                           },
                           child: const Text('查看结果'),
                         ),
@@ -415,39 +498,114 @@ class _FilterStrip extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        )
-        .whenComplete(() {
-          openCollege.dispose();
-          grade.dispose();
-          major.dispose();
-          building.dispose();
-        });
+          );
+        },
+      ),
+    ).whenComplete(() {
+      courseName.dispose();
+      teacher.dispose();
+      teachingClass.dispose();
+      major.dispose();
+    });
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    this.onTap,
-    this.icon,
-    this.active = false,
-  });
+class _SheetTextField extends StatelessWidget {
+  const _SheetTextField({required this.label, required this.controller});
 
   final String label;
-  final IconData? icon;
-  final bool active;
-  final VoidCallback? onTap;
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetSelectField extends StatelessWidget {
+  const _SheetSelectField({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedValue = options.contains(value) ? value : '';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<String>(
+        initialValue: selectedValue,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          isDense: true,
+        ),
+        items: [
+          for (final option in options)
+            DropdownMenuItem(value: option, child: Text(_optionLabel(option))),
+        ],
+        onChanged: (value) => onChanged(value ?? ''),
+      ),
+    );
+  }
+}
+
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ui.Chip(
-        leading: icon == null ? null : Icon(icon, size: 16),
-        style: active ? const ui.ButtonStyle.primary() : null,
+      child: ActionChip(
+        avatar: Icon(
+          icon,
+          size: 18,
+          color: active ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+        ),
+        label: Text(label),
         onPressed: onTap,
-        child: Text(label),
+        backgroundColor: active
+            ? colors.primaryContainer
+            : colors.surfaceContainerHighest,
+        labelStyle: TextStyle(
+          color: active ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        ),
+        shape: const StadiumBorder(),
       ),
     );
   }
@@ -497,9 +655,20 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
-String _weekdayLabel(int weekday) {
-  return const ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][weekday];
+bool _hasMoreFilters(AllSchoolTimetableQuery query) {
+  return query.courseName.isNotEmpty ||
+      query.teacher.isNotEmpty ||
+      query.teachingClass.isNotEmpty ||
+      query.openDepartment.isNotEmpty ||
+      query.studentCollege.isNotEmpty ||
+      query.grade.isNotEmpty ||
+      query.major.isNotEmpty ||
+      query.courseCategory.isNotEmpty ||
+      query.departmentOrCollege.isNotEmpty ||
+      query.openType.isNotEmpty;
 }
+
+String _optionLabel(String option) => option.isEmpty ? '全部' : option;
 
 class CourseHeadPageArgs {
   const CourseHeadPageArgs(this.termKey, this.courseHeadId);
@@ -514,3 +683,245 @@ class TeachingClassDetailPageArgs {
   final String termKey;
   final String teachingClassId;
 }
+
+const _courseCategoryOptions = [
+  '',
+  '创新创业课程',
+  '核心课程',
+  '一般通识',
+  '无',
+  '跨学院公共基础课',
+  '核心通识',
+  '专业课程',
+  '大类平台',
+];
+
+const _openTypeOptions = [
+  '',
+  '专业教育课程',
+  '微专业课程',
+  '二学位',
+  '辅修课程',
+  '体育',
+  '板块',
+  '英语',
+  '重修课程',
+  '其它特殊课程',
+  '通识课程',
+  '其他课程（含学科竞赛培训、国际学生课程）',
+  '通识必修课程',
+  '跨专业选修课',
+  '直考课程',
+  '创新创业课程',
+];
+
+const _courseNatureOptions = [
+  '',
+  '公共基础必修',
+  '公共基础选修',
+  '通识教育必修',
+  '通识教育选修',
+  '专业教育必修',
+  '专业教育选修',
+  '公共必修',
+  '公共选修',
+  '专业必修',
+  '专业选修',
+];
+
+final _gradeOptions = [
+  '',
+  for (var year = 2030; year >= 1999; year--) year.toString(),
+];
+
+const _departmentOptions = [
+  '',
+  '国家文化发展研究院',
+  '高等研究院',
+  '中国南极测绘研究中心',
+  '工学部',
+  'EMBA',
+  'MBA',
+  'WTO学院',
+  '本科生院',
+  '材料科学与工程学院',
+  '测绘学院',
+  '城市设计学院',
+  '大学生心理健康中心',
+  '大学英语部',
+  '电气与自动化学院',
+  '动力与机械学院',
+  '发展研究院',
+  '法学院',
+  '高级研究中心',
+  '工程图学中心',
+  '公共化学教学',
+  '公共力学',
+  '公共数学教学',
+  '公共卫生学院',
+  '公共文学教学',
+  '公共物理教学',
+  '公共政治教学',
+  '国际交流部',
+  '国际教育学院',
+  '国际软件学院',
+  '国家网络安全学院',
+  '国学院',
+  '弘毅学堂',
+  '护理学院',
+  '化学与分子科学学院',
+  '计算机学院',
+  '计算中心',
+  '健康学院',
+  '教师教学发展中心',
+  '教务部',
+  '教育发展基金工作办',
+  '教育科学研究院',
+  '经济与管理学院',
+  '学生就业指导与服务中心',
+  '军官选拔办公室',
+  '军事教研室',
+  '口腔医学院',
+  '历史学院',
+  '七校联办',
+  '其它',
+  '全校',
+  '社会学院',
+  '生命科学学院',
+  '数学与统计学院',
+  '双学位',
+  '水利水电学院',
+  '台湾研究所',
+  '体育部',
+  '通识教育中心',
+  '图书馆',
+  '土木建筑工程学院',
+  '外国语言文学学院',
+  '物理科学与技术学院',
+  '档案馆',
+  '共青团武汉大学委员会',
+  '信息管理学院',
+  '形势与政策教育中心',
+  '学工部',
+  '训创中心',
+  '遥感信息工程学院',
+  '药学院',
+  '医学部',
+  '医学院',
+  '印刷与包装系',
+  '政治与公共管理学院',
+  '职业培训学院',
+  '中国边界与海洋研究院',
+  '中国传统文化研究中心',
+  '资源与环境科学学院',
+  '中国中部发展研究院',
+  '动物实验中心',
+  '图像传播与印刷包装研究中心',
+  '武汉大学杜伦大学联合学院',
+  '地球与空间科学技术学院',
+  '人工智能学院',
+  '国家卓越工程师学院',
+  '机器人学院',
+  '集成电路学院',
+  '马克思主义学院',
+  '总务后勤部',
+  '附属学校',
+  '资产经营投资管理有限责任公司',
+  '房地产管理部',
+  '湖北珞珈实验室',
+  '国际法研究所',
+  '离退休工作处',
+  '审计处',
+  '采购与招投标管理中心',
+  '党委巡视工作领导小组办公室',
+  '党委宣传部',
+  '实验室与设备管理处',
+  '先进技术研究院',
+  '人民武装部',
+  '汉语国际推广教学资源研究与开发基地',
+  '董辅礽经济社会发展研究院',
+  '纪委、监察专员办',
+  '党委组织部',
+  '党校',
+  '党委学生工作部',
+  '机关与直属单位党委',
+  '工会',
+  '科学技术发展研究院',
+  '保卫部',
+  '保密委员会办公室',
+  '医学职业技术学院',
+  '广东研究院',
+  '宜昌三峡研究院',
+  '西南研究院',
+  '湖北发展问题研究中心',
+  '武汉先进光源研究中心建设工程项目工程建设指挥部办公室',
+  '泰康生命医学中心',
+  '科研公共服务条件平台',
+  '国内合作部',
+  '财政金融研究中心',
+  '党内法规研究中心',
+  '国家领土主权与海洋权益协同创新中心',
+  '地球空间信息技术协同创新中心',
+  '出版社有限责任公司',
+  '珞珈学院',
+  '党政办公室',
+  '苏州研究院',
+  '水工程科学研究院',
+  '国际法治研究院',
+  '中国发展战略与规划研究院',
+  '发展规划与学科建设办公室',
+  '党委研究生工作部',
+  '党委统战部',
+  '财务部',
+  '新闻与传播学院',
+  '武汉大学中国发展战略与规划研究院',
+  '人事部',
+  '前沿交叉学科研究院',
+  '质量发展战略研究院',
+  '测绘遥感信息工程全国重点实验室',
+  '医学研究院',
+  '泰康医学院(基础医学院)',
+  '继续教育学院',
+  '校友事务与发展联络处',
+  '第一临床学院',
+  '第二临床学院',
+  '校医院',
+  '国际问题研究院',
+  '武汉数学与智能研究院',
+  '新型电力系统与国际标准研究院',
+  '简帛研究中心',
+  '文化遗产智能计算实验室',
+  '中华民族共同体法治研究院',
+  '数据智能研究院',
+  '水资源工程与调度全国重点实验室',
+  '杂交水稻全国重点实验室',
+  '电网环境保护全国重点实验室',
+  '湖北应用数学中心',
+  '口颌系统重建与再生全国重点实验室',
+  '国家多媒体软件工程技术研究中心',
+  '武汉大气遥感国家野外科学观测研究站',
+  '卫星导航定位技术研究中心（国家卫星定位系统工程技术研究中心）',
+  '《民藏》编纂与研究中心',
+  '先进光源研究中心',
+  '碳中和研究院',
+  '复杂生命体代谢与调控全国重点实验室',
+  '科技与产业学院',
+  '涉外法治学院',
+  '武汉大学武汉-本哈研究生院',
+  '辛亥革命博物院-武汉大学国家革命文物协同研究中心',
+  '高致病性病毒与生物安全全国重点实验室',
+  '梁子湖湖泊生态系统国家野外科学观测站',
+  '智慧校园部',
+  '人文社会科学研究院',
+  '计算机教研室01',
+  '哲学学院',
+  '基建管理部（文物保护管理处）',
+  '科教融合创新园区建设指挥部办公室',
+  '纪检监察研究院',
+  '教育部法治国际组织联合研究院',
+  '文学院',
+  '艺术学院',
+  '电子信息学院',
+  '研究生院',
+  '工业科学研究院',
+];

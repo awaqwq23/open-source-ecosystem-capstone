@@ -122,10 +122,6 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
     }
   }
 
-  Future<void> setMode(AllSchoolTimetableQueryMode mode) {
-    return _updateQuery(state.query.copyWith(mode: mode));
-  }
-
   Future<void> setKeyword(String keyword) {
     return _updateQuery(state.query.copyWith(keyword: keyword));
   }
@@ -138,55 +134,50 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
     return _updateQuery(state.query.copyWith(keyword: ''));
   }
 
-  Future<void> setOpenCollege(String value) {
-    return _updateQuery(state.query.copyWith(openCollege: value));
-  }
-
-  Future<void> setGrade(String value) {
-    return _updateQuery(state.query.copyWith(grade: value));
-  }
-
-  Future<void> setMajor(String value) {
-    return _updateQuery(state.query.copyWith(major: value));
-  }
-
-  Future<void> setWeekday(int? value) {
-    return _updateQuery(
-      state.query.copyWith(weekday: value, clearWeekday: value == null),
-    );
-  }
-
-  Future<void> setBuilding(String value) {
-    return _updateQuery(state.query.copyWith(building: value));
-  }
-
-  Future<void> applyProfessionalFilters({
-    required String openCollege,
+  Future<void> applyAdvancedFilters({
+    required String courseName,
+    required String teacher,
+    required String teachingClass,
+    required String openDepartment,
+    required String studentCollege,
     required String grade,
     required String major,
-    required String building,
-    required int? weekday,
+    required String courseCategory,
+    required String departmentOrCollege,
+    required String openType,
+    required String courseNature,
   }) {
     return _updateQuery(
       state.query.copyWith(
-        openCollege: openCollege,
+        courseName: courseName,
+        teacher: teacher,
+        teachingClass: teachingClass,
+        openDepartment: openDepartment,
+        studentCollege: studentCollege,
         grade: grade,
         major: major,
-        building: building,
-        weekday: weekday,
-        clearWeekday: weekday == null,
+        courseCategory: courseCategory,
+        departmentOrCollege: departmentOrCollege,
+        openType: openType,
+        courseNature: courseNature,
       ),
     );
   }
 
-  Future<void> clearProfessionalFilters() {
+  Future<void> clearAdvancedFilters() {
     return _updateQuery(
       state.query.copyWith(
-        openCollege: '',
+        courseName: '',
+        teacher: '',
+        teachingClass: '',
+        openDepartment: '',
+        studentCollege: '',
         grade: '',
         major: '',
-        building: '',
-        clearWeekday: true,
+        courseCategory: '',
+        departmentOrCollege: '',
+        openType: '',
+        courseNature: '',
       ),
     );
   }
@@ -218,7 +209,7 @@ class AllSchoolTimetableViewModel extends Notifier<AllSchoolTimetableState> {
   }
 
   static bool _hasActiveFilter(AllSchoolTimetableQuery query) {
-    return query.keyword.isNotEmpty || query.hasProfessionalFilters;
+    return query.keyword.isNotEmpty || query.hasAdvancedFilters;
   }
 }
 

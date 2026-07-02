@@ -20,57 +20,80 @@ class SchoolTimetableTerm {
   final DateTime updatedAt;
 }
 
-enum AllSchoolTimetableQueryMode { lightweight, professional }
-
 class AllSchoolTimetableQuery {
   const AllSchoolTimetableQuery({
     this.termKey,
     this.keyword = '',
-    this.mode = AllSchoolTimetableQueryMode.lightweight,
-    this.openCollege = '',
+    this.courseName = '',
+    this.teacher = '',
+    this.teachingClass = '',
+    this.openDepartment = '',
+    this.studentCollege = '',
     this.grade = '',
     this.major = '',
-    this.weekday,
-    this.building = '',
+    this.courseCategory = '',
+    this.departmentOrCollege = '',
+    this.openType = '',
+    this.courseNature = '',
   });
 
   final String? termKey;
   final String keyword;
-  final AllSchoolTimetableQueryMode mode;
-  final String openCollege;
+  final String courseName;
+  final String teacher;
+  final String teachingClass;
+  final String openDepartment;
+  final String studentCollege;
   final String grade;
   final String major;
-  final int? weekday;
-  final String building;
+  final String courseCategory;
+  final String departmentOrCollege;
+  final String openType;
+  final String courseNature;
 
-  bool get hasProfessionalFilters {
-    return openCollege.isNotEmpty ||
+  bool get hasAdvancedFilters {
+    return courseName.isNotEmpty ||
+        teacher.isNotEmpty ||
+        teachingClass.isNotEmpty ||
+        openDepartment.isNotEmpty ||
+        studentCollege.isNotEmpty ||
         grade.isNotEmpty ||
         major.isNotEmpty ||
-        weekday != null ||
-        building.isNotEmpty;
+        courseCategory.isNotEmpty ||
+        departmentOrCollege.isNotEmpty ||
+        openType.isNotEmpty ||
+        courseNature.isNotEmpty;
   }
 
   AllSchoolTimetableQuery copyWith({
     String? termKey,
     String? keyword,
-    AllSchoolTimetableQueryMode? mode,
-    String? openCollege,
+    String? courseName,
+    String? teacher,
+    String? teachingClass,
+    String? openDepartment,
+    String? studentCollege,
     String? grade,
     String? major,
-    int? weekday,
-    String? building,
-    bool clearWeekday = false,
+    String? courseCategory,
+    String? departmentOrCollege,
+    String? openType,
+    String? courseNature,
   }) {
     return AllSchoolTimetableQuery(
       termKey: termKey ?? this.termKey,
       keyword: keyword ?? this.keyword,
-      mode: mode ?? this.mode,
-      openCollege: openCollege ?? this.openCollege,
+      courseName: courseName ?? this.courseName,
+      teacher: teacher ?? this.teacher,
+      teachingClass: teachingClass ?? this.teachingClass,
+      openDepartment: openDepartment ?? this.openDepartment,
+      studentCollege: studentCollege ?? this.studentCollege,
       grade: grade ?? this.grade,
       major: major ?? this.major,
-      weekday: clearWeekday ? null : weekday ?? this.weekday,
-      building: building ?? this.building,
+      courseCategory: courseCategory ?? this.courseCategory,
+      departmentOrCollege: departmentOrCollege ?? this.departmentOrCollege,
+      openType: openType ?? this.openType,
+      courseNature: courseNature ?? this.courseNature,
     );
   }
 }
@@ -161,8 +184,10 @@ class SchoolTeachingClass {
   final String openType;
   final String grade;
   final String major;
+
   /// 主讲教师名（由 offering_teacher→teacher 聚合得到）。
   final String instructor;
+
   /// 主讲教师职称。
   final String title;
   final int? capacity;
@@ -177,8 +202,10 @@ class SchoolTeachingClass {
   final String otherTeachers;
   final String textbook;
   final String publisher;
+
   /// 排课摘要，由查询时从 meetings 拼接。
   final String scheduleSummary;
+
   /// 上课星期摘要，由查询时从 meetings 聚合。
   final String weekdaySummary;
 }
