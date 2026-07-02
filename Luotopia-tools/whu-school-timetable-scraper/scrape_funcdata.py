@@ -33,7 +33,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 FUNC_URL = (
     "https://jwgl.whu.edu.cn/design/funcData_cxFuncDataList.html"
@@ -165,9 +165,14 @@ def first_week_monday_for(start_year: int, term: str) -> str:
     第1学期按9月初、第2学期按2月底/3月初、第3学期按6月底。
     精确值需用户在 build 时通过 --first-week-monday 覆盖。
     """
-    month_day = {"1": ("09", "01"), "2": ("02", "23"), "3": ("06", "23")}
-    m, d = month_day[term]
-    return f"{start_year + (1 if term == '1' else 0)}-{m}-{d}"
+    anchors = {
+        "1": date(start_year, 9, 1),
+        "2": date(start_year + 1, 2, 23),
+        "3": date(start_year + 1, 6, 23),
+    }
+    anchor = anchors[term]
+    monday = anchor + timedelta(days=(7 - anchor.weekday()) % 7)
+    return monday.isoformat()
 
 
 def write_outputs(term_key_str: str, rows: list[dict], raw: dict, output_dir: str, xnm: str, xqm: str) -> None:
