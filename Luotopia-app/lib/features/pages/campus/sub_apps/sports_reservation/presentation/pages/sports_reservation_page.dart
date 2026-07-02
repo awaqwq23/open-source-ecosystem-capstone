@@ -276,7 +276,7 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
                 .read(sportsReservationViewModelProvider.notifier)
                 .selectProject(project),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 0),
           _DateNavigator(
             selectedDate: state.selectedDate,
             minDate: _minReservableDate(),
@@ -295,9 +295,6 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
                     SportsReservationViewStatus.authorizationExpired,
               ),
             ),
-          if (state.status == SportsReservationViewStatus.loading ||
-              state.status == SportsReservationViewStatus.refreshing)
-            const _RefreshingIndicator(),
           if (state.availability.isEmpty &&
               state.status != SportsReservationViewStatus.loading)
             const _EmptyAvailabilityView()
@@ -534,7 +531,7 @@ class _ProjectToggleBar extends StatelessWidget {
         ),
         disabledChildren: disabledIndexes,
         groupValue: selectedIndex < 0 ? 0 : selectedIndex,
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(5),
         onValueChanged: (index) {
           if (index == null) {
             return;
@@ -582,7 +579,7 @@ class _ProjectSegment extends StatelessWidget {
       context,
     ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -903,10 +900,7 @@ class _AreaAvailabilityMatrix extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     if (loading) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 12),
-        child: LinearProgressIndicator(minHeight: 2),
-      );
+      return const SizedBox.shrink();
     }
     if (areas.isEmpty) {
       return Padding(
@@ -1521,18 +1515,6 @@ class _InlineError extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _RefreshingIndicator extends StatelessWidget {
-  const _RefreshingIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: LinearProgressIndicator(minHeight: 2),
     );
   }
 }
