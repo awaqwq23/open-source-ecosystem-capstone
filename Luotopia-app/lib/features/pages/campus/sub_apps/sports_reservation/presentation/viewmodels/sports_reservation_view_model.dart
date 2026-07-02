@@ -86,7 +86,8 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
     final cache = ref.read(sportsReservationCacheProvider);
     final cachedTypes = cache.readSportsTypes();
     final cachedVenues = cache.readVenues();
-    final hasCachedData = cachedTypes != null &&
+    final hasCachedData =
+        cachedTypes != null &&
         cachedTypes.isNotEmpty &&
         cachedVenues != null &&
         cachedVenues.isNotEmpty;
@@ -96,10 +97,7 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
         cachedTypes,
         state.selectedProject,
       );
-      final selectedVenue = _selectVenueFrom(
-        cachedVenues,
-        state.selectedVenue,
-      );
+      final selectedVenue = _selectVenueFrom(cachedVenues, state.selectedVenue);
       state = state.copyWith(
         status: SportsReservationViewStatus.refreshing,
         projects: cachedTypes,
@@ -159,20 +157,21 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
         ];
       } else {
         dataResults = await Future.wait<Object>([
-          service
-              .fetchAppointmentList(
-                SportsReservationQuery(
-                  sportsTypeId: selectedProject.id,
-                  appointmentDate: state.selectedDate,
-                  venueId: selectedVenue?.id,
-                ),
-              )
-              .then((r) => r.items),
+          service.fetchAppointmentList(
+            SportsReservationQuery(
+              sportsTypeId: selectedProject.id,
+              appointmentDate: state.selectedDate,
+              venueId: selectedVenue?.id,
+            ),
+          ),
           service.fetchRecentlyStartReservations(),
           service.fetchOrderList().then((r) => r.items),
         ]);
       }
-      final availability = dataResults[0] as List<SportsVenueAvailability>;
+      final appointmentList = selectedProject == null
+          ? null
+          : dataResults[0] as SportsAppointmentListResult;
+      final availability = appointmentList?.items ?? const [];
       final reservations = dataResults[1] as List<SportsReservation>;
       final orders = dataResults[2] as List<SportsReservation>;
       if (!_isCurrentOperation(operation)) {
@@ -188,6 +187,9 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
         availability: availability,
         reservations: reservations,
         orders: orders,
+        advanceAppointmentDayCount: appointmentList?.advanceAppointmentDayCount,
+        advanceAppointmentStartTime:
+            appointmentList?.advanceAppointmentStartTime,
         areaAvailability: const [],
         selectedProject: selectedProject,
         selectedVenue: selectedVenue,
@@ -256,6 +258,8 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
         availability: result.items,
         reservations: reservations,
         orders: orders,
+        advanceAppointmentDayCount: result.advanceAppointmentDayCount,
+        advanceAppointmentStartTime: result.advanceAppointmentStartTime,
         areaAvailability: const [],
         clearSelectedAvailability: true,
         clearSelectedWindow: true,
@@ -298,7 +302,7 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
 
   Future<void> selectDate(DateTime date) async {
     state = state.copyWith(
-      selectedDate: _dateOnly(date),
+      selectedDate: _clampReservableDate(date),
       availability: const [],
       areaAvailability: const [],
       clearSelectedAvailability: true,
@@ -599,6 +603,8 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
       availability: appointmentList?.items,
       reservations: reservations,
       orders: orders,
+      advanceAppointmentDayCount: appointmentList?.advanceAppointmentDayCount,
+      advanceAppointmentStartTime: appointmentList?.advanceAppointmentStartTime,
       clearOrderError: true,
       clearSubmitError: true,
     );
@@ -701,5 +707,50 @@ class SportsReservationViewModel extends Notifier<SportsReservationState> {
 
   DateTime _dateOnly(DateTime date) {
     return DateTime(date.year, date.month, date.day);
+  }
+
+  DateTime _clampReservableDate(DateTime date) {
+    final target = _dateOnly(date);
+    final today = _dateOnly(DateTime.now());
+    final maxDate = _maxReservableDate(today);
+    if (target.isBefore(today)) {
+      return today;
+    }
+    if (target.isAfter(maxDate)) {
+      return maxDate;
+    }
+    return target;
+  }
+
+  DateTime _maxReservableDate(DateTime today) {
+    final dayCount = state.advanceAppointmentDayCount;
+    if (dayCount <= 0) {
+      return today;
+    }
+    final hasReachedStartTime = _hasReachedAdvanceStartTime(DateTime.now());
+    final offset = hasReachedStartTime ? dayCount : dayCount - 1;
+    return today.add(Duration(days: offset < 0 ? 0 : offset));
+  }
+
+  bool _hasReachedAdvanceStartTime(DateTime now) {
+    final start = _parseClockTime(state.advanceAppointmentStartTime);
+    if (start == null) {
+      return true;
+    }
+    return now.hour > start.$1 ||
+        now.hour == start.$1 && now.minute >= start.$2;
+  }
+
+  (int, int)? _parseClockTime(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 4) {
+      return null;
+    }
+    final hour = int.tryParse(digits.substring(0, 2));
+    final minute = int.tryParse(digits.substring(2, 4));
+    if (hour == null || minute == null) {
+      return null;
+    }
+    return (hour, minute);
   }
 }

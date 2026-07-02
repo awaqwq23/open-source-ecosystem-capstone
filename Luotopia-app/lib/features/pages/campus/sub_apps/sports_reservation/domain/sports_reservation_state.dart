@@ -34,6 +34,8 @@ class SportsReservationState {
     this.orders = const [],
     this.bulletins = const [],
     this.appointmentRules = '',
+    this.advanceAppointmentDayCount = 0,
+    this.advanceAppointmentStartTime = '',
     this.blacklistStatus,
     this.selectedProject,
     this.selectedVenue,
@@ -67,6 +69,8 @@ class SportsReservationState {
   final List<SportsReservation> orders;
   final List<SportsBulletin> bulletins;
   final String appointmentRules;
+  final int advanceAppointmentDayCount;
+  final String advanceAppointmentStartTime;
   final SportsBlacklistStatus? blacklistStatus;
   final SportsProject? selectedProject;
   final SportsVenue? selectedVenue;
@@ -105,6 +109,8 @@ class SportsReservationState {
     List<SportsReservation>? orders,
     List<SportsBulletin>? bulletins,
     String? appointmentRules,
+    int? advanceAppointmentDayCount,
+    String? advanceAppointmentStartTime,
     SportsBlacklistStatus? blacklistStatus,
     SportsProject? selectedProject,
     SportsVenue? selectedVenue,
@@ -141,6 +147,10 @@ class SportsReservationState {
       orders: orders ?? this.orders,
       bulletins: bulletins ?? this.bulletins,
       appointmentRules: appointmentRules ?? this.appointmentRules,
+      advanceAppointmentDayCount:
+          advanceAppointmentDayCount ?? this.advanceAppointmentDayCount,
+      advanceAppointmentStartTime:
+          advanceAppointmentStartTime ?? this.advanceAppointmentStartTime,
       blacklistStatus: clearBlacklistStatus
           ? null
           : blacklistStatus ?? this.blacklistStatus,

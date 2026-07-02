@@ -278,6 +278,8 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
           const SizedBox(height: 10),
           _DateNavigator(
             selectedDate: state.selectedDate,
+            minDate: _minReservableDate(),
+            maxDate: _maxReservableDate(state),
             onSelected: (date) => ref
                 .read(sportsReservationViewModelProvider.notifier)
                 .selectDate(date),
@@ -499,26 +501,35 @@ class _ProjectToggleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     const items = [
       _ProjectToggleSpec(label: '羽毛球', aliases: ['羽毛']),
       _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓']),
       _ProjectToggleSpec(label: '健身房', aliases: ['健身']),
     ];
-    return Row(
+    final matchedProjects = [
+      for (final item in items) _matchProject(item, projects),
+    ];
+    final selectedIndex = matchedProjects.indexWhere(
+      (project) => project?.id == selectedProject?.id,
+    );
+    return ui.Tabs(
+      index: selectedIndex < 0 ? 0 : selectedIndex,
+      expand: true,
+      onChanged: (index) {
+        final project = matchedProjects[index];
+        if (project != null) {
+          onProjectSelected(project);
+        }
+      },
       children: [
-        for (var index = 0; index < items.length; index++) ...[
-          Expanded(
-            child: _ProjectToggleButton(
-              spec: items[index],
-              project: _matchProject(items[index], projects),
-              selectedProject: selectedProject,
-              colors: colors,
-              onSelected: onProjectSelected,
+        for (var index = 0; index < items.length; index++)
+          ui.TabItem(
+            child: Text(
+              items[index].label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (index != items.length - 1) const SizedBox(width: 6),
-        ],
       ],
     );
   }
@@ -538,56 +549,6 @@ class _ProjectToggleBar extends StatelessWidget {
   }
 }
 
-class _ProjectToggleButton extends StatelessWidget {
-  const _ProjectToggleButton({
-    required this.spec,
-    required this.project,
-    required this.selectedProject,
-    required this.colors,
-    required this.onSelected,
-  });
-
-  final _ProjectToggleSpec spec;
-  final SportsProject? project;
-  final SportsProject? selectedProject;
-  final ColorScheme colors;
-  final ValueChanged<SportsProject> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = project != null && selectedProject?.id == project!.id;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: project == null ? null : () => onSelected(project!),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? colors.primary : colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? colors.primary : colors.outlineVariant,
-          ),
-        ),
-        child: Text(
-          spec.label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: selected
-                ? colors.onPrimary
-                : project == null
-                ? colors.onSurfaceVariant.withValues(alpha: 0.55)
-                : colors.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProjectToggleSpec {
   const _ProjectToggleSpec({required this.label, required this.aliases});
 
@@ -596,30 +557,32 @@ class _ProjectToggleSpec {
 }
 
 class _DateNavigator extends StatelessWidget {
-  const _DateNavigator({required this.selectedDate, required this.onSelected});
+  const _DateNavigator({
+    required this.selectedDate,
+    required this.minDate,
+    required this.maxDate,
+    required this.onSelected,
+  });
 
   final DateTime selectedDate;
+  final DateTime minDate;
+  final DateTime maxDate;
   final ValueChanged<DateTime> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
+    final currentDate = DateUtils.dateOnly(selectedDate);
+    final previousDate = currentDate.subtract(const Duration(days: 1));
+    final nextDate = currentDate.add(const Duration(days: 1));
+    final canPrevious = !previousDate.isBefore(minDate);
+    final canNext = !nextDate.isAfter(maxDate);
+    return SizedBox(
       height: 44,
-      decoration: BoxDecoration(
-        border: Border.symmetric(
-          horizontal: BorderSide(color: colors.outlineVariant),
-        ),
-      ),
       child: Row(
         children: [
-          _DateArrowButton(
-            icon: Icons.chevron_left,
-            onPressed: () => onSelected(
-              DateUtils.dateOnly(
-                selectedDate,
-              ).subtract(const Duration(days: 1)),
-            ),
+          ui.IconButton.ghost(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: canPrevious ? () => onSelected(previousDate) : null,
           ),
           Expanded(
             child: Center(
@@ -631,31 +594,12 @@ class _DateNavigator extends StatelessWidget {
               ),
             ),
           ),
-          _DateArrowButton(
-            icon: Icons.chevron_right,
-            onPressed: () => onSelected(
-              DateUtils.dateOnly(selectedDate).add(const Duration(days: 1)),
-            ),
+          ui.IconButton.ghost(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: canNext ? () => onSelected(nextDate) : null,
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DateArrowButton extends StatelessWidget {
-  const _DateArrowButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon),
-      onPressed: onPressed,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-      padding: EdgeInsets.zero,
     );
   }
 }
@@ -803,7 +747,7 @@ class _AvailabilityListRow extends StatelessWidget {
           ),
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
-            secondChild: _AreaAvailabilityTable(
+            secondChild: _AreaAvailabilityMatrix(
               availability: availability,
               areas: areaAvailability,
               loading: loadingDetails,
@@ -881,8 +825,8 @@ class _DayPartSummary extends StatelessWidget {
   }
 }
 
-class _AreaAvailabilityTable extends StatelessWidget {
-  const _AreaAvailabilityTable({
+class _AreaAvailabilityMatrix extends StatelessWidget {
+  const _AreaAvailabilityMatrix({
     required this.availability,
     required this.areas,
     required this.loading,
@@ -917,63 +861,104 @@ class _AreaAvailabilityTable extends StatelessWidget {
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.outlineVariant),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Table(
-              defaultColumnWidth: const FixedColumnWidth(86),
-              columnWidths: const {
-                0: FixedColumnWidth(58),
-                4: FixedColumnWidth(68),
-              },
-              border: TableBorder.symmetric(
-                inside: BorderSide(color: colors.outlineVariant),
-              ),
-              children: [
-                _tableHeader(context),
-                for (final area in areas) _tableAreaRow(context, area),
-              ],
-            ),
-          ),
+      child: ui.OutlinedContainer(
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            _AreaMatrixHeader(),
+            for (final area in areas)
+              _AreaMatrixRow(area: area, onReserve: onReserve),
+          ],
         ),
       ),
     );
   }
+}
 
-  TableRow _tableHeader(BuildContext context) {
+class _AreaMatrixHeader extends StatelessWidget {
+  const _AreaMatrixHeader();
+
+  @override
+  Widget build(BuildContext context) {
     final style = Theme.of(
       context,
     ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700);
-    return TableRow(
-      children: [
-        _TableHeaderCell(text: '场地号', style: style),
-        for (final part in _dayParts)
-          _TableHeaderCell(text: part.label, style: style),
-        _TableHeaderCell(text: '', style: style),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 42,
+            child: Center(child: Text('场地', style: style)),
+          ),
+          const SizedBox(width: 4),
+          for (final part in _dayParts)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Center(child: Text(part.label, style: style)),
+              ),
+            ),
+          const SizedBox(width: 52),
+        ],
+      ),
     );
   }
+}
 
-  TableRow _tableAreaRow(BuildContext context, SportsAreaAvailability area) {
+class _AreaMatrixRow extends StatelessWidget {
+  const _AreaMatrixRow({required this.area, required this.onReserve});
+
+  final SportsAreaAvailability area;
+  final void Function(SportsAreaAvailability, SportsAppointmentWindow)
+  onReserve;
+
+  @override
+  Widget build(BuildContext context) {
     final reserveWindow = _firstReservableWindow(area.windows);
-    return TableRow(
-      children: [
-        _AreaNoCell(areaNo: area.areaNo),
-        for (final part in _dayParts)
-          _WindowStatusCell(window: _windowForPart(part, area.windows)),
-        _ReserveCell(
-          enabled: reserveWindow != null,
-          onPressed: reserveWindow == null
-              ? null
-              : () => onReserve(area, reserveWindow),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 42,
+            height: 54,
+            child: Center(
+              child: Text(
+                '${area.areaNo}',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          for (final part in _dayParts)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: _WindowStatusBlock(
+                  window: _windowForPart(part, area.windows),
+                ),
+              ),
+            ),
+          SizedBox(
+            width: 52,
+            height: 54,
+            child: Center(
+              child: FittedBox(
+                child: ui.OutlineButton(
+                  onPressed: reserveWindow == null
+                      ? null
+                      : () => onReserve(area, reserveWindow),
+                  density: ui.ButtonDensity.compact,
+                  child: const Text('预定'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1284,45 +1269,8 @@ class _OrderDetailRow extends StatelessWidget {
   }
 }
 
-class _TableHeaderCell extends StatelessWidget {
-  const _TableHeaderCell({required this.text, required this.style});
-
-  final String text;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 34,
-      alignment: Alignment.center,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Text(text, style: style),
-    );
-  }
-}
-
-class _AreaNoCell extends StatelessWidget {
-  const _AreaNoCell({required this.areaNo});
-
-  final int areaNo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      alignment: Alignment.center,
-      child: Text(
-        '$areaNo',
-        style: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _WindowStatusCell extends StatelessWidget {
-  const _WindowStatusCell({required this.window});
+class _WindowStatusBlock extends StatelessWidget {
+  const _WindowStatusBlock({required this.window});
 
   final SportsAppointmentWindow? window;
 
@@ -1330,53 +1278,57 @@ class _WindowStatusCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final available = window?.canReserve == true;
-    return Container(
-      height: 58,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      color: available
-          ? colors.primary.withValues(alpha: 0.09)
+    final textColor = available ? colors.primary : colors.onSurfaceVariant;
+    return ui.OutlinedContainer(
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+      borderRadius: BorderRadius.circular(6),
+      borderColor: available ? colors.primary : colors.outlineVariant,
+      backgroundColor: available
+          ? colors.primary.withValues(alpha: 0.08)
           : colors.surfaceContainerHighest.withValues(alpha: 0.35),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _compactTimeRange(window),
+            _compactTime(window?.startTime ?? '--'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: available ? colors.primary : colors.onSurfaceVariant,
+              color: textColor,
               fontWeight: FontWeight.w700,
+              height: 1,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              Expanded(
+                child: Divider(height: 1, thickness: 1, color: textColor),
+              ),
+              const SizedBox(width: 2),
+              Text(
+                available ? '有' : '无',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
           Text(
-            available ? '有' : '无',
+            _compactTime(window?.endTime ?? '--'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: available ? colors.primary : colors.onSurfaceVariant,
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              height: 1,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ReserveCell extends StatelessWidget {
-  const _ReserveCell({required this.enabled, required this.onPressed});
-
-  final bool enabled;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 58,
-      child: Center(
-        child: TextButton(
-          onPressed: enabled ? onPressed : null,
-          child: const Text('预定'),
-        ),
       ),
     );
   }
@@ -1445,13 +1397,6 @@ int _parseStartHour(String startTime) {
   return int.tryParse(digits.substring(0, 2)) ?? 0;
 }
 
-String _compactTimeRange(SportsAppointmentWindow? window) {
-  if (window == null) {
-    return '--';
-  }
-  return '${_compactTime(window.startTime)}~${_compactTime(window.endTime)}';
-}
-
 String _compactTime(String value) {
   final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
   if (digits.length >= 4) {
@@ -1478,23 +1423,10 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: active
-            ? colors.primary.withValues(alpha: 0.10)
-            : colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: active ? colors.primary : colors.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+    final child = Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
+    return active
+        ? ui.PrimaryBadge(child: child)
+        : ui.SecondaryBadge(child: child);
   }
 }
 
@@ -1637,6 +1569,44 @@ String _formatReservationDate(DateTime date) {
   final month = date.month.toString().padLeft(2, '0');
   final day = date.day.toString().padLeft(2, '0');
   return '$month/$day';
+}
+
+DateTime _minReservableDate() {
+  return DateUtils.dateOnly(DateTime.now());
+}
+
+DateTime _maxReservableDate(SportsReservationState state) {
+  final today = _minReservableDate();
+  final dayCount = state.advanceAppointmentDayCount;
+  if (dayCount <= 0) {
+    return today;
+  }
+  final offset = _hasReachedAdvanceStartTime(state.advanceAppointmentStartTime)
+      ? dayCount
+      : dayCount - 1;
+  return today.add(Duration(days: offset < 0 ? 0 : offset));
+}
+
+bool _hasReachedAdvanceStartTime(String value) {
+  final start = _parseClockTime(value);
+  if (start == null) {
+    return true;
+  }
+  final now = DateTime.now();
+  return now.hour > start.$1 || now.hour == start.$1 && now.minute >= start.$2;
+}
+
+(int, int)? _parseClockTime(String value) {
+  final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.length < 4) {
+    return null;
+  }
+  final hour = int.tryParse(digits.substring(0, 2));
+  final minute = int.tryParse(digits.substring(2, 4));
+  if (hour == null || minute == null) {
+    return null;
+  }
+  return (hour, minute);
 }
 
 String _formatFullDate(DateTime date) {
