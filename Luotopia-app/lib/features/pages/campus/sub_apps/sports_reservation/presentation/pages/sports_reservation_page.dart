@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -502,9 +503,17 @@ class _ProjectToggleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      _ProjectToggleSpec(label: '羽毛球', aliases: ['羽毛']),
-      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓']),
-      _ProjectToggleSpec(label: '健身房', aliases: ['健身']),
+      _ProjectToggleSpec(
+        label: '羽毛球',
+        aliases: ['羽毛'],
+        icon: Icons.sports_tennis,
+      ),
+      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓'], icon: Icons.table_bar),
+      _ProjectToggleSpec(
+        label: '健身房',
+        aliases: ['健身'],
+        icon: Icons.fitness_center,
+      ),
     ];
     final matchedProjects = [
       for (final item in items) _matchProject(item, projects),
@@ -512,25 +521,36 @@ class _ProjectToggleBar extends StatelessWidget {
     final selectedIndex = matchedProjects.indexWhere(
       (project) => project?.id == selectedProject?.id,
     );
-    return ui.Tabs(
-      index: selectedIndex < 0 ? 0 : selectedIndex,
-      expand: true,
-      onChanged: (index) {
-        final project = matchedProjects[index];
-        if (project != null) {
-          onProjectSelected(project);
-        }
-      },
-      children: [
-        for (var index = 0; index < items.length; index++)
-          ui.TabItem(
-            child: Text(
-              items[index].label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    final disabledIndexes = {
+      for (var index = 0; index < matchedProjects.length; index++)
+        if (matchedProjects[index] == null) index,
+    };
+    return SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<int>(
+        backgroundColor: CupertinoDynamicColor.resolve(
+          CupertinoColors.tertiarySystemFill,
+          context,
+        ),
+        disabledChildren: disabledIndexes,
+        groupValue: selectedIndex < 0 ? 0 : selectedIndex,
+        onValueChanged: (index) {
+          if (index == null) {
+            return;
+          }
+          final project = matchedProjects[index];
+          if (project != null) {
+            onProjectSelected(project);
+          }
+        },
+        children: {
+          for (var index = 0; index < items.length; index++)
+            index: _ProjectSegment(
+              icon: items[index].icon,
+              label: items[index].label,
             ),
-          ),
-      ],
+        },
+      ),
     );
   }
 
@@ -549,11 +569,41 @@ class _ProjectToggleBar extends StatelessWidget {
   }
 }
 
+class _ProjectSegment extends StatelessWidget {
+  const _ProjectSegment({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProjectToggleSpec {
-  const _ProjectToggleSpec({required this.label, required this.aliases});
+  const _ProjectToggleSpec({
+    required this.label,
+    required this.aliases,
+    required this.icon,
+  });
 
   final String label;
   final List<String> aliases;
+  final IconData icon;
 }
 
 class _DateNavigator extends StatelessWidget {
