@@ -20,5 +20,5 @@
 ### 约束
 
 - `shared/` 不承载应用启动逻辑。
-- `shared/` 不再提供私有页面框架组件，页面布局优先直接使用 `shadcn_flutter`。
+- `shared/` 不再提供私有页面框架组件，页面布局优先直接使用 `shadcn_flutter` 与 Material。
 - 若某能力只服务单一 feature，应回到对应 feature 内部。

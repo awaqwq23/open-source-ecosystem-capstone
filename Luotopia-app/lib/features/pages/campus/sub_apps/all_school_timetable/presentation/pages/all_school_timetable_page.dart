@@ -189,11 +189,7 @@ class _SearchBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        FilledButton.icon(
-          onPressed: onSearch,
-          icon: const Icon(Icons.search, size: 18),
-          label: const Text('搜索'),
-        ),
+        FilledButton(onPressed: onSearch, child: const Text('搜索')),
       ],
     );
   }
@@ -356,16 +352,25 @@ class _FilterStrip extends StatelessWidget {
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
-            for (final option in options)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_optionLabel(option)),
-                trailing: value == option ? const Icon(Icons.check) : null,
-                onTap: () {
-                  onSelected(option);
+            RadioGroup<String>(
+              groupValue: options.contains(value) ? value : '',
+              onChanged: (selected) {
+                if (selected != null) {
+                  onSelected(selected);
                   Navigator.of(sheetContext).pop();
-                },
+                }
+              },
+              child: Column(
+                children: [
+                  for (final option in options)
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      value: option,
+                      title: Text(_optionLabel(option)),
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -552,21 +557,20 @@ class _SheetSelectField extends StatelessWidget {
     final selectedValue = options.contains(value) ? value : '';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: DropdownButtonFormField<String>(
-        initialValue: selectedValue,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-          isDense: true,
-        ),
-        items: [
-          for (final option in options)
-            DropdownMenuItem(value: option, child: Text(_optionLabel(option))),
-        ],
-        onChanged: (value) => onChanged(value ?? ''),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return DropdownMenu<String>(
+            initialSelection: selectedValue,
+            width: constraints.maxWidth,
+            menuHeight: 360,
+            label: Text(label),
+            dropdownMenuEntries: [
+              for (final option in options)
+                DropdownMenuEntry(value: option, label: _optionLabel(option)),
+            ],
+            onSelected: (value) => onChanged(value ?? ''),
+          );
+        },
       ),
     );
   }
@@ -587,25 +591,14 @@ class _FilterPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        avatar: Icon(
-          icon,
-          size: 18,
-          color: active ? colors.onPrimaryContainer : colors.onSurfaceVariant,
-        ),
+      child: FilterChip(
+        selected: active,
+        showCheckmark: false,
+        avatar: Icon(icon, size: 18),
         label: Text(label),
-        onPressed: onTap,
-        backgroundColor: active
-            ? colors.primaryContainer
-            : colors.surfaceContainerHighest,
-        labelStyle: TextStyle(
-          color: active ? colors.onPrimaryContainer : colors.onSurfaceVariant,
-          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-        ),
-        shape: const StadiumBorder(),
+        onSelected: (_) => onTap(),
       ),
     );
   }

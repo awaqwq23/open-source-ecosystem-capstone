@@ -20,6 +20,6 @@
 
 ### 当前约束
 
-- 页面框架层统一依赖 `shadcn_flutter`，`core/` 不再新增私有 Scaffold、AppBar、Sheet 之类的替代实现。
+- 页面框架层统一依赖 `shadcn_flutter` 与 Material，`core/` 不再新增私有 Scaffold、AppBar、Sheet 之类的替代实现。
 - 全局可复用图标语义统一收口到 `core/theme/app_icons.dart`；页面层新增稳定图标时优先复用 `AppIcons`，不要直接散写 `Icons.*`。
 - 只有一次性、局部且尚未沉淀为通用语义的图标，才允许在页面内直接使用 `Icons.*`。
