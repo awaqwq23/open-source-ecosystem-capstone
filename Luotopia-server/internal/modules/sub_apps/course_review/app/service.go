@@ -19,6 +19,8 @@ const (
 
 // Repository 仓储端口，由 infra 实现。
 type Repository interface {
+	// ValidateSubjectTarget 校验 course_id + teacher_id 是否来自全校课表中真实存在的授课组合。
+	ValidateSubjectTarget(ctx context.Context, courseID, teacherID string) error
 	// GetSubject 按 course_id+teacher_id 取聚合；未创建时返回 ErrNotFound。
 	GetSubject(ctx context.Context, courseID, teacherID string) (domain.Subject, error)
 	// FindOrCreateSubject 幂等创建评价对象（确定性 id），返回 subject。
@@ -92,6 +94,13 @@ type WalletView struct {
 	AccessGrant *domain.AccessGrant `json:"access_grant"`
 }
 
+// PolicyView 客户端展示用业务策略。
+type PolicyView struct {
+	PointsPerReview  int `json:"points_per_review"`
+	AccessCostPerDay int `json:"access_cost_per_day"`
+	MaxRedeemDays    int `json:"max_redeem_days"`
+}
+
 // Service 课程评价应用服务。
 type Service struct {
 	repo Repository
@@ -123,6 +132,9 @@ func (s *Service) GetSubject(ctx context.Context, courseID, teacherID string) (S
 	if courseID == "" || teacherID == "" {
 		return SubjectOverview{}, domain.ErrInvalidArgument
 	}
+	if err := s.repo.ValidateSubjectTarget(ctx, courseID, teacherID); err != nil {
+		return SubjectOverview{}, err
+	}
 	subject, err := s.repo.GetSubject(ctx, courseID, teacherID)
 	if err != nil {
 		if err == domain.ErrNotFound {
@@ -146,6 +158,9 @@ func (s *Service) GetSubject(ctx context.Context, courseID, teacherID string) (S
 func (s *Service) ListReviews(ctx context.Context, userID, courseID, teacherID, cursor string, limit int) ([]domain.Review, string, error) {
 	if courseID == "" || teacherID == "" {
 		return nil, "", domain.ErrInvalidArgument
+	}
+	if err := s.repo.ValidateSubjectTarget(ctx, courseID, teacherID); err != nil {
+		return nil, "", err
 	}
 	if userID == "" {
 		return nil, "", domain.ErrAccessRequired
@@ -188,6 +203,9 @@ func (s *Service) SubmitReview(ctx context.Context, userID, courseID, teacherID 
 	if courseID == "" || teacherID == "" {
 		return domain.Review{}, WalletView{}, domain.ErrInvalidArgument
 	}
+	if err := s.repo.ValidateSubjectTarget(ctx, courseID, teacherID); err != nil {
+		return domain.Review{}, WalletView{}, err
+	}
 	if err := validateRatings(input); err != nil {
 		return domain.Review{}, WalletView{}, err
 	}
@@ -207,8 +225,8 @@ func (s *Service) SubmitReview(ctx context.Context, userID, courseID, teacherID 
 	if err != nil {
 		return domain.Review{}, WalletView{}, err
 	}
-	grant, _ := s.repo.ActiveAccessGrant(ctx, userID, time.Now())
-	return review, WalletView{Balance: wallet.Balance, AccessGrant: grantOrNil(grant)}, nil
+	grant, grantErr := s.repo.ActiveAccessGrant(ctx, userID, time.Now())
+	return review, WalletView{Balance: wallet.Balance, AccessGrant: grantOrNil(grant, grantErr)}, nil
 }
 
 // DeleteReview 作者软删评价，不退积分。
@@ -235,8 +253,8 @@ func (s *Service) GetWallet(ctx context.Context, userID string) (WalletView, err
 		}
 		return WalletView{}, err
 	}
-	grant, _ := s.repo.ActiveAccessGrant(ctx, userID, time.Now())
-	return WalletView{Balance: wallet.Balance, AccessGrant: grantOrNil(grant)}, nil
+	grant, grantErr := s.repo.ActiveAccessGrant(ctx, userID, time.Now())
+	return WalletView{Balance: wallet.Balance, AccessGrant: grantOrNil(grant, grantErr)}, nil
 }
 
 // ListMyReviews 我发表的评价。
@@ -267,6 +285,19 @@ func (s *Service) RedeemAccess(ctx context.Context, userID string, durationDays 
 	return WalletView{Balance: wallet.Balance, AccessGrant: &grant}, grant, nil
 }
 
+// GetPolicy 返回客户端可展示的课程评价业务策略。
+func (s *Service) GetPolicy() PolicyView {
+	points := s.cfg.PointsPerReview
+	if points < 0 {
+		points = 0
+	}
+	return PolicyView{
+		PointsPerReview:  points,
+		AccessCostPerDay: s.cfg.AccessCostPerDay,
+		MaxRedeemDays:    s.cfg.MaxRedeemDays,
+	}
+}
+
 func validateRatings(input ReviewInput) error {
 	for _, v := range []int{input.Difficulty, input.Workload, input.Quality, input.Interest} {
 		if v < ratingMin || v > ratingMax {
@@ -295,6 +326,9 @@ func parseGradeValue(raw string) *float64 {
 	return nil
 }
 
-func grantOrNil(g domain.AccessGrant) *domain.AccessGrant {
+func grantOrNil(g domain.AccessGrant, err error) *domain.AccessGrant {
+	if err != nil {
+		return nil
+	}
 	return &g
 }

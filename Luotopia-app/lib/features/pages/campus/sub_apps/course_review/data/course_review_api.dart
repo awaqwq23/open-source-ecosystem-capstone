@@ -20,6 +20,11 @@ class CourseReviewApi {
     return CourseReviewSubject.fromJson(json);
   }
 
+  Future<CourseReviewPolicy> getPolicy() async {
+    final json = await _api.get('$_base/policy');
+    return CourseReviewPolicy.fromJson(json);
+  }
+
   /// 评价正文列表（需权限）。返回 (列表, 下一页游标)。
   Future<({List<CourseReview> items, String nextCursor})> listReviews({
     required String courseId,
@@ -30,8 +35,9 @@ class CourseReviewApi {
     final params = <String>[];
     if (cursor.isNotEmpty) params.add('cursor=${Uri.encodeComponent(cursor)}');
     params.add('limit=$limit');
-    final json = await _api
-        .get('$_base/courses/$courseId/teachers/$teacherId/reviews?${params.join('&')}');
+    final json = await _api.get(
+      '$_base/courses/$courseId/teachers/$teacherId/reviews?${params.join('&')}',
+    );
     final items = (json['items'] as List? ?? const [])
         .map((e) => CourseReview.fromJson(e as Map<String, dynamic>))
         .toList(growable: false);
@@ -66,8 +72,12 @@ class CourseReviewApi {
         'content_text': contentText,
       },
     );
-    final review = CourseReview.fromJson((json['review'] as Map<String, dynamic>?) ?? const {});
-    final wallet = CourseReviewWallet.fromJson((json['wallet'] as Map<String, dynamic>?) ?? const {});
+    final review = CourseReview.fromJson(
+      (json['review'] as Map<String, dynamic>?) ?? const {},
+    );
+    final wallet = CourseReviewWallet.fromJson(
+      (json['wallet'] as Map<String, dynamic>?) ?? const {},
+    );
     return (review: review, wallet: wallet);
   }
 
@@ -99,4 +109,10 @@ class CourseReviewApi {
 // 引用 pull_providers 中导出的 apiClientProvider（同文件定义）。
 final courseReviewApiProvider = Provider<CourseReviewApi>((ref) {
   return CourseReviewApi(ref.read(apiClientProvider));
+});
+
+final courseReviewPolicyProvider = FutureProvider<CourseReviewPolicy>((
+  ref,
+) async {
+  return ref.read(courseReviewApiProvider).getPolicy();
 });

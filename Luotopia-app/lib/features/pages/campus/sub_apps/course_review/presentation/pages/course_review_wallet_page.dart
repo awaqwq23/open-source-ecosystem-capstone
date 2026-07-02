@@ -52,6 +52,7 @@ class _CourseReviewWalletPageState
     final theme = Theme.of(context);
     final session = ref.watch(courseReviewSessionViewModelProvider);
     final authenticated = ref.watch(luotopiaAuthProvider).isAuthenticated;
+    final policyAsync = ref.watch(courseReviewPolicyProvider);
 
     if (!authenticated) {
       return ui.Scaffold(
@@ -130,37 +131,39 @@ class _CourseReviewWalletPageState
             ),
           ),
           const SizedBox(height: 16),
-          Text('兑换查询权限（每日 3 积分）', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ui.PrimaryButton(
-                  onPressed: session.isSubmitting ? null : () => _redeem(7),
-                  child: const Text('7 天 · 21 积分'),
-                ),
+          policyAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: ui.CircularProgressIndicator()),
+            ),
+            error: (error, _) => Text(
+              '兑换策略加载失败：$error',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ui.PrimaryButton(
-                  onPressed: session.isSubmitting ? null : () => _redeem(30),
-                  child: const Text('30 天 · 90 积分'),
-                ),
-              ),
-            ],
+            ),
+            data: (policy) => _RedeemSection(
+              policy: policy,
+              isSubmitting: session.isSubmitting,
+              onRedeem: _redeem,
+            ),
           ),
           if (session.message != null) ...[
             const SizedBox(height: 8),
             Text(
               session.message!,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
           ],
           if (session.error != null) ...[
             const SizedBox(height: 8),
             Text(
               session.error!,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ],
           const SizedBox(height: 24),
@@ -174,10 +177,7 @@ class _CourseReviewWalletPageState
           else if (_myReviews == null || _myReviews!.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                '还没有发布过评价',
-                style: theme.textTheme.bodyMedium,
-              ),
+              child: Text('还没有发布过评价', style: theme.textTheme.bodyMedium),
             )
           else
             for (final review in _myReviews!)
@@ -228,6 +228,55 @@ class _CourseReviewWalletPageState
   void _toast(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
+    );
+  }
+}
+
+class _RedeemSection extends StatelessWidget {
+  const _RedeemSection({
+    required this.policy,
+    required this.isSubmitting,
+    required this.onRedeem,
+  });
+
+  final CourseReviewPolicy policy;
+  final bool isSubmitting;
+  final ValueChanged<int> onRedeem;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final options = <int>[
+      7,
+      30,
+    ].where(policy.canRedeemDays).toList(growable: false);
+    if (policy.accessCostPerDay <= 0 || options.isEmpty) {
+      return Text('暂不可兑换查询权限', style: theme.textTheme.bodyMedium);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '兑换查询权限（每日 ${policy.accessCostPerDay} 积分）',
+          style: theme.textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var i = 0; i < options.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: ui.PrimaryButton(
+                  onPressed: isSubmitting ? null : () => onRedeem(options[i]),
+                  child: Text(
+                    '${options[i]} 天 · ${policy.costForDays(options[i])} 积分',
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }

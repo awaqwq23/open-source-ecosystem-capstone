@@ -122,14 +122,20 @@ class CourseReview {
       attendanceText: json['attendance_text'] as String? ?? '',
       homeworkText: json['homework_text'] as String? ?? '',
       contentText: json['content_text'] as String? ?? '',
-      createdAt: _parseTime(json['created_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          _parseTime(json['created_at']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }
 
 /// 查询权限授权区间。
 class CourseReviewAccessGrant {
-  const CourseReviewAccessGrant({required this.id, required this.startsAt, required this.expiresAt});
+  const CourseReviewAccessGrant({
+    required this.id,
+    required this.startsAt,
+    required this.expiresAt,
+  });
 
   final String id;
   final DateTime startsAt;
@@ -140,8 +146,12 @@ class CourseReviewAccessGrant {
   factory CourseReviewAccessGrant.fromJson(Map<String, dynamic> json) {
     return CourseReviewAccessGrant(
       id: json['id'] as String? ?? '',
-      startsAt: _parseTime(json['starts_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
-      expiresAt: _parseTime(json['expires_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+      startsAt:
+          _parseTime(json['starts_at']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      expiresAt:
+          _parseTime(json['expires_at']) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }
@@ -157,7 +167,34 @@ class CourseReviewWallet {
     final grant = json['access_grant'] as Map<String, dynamic>?;
     return CourseReviewWallet(
       balance: (json['balance'] as num?)?.toInt() ?? 0,
-      accessGrant: grant == null ? null : CourseReviewAccessGrant.fromJson(grant),
+      accessGrant: grant == null
+          ? null
+          : CourseReviewAccessGrant.fromJson(grant),
+    );
+  }
+}
+
+class CourseReviewPolicy {
+  const CourseReviewPolicy({
+    required this.pointsPerReview,
+    required this.accessCostPerDay,
+    required this.maxRedeemDays,
+  });
+
+  final int pointsPerReview;
+  final int accessCostPerDay;
+  final int maxRedeemDays;
+
+  int costForDays(int days) => days * accessCostPerDay;
+
+  bool canRedeemDays(int days) =>
+      days > 0 && (maxRedeemDays <= 0 || days <= maxRedeemDays);
+
+  factory CourseReviewPolicy.fromJson(Map<String, dynamic> json) {
+    return CourseReviewPolicy(
+      pointsPerReview: (json['points_per_review'] as num?)?.toInt() ?? 0,
+      accessCostPerDay: (json['access_cost_per_day'] as num?)?.toInt() ?? 0,
+      maxRedeemDays: (json['max_redeem_days'] as num?)?.toInt() ?? 0,
     );
   }
 }

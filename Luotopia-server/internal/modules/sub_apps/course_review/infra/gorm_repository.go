@@ -108,6 +108,25 @@ func (grantModel) TableName() string { return "course_review_access_grants" }
 
 // ---- Repository 实现 ----
 
+func (r *GormRepository) ValidateSubjectTarget(ctx context.Context, courseID, teacherID string) error {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Table("school_timetable_entities AS ot").
+		Joins("JOIN school_timetable_entities AS o ON o.entity_type = ? AND o.entity_id = (ot.payload_json ->> ?)", "offering", "offering_id").
+		Where("ot.entity_type = ?", "offering_teacher").
+		Where("(ot.payload_json ->> ?) = ?", "teacher_id", teacherID).
+		Where("(o.payload_json ->> ?) = ?", "course_id", courseID).
+		Limit(1).
+		Count(&count).Error
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func (r *GormRepository) GetSubject(ctx context.Context, courseID, teacherID string) (domain.Subject, error) {
 	var m subjectModel
 	err := r.db.WithContext(ctx).
@@ -213,6 +232,13 @@ func (r *GormRepository) SubmitReview(ctx context.Context, userID string, subjec
 
 	var wallet walletModel
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var everCount int64
+		if err := tx.Model(&reviewModel{}).
+			Where("author_user_id = ? AND subject_id = ? AND source = ?",
+				userID, subject.ID, string(domain.ReviewSourceUser)).
+			Count(&everCount).Error; err != nil {
+			return err
+		}
 		// 唯一性约束兜底：先查同用户同 subject 是否已有有效评价。
 		var existing reviewModel
 		err := tx.Where("author_user_id = ? AND subject_id = ? AND source = ? AND status <> ?",
@@ -243,8 +269,12 @@ func (r *GormRepository) SubmitReview(ctx context.Context, userID string, subjec
 				return err
 			}
 		}
-		if rewardPoints > 0 {
-			wallet.Balance += rewardPoints
+		reward := rewardPoints
+		if everCount > 0 {
+			reward = 0
+		}
+		if reward > 0 {
+			wallet.Balance += reward
 			wallet.UpdatedAt = now
 			if err := tx.Model(&walletModel{}).Where("user_id = ?", userID).
 				Updates(map[string]any{"balance": wallet.Balance, "updated_at": now}).Error; err != nil {
@@ -254,7 +284,7 @@ func (r *GormRepository) SubmitReview(ctx context.Context, userID string, subjec
 			ledger := ledgerModel{
 				ID:        ledgerID,
 				UserID:    userID,
-				Delta:     rewardPoints,
+				Delta:     reward,
 				Reason:    string(domain.LedgerReasonReviewPublished),
 				ReviewID:  &reviewID,
 				CreatedAt: now,
@@ -335,9 +365,10 @@ func (r *GormRepository) ActiveAccessGrant(ctx context.Context, userID string, n
 func (r *GormRepository) RedeemAccess(ctx context.Context, userID string, cost, durationDays int, now time.Time) (domain.Wallet, domain.AccessGrant, error) {
 	grantID := newGrantID()
 	ledgerID := newLedgerID()
+	starts := now
 	expires := now.Add(time.Duration(durationDays) * 24 * time.Hour)
 	var wallet walletModel
-	grant := domain.AccessGrant{ID: grantID, UserID: userID, StartsAt: now, ExpiresAt: expires, CreatedAt: now}
+	grant := domain.AccessGrant{ID: grantID, UserID: userID, StartsAt: starts, ExpiresAt: expires, CreatedAt: now}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("user_id = ?", userID).First(&wallet).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -347,6 +378,17 @@ func (r *GormRepository) RedeemAccess(ctx context.Context, userID string, cost, 
 		}
 		if wallet.Balance < cost {
 			return domain.ErrInsufficient
+		}
+		var latest grantModel
+		if err := tx.Where("user_id = ? AND expires_at > ?", userID, now).
+			Order("expires_at DESC").
+			First(&latest).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+		} else {
+			expires = latest.ExpiresAt.Add(time.Duration(durationDays) * 24 * time.Hour)
+			grant.ExpiresAt = expires
 		}
 		wallet.Balance -= cost
 		wallet.UpdatedAt = now
@@ -368,7 +410,7 @@ func (r *GormRepository) RedeemAccess(ctx context.Context, userID string, cost, 
 		g := grantModel{
 			ID:           grantID,
 			UserID:       userID,
-			StartsAt:     now,
+			StartsAt:     starts,
 			ExpiresAt:    expires,
 			SourceLedger: &ledgerID,
 			CreatedAt:    now,

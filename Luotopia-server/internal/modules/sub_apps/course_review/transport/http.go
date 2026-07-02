@@ -26,6 +26,7 @@ func NewHandler(service *app.Service, tokenSecret string) Handler {
 // Register 挂载到 /api/v1/course-reviews。概览免费；其余需登录。
 func (h Handler) Register(router gin.IRouter) {
 	g := router.Group(contract.ClientBase)
+	g.GET("/policy", h.getPolicy)
 	g.GET("/courses/:courseId/teachers/:teacherId", h.getSubject)
 
 	protected := g.Group("")
@@ -36,6 +37,10 @@ func (h Handler) Register(router gin.IRouter) {
 	protected.GET("/me/wallet", h.getWallet)
 	protected.GET("/me/reviews", h.myReviews)
 	protected.POST("/access/redeem", h.redeemAccess)
+}
+
+func (h Handler) getPolicy(c *gin.Context) {
+	c.JSON(http.StatusOK, policyJSON(h.service.GetPolicy()))
 }
 
 func (h Handler) getSubject(c *gin.Context) {
@@ -204,6 +209,14 @@ func walletJSON(w app.WalletView) gin.H {
 		}
 	}
 	return gin.H{"balance": w.Balance, "access_grant": grant}
+}
+
+func policyJSON(p app.PolicyView) gin.H {
+	return gin.H{
+		"points_per_review":   p.PointsPerReview,
+		"access_cost_per_day": p.AccessCostPerDay,
+		"max_redeem_days":     p.MaxRedeemDays,
+	}
 }
 
 func nullableFloat(v *float64) any {

@@ -27,27 +27,33 @@ class CourseReviewSubjectKey {
 
 /// 本地课程搜索（按关键字）。
 final courseReviewSearchProvider =
-    FutureProvider.family<List<CourseReviewCourse>, String>((ref, keyword) async {
-  final local = ref.read(courseReviewLocalDataProvider);
-  return local.searchCourses(keyword);
-});
+    FutureProvider.family<List<CourseReviewCourse>, String>((
+      ref,
+      keyword,
+    ) async {
+      final local = ref.read(courseReviewLocalDataProvider);
+      return local.searchCourses(keyword);
+    });
 
 /// 某课程的本地教师列表。
 final courseReviewTeachersProvider =
-    FutureProvider.family<List<CourseReviewTeacher>, String>((ref, courseId) async {
-  final local = ref.read(courseReviewLocalDataProvider);
-  return local.listTeachers(courseId);
-});
+    FutureProvider.family<List<CourseReviewTeacher>, String>((
+      ref,
+      courseId,
+    ) async {
+      final local = ref.read(courseReviewLocalDataProvider);
+      return local.listTeachers(courseId);
+    });
 
 /// 评价对象概览（免费）。
 final courseReviewSubjectProvider =
     FutureProvider.family<CourseReviewSubject, CourseReviewSubjectKey>((
-  ref,
-  key,
-) async {
-  final api = ref.read(courseReviewApiProvider);
-  return api.getSubject(courseId: key.courseId, teacherId: key.teacherId);
-});
+      ref,
+      key,
+    ) async {
+      final api = ref.read(courseReviewApiProvider);
+      return api.getSubject(courseId: key.courseId, teacherId: key.teacherId);
+    });
 
 // ---- 会话视图模型：钱包 / 提交 / 兑换 / 删除 ----
 
@@ -113,7 +119,11 @@ class CourseReviewSessionViewModel extends Notifier<CourseReviewSessionState> {
     String attendanceText = '',
     String homeworkText = '',
   }) async {
-    state = state.copyWith(isSubmitting: true, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      isSubmitting: true,
+      clearMessage: true,
+      clearError: true,
+    );
     try {
       final result = await _api.submitReview(
         courseId: key.courseId,
@@ -128,10 +138,13 @@ class CourseReviewSessionViewModel extends Notifier<CourseReviewSessionState> {
         attendanceText: attendanceText,
         homeworkText: homeworkText,
       );
+      final gained =
+          result.wallet.balance -
+          (state.wallet?.balance ?? result.wallet.balance);
       state = state.copyWith(
         wallet: result.wallet,
         isSubmitting: false,
-        message: '评价已发布，积分 +${result.wallet.balance - (state.wallet?.balance ?? 0)}',
+        message: gained > 0 ? '评价已发布，积分 +$gained' : '评价已发布',
       );
       ref.invalidate(courseReviewSubjectProvider(key));
       ref.invalidate(courseReviewListViewModelProvider);
@@ -143,7 +156,11 @@ class CourseReviewSessionViewModel extends Notifier<CourseReviewSessionState> {
   }
 
   Future<bool> redeemAccess(int durationDays) async {
-    state = state.copyWith(isSubmitting: true, clearMessage: true, clearError: true);
+    state = state.copyWith(
+      isSubmitting: true,
+      clearMessage: true,
+      clearError: true,
+    );
     try {
       final wallet = await _api.redeemAccess(durationDays);
       state = state.copyWith(
