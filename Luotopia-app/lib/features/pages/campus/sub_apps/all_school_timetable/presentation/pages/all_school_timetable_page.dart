@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
+import 'package:luotopia/core/motion/app_motion_widgets.dart';
 import 'package:luotopia/core/theme/app_icons.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/domain/models/all_school_timetable_models.dart';
 import 'package:luotopia/features/pages/campus/sub_apps/all_school_timetable/presentation/viewmodels/all_school_timetable_view_model.dart';
@@ -162,37 +163,33 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ui.TextField(
-      controller: controller,
-      textInputAction: TextInputAction.search,
-      onSubmitted: onSubmitted,
-      hintText: '搜课程、老师、课程号、教室',
-      features: [
-        const ui.InputLeadingFeature(Icon(Icons.search, size: 16)),
-        ui.InputTrailingFeature(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (hasKeyword) ...[
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: ui.IconButton.ghost(
-                    onPressed: onClear,
-                    icon: const Icon(Icons.close, size: 16),
-                  ),
-                ),
-              ],
-              ui.Button.primary(
-                onPressed: onSearch,
-                leading: const Icon(Icons.search, size: 16),
-                style: const ui.ButtonStyle.primary(
-                  density: ui.ButtonDensity.compact,
-                ),
-                child: const Text('搜索'),
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            textInputAction: TextInputAction.search,
+            onSubmitted: onSubmitted,
+            decoration: InputDecoration(
+              hintText: '搜课程、老师、课程号、教室',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: hasKeyword
+                  ? IconButton(
+                      tooltip: '清空搜索',
+                      icon: const Icon(Icons.close),
+                      onPressed: onClear,
+                    )
+                  : null,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
-            ],
+              filled: true,
+              isDense: true,
+            ),
           ),
         ),
+        const SizedBox(width: 10),
+        FilledButton(onPressed: onSearch, child: const Text('搜索')),
       ],
     );
   }
@@ -276,42 +273,58 @@ class _FilterStrip extends StatelessWidget {
   }
 
   Future<void> _showTermPicker(BuildContext context) {
-    return showModalBottomSheet<void>(
+    return ui.openSheet<void>(
       context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          children: [
-            Text(
-              '选择学期',
-              style: Theme.of(
-                sheetContext,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            RadioGroup<String>(
-              groupValue: state.query.termKey,
-              onChanged: (selected) {
-                if (selected != null) {
-                  notifier.setTerm(selected);
-                  Navigator.of(sheetContext).pop();
-                }
-              },
-              child: Column(
-                children: [
-                  for (final term in state.terms)
-                    RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      value: term.termKey,
-                      title: Text('${term.schoolYear} 第${term.term}学期'),
-                      subtitle: Text('${term.rowCount} 条教学班'),
-                    ),
-                ],
+      position: ui.OverlayPosition.bottom,
+      builder: (sheetContext) => AppSheetEntrance(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '选择学期',
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              for (final term in state.terms)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ui.CardButton(
+                    alignment: Alignment.centerLeft,
+                    onPressed: () {
+                      notifier.setTerm(term.termKey);
+                      ui.closeSheet(sheetContext);
+                    },
+                    trailing: state.query.termKey == term.termKey
+                        ? const Icon(Icons.check)
+                        : null,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${term.schoolYear} 第${term.term}学期'),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${term.rowCount} 条教学班',
+                            style: Theme.of(sheetContext).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    sheetContext,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -578,27 +591,14 @@ class _FilterPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final activeStyle = ui.ButtonVariance.outline
-        .withBorder(
-          border: Border.all(color: colorScheme.primary, width: 1.4),
-          hoverBorder: Border.all(color: colorScheme.primary, width: 1.6),
-          focusBorder: Border.all(color: colorScheme.primary, width: 1.6),
-        )
-        .withForegroundColor(
-          color: colorScheme.primary,
-          hoverColor: colorScheme.primary,
-          focusColor: colorScheme.primary,
-        );
-
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ui.Button.outline(
-        leading: Icon(icon, size: 16),
-        trailing: active ? const Icon(Icons.check, size: 16) : null,
-        onPressed: onTap,
-        style: active ? activeStyle : ui.ButtonVariance.outline,
-        child: Text(label),
+      child: FilterChip(
+        selected: active,
+        showCheckmark: false,
+        avatar: Icon(icon, size: 18),
+        label: Text(label),
+        onSelected: (_) => onTap(),
       ),
     );
   }
