@@ -18,6 +18,8 @@ class SportsReservationPage extends ConsumerStatefulWidget {
 }
 
 class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
+  int? _expandedAvailabilityKey;
+
   @override
   void initState() {
     super.initState();
@@ -144,8 +146,34 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
     );
   }
 
-  Future<void> _selectWindow({
+  Future<void> _toggleAvailabilityDetails(
+    SportsVenueAvailability availability,
+  ) async {
+    final availabilityKey = availability.stadiumsAreaId;
+    if (_expandedAvailabilityKey == availabilityKey) {
+      setState(() {
+        _expandedAvailabilityKey = null;
+      });
+      ref
+          .read(sportsReservationViewModelProvider.notifier)
+          .clearAreaSelection();
+      return;
+    }
+    setState(() {
+      _expandedAvailabilityKey = availabilityKey;
+    });
+    final window = _firstWindowForDetails(availability);
+    if (window == null) {
+      return;
+    }
+    await ref
+        .read(sportsReservationViewModelProvider.notifier)
+        .loadAreaAvailability(availability: availability, window: window);
+  }
+
+  Future<void> _reserveAreaWindow({
     required SportsVenueAvailability availability,
+    required SportsAreaAvailability area,
     required SportsAppointmentWindow window,
   }) async {
     await ref
@@ -154,23 +182,18 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
     if (!mounted) {
       return;
     }
-    final state = ref.read(sportsReservationViewModelProvider);
-    if (state.selectedAvailability == null || state.selectedWindow == null) {
-      return;
+    await _openCheckout(area);
+  }
+
+  SportsAppointmentWindow? _firstWindowForDetails(
+    SportsVenueAvailability availability,
+  ) {
+    for (final window in availability.windows) {
+      if (window.canReserve) {
+        return window;
+      }
     }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return _AreaSelectionSheet(
-          state: ref.read(sportsReservationViewModelProvider),
-          onCheckout: (area) {
-            Navigator.of(context).pop();
-            _openCheckout(area);
-          },
-        );
-      },
-    );
+    return availability.windows.isEmpty ? null : availability.windows.first;
   }
 
   Future<void> _openCheckout(SportsAreaAvailability area) async {
@@ -243,21 +266,23 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
     return RefreshIndicator(
       onRefresh: _refreshAvailability,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
         children: [
-          _FilterSection(
-            state: state,
+          _ProjectToggleBar(
+            projects: state.projects,
+            selectedProject: state.selectedProject,
             onProjectSelected: (project) => ref
                 .read(sportsReservationViewModelProvider.notifier)
                 .selectProject(project),
-            onDateSelected: (date) => ref
+          ),
+          const SizedBox(height: 10),
+          _DateNavigator(
+            selectedDate: state.selectedDate,
+            onSelected: (date) => ref
                 .read(sportsReservationViewModelProvider.notifier)
                 .selectDate(date),
-            onVenueSelected: (venue) => ref
-                .read(sportsReservationViewModelProvider.notifier)
-                .selectVenue(venue),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           if (state.errorMessage != null)
             _InlineError(
               message: state.errorMessage!,
@@ -274,18 +299,31 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
               state.status != SportsReservationViewStatus.loading)
             const _EmptyAvailabilityView()
           else
-            ...state.availability.map(
-              (availability) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _VenueAvailabilityCard(
+            ...state.availability.map((availability) {
+              final expanded =
+                  _expandedAvailabilityKey == availability.stadiumsAreaId;
+              final detailsBelongToRow =
+                  state.selectedAvailability?.stadiumsAreaId ==
+                  availability.stadiumsAreaId;
+              return _AvailabilityListRow(
+                availability: availability,
+                expanded: expanded,
+                loadingDetails:
+                    expanded &&
+                    state.status == SportsReservationViewStatus.refreshing &&
+                    state.areaAvailability.isEmpty,
+                areaAvailability: expanded && detailsBelongToRow
+                    ? state.areaAvailability
+                    : const [],
+                onToggleExpanded: () =>
+                    _toggleAvailabilityDetails(availability),
+                onReserve: (area, window) => _reserveAreaWindow(
                   availability: availability,
-                  selectedAvailability: state.selectedAvailability,
-                  selectedWindow: state.selectedWindow,
-                  onWindowSelected: (window) =>
-                      _selectWindow(availability: availability, window: window),
+                  area: area,
+                  window: window,
                 ),
-              ),
-            ),
+              );
+            }),
         ],
       ),
     );
@@ -448,222 +486,176 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
   }
 }
 
-class _FilterSection extends StatelessWidget {
-  const _FilterSection({
-    required this.state,
-    required this.onProjectSelected,
-    required this.onDateSelected,
-    required this.onVenueSelected,
-  });
-
-  final SportsReservationState state;
-  final ValueChanged<SportsProject> onProjectSelected;
-  final ValueChanged<DateTime> onDateSelected;
-  final ValueChanged<SportsVenue?> onVenueSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final selectedProject = state.selectedProject;
-
-    return ui.Card(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '预约条件',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          _ProjectSelector(
-            projects: state.projects,
-            selectedProject: selectedProject,
-            onSelected: onProjectSelected,
-          ),
-          const SizedBox(height: 12),
-          _DateSelector(
-            selectedDate: state.selectedDate,
-            onSelected: onDateSelected,
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int?>(
-            key: ValueKey(state.selectedVenue?.id),
-            initialValue: state.selectedVenue?.id,
-            decoration: const InputDecoration(
-              labelText: '场馆',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('全部场馆')),
-              ...state.venues.map(
-                (venue) => DropdownMenuItem<int?>(
-                  value: venue.id,
-                  child: Text(
-                    _venueLabel(venue),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ],
-            onChanged: state.isBusy
-                ? null
-                : (venueId) {
-                    if (venueId == null) {
-                      onVenueSelected(null);
-                      return;
-                    }
-                    final selected = state.venues.where(
-                      (venue) => venue.id == venueId,
-                    );
-                    onVenueSelected(selected.isEmpty ? null : selected.first);
-                  },
-          ),
-          if (selectedProject == null) ...[
-            const SizedBox(height: 10),
-            Text(
-              '暂无可选运动项目',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  static String _venueLabel(SportsVenue venue) {
-    if (venue.campusTitle.trim().isEmpty) {
-      return venue.title;
-    }
-    return '${venue.title} · ${venue.campusTitle}';
-  }
-}
-
-class _ProjectSelector extends StatelessWidget {
-  const _ProjectSelector({
+class _ProjectToggleBar extends StatelessWidget {
+  const _ProjectToggleBar({
     required this.projects,
     required this.selectedProject,
-    required this.onSelected,
+    required this.onProjectSelected,
   });
 
   final List<SportsProject> projects;
   final SportsProject? selectedProject;
+  final ValueChanged<SportsProject> onProjectSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const items = [
+      _ProjectToggleSpec(label: '羽毛球', aliases: ['羽毛']),
+      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓']),
+      _ProjectToggleSpec(label: '健身房', aliases: ['健身']),
+    ];
+    return Row(
+      children: [
+        for (var index = 0; index < items.length; index++) ...[
+          Expanded(
+            child: _ProjectToggleButton(
+              spec: items[index],
+              project: _matchProject(items[index], projects),
+              selectedProject: selectedProject,
+              colors: colors,
+              onSelected: onProjectSelected,
+            ),
+          ),
+          if (index != items.length - 1) const SizedBox(width: 6),
+        ],
+      ],
+    );
+  }
+
+  SportsProject? _matchProject(
+    _ProjectToggleSpec spec,
+    List<SportsProject> projects,
+  ) {
+    for (final project in projects) {
+      final title = project.title.trim();
+      if (title == spec.label ||
+          spec.aliases.any((alias) => title.contains(alias))) {
+        return project;
+      }
+    }
+    return null;
+  }
+}
+
+class _ProjectToggleButton extends StatelessWidget {
+  const _ProjectToggleButton({
+    required this.spec,
+    required this.project,
+    required this.selectedProject,
+    required this.colors,
+    required this.onSelected,
+  });
+
+  final _ProjectToggleSpec spec;
+  final SportsProject? project;
+  final SportsProject? selectedProject;
+  final ColorScheme colors;
   final ValueChanged<SportsProject> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    if (projects.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: projects.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final project = projects[index];
-          final selected = selectedProject?.id == project.id;
-          return ChoiceChip(
-            label: Text(project.title),
-            selected: selected,
-            onSelected: (_) => onSelected(project),
-          );
-        },
+    final selected = project != null && selectedProject?.id == project!.id;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: project == null ? null : () => onSelected(project!),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? colors.primary : colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? colors.primary : colors.outlineVariant,
+          ),
+        ),
+        child: Text(
+          spec.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: selected
+                ? colors.onPrimary
+                : project == null
+                ? colors.onSurfaceVariant.withValues(alpha: 0.55)
+                : colors.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _DateSelector extends StatelessWidget {
-  const _DateSelector({required this.selectedDate, required this.onSelected});
+class _ProjectToggleSpec {
+  const _ProjectToggleSpec({required this.label, required this.aliases});
+
+  final String label;
+  final List<String> aliases;
+}
+
+class _DateNavigator extends StatelessWidget {
+  const _DateNavigator({required this.selectedDate, required this.onSelected});
 
   final DateTime selectedDate;
   final ValueChanged<DateTime> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final dates = List.generate(3, (index) => today.add(Duration(days: index)));
-    return SizedBox(
-      height: 52,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: dates.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final date = dates[index];
-          final selected = DateUtils.isSameDay(date, selectedDate);
-          return _DateChip(
-            date: date,
-            label: switch (index) {
-              0 => '今天',
-              1 => '明天',
-              _ => '后天',
-            },
-            selected: selected,
-            onTap: () => onSelected(date),
-          );
-        },
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        border: Border.symmetric(
+          horizontal: BorderSide(color: colors.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: [
+          _DateArrowButton(
+            icon: Icons.chevron_left,
+            onPressed: () => onSelected(
+              DateUtils.dateOnly(
+                selectedDate,
+              ).subtract(const Duration(days: 1)),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                _formatFullDate(selectedDate),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          _DateArrowButton(
+            icon: Icons.chevron_right,
+            onPressed: () => onSelected(
+              DateUtils.dateOnly(selectedDate).add(const Duration(days: 1)),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DateChip extends StatelessWidget {
-  const _DateChip({
-    required this.date,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _DateArrowButton extends StatelessWidget {
+  const _DateArrowButton({required this.icon, required this.onPressed});
 
-  final DateTime date;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final IconData icon;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        width: 84,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? colors.primary.withValues(alpha: 0.12) : null,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? colors.primary : colors.outlineVariant,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: selected ? colors.primary : colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${date.month}/${date.day}',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return IconButton(
+      icon: Icon(icon),
+      onPressed: onPressed,
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      padding: EdgeInsets.zero,
     );
   }
 }
@@ -736,107 +728,252 @@ class _OrdersSheet extends StatelessWidget {
   }
 }
 
-class _AreaSelectionSheet extends StatelessWidget {
-  const _AreaSelectionSheet({required this.state, required this.onCheckout});
+class _AvailabilityListRow extends StatelessWidget {
+  const _AvailabilityListRow({
+    required this.availability,
+    required this.expanded,
+    required this.loadingDetails,
+    required this.areaAvailability,
+    required this.onToggleExpanded,
+    required this.onReserve,
+  });
 
-  final SportsReservationState state;
-  final ValueChanged<SportsAreaAvailability> onCheckout;
+  final SportsVenueAvailability availability;
+  final bool expanded;
+  final bool loadingDetails;
+  final List<SportsAreaAvailability> areaAvailability;
+  final VoidCallback onToggleExpanded;
+  final void Function(SportsAreaAvailability, SportsAppointmentWindow)
+  onReserve;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final selected = state.selectedAvailability!;
-    final window = state.selectedWindow!;
-    final reservableAreas = state.areaAvailability.where(
-      (area) => area.windows.any(
-        (areaWindow) =>
-            areaWindow.canReserve &&
-            areaWindow.startTime == window.startTime &&
-            areaWindow.endTime == window.endTime,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
       ),
-    );
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '选择具体场地',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${selected.venue.title} · ${window.startTime}-${window.endTime}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 14),
-            if (state.status == SportsReservationViewStatus.refreshing &&
-                state.areaAvailability.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (state.areaAvailability.isEmpty)
-              Text(
-                '暂未查询到具体场地。',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              )
-            else ...[
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggleExpanded,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final area in state.areaAvailability)
-                    _AreaChip(
-                      area: area,
-                      selectedWindow: window,
-                      onCheckout: onCheckout,
+                  _VenueImage(venue: availability.venue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          availability.venue.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          [
+                            if (availability.sportsTypeTitle.isNotEmpty)
+                              availability.sportsTypeTitle,
+                            _formatChargeRange(availability.chargeRange),
+                          ].join('  '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 8),
+                        _DayPartSummary(windows: availability.windows),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      reservableAreas.isEmpty
-                          ? '该时段暂无可预约场地。'
-                          : '选择一个可预约场地后，将打开官方页面继续确认和支付。',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: colors.onSurfaceVariant,
                   ),
                 ],
               ),
-              if (state.submitErrorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  state.submitErrorMessage!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: colors.error),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: _AreaAvailabilityTable(
+              availability: availability,
+              areas: areaAvailability,
+              loading: loadingDetails,
+              onReserve: onReserve,
+            ),
+            crossFadeState: expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 160),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VenueImage extends StatelessWidget {
+  const _VenueImage({required this.venue});
+
+  final SportsVenue venue;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final imageUrl = venue.imageUrl.trim().isNotEmpty
+        ? venue.imageUrl.trim()
+        : venue.images.where((url) => url.trim().isNotEmpty).firstOrNull;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 72,
+        height: 72,
+        child: imageUrl == null
+            ? ColoredBox(
+                color: colors.surfaceContainerHighest,
+                child: Icon(Icons.stadium_outlined, color: colors.primary),
+              )
+            : Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => ColoredBox(
+                  color: colors.surfaceContainerHighest,
+                  child: Icon(Icons.stadium_outlined, color: colors.primary),
                 ),
+              ),
+      ),
+    );
+  }
+}
+
+class _DayPartSummary extends StatelessWidget {
+  const _DayPartSummary({required this.windows});
+
+  final List<SportsAppointmentWindow> windows;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final part in _dayParts)
+          Text(
+            '${part.label}：${_hasReservableWindow(part, windows) ? '有' : '无'}',
+            style: style?.copyWith(
+              color: _hasReservableWindow(part, windows)
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _AreaAvailabilityTable extends StatelessWidget {
+  const _AreaAvailabilityTable({
+    required this.availability,
+    required this.areas,
+    required this.loading,
+    required this.onReserve,
+  });
+
+  final SportsVenueAvailability availability;
+  final List<SportsAreaAvailability> areas;
+  final bool loading;
+  final void Function(SportsAreaAvailability, SportsAppointmentWindow)
+  onReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: LinearProgressIndicator(minHeight: 2),
+      );
+    }
+    if (areas.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(
+          '暂无具体场地状态',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Table(
+              defaultColumnWidth: const FixedColumnWidth(86),
+              columnWidths: const {
+                0: FixedColumnWidth(58),
+                4: FixedColumnWidth(68),
+              },
+              border: TableBorder.symmetric(
+                inside: BorderSide(color: colors.outlineVariant),
+              ),
+              children: [
+                _tableHeader(context),
+                for (final area in areas) _tableAreaRow(context, area),
               ],
-            ],
-          ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  TableRow _tableHeader(BuildContext context) {
+    final style = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700);
+    return TableRow(
+      children: [
+        _TableHeaderCell(text: '场地号', style: style),
+        for (final part in _dayParts)
+          _TableHeaderCell(text: part.label, style: style),
+        _TableHeaderCell(text: '', style: style),
+      ],
+    );
+  }
+
+  TableRow _tableAreaRow(BuildContext context, SportsAreaAvailability area) {
+    final reserveWindow = _firstReservableWindow(area.windows);
+    return TableRow(
+      children: [
+        _AreaNoCell(areaNo: area.areaNo),
+        for (final part in _dayParts)
+          _WindowStatusCell(window: _windowForPart(part, area.windows)),
+        _ReserveCell(
+          enabled: reserveWindow != null,
+          onPressed: reserveWindow == null
+              ? null
+              : () => onReserve(area, reserveWindow),
+        ),
+      ],
     );
   }
 }
@@ -1147,238 +1284,190 @@ class _OrderDetailRow extends StatelessWidget {
   }
 }
 
-class _VenueAvailabilityCard extends StatelessWidget {
-  const _VenueAvailabilityCard({
-    required this.availability,
-    required this.selectedAvailability,
-    required this.selectedWindow,
-    required this.onWindowSelected,
-  });
+class _TableHeaderCell extends StatelessWidget {
+  const _TableHeaderCell({required this.text, required this.style});
 
-  final SportsVenueAvailability availability;
-  final SportsVenueAvailability? selectedAvailability;
-  final SportsAppointmentWindow? selectedWindow;
-  final ValueChanged<SportsAppointmentWindow> onWindowSelected;
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      alignment: Alignment.center,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Text(text, style: style),
+    );
+  }
+}
+
+class _AreaNoCell extends StatelessWidget {
+  const _AreaNoCell({required this.areaNo});
+
+  final int areaNo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      alignment: Alignment.center,
+      child: Text(
+        '$areaNo',
+        style: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _WindowStatusCell extends StatelessWidget {
+  const _WindowStatusCell({required this.window});
+
+  final SportsAppointmentWindow? window;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final venue = availability.venue;
-    final reservableCount = availability.windows
-        .where((window) => window.canReserve)
-        .length;
-
-    return ui.Card(
-      padding: const EdgeInsets.all(14),
+    final available = window?.canReserve == true;
+    return Container(
+      height: 58,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      color: available
+          ? colors.primary.withValues(alpha: 0.09)
+          : colors.surfaceContainerHighest.withValues(alpha: 0.35),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.stadium_outlined, color: colors.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      venue.title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              _StatusPill(
-                text: reservableCount > 0 ? '$reservableCount 个可约' : '暂无可约',
-                active: reservableCount > 0,
-              ),
-            ],
+          Text(
+            _compactTimeRange(window),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: available ? colors.primary : colors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final window in availability.windows)
-                _TimeWindowChip(
-                  window: window,
-                  selected:
-                      selectedAvailability?.stadiumsAreaId ==
-                          availability.stadiumsAreaId &&
-                      selectedWindow?.startTime == window.startTime &&
-                      selectedWindow?.endTime == window.endTime,
-                  onTap: window.canReserve
-                      ? () => onWindowSelected(window)
-                      : null,
-                ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            available ? '有' : '无',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: available ? colors.primary : colors.onSurfaceVariant,
+            ),
           ),
         ],
       ),
     );
   }
-
-  String get _subtitle {
-    final parts = [
-      if (availability.sportsTypeTitle.isNotEmpty) availability.sportsTypeTitle,
-      if (availability.venue.campusTitle.isNotEmpty)
-        availability.venue.campusTitle,
-      if (availability.venue.address.isNotEmpty) availability.venue.address,
-      _priceText,
-    ];
-    return parts.where((part) => part.trim().isNotEmpty).join(' · ');
-  }
-
-  String get _priceText {
-    final range = availability.chargeRange;
-    if (range.isFree) {
-      return '免费';
-    }
-    if (range.lowPrice == range.highPrice) {
-      return '${range.lowPrice.toStringAsFixed(0)} 元';
-    }
-    return '${range.lowPrice.toStringAsFixed(0)}-${range.highPrice.toStringAsFixed(0)} 元';
-  }
 }
 
-class _TimeWindowChip extends StatelessWidget {
-  const _TimeWindowChip({
-    required this.window,
-    required this.selected,
-    required this.onTap,
-  });
+class _ReserveCell extends StatelessWidget {
+  const _ReserveCell({required this.enabled, required this.onPressed});
 
-  final SportsAppointmentWindow window;
-  final bool selected;
-  final VoidCallback? onTap;
+  final bool enabled;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final enabled = onTap != null;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 118),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected
-              ? colors.primary.withValues(alpha: 0.12)
-              : enabled
-              ? colors.surface
-              : colors.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected
-                ? colors.primary
-                : enabled
-                ? colors.outlineVariant
-                : colors.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              window.title.isEmpty ? '时段' : window.title,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: enabled ? colors.onSurface : colors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${window.startTime}-${window.endTime}',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ],
+    return SizedBox(
+      height: 58,
+      child: Center(
+        child: TextButton(
+          onPressed: enabled ? onPressed : null,
+          child: const Text('预定'),
         ),
       ),
     );
   }
 }
 
-class _AreaChip extends StatelessWidget {
-  const _AreaChip({
-    required this.area,
-    required this.selectedWindow,
-    required this.onCheckout,
+class _DayPart {
+  const _DayPart({
+    required this.label,
+    required this.startHourInclusive,
+    required this.endHourExclusive,
   });
 
-  final SportsAreaAvailability area;
-  final SportsAppointmentWindow selectedWindow;
-  final ValueChanged<SportsAreaAvailability> onCheckout;
+  final String label;
+  final int startHourInclusive;
+  final int endHourExclusive;
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final available = area.windows.any(
-      (window) =>
-          window.canReserve &&
-          window.startTime == selectedWindow.startTime &&
-          window.endTime == selectedWindow.endTime,
-    );
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: available ? () => onCheckout(area) : null,
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 84),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: available
-              ? colors.primary.withValues(alpha: 0.08)
-              : colors.surfaceContainerHighest.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: available
-                ? colors.primary.withValues(alpha: 0.35)
-                : colors.outlineVariant,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${area.areaNo} 号场',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: available ? colors.primary : colors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              available ? '继续确认' : '不可约',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    );
+  bool contains(SportsAppointmentWindow window) {
+    final hour = _parseStartHour(window.startTime);
+    return hour >= startHourInclusive && hour < endHourExclusive;
   }
+}
+
+const _dayParts = [
+  _DayPart(label: '上午', startHourInclusive: 0, endHourExclusive: 14),
+  _DayPart(label: '下午', startHourInclusive: 14, endHourExclusive: 18),
+  _DayPart(label: '晚上', startHourInclusive: 18, endHourExclusive: 24),
+];
+
+bool _hasReservableWindow(
+  _DayPart part,
+  List<SportsAppointmentWindow> windows,
+) {
+  return windows.any((window) => part.contains(window) && window.canReserve);
+}
+
+SportsAppointmentWindow? _windowForPart(
+  _DayPart part,
+  List<SportsAppointmentWindow> windows,
+) {
+  for (final window in windows) {
+    if (part.contains(window)) {
+      return window;
+    }
+  }
+  return null;
+}
+
+SportsAppointmentWindow? _firstReservableWindow(
+  List<SportsAppointmentWindow> windows,
+) {
+  for (final part in _dayParts) {
+    for (final window in windows) {
+      if (part.contains(window) && window.canReserve) {
+        return window;
+      }
+    }
+  }
+  return null;
+}
+
+int _parseStartHour(String startTime) {
+  final digits = startTime.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.length < 2) {
+    return 0;
+  }
+  return int.tryParse(digits.substring(0, 2)) ?? 0;
+}
+
+String _compactTimeRange(SportsAppointmentWindow? window) {
+  if (window == null) {
+    return '--';
+  }
+  return '${_compactTime(window.startTime)}~${_compactTime(window.endTime)}';
+}
+
+String _compactTime(String value) {
+  final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.length >= 4) {
+    return digits.substring(0, 4);
+  }
+  return value;
+}
+
+String _formatChargeRange(SportsChargeRange range) {
+  if (range.isFree) {
+    return '免费';
+  }
+  if (range.lowPrice == range.highPrice) {
+    return '${range.lowPrice.toStringAsFixed(0)} 元';
+  }
+  return '${range.lowPrice.toStringAsFixed(0)}-${range.highPrice.toStringAsFixed(0)} 元';
 }
 
 class _StatusPill extends StatelessWidget {
