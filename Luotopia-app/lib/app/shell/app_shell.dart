@@ -14,10 +14,7 @@ class AppShell extends ConsumerWidget {
   static const _compactNavBarHeightWithLabels = 84.0;
   static const _compactNavBarHeightIconsOnly = 72.0;
 
-  const AppShell({
-    required this.navigationShell,
-    super.key,
-  });
+  const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
@@ -26,7 +23,8 @@ class AppShell extends ConsumerWidget {
     // 从其他标签页切换到 AI 页时，触发新 session 创建
     final allDestinations = AppShellDestination.values;
     if (allDestinations[branchIndex] == AppShellDestination.ai &&
-        allDestinations[navigationShell.currentIndex] != AppShellDestination.ai) {
+        allDestinations[navigationShell.currentIndex] !=
+            AppShellDestination.ai) {
       ref.read(aiPageActivationProvider.notifier).state++;
     }
     navigationShell.goBranch(
@@ -47,13 +45,14 @@ class AppShell extends ConsumerWidget {
       MiddleTabMode.ai => const [0, 1, 3, 4, 5],
     };
     final allDestinations = AppShellDestination.values;
-    final visibleDestinations =
-        branchIndices.map((i) => allDestinations[i]).toList(growable: false);
+    final visibleDestinations = branchIndices
+        .map((i) => allDestinations[i])
+        .toList(growable: false);
     final current = allDestinations[navigationShell.currentIndex];
 
     if (isCompact) {
       return ui.Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: ui.Theme.of(context).colorScheme.background,
         footers: [
           _buildNavigationBar(
             context,
@@ -69,7 +68,7 @@ class AppShell extends ConsumerWidget {
     }
 
     return ui.Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: ui.Theme.of(context).colorScheme.background,
       child: Row(
         children: [
           Padding(
@@ -87,9 +86,7 @@ class AppShell extends ConsumerWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: ui.Card(
-                child: SizedBox.expand(child: navigationShell),
-              ),
+              child: ui.Card(child: SizedBox.expand(child: navigationShell)),
             ),
           ),
         ],
@@ -105,8 +102,9 @@ class AppShell extends ConsumerWidget {
     List<int> branchIndices,
     WidgetRef ref,
   ) {
-    final compactNavBarHeight =
-        showLabels ? _compactNavBarHeightWithLabels : _compactNavBarHeightIconsOnly;
+    final compactNavBarHeight = showLabels
+        ? _compactNavBarHeightWithLabels
+        : _compactNavBarHeightIconsOnly;
     final navIconSize = showLabels ? 24.0 : 28.0;
     final compactNavBarPadding = showLabels
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
@@ -114,8 +112,9 @@ class AppShell extends ConsumerWidget {
 
     return ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
-      labelType:
-          showLabels ? ui.NavigationLabelType.all : ui.NavigationLabelType.none,
+      labelType: showLabels
+          ? ui.NavigationLabelType.all
+          : ui.NavigationLabelType.none,
       expanded: showLabels,
       expandedSize: compactNavBarHeight,
       padding: compactNavBarPadding,

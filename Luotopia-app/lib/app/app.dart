@@ -54,27 +54,35 @@ class LuotopiaApp extends ConsumerWidget {
 }
 
 ThemeData _materialThemeFromShadcn(ui.ThemeData shadTheme) {
+  final shadColors = shadTheme.colorScheme;
   final colorScheme = ColorScheme.fromSeed(
-    seedColor: shadTheme.colorScheme.primary,
+    seedColor: shadColors.primary,
     brightness: shadTheme.brightness,
-    surface: shadTheme.colorScheme.background,
-    primary: shadTheme.colorScheme.primary,
-    secondary: shadTheme.colorScheme.secondary,
-    error: shadTheme.colorScheme.destructive,
+    primary: shadColors.primary,
+    onPrimary: shadColors.primaryForeground,
+    secondary: shadColors.secondary,
+    onSecondary: shadColors.secondaryForeground,
+    surface: shadColors.card,
+    onSurface: shadColors.cardForeground,
+    error: shadColors.destructive,
+    onError: Colors.white,
   );
-  final base = ThemeData.from(
-    colorScheme: colorScheme,
-    useMaterial3: true,
-  );
-  final borderColor = shadTheme.colorScheme.border;
-  final overlayColor = shadTheme.colorScheme.popover;
-  final foreground = shadTheme.colorScheme.foreground;
+  final base = ThemeData.from(colorScheme: colorScheme, useMaterial3: true);
+  final pageBackground = shadColors.background;
+  final borderColor = shadColors.border;
+  final overlayColor = shadColors.popover;
+  final foreground = shadColors.foreground;
 
   return base.copyWith(
-    scaffoldBackgroundColor: shadTheme.colorScheme.background,
+    scaffoldBackgroundColor: pageBackground,
     canvasColor: overlayColor,
-    cardColor: shadTheme.colorScheme.card,
+    cardColor: shadColors.card,
     dividerColor: borderColor,
+    bottomSheetTheme: base.bottomSheetTheme.copyWith(
+      backgroundColor: overlayColor,
+      modalBackgroundColor: overlayColor,
+      surfaceTintColor: Colors.transparent,
+    ),
     dialogTheme: base.dialogTheme.copyWith(
       backgroundColor: overlayColor,
       surfaceTintColor: Colors.transparent,
@@ -96,9 +104,9 @@ ThemeData _materialThemeFromShadcn(ui.ThemeData shadTheme) {
       ),
     ),
     textSelectionTheme: TextSelectionThemeData(
-      cursorColor: shadTheme.colorScheme.primary,
-      selectionColor: shadTheme.colorScheme.primary.withValues(alpha: 0.3),
-      selectionHandleColor: shadTheme.colorScheme.primary,
+      cursorColor: shadColors.primary,
+      selectionColor: shadColors.primary.withValues(alpha: 0.3),
+      selectionHandleColor: shadColors.primary,
     ),
   );
 }
