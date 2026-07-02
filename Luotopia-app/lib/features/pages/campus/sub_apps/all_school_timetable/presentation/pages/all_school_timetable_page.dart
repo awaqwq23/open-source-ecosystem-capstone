@@ -162,34 +162,36 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: ui.TextField(
-            controller: controller,
-            textInputAction: TextInputAction.search,
-            onSubmitted: onSubmitted,
-            hintText: '搜课程、老师、课程号、教室',
-            features: [
-              const ui.InputLeadingFeature(Icon(Icons.search, size: 16)),
-              if (hasKeyword)
-                ui.InputTrailingFeature(
-                  Tooltip(
-                    message: '清空搜索',
-                    child: ui.IconButton.ghost(
-                      onPressed: onClear,
-                      icon: const Icon(Icons.close, size: 16),
-                    ),
+    return ui.TextField(
+      controller: controller,
+      textInputAction: TextInputAction.search,
+      onSubmitted: onSubmitted,
+      hintText: '搜课程、老师、课程号、教室',
+      features: [
+        const ui.InputLeadingFeature(Icon(Icons.search, size: 16)),
+        ui.InputTrailingFeature(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasKeyword) ...[
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: ui.IconButton.ghost(
+                    onPressed: onClear,
+                    icon: const Icon(Icons.close, size: 16),
                   ),
                 ),
+              ],
+              ui.Button.primary(
+                onPressed: onSearch,
+                leading: const Icon(Icons.search, size: 16),
+                style: const ui.ButtonStyle.primary(
+                  density: ui.ButtonDensity.compact,
+                ),
+                child: const Text('搜索'),
+              ),
             ],
           ),
-        ),
-        const SizedBox(width: 10),
-        ui.Button.primary(
-          onPressed: onSearch,
-          leading: const Icon(Icons.search, size: 16),
-          child: const Text('搜索'),
         ),
       ],
     );
@@ -576,13 +578,26 @@ class _FilterPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final activeStyle = ui.ButtonVariance.outline
+        .withBorder(
+          border: Border.all(color: colorScheme.primary, width: 1.4),
+          hoverBorder: Border.all(color: colorScheme.primary, width: 1.6),
+          focusBorder: Border.all(color: colorScheme.primary, width: 1.6),
+        )
+        .withForegroundColor(
+          color: colorScheme.primary,
+          hoverColor: colorScheme.primary,
+          focusColor: colorScheme.primary,
+        );
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ui.Chip(
+      child: ui.Button.outline(
         leading: Icon(icon, size: 16),
         trailing: active ? const Icon(Icons.check, size: 16) : null,
         onPressed: onTap,
-        style: active ? ui.ButtonVariance.primary : ui.ButtonVariance.secondary,
+        style: active ? activeStyle : ui.ButtonVariance.outline,
         child: Text(label),
       ),
     );
