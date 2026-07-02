@@ -276,7 +276,7 @@ class _SportsReservationPageState extends ConsumerState<SportsReservationPage> {
                 .read(sportsReservationViewModelProvider.notifier)
                 .selectProject(project),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _DateNavigator(
             selectedDate: state.selectedDate,
             minDate: _minReservableDate(),
@@ -503,9 +503,17 @@ class _ProjectToggleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      _ProjectToggleSpec(label: '羽毛球', aliases: ['羽毛']),
-      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓']),
-      _ProjectToggleSpec(label: '健身房', aliases: ['健身']),
+      _ProjectToggleSpec(
+        label: '羽毛球',
+        aliases: ['羽毛'],
+        icon: Icons.sports_tennis,
+      ),
+      _ProjectToggleSpec(label: '乒乓球', aliases: ['乒乓'], icon: Icons.table_bar),
+      _ProjectToggleSpec(
+        label: '健身房',
+        aliases: ['健身'],
+        icon: Icons.fitness_center,
+      ),
     ];
     final matchedProjects = [
       for (final item in items) _matchProject(item, projects),
@@ -526,7 +534,7 @@ class _ProjectToggleBar extends StatelessWidget {
         ),
         disabledChildren: disabledIndexes,
         groupValue: selectedIndex < 0 ? 0 : selectedIndex,
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(4),
         onValueChanged: (index) {
           if (index == null) {
             return;
@@ -538,7 +546,10 @@ class _ProjectToggleBar extends StatelessWidget {
         },
         children: {
           for (var index = 0; index < items.length; index++)
-            index: _ProjectSegment(label: items[index].label),
+            index: _ProjectSegment(
+              icon: items[index].icon,
+              label: items[index].label,
+            ),
         },
       ),
     );
@@ -560,8 +571,9 @@ class _ProjectToggleBar extends StatelessWidget {
 }
 
 class _ProjectSegment extends StatelessWidget {
-  const _ProjectSegment({required this.label});
+  const _ProjectSegment({required this.icon, required this.label});
 
+  final IconData icon;
   final String label;
 
   @override
@@ -570,23 +582,38 @@ class _ProjectSegment extends StatelessWidget {
       context,
     ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: textStyle,
-        textAlign: TextAlign.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textStyle,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _ProjectToggleSpec {
-  const _ProjectToggleSpec({required this.label, required this.aliases});
+  const _ProjectToggleSpec({
+    required this.label,
+    required this.aliases,
+    required this.icon,
+  });
 
   final String label;
   final List<String> aliases;
+  final IconData icon;
 }
 
 class _DateNavigator extends StatelessWidget {
@@ -895,12 +922,20 @@ class _AreaAvailabilityMatrix extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: ui.OutlinedContainer(
-        borderRadius: BorderRadius.circular(8),
+        backgroundColor: colors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(10),
         child: Column(
           children: [
             _AreaMatrixHeader(),
-            for (final area in areas)
-              _AreaMatrixRow(area: area, onReserve: onReserve),
+            for (var index = 0; index < areas.length; index++) ...[
+              if (index > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: colors.outlineVariant.withValues(alpha: 0.7),
+                ),
+              _AreaMatrixRow(area: areas[index], onReserve: onReserve),
+            ],
           ],
         ),
       ),
@@ -916,23 +951,28 @@ class _AreaMatrixHeader extends StatelessWidget {
     final style = Theme.of(
       context,
     ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHigh.withValues(alpha: 0.55),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      ),
       child: Row(
         children: [
           SizedBox(
-            width: 42,
+            width: 46,
             child: Center(child: Text('场地', style: style)),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           for (final part in _dayParts)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.only(right: 6),
                 child: Center(child: Text(part.label, style: style)),
               ),
             ),
-          const SizedBox(width: 52),
+          const SizedBox(width: 58),
         ],
       ),
     );
@@ -950,12 +990,12 @@ class _AreaMatrixRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final reserveWindow = _firstReservableWindow(area.windows);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
       child: Row(
         children: [
           SizedBox(
-            width: 42,
-            height: 54,
+            width: 46,
+            height: 50,
             child: Center(
               child: Text(
                 '${area.areaNo}',
@@ -965,19 +1005,19 @@ class _AreaMatrixRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           for (final part in _dayParts)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.only(right: 6),
                 child: _WindowStatusBlock(
                   window: _windowForPart(part, area.windows),
                 ),
               ),
             ),
           SizedBox(
-            width: 52,
-            height: 54,
+            width: 58,
+            height: 50,
             child: Center(
               child: FittedBox(
                 child: ui.OutlineButton(
@@ -1311,54 +1351,44 @@ class _WindowStatusBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final available = window?.canReserve == true;
-    final textColor = available ? colors.primary : colors.onSurfaceVariant;
+    final titleColor = available ? colors.primary : colors.onSurfaceVariant;
+    final detailColor = available
+        ? colors.onPrimaryContainer
+        : colors.onSurfaceVariant;
     return ui.OutlinedContainer(
-      height: 54,
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-      borderRadius: BorderRadius.circular(6),
-      borderColor: available ? colors.primary : colors.outlineVariant,
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      borderRadius: BorderRadius.circular(8),
+      borderColor: available
+          ? colors.primary.withValues(alpha: 0.55)
+          : colors.outlineVariant,
       backgroundColor: available
-          ? colors.primary.withValues(alpha: 0.08)
-          : colors.surfaceContainerHighest.withValues(alpha: 0.35),
+          ? colors.primaryContainer.withValues(alpha: 0.42)
+          : colors.surfaceContainerHighest.withValues(alpha: 0.45),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            _compactTime(window?.startTime ?? '--'),
+            available ? '可约' : '无号',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-              height: 1,
+              color: titleColor,
+              fontWeight: FontWeight.w800,
+              height: 1.05,
             ),
           ),
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              Expanded(
-                child: Divider(height: 1, thickness: 1, color: textColor),
-              ),
-              const SizedBox(width: 2),
-              Text(
-                available ? '有' : '无',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w700,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 5),
           Text(
-            _compactTime(window?.endTime ?? '--'),
+            window == null
+                ? '--'
+                : '${_compactTime(window!.startTime)}-${_compactTime(window!.endTime)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-              height: 1,
+              color: detailColor,
+              fontWeight: FontWeight.w600,
+              height: 1.05,
             ),
           ),
         ],
