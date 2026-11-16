@@ -76,3 +76,8 @@ app.*.map.json
 /.tmp/*
 /cmd/*
 /Luotopia-tools/whu-school-timetable-scraper/output/*
+
+# Course design and generated release artifacts
+!/docs/DESIGN.docx
+/release/*
+!/release/RELEASE.md

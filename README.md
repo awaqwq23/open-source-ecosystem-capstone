@@ -1,3 +1,48 @@
+# Luotopia 开源软件生态与开发技术课程大作业
+
+本仓库是 [Enchograph/Luotopia](https://github.com/Enchograph/Luotopia) 的课程 fork，起点为 `e40a726`。原项目使用 Flutter、Go 和 Astro，已提供校园入口、全校课表搜索和教学班详情。本次课程从原 Android App 的「校园 → 全校课表 → 教学班详情」完成验收，范围包含本地演示样例和一个可独立交付的排课日期导出扩展。
+
+| 课程入口 | 用途 |
+| --- | --- |
+| [系统设计](docs/DESIGN.docx) | 既有架构、课程扩展设计、测试与取舍 |
+| [扩展说明](Luotopia-app/packages/timetable_date_export/README.md) | 扩展范围和公开契约的实现计划 |
+| [小样例](Luotopia-app/test/fixtures/timetable_date_export/sample.json) | 第 1、3 周对应的两条预期日期 |
+| [发布记录](release/RELEASE.md) | 当前 HOLD，最终登记 Commit、Tag、制品及实测结果 |
+| [项目许可状态](LICENSE) | 上游授权状态和第三方许可入口 |
+
+## 课程运行与验收
+
+课程分支计划使用 Flutter 3.38.5（Dart 3.10.4）、JDK 17 和 Android SDK。进入 `Luotopia-app/`，将 `.env.example` 复制为 `.env`，再执行：
+
+```text
+flutter pub get
+flutter test
+flutter analyze
+flutter build apk --debug
+```
+
+课程 [CI](.github/workflows/course-check.yml)运行 App 测试和 APK 构建。实际运行编号、基础检查结果和可安装制品随发布补齐。当前小样例是实现与测试共用的规格，App 样例入口及扩展开关随功能 PR 接入。预期路径是查找演示教学班，查看详情，启用扩展后导出 2026-09-07 和 2026-09-21，禁用或失败时仍可查看详情。
+
+扩展由独立包提供，App 装配层注册并重新构建。核心通过公共约定调用扩展。正式接入步骤、构建命令、失败行为及兼容范围待联调后按实测更新。本次验收聚焦 Android 全校课表。
+
+## 协作及成员贡献与 AI 核验
+
+每项改动从分支发起 PR，至少一位其他组员留下具体审查意见，作者回应并完成复核后合并。成员表按已核对的提交和评审填写。未使用 AI 的成员填写“未使用”。
+
+| 成员 | 本次计划 | 实质改动及 PR | 审查及结果 | AI 建议及核验 |
+| --- | --- | --- | --- | --- |
+| 陈同学 | 原课表模块与扩展契约 | 待填写 | 待填写 | 待填写 |
+| 曾同学 | 独立日期导出扩展及测试 | 待填写 | 待填写 | 待填写 |
+| awa | 原页面、App 装配及离线样例 | 待填写 | 待填写 | 待填写 |
+| 李同学 | 回归测试、CI、APK 与发布 | 待填写 | 待填写 | 待填写 |
+
+## 许可及第三方声明
+
+项目许可状态见 [LICENSE](LICENSE)。第三方许可或署名按原文件保留，见 [天气图标许可](Luotopia-app/assets/qweather_icons/LICENSE) 和 [站点素材署名](Luotopia-website/ATTRIBUTION.md)。正式发行时核对 APK 和提交 ZIP 实际包含的依赖和素材，并更新必要声明。
+
+## 原项目开发说明
+
+
 # Luotopia 社区开发指南
 
 本文档面向接下来参与 Luotopia 共同开发的贡献者，欢迎大家直接选择自己心怡的模块直接开始开发！
