@@ -5,10 +5,36 @@
 | 课程入口 | 用途 |
 | --- | --- |
 | [系统设计](docs/DESIGN.docx) | 既有架构、课程扩展设计、测试与取舍 |
-| [扩展说明](Luotopia-app/packages/timetable_date_export/README.md) | 扩展范围和公开契约的实现计划 |
-| [小样例](Luotopia-app/test/fixtures/timetable_date_export/sample.json) | 第 1、3 周对应的两条预期日期 |
+| [扩展占位](src/plugin/README.md) | 扩展范围和公开契约的实现计划 |
+| [小样例](src/samples/timetable-date-export.json) | 第 1、3 周对应的两条预期日期 |
+| [测试占位](src/test/README.md) | 核心场景、接入、禁用和失败 |
+| [交付物占位](release/已验证交付物/README.md) | APK 验证后放置的位置 |
 | [发布记录](release/RELEASE.md) | 当前 HOLD，最终登记 Commit、Tag、制品及实测结果 |
 | [项目许可状态](LICENSE) | 上游授权状态和第三方许可入口 |
+
+
+## 课程交付目录
+
+```text
+project/                          仓库根目录
+├─ .git/
+├─ README.md
+├─ LICENSE
+├─ .gitignore
+├─ docs/DESIGN.docx
+├─ src/
+│  ├─ main/README.md              核心源码入口
+│  ├─ plugin/README.md            独立扩展占位
+│  ├─ test/README.md              测试占位与验收预期
+│  └─ samples/                    合成样例和预期结果
+├─ Luotopia-app/                  Flutter 源码、测试及依赖
+├─ Luotopia-server/               Go 源码及依赖
+├─ Luotopia-website/              Astro 源码及依赖
+├─ .github/workflows/             CI 配置
+└─ release/
+   ├─ 已验证交付物/README.md       APK 的放置位置
+   └─ RELEASE.md
+```
 
 ## 课程运行与验收
 
