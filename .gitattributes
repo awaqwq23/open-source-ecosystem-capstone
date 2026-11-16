@@ -1,2 +1,2 @@
 *.arb text eol=lf
-lib/core/localization/generated/*.dart text eol=lf
+src/Luotopia-app/lib/core/localization/generated/*.dart text eol=lf

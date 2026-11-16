@@ -1,5 +1,6 @@
 {
   "status": "proposed-fixture",
+  "schemaVersion": 1,
   "firstWeekMonday": "2026-09-07",
   "className": "开源软件实践（演示教学班）",
   "meetings": [

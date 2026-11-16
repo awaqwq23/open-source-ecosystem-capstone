@@ -1,6 +1,6 @@
 # 测试占位
 
-已有 [Flutter 测试](../../Luotopia-app/test)和 [Go 课表包测试](../../Luotopia-server/internal/modules/sub_apps/school_timetable/app/package_test.go)。课程新增测试随相关模块提交到构建工具识别的测试目录。
+已有 [Flutter 测试](../Luotopia-app/test)和 [Go 课表包测试](../Luotopia-server/internal/modules/sub_apps/school_timetable/app/package_test.go)。课程新增测试随相关模块提交到构建工具识别的测试目录。
 
 | 待补场景 | 预期 |
 | --- | --- |

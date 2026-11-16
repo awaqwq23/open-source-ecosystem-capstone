@@ -5,4 +5,4 @@ Luotopia 项目许可状态
 
 项目许可证将在相关权利人确认授权范围及许可文本后更新。
 第三方代码、依赖和素材沿用各自的许可及署名声明，参见
-Luotopia-app/assets/qweather_icons/LICENSE 和 Luotopia-website/ATTRIBUTION.md。
+src/Luotopia-app/assets/qweather_icons/LICENSE 和 src/Luotopia-website/ATTRIBUTION.md。
