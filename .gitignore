@@ -81,3 +81,6 @@ app.*.map.json
 !/docs/DESIGN.docx
 /release/*
 !/release/RELEASE.md
+!/release/已验证交付物/
+/release/已验证交付物/*
+!/release/已验证交付物/README.md
