@@ -13,15 +13,15 @@
 ### Task 1: 服务端 contract 包与 pull links 契约
 
 **Files:**
-- Create: `Luotopia-server/internal/modules/sub_apps/school_timetable/contract/http.go`
-- Create: `Luotopia-server/internal/modules/sub_apps/school_timetable/contract/http_test.go`
-- Create: `Luotopia-server/internal/modules/push-and-pull/hot_update/contract/http.go`
-- Create: `Luotopia-server/internal/modules/push-and-pull/hot_update/contract/http_test.go`
-- Modify: `Luotopia-server/internal/modules/sub_apps/school_timetable/transport/http.go`
-- Modify: `Luotopia-server/internal/modules/push-and-pull/hot_update/transport/http.go`
-- Modify: `Luotopia-server/internal/modules/push-and-pull/pull/domain/types.go`
-- Modify: `Luotopia-server/internal/modules/push-and-pull/pull/app/service.go`
-- Test: `Luotopia-server/internal/modules/push-and-pull/pull/app/service_test.go`
+- Create: `src/Luotopia-server/internal/modules/sub_apps/school_timetable/contract/http.go`
+- Create: `src/Luotopia-server/internal/modules/sub_apps/school_timetable/contract/http_test.go`
+- Create: `src/Luotopia-server/internal/modules/push-and-pull/hot_update/contract/http.go`
+- Create: `src/Luotopia-server/internal/modules/push-and-pull/hot_update/contract/http_test.go`
+- Modify: `src/Luotopia-server/internal/modules/sub_apps/school_timetable/transport/http.go`
+- Modify: `src/Luotopia-server/internal/modules/push-and-pull/hot_update/transport/http.go`
+- Modify: `src/Luotopia-server/internal/modules/push-and-pull/pull/domain/types.go`
+- Modify: `src/Luotopia-server/internal/modules/push-and-pull/pull/app/service.go`
+- Test: `src/Luotopia-server/internal/modules/push-and-pull/pull/app/service_test.go`
 
 - [ ] Write failing tests for contract path builders and pull response links.
 - [ ] Run targeted Go tests and confirm they fail because contract/link code is missing.
@@ -31,9 +31,9 @@
 ### Task 2: Flutter links parsing and download consumption
 
 **Files:**
-- Modify: `Luotopia-app/lib/features/unified_pull/data/pull_response.dart`
-- Modify: `Luotopia-app/lib/features/unified_pull/domain/pull_service.dart`
-- Modify: `Luotopia-app/test/features/unified_pull/pull_response_test.dart`
+- Modify: `src/Luotopia-app/lib/features/unified_pull/data/pull_response.dart`
+- Modify: `src/Luotopia-app/lib/features/unified_pull/domain/pull_service.dart`
+- Modify: `src/Luotopia-app/test/features/unified_pull/pull_response_test.dart`
 
 - [ ] Write failing Flutter test for `links.snapshot.href` and `links.content.href` parsing.
 - [ ] Run targeted Flutter test and confirm it fails because links parsing is missing.
@@ -43,7 +43,7 @@
 ### Task 3: Contract documentation and verification
 
 **Files:**
-- Create: `Luotopia-server/api/openapi/client.v1.yaml`
+- Create: `src/Luotopia-server/api/openapi/client.v1.yaml`
 
 - [ ] Document the pull response link shape and resource download endpoints.
 - [ ] Run Go targeted tests, Flutter targeted test, and source searches for forbidden hard-coded resource paths.
