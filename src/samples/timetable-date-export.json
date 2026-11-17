@@ -1,0 +1,18 @@
+{
+  "status": "proposed-fixture",
+  "schemaVersion": 1,
+  "firstWeekMonday": "2026-09-07",
+  "className": "开源软件实践（演示教学班）",
+  "meetings": [
+    {
+      "weekday": 1,
+      "weekIndexes": [1, 3],
+      "sectionText": "1–2",
+      "location": "演示教室 A101"
+    }
+  ],
+  "expected": {
+    "dates": ["2026-09-07", "2026-09-21"],
+    "rowCount": 2
+  }
+}
