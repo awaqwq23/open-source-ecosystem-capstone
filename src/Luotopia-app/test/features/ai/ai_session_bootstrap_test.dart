@@ -69,20 +69,16 @@ void main() {
     );
 
     test('deleting active session selects remaining newest session', () async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        AppBootstrapStorageKeys.aiSessions: jsonEncode([
+          _sessionJson(id: 'session_older', updatedAt: DateTime(2026, 5, 1, 8)),
+          _sessionJson(id: 'session_newer', updatedAt: DateTime(2026, 5, 2, 8)),
+        ]),
+        AppBootstrapStorageKeys.activeAiSessionId: 'session_newer',
+      });
       final prefs = await SharedPreferences.getInstance();
-      final store = AiChatSessionStore(
-        sessions: [
-          _session(id: 'session_newer', updatedAt: DateTime(2026, 5, 2, 8)),
-          _session(id: 'session_older', updatedAt: DateTime(2026, 5, 1, 8)),
-        ],
-        activeSessionId: 'session_newer',
-      );
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-          aiChatBootstrapSessionStoreProvider.overrideWithValue(store),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(container.dispose);
 
