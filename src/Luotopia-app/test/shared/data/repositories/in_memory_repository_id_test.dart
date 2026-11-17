@@ -1,6 +1,8 @@
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luotopia/features/pages/item_editor/domain/item_editor_defaults.dart';
+import 'package:luotopia/shared/data/database/app_database.dart';
 import 'package:luotopia/shared/data/id/app_id_generator.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
 import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
@@ -10,8 +12,11 @@ import 'package:luotopia/shared/domain/entities/item_draft.dart';
 void main() {
   group('InMemoryAgendaItemRepository IDs', () {
     test('新建事项使用带 item 前缀的唯一 ID', () async {
+      final database = AppDatabase.withExecutor(NativeDatabase.memory());
+      addTearDown(database.close);
       final container = ProviderContainer(
         overrides: [
+          appDatabaseProvider.overrideWithValue(database),
           appIdGeneratorProvider.overrideWithValue(
             _FakeAppIdGenerator(agendaIds: ['item_alpha', 'item_beta']),
           ),
@@ -31,8 +36,11 @@ void main() {
     });
 
     test('删除事项后新建不会复用已有 ID', () async {
+      final database = AppDatabase.withExecutor(NativeDatabase.memory());
+      addTearDown(database.close);
       final container = ProviderContainer(
         overrides: [
+          appDatabaseProvider.overrideWithValue(database),
           appIdGeneratorProvider.overrideWithValue(
             _FakeAppIdGenerator(agendaIds: ['item_0', 'item_1', 'item_2']),
           ),
@@ -53,8 +61,11 @@ void main() {
     });
 
     test('生成器偶发碰撞时跳过已有事项 ID', () async {
+      final database = AppDatabase.withExecutor(NativeDatabase.memory());
+      addTearDown(database.close);
       final container = ProviderContainer(
         overrides: [
+          appDatabaseProvider.overrideWithValue(database),
           appIdGeneratorProvider.overrideWithValue(
             _FakeAppIdGenerator(agendaIds: ['item_same', 'item_same', 'item_next']),
           ),
@@ -69,16 +80,21 @@ void main() {
       expect(first.id, 'item_same');
       expect(second.id, 'item_next');
       expect(
-        container.read(agendaItemRepositoryProvider).map((item) => item.id).toSet(),
-        hasLength(2),
+        (await database.select(database.agendaItemRows).get())
+            .map((row) => row.id)
+            .toSet(),
+        {'item_same', 'item_next'},
       );
     });
   });
 
   group('InMemoryCourseTimetableRepository IDs', () {
     test('新建课程表使用带 timetable 前缀的唯一 ID', () async {
+      final database = AppDatabase.withExecutor(NativeDatabase.memory());
+      addTearDown(database.close);
       final container = ProviderContainer(
         overrides: [
+          appDatabaseProvider.overrideWithValue(database),
           appIdGeneratorProvider.overrideWithValue(
             _FakeAppIdGenerator(timetableIds: ['timetable_alpha', 'timetable_beta']),
           ),
@@ -104,8 +120,11 @@ void main() {
     });
 
     test('生成器偶发碰撞时跳过已有课程表 ID', () async {
+      final database = AppDatabase.withExecutor(NativeDatabase.memory());
+      addTearDown(database.close);
       final container = ProviderContainer(
         overrides: [
+          appDatabaseProvider.overrideWithValue(database),
           appIdGeneratorProvider.overrideWithValue(
             _FakeAppIdGenerator(
               timetableIds: ['timetable_same', 'timetable_same', 'timetable_next'],
@@ -128,12 +147,10 @@ void main() {
       expect(first.id, 'timetable_same');
       expect(second.id, 'timetable_next');
       expect(
-        container
-            .read(courseTimetableRepositoryProvider)
-            .timetables
-            .map((timetable) => timetable.id)
+        (await database.select(database.courseTimetableRows).get())
+            .map((row) => row.id)
             .toSet(),
-        hasLength(2),
+        {'timetable_same', 'timetable_next'},
       );
     });
   });

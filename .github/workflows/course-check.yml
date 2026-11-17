@@ -28,7 +28,7 @@ jobs:
       - name: Prepare example configuration
         run: cp .env.example .env
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
       - name: Run app tests
         run: flutter test
       - name: Build demo APK
