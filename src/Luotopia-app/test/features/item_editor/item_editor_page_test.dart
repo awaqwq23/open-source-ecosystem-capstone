@@ -9,7 +9,7 @@ import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
 void main() {
-  testWidgets('切换到备忘后显示目标日期与预计时长字段', (tester) async {
+  testWidgets('从任务切换到备忘时移除截止时间并保留重复和提醒', (tester) async {
     await tester.pumpWidget(const _TestApp(child: ItemEditorPage()));
     await tester.pumpAndSettle();
 
@@ -22,8 +22,12 @@ void main() {
     await tester.tap(find.text('备忘'));
     await tester.pumpAndSettle();
 
-    expect(find.text('目标日期'), findsOneWidget);
-    expect(find.text('预计时长'), findsOneWidget);
+    expect(find.text('创建备忘'), findsOneWidget);
+    expect(find.text('截止时间'), findsNothing);
+    expect(find.text('目标日期'), findsNothing);
+    expect(find.text('预计时长'), findsNothing);
+    expect(find.text('重复'), findsOneWidget);
+    expect(find.text('提醒'), findsOneWidget);
     expect(find.text('截止时间'), findsNothing);
   });
 
