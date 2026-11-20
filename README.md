@@ -55,9 +55,9 @@ flutter build apk --debug
 
 ## 测试与检查
 
-从 `src/Luotopia-app/` 运行 `flutter test`、`flutter analyze` 和 `flutter build apk --debug`。基础检查选择 Flutter 静态分析。现有测试入口和需要补齐的正常、边界／失败及扩展接入断言见 [测试说明](src/test/README.md)。
+从 `src/Luotopia-app/` 运行 `flutter test`、`flutter analyze` 和 `flutter build apk --debug`。基础检查选择 Flutter 静态分析。Go 与 Flutter 课表包契约测试、离线查询测试、CSV 样例检查及尚待扩展接入的场景见 [测试说明](src/test/README.md)。
 
-故意改错示例待随扩展测试实现。计划在临时副本中把第 3 周的偏移改少 7 天，确认日期断言失败，恢复后复跑同一测试。
+CSV 验收示例包含第三周日期提前 7 天的反例。可从根目录运行 `python -B -m unittest discover -s src/test -v`，也可按测试说明核对实际导出文件。
 
 [课程 CI 配置](.github/workflows/course-check.yml) 默认执行 App 测试与 APK 构建。已有 [首次 CI 运行](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/runs/43910348699) 的依赖安装通过，Flutter 测试失败，APK 步骤跳过。以 [分支最新运行](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/workflows/course-check.yml?query=branch%3Acourse%2Fdelivery-scaffold) 核对当前状态，最终成功记录待完成。
 
