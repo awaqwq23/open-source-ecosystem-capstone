@@ -31,5 +31,13 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Run app tests
         run: flutter test
+      - name: Check plugin implementation
+        run: dart analyze lib/features/plugins test/features/plugins integration_test
+      - name: Check plugin SDK and executable example
+        working-directory: .
+        run: |
+          python3 -B -m unittest discover -s src/plugin/luotopia-plugin-sdk/tests
+          node src/samples/plugins/study-time/test.mjs
+          node src/plugin/luotopia-plugin-sdk/tests/bridge-security.mjs
       - name: Build demo APK
         run: flutter build apk --debug

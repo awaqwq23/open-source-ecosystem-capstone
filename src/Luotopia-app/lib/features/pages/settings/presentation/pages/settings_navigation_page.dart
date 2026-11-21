@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/app/shell/app_shell_destination.dart';
+import 'package:luotopia/app/router/app_navigator.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
-import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import 'package:luotopia/features/pages/settings/presentation/viewmodels/settings_view_model.dart';
 import 'package:luotopia/features/pages/settings/presentation/widgets/settings_flat_list.dart';
@@ -16,7 +17,12 @@ class SettingsNavigationPage extends ConsumerWidget {
     final state = ref.watch(settingsViewModelProvider);
     final viewModel = ref.read(settingsViewModelProvider.notifier);
     final l10n = context.l10n;
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
+    final entries = ref
+        .watch(pluginManagerProvider)
+        .entries(ContributionSlot.navigation);
+    final isZh = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().startsWith('zh');
 
     return ui.Scaffold(
       headers: [
@@ -40,17 +46,9 @@ class SettingsNavigationPage extends ConsumerWidget {
               ),
             ),
             SettingsFlatTile(
-              title: isZh ? '中间标签页' : 'Middle tab',
-              subtitle: isZh
-                  ? '导航栏中间位置显示论坛或 AI 助手（默认论坛）'
-                  : 'Choose between Forum or AI for the middle tab (default Forum).',
-              leading: const Icon(Icons.swap_horiz_outlined),
-              trailing: _MiddleTabDropdown(
-                value: state.navigationSettings.middleTabMode,
-                onChanged: (value) => viewModel.saveNavigationSettings(
-                  state.navigationSettings.copyWith(middleTabMode: value),
-                ),
-              ),
+              title: isZh ? '管理导航入口' : 'Manage navigation plugins',
+              leading: const Icon(Icons.extension_outlined),
+              onTap: () => context.openSecondary('/settings/plugins'),
             ),
             SettingsFlatTile(
               title: isZh ? '启动时默认页面' : 'Default home tab',
@@ -59,7 +57,13 @@ class SettingsNavigationPage extends ConsumerWidget {
                   : 'The page shown when the app starts (default Home).',
               leading: const Icon(Icons.home_outlined),
               trailing: _DefaultTabDropdown(
-                value: state.navigationSettings.defaultTab,
+                value:
+                    entries.any(
+                      (c) => c.route == state.navigationSettings.defaultTab,
+                    )
+                    ? state.navigationSettings.defaultTab
+                    : '/',
+                entries: entries,
                 onChanged: (value) => viewModel.saveNavigationSettings(
                   state.navigationSettings.copyWith(defaultTab: value),
                 ),
@@ -72,48 +76,15 @@ class SettingsNavigationPage extends ConsumerWidget {
   }
 }
 
-class _MiddleTabDropdown extends StatelessWidget {
-  const _MiddleTabDropdown({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final MiddleTabMode value;
-  final ValueChanged<MiddleTabMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final isZh = Localizations.localeOf(context).languageCode.toLowerCase().startsWith('zh');
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<MiddleTabMode>(
-        value: value,
-        onChanged: (selected) {
-          if (selected != null) {
-            onChanged(selected);
-          }
-        },
-        items: [
-          DropdownMenuItem(
-            value: MiddleTabMode.forum,
-            child: Text(isZh ? '论坛' : 'Forum'),
-          ),
-          DropdownMenuItem(
-            value: MiddleTabMode.ai,
-            child: Text(isZh ? 'AI 助手' : 'AI'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _DefaultTabDropdown extends StatelessWidget {
   const _DefaultTabDropdown({
     required this.value,
+    required this.entries,
     required this.onChanged,
   });
 
   final String value;
+  final List<PluginContribution> entries;
   final ValueChanged<String> onChanged;
 
   @override
@@ -127,10 +98,10 @@ class _DefaultTabDropdown extends StatelessWidget {
           }
         },
         items: [
-          for (final destination in AppShellDestination.values)
+          for (final destination in entries)
             DropdownMenuItem(
               value: destination.route,
-              child: Text(destination.label(context)),
+              child: Text(destination.title),
             ),
         ],
       ),

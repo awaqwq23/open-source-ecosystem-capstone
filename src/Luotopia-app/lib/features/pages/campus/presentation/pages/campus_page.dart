@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_icons.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
-import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
 import 'package:luotopia/features/weather/presentation/widgets/qweather_icon.dart';
@@ -11,8 +15,81 @@ import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class CampusPage extends StatelessWidget {
+class CampusPage extends ConsumerStatefulWidget {
   const CampusPage({super.key});
+
+  @override
+  ConsumerState<CampusPage> createState() => _CampusPageState();
+}
+
+class _CampusPageState extends ConsumerState<CampusPage> {
+  final _scroll = ScrollController();
+  final _cardKeys = <String, GlobalKey>{};
+  Timer? _edgeTimer;
+  List<PluginContribution>? _dragEntries;
+  int? _dragRevision;
+
+  @override
+  void dispose() {
+    _edgeTimer?.cancel();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _scrollAt(Offset globalPosition) {
+    _edgeTimer?.cancel();
+    final box = context.findRenderObject() as RenderBox;
+    final y = box.globalToLocal(globalPosition).dy;
+    final direction = y < 80
+        ? -1
+        : y > box.size.height - 80
+        ? 1
+        : 0;
+    if (direction == 0) return;
+    _edgeTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (_scroll.hasClients) {
+        _scroll.jumpTo(
+          (_scroll.offset + direction * 12).clamp(
+            0.0,
+            _scroll.position.maxScrollExtent,
+          ),
+        );
+      }
+    });
+  }
+
+  void _cancelDrag() {
+    _edgeTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _dragEntries = null;
+        _dragRevision = null;
+      });
+    }
+  }
+
+  Future<void> _drop() async {
+    final entries = _dragEntries;
+    final revision = _dragRevision;
+    if (entries == null) return;
+    try {
+      await ref
+          .read(pluginManagerProvider)
+          .reorder(
+            ContributionSlot.campusCard,
+            entries.map((c) => c.key).toList(),
+            expectedRevision: revision,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('布局保存失败，请重试')));
+      }
+    } finally {
+      _cancelDrag();
+    }
+  }
 
   static const _gridApps = <_CampusApp>[
     _CampusApp(
@@ -82,43 +159,168 @@ class CampusPage extends StatelessWidget {
     ),
   ];
 
+  Widget _card(PluginContribution entry) {
+    if (entry.pluginId == 'luotopia.campus-info') {
+      final weather = ref.watch(weatherProvider);
+      return _CampusInfoCard(
+        weather: weather.weather,
+        loading: weather.loading,
+        isMock: weather.isMock,
+      );
+    }
+    const ids = [
+      'timetable',
+      'seat-reservation',
+      'library',
+      'sports-reservation',
+      'luojia-ecard',
+      'ecard-payment-code',
+      'score',
+      'empty-classroom',
+      'audit-course',
+      'all-school-timetable',
+      'grading',
+      'course-review',
+      'study-materials',
+    ];
+    final index = ids.indexOf(entry.pluginId.replaceFirst('luotopia.', ''));
+    return _CampusTile(
+      entry: entry,
+      app: index < 0 ? null : _gridApps[index],
+      customIcon: ref
+          .read(pluginManagerProvider)
+          .hasPresentationOverride(entry.key, 'icon'),
+      customColor: ref
+          .read(pluginManagerProvider)
+          .hasPresentationOverride(entry.key, 'color'),
+    );
+  }
+
+  Widget _draggable(PluginContribution entry, double width, double height) {
+    return DragTarget<String>(
+      key: _cardKeys.putIfAbsent(entry.key, GlobalKey.new),
+      onWillAcceptWithDetails: (details) => details.data != entry.key,
+      onMove: (details) {
+        final entries = _dragEntries;
+        if (entries == null) return;
+        final from = entries.indexWhere((c) => c.key == details.data);
+        final to = entries.indexWhere((c) => c.key == entry.key);
+        if (from >= 0 && to >= 0 && from != to) {
+          setState(() {
+            entries.insert(to, entries.removeAt(from));
+          });
+        }
+      },
+      onAcceptWithDetails: (_) => _drop(),
+      builder: (context, candidates, rejected) => LongPressDraggable<String>(
+        data: entry.key,
+        onDragStarted: () => setState(() {
+          final manager = ref.read(pluginManagerProvider);
+          _dragEntries = manager.entries(ContributionSlot.campusCard).toList();
+          _dragRevision = manager.revision;
+        }),
+        onDragUpdate: (details) => _scrollAt(details.globalPosition),
+        onDraggableCanceled: (_, _) => _cancelDrag(),
+        onDragEnd: (_) => _edgeTimer?.cancel(),
+        feedback: Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Opacity(opacity: 0.9, child: _card(entry)),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: _card(entry)),
+        child: Semantics(
+          label: entry.title,
+          hint: '长按拖动以调整顺序',
+          child: _card(entry),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final registered = ref
+        .watch(pluginManagerProvider)
+        .entries(ContributionSlot.campusCard);
+    final entries = _dragEntries ?? registered;
     return ui.Scaffold(
       child: Stack(
         children: [
           const Positioned.fill(
             child: RepaintBoundary(child: AppWallpaperBackground()),
           ),
-          // Slight dark overlay for readability over bright images
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
-          // Scrollable content
           SafeArea(
             child: BackdropGroup(
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: Consumer(
-                        builder: (context, ref, _) {
-                          final weatherState = ref.watch(weatherProvider);
-                          return _CampusInfoCard(
-                            weather: weatherState.weather,
-                            loading: weatherState.loading,
-                            isMock: weatherState.isMock,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    sliver: _AppGrid(apps: _gridApps),
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final smallWidth = (constraints.maxWidth - 56) / 3;
+                  final rows = <Widget>[];
+                  final gaps = <double>[];
+                  for (var i = 0; i < entries.length;) {
+                    final entry = entries[i];
+                    if (entry.size == 'wide') {
+                      gaps.add(16);
+                      rows.add(
+                        SizedBox(
+                          key: ValueKey(entry.key),
+                          width: double.infinity,
+                          height: entry.pluginId == 'luotopia.campus-info'
+                              ? null
+                              : smallWidth,
+                          child: _draggable(
+                            entry,
+                            constraints.maxWidth - 32,
+                            entry.pluginId == 'luotopia.campus-info'
+                                ? 300
+                                : smallWidth,
+                          ),
+                        ),
+                      );
+                      i++;
+                    } else {
+                      gaps.add(12);
+                      final cells = <Widget>[];
+                      while (i < entries.length &&
+                          entries[i].size != 'wide' &&
+                          cells.length < 3) {
+                        final cell = entries[i++];
+                        cells.add(
+                          SizedBox(
+                            key: ValueKey(cell.key),
+                            width: smallWidth,
+                            height: smallWidth,
+                            child: _draggable(cell, smallWidth, smallWidth),
+                          ),
+                        );
+                      }
+                      rows.add(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (var c = 0; c < cells.length; c++) ...[
+                              if (c > 0) const SizedBox(width: 12),
+                              cells[c],
+                            ],
+                          ],
+                        ),
+                      );
+                    }
+                  }
+                  return ListView.separated(
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                    itemCount: rows.length,
+                    separatorBuilder: (_, index) =>
+                        SizedBox(height: gaps[index]),
+                    itemBuilder: (_, index) => rows[index],
+                  );
+                },
               ),
             ),
           ),
@@ -519,98 +721,71 @@ class _ReminderTile extends StatelessWidget {
   }
 }
 
-class _AppGrid extends StatelessWidget {
-  const _AppGrid({required this.apps});
-
-  final List<_CampusApp> apps;
+class _CampusTile extends StatelessWidget {
+  const _CampusTile({
+    required this.entry,
+    this.app,
+    required this.customIcon,
+    required this.customColor,
+  });
+  final bool customIcon, customColor;
+  final PluginContribution entry;
+  final _CampusApp? app;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return SliverGrid.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.0,
-      ),
-      itemCount: apps.length,
-      itemBuilder: (context, index) {
-        final app = apps[index];
-        final accent = app.colorAssoc.resolve(theme.brightness);
-        return _CampusGlassCard(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _openApp(context, app.name),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(app.icon, size: 26, color: accent),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  app.name,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    final accent = !customColor && app != null
+        ? app!.colorAssoc.resolve(theme.brightness)
+        : pluginColor(entry.color);
+    return _CampusGlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          if (entry.nativeRoute != null) {
+            context.openSecondary(entry.nativeRoute!);
+          } else if (!entry.pluginId.startsWith('luotopia.')) {
+            context.go(entry.route);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${entry.title} 功能正在开发中'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                !customIcon && app != null ? app!.icon : pluginIcon(entry.icon),
+                size: 26,
+                color: accent,
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 10),
+            Text(
+              entry.title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  void _openApp(BuildContext context, String name) {
-    switch (name) {
-      case '课程表':
-        context.openSecondary(AppRoutePaths.campusTimetable);
-        return;
-      case '成绩':
-        context.openSecondary(AppRoutePaths.campusScore);
-        return;
-      case '自习预约':
-        context.openSecondary(AppRoutePaths.campusSeatReservation);
-        return;
-      case '运动场馆':
-        context.openSecondary(AppRoutePaths.campusSportsReservation);
-        return;
-      case '珞珈E卡':
-        context.openSecondary(AppRoutePaths.campusLuojiaEcard);
-        return;
-      case 'E卡付款码':
-        context.openSecondary(AppRoutePaths.campusEcardPaymentCode);
-        return;
-      case '空闲教室':
-        context.openSecondary(AppRoutePaths.campusEmptyClassroom);
-        return;
-      case '全校课表':
-        context.openSecondary(AppRoutePaths.campusAllSchoolTimetable);
-        return;
-      case '课程评价':
-        context.openSecondary(AppRoutePaths.campusCourseReview);
-        return;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$name 功能正在开发中'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    }
   }
 }
 

@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:luotopia/app/shell/app_shell_destination.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
 import 'package:luotopia/features/pages/ai/domain/repositories/ai_runtime_providers.dart';
-import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_icons.dart';
 import 'package:luotopia/features/pages/settings/domain/providers/settings_state_providers.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
@@ -18,37 +20,66 @@ class AppShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  void _onTap(int visibleIndex, List<int> branchIndices, WidgetRef ref) {
-    final branchIndex = branchIndices[visibleIndex];
-    // 从其他标签页切换到 AI 页时，触发新 session 创建
-    final allDestinations = AppShellDestination.values;
-    if (allDestinations[branchIndex] == AppShellDestination.ai &&
-        allDestinations[navigationShell.currentIndex] !=
-            AppShellDestination.ai) {
+  void _onTap(BuildContext context, PluginContribution entry, WidgetRef ref) {
+    final branch = AppShellDestination.values.indexWhere(
+      (d) => d.route == entry.route,
+    );
+    if (branch < 0) {
+      context.go(entry.route);
+      return;
+    }
+    if (entry.route == '/ai' && navigationShell.currentIndex != branch) {
       ref.read(aiPageActivationProvider.notifier).state++;
     }
     navigationShell.goBranch(
-      branchIndex,
-      initialLocation: branchIndex == navigationShell.currentIndex,
+      branch,
+      initialLocation: branch == navigationShell.currentIndex,
     );
+  }
+
+  String _label(BuildContext context, PluginContribution entry, WidgetRef ref) {
+    final destination = AppShellDestination.values
+        .where((d) => d.route == entry.route)
+        .firstOrNull;
+    return destination != null &&
+            !ref
+                .read(pluginManagerProvider)
+                .hasPresentationOverride(entry.key, 'title')
+        ? destination.label(context)
+        : entry.title;
+  }
+
+  IconData _icon(PluginContribution entry, bool selected, WidgetRef ref) {
+    final destination = AppShellDestination.values
+        .where((d) => d.route == entry.route)
+        .firstOrNull;
+    if (destination != null &&
+        !ref
+            .read(pluginManagerProvider)
+            .hasPresentationOverride(entry.key, 'icon')) {
+      return selected ? destination.selectedIcon : destination.icon;
+    }
+    return pluginIcon(entry.icon);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final navSettings = ref.watch(appNavigationSettingsProvider);
-    final middleTabMode = navSettings.middleTabMode;
     final isCompact = !ResponsiveBreakpoints.of(context).largerThan(MOBILE);
     final showLabels = navSettings.showLabels;
-
-    final branchIndices = switch (middleTabMode) {
-      MiddleTabMode.forum => const [0, 1, 2, 4, 5],
-      MiddleTabMode.ai => const [0, 1, 3, 4, 5],
-    };
-    final allDestinations = AppShellDestination.values;
-    final visibleDestinations = branchIndices
-        .map((i) => allDestinations[i])
-        .toList(growable: false);
-    final current = allDestinations[navigationShell.currentIndex];
+    final visibleDestinations = ref
+        .watch(pluginManagerProvider)
+        .entries(ContributionSlot.navigation);
+    final location = GoRouterState.of(context).uri.path;
+    final current = visibleDestinations
+        .where(
+          (c) =>
+              c.route == location ||
+              (c.nativeRoute == null &&
+                  location.startsWith('/plugins/${c.pluginId}/${c.id}/')) ||
+              (c.route != '/' && location.startsWith('${c.route}/')),
+        )
+        .firstOrNull;
 
     if (isCompact) {
       return ui.Scaffold(
@@ -59,7 +90,6 @@ class AppShell extends ConsumerWidget {
             visibleDestinations,
             current,
             showLabels,
-            branchIndices,
             ref,
           ),
         ],
@@ -78,7 +108,6 @@ class AppShell extends ConsumerWidget {
               visibleDestinations,
               current,
               showLabels,
-              branchIndices,
               ref,
             ),
           ),
@@ -94,12 +123,11 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  ui.NavigationBar _buildNavigationBar(
+  Widget _buildNavigationBar(
     BuildContext context,
-    List<AppShellDestination> destinations,
-    AppShellDestination current,
+    List<PluginContribution> destinations,
+    PluginContribution? current,
     bool showLabels,
-    List<int> branchIndices,
     WidgetRef ref,
   ) {
     final compactNavBarHeight = showLabels
@@ -110,7 +138,7 @@ class AppShell extends ConsumerWidget {
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
         : const EdgeInsets.fromLTRB(8, 8, 8, 12);
 
-    return ui.NavigationBar(
+    Widget bar(List<PluginContribution> destinations) => ui.NavigationBar(
       alignment: ui.NavigationBarAlignment.spaceEvenly,
       labelType: showLabels
           ? ui.NavigationLabelType.all
@@ -119,63 +147,80 @@ class AppShell extends ConsumerWidget {
       expandedSize: compactNavBarHeight,
       padding: compactNavBarPadding,
       spacing: showLabels ? 4 : 0,
-      selectedKey: ValueKey(current.route),
+      selectedKey: current == null ? null : ValueKey(current.key),
       onSelected: (key) {
         final visibleIndex = destinations.indexWhere(
-          (d) => ValueKey(d.route) == key,
+          (d) => ValueKey(d.key) == key,
         );
         if (visibleIndex >= 0) {
-          _onTap(visibleIndex, branchIndices, ref);
+          _onTap(context, destinations[visibleIndex], ref);
         }
       },
       children: [
         for (final destination in destinations)
           ui.NavigationItem(
-            key: ValueKey(destination.route),
-            label: Text(destination.label(context)),
+            key: ValueKey(destination.key),
+            label: Text(_label(context, destination, ref)),
             child: Icon(
-              destination.route == current.route
-                  ? destination.selectedIcon
-                  : destination.icon,
+              _icon(destination, destination.key == current?.key, ref),
               size: navIconSize,
             ),
           ),
       ],
     );
+    if (destinations.length <= 5) return bar(destinations);
+    return SizedBox(
+      height: compactNavBarHeight,
+      child: Row(
+        children: [
+          SizedBox(width: 72, child: bar([destinations.first])),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: (destinations.length - 3) * 76.0,
+                child: bar(destinations.sublist(1, destinations.length - 2)),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 144,
+            child: bar(destinations.sublist(destinations.length - 2)),
+          ),
+        ],
+      ),
+    );
   }
 
   ui.NavigationSidebar _buildNavigationSidebar(
     BuildContext context,
-    List<AppShellDestination> destinations,
-    AppShellDestination current,
+    List<PluginContribution> destinations,
+    PluginContribution? current,
     bool showLabels,
-    List<int> branchIndices,
     WidgetRef ref,
   ) {
     final navIconSize = showLabels ? 24.0 : 28.0;
 
     return ui.NavigationSidebar(
-      selectedKey: ValueKey(current.route),
+      selectedKey: current == null ? null : ValueKey(current.key),
       labelType: showLabels
           ? ui.NavigationLabelType.expanded
           : ui.NavigationLabelType.none,
       onSelected: (key) {
         final visibleIndex = destinations.indexWhere(
-          (d) => ValueKey(d.route) == key,
+          (d) => ValueKey(d.key) == key,
         );
         if (visibleIndex >= 0) {
-          _onTap(visibleIndex, branchIndices, ref);
+          _onTap(context, destinations[visibleIndex], ref);
         }
       },
       children: [
         for (final destination in destinations)
           ui.NavigationItem(
-            key: ValueKey(destination.route),
-            label: Text(destination.label(context)),
+            key: ValueKey(destination.key),
+            label: Text(_label(context, destination, ref)),
             child: Icon(
-              destination.route == current.route
-                  ? destination.selectedIcon
-                  : destination.icon,
+              _icon(destination, destination.key == current?.key, ref),
               size: navIconSize,
             ),
           ),
