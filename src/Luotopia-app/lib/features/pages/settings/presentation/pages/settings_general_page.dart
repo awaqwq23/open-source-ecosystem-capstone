@@ -50,6 +50,11 @@ class SettingsGeneralPage extends ConsumerWidget {
                   ),
                 ),
                 SettingsFlatTile(
+                  title: isZh ? '插件管理' : 'Plugins',
+                  leading: const Icon(Icons.extension_outlined),
+                  onTap: () => context.openSecondary('/settings/plugins'),
+                ),
+                SettingsFlatTile(
                   title: l10n.settingsNavigationEntryTitle,
                   subtitle: l10n.settingsNavigationEntrySubtitle,
                   leading: const Icon(Icons.explore_outlined),

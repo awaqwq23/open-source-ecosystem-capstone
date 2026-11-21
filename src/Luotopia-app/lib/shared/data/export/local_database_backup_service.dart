@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app_bootstrap.dart';
@@ -13,6 +15,7 @@ final localDatabaseBackupServiceProvider = Provider<LocalDatabaseBackupService>(
     db: ref.read(appDatabaseProvider),
     syncCursorStore: ref.read(syncCursorStoreProvider),
     preferences: ref.read(sharedPreferencesProvider),
+    plugins: ref.read(pluginManagerProvider),
   ),
 );
 
@@ -21,13 +24,16 @@ class LocalDatabaseBackupService {
     required AppDatabase db,
     required SyncCursorStore syncCursorStore,
     required SharedPreferences? preferences,
+    PluginManager? plugins,
   }) : _db = db,
        _syncCursorStore = syncCursorStore,
-       _preferences = preferences;
+       _preferences = preferences,
+       _plugins = plugins;
 
   final AppDatabase _db;
   final SyncCursorStore _syncCursorStore;
   final SharedPreferences? _preferences;
+  final PluginManager? _plugins;
 
   Future<LocalDatabaseBackupFile> exportDatabase() async {
     final directory = await getTemporaryDirectory();
@@ -56,13 +62,21 @@ class LocalDatabaseBackupService {
     try {
       final metadata = await _readBackupMetadata(alias);
       await _validateBackup(alias, metadata);
+      final pluginData = await _readPluginData(alias);
       await _db.customStatement('PRAGMA foreign_keys = OFF');
       try {
-        await _db.transaction(() async {
-          await _deleteCurrentNonCourseRows();
-          await _copyRows(alias);
-          await _validateImportedRows();
-        });
+        Future<void> importRows(Future<void> Function()? writePlugins) =>
+            _db.transaction(() async {
+              await _deleteCurrentNonCourseRows();
+              await _copyRows(alias);
+              await _validateImportedRows();
+              await writePlugins?.call();
+            });
+        if (pluginData != null && _plugins != null) {
+          await _plugins.restoreBackupWithDatabase(pluginData, importRows);
+        } else {
+          await importRows(null);
+        }
         _notifyImportedTablesUpdated();
       } finally {
         await _db.customStatement('PRAGMA foreign_keys = ON');
@@ -85,6 +99,7 @@ class LocalDatabaseBackupService {
         );
         await _sanitizeBackupRows(alias);
         await _writeBackupPreferences(alias);
+        await _writePluginData(alias);
         await _writeBackupMetadata(alias);
       } finally {
         await _db.customStatement('PRAGMA foreign_keys = ON');
@@ -103,7 +118,7 @@ class LocalDatabaseBackupService {
       )
     ''');
     final metadata = {
-      'format_version': '3',
+      'format_version': '4',
       'schema_version': _db.schemaVersion.toString(),
       'backup_scope': _backupScope,
       'created_at': DateTime.now().toIso8601String(),
@@ -147,7 +162,7 @@ class LocalDatabaseBackupService {
         '数据库导入失败：备份版本 $version 与当前版本 ${_db.schemaVersion} 不兼容',
       );
     }
-    if (metadata['format_version'] != '3' ||
+    if (!{'3', '4'}.contains(metadata['format_version']) ||
         metadata['schema_version'] != _db.schemaVersion.toString() ||
         metadata['backup_scope'] != _backupScope) {
       throw const LocalDatabaseBackupException('数据库导入失败：备份格式不兼容');
@@ -323,6 +338,40 @@ class LocalDatabaseBackupService {
         INSERT INTO $alias.$_preferencesTable (key, value)
         VALUES (${_sqlString(key)}, ${_sqlString(value)})
       ''');
+    }
+  }
+
+  Future<void> _writePluginData(String alias) async {
+    await _db.customStatement(
+      'DROP TABLE IF EXISTS $alias._luotopia_plugin_data',
+    );
+    await _db.customStatement(
+      'CREATE TABLE $alias._luotopia_plugin_data (data TEXT NOT NULL)',
+    );
+    final data = jsonEncode((_plugins ?? PluginManager()).exportBackup());
+    await _db.customStatement(
+      'INSERT INTO $alias._luotopia_plugin_data (data) VALUES (${_sqlString(data)})',
+    );
+  }
+
+  Future<Map<String, dynamic>?> _readPluginData(String alias) async {
+    if (!await _tableExists(alias, '_luotopia_plugin_data')) return null;
+    final rows = await _db
+        .customSelect('SELECT data FROM $alias._luotopia_plugin_data LIMIT 2')
+        .get();
+    if (rows.length != 1 || rows.single.data['data'] is! String) {
+      throw const LocalDatabaseBackupException('插件备份格式不正确');
+    }
+    final text = rows.single.data['data'] as String;
+    if (text.length > 18 * 1024 * 1024) {
+      throw const LocalDatabaseBackupException('插件备份过大');
+    }
+    try {
+      final data = jsonDecode(text) as Map<String, dynamic>;
+      PluginManager.validateBackup(data);
+      return data;
+    } catch (_) {
+      throw const LocalDatabaseBackupException('插件备份校验失败');
     }
   }
 

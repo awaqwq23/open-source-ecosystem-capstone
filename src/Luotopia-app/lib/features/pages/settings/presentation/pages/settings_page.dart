@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/domain/builtin_plugins.dart';
+import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_icons.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -42,6 +47,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final entries = ref
+        .watch(pluginManagerProvider)
+        .entries(ContributionSlot.settingsRow);
+    final sections = <List<PluginContribution>>[];
+    for (final entry in entries) {
+      if (entry.pluginId == 'luotopia.settings' && entry.id == 'accounts') {
+        continue;
+      }
+      if (sections.isEmpty ||
+          entry.pluginId == 'luotopia.notification' ||
+          sections.last.last.pluginId == 'luotopia.notification' ||
+          settingsGroupFor(sections.last.last.pluginId) !=
+              settingsGroupFor(entry.pluginId)) {
+        sections.add([]);
+      }
+      sections.last.add(entry);
+    }
     final whuAuth = ref.watch(whuAuthProvider);
     final luotopiaAuth = ref.watch(luotopiaAuthProvider);
     return ui.Scaffold(
@@ -96,77 +118,99 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
-            const _NotificationSection(),
-            const SizedBox(height: _settingsSectionSpacing),
-            _SettingsLinkCard(
-              children: [
-                _SettingsLinkTile(
-                  title: l10n.settingsGeneralEntryTitle,
-                  subtitle: l10n.settingsGeneralEntrySubtitle,
-                  icon: AppIcons.settingsOutlined,
-                  onTap: () =>
-                      context.openSecondary(AppRoutePaths.settingsGeneral),
-                ),
-                _SettingsLinkTile(
-                  title: '数据更新',
-                  subtitle: '天气、通知、脚本与同步',
-                  icon: Icons.sync_outlined,
-                  onTap: () =>
-                      context.openSecondary(AppRoutePaths.settingsDataUpdates),
-                ),
-                _SettingsLinkTile(
-                  title: l10n.settingsHomeSectionTitle,
-                  subtitle: l10n.settingsHomeEntrySubtitle,
-                  icon: AppIcons.homeOutlined,
-                  onTap: () =>
-                      context.openSecondary(AppRoutePaths.settingsHome),
-                ),
-                _SettingsLinkTile(
-                  title: l10n.settingsAiSectionTitle,
-                  subtitle: '模型、密钥与系统提示词',
-                  icon: AppIcons.aiOutlined,
-                  onTap: () => context.openSecondary(AppRoutePaths.settingsAi),
+            for (var index = 0; index < sections.length; index++) ...[
+              if (sections[index].singleOrNull?.pluginId ==
+                  'luotopia.notification')
+                const _NotificationSection()
+              else ...[
+                const SizedBox(height: _settingsSectionSpacing),
+                _SettingsLinkCard(
+                  children: [
+                    for (final entry in sections[index])
+                      _pluginTile(context, entry),
+                  ],
                 ),
               ],
-            ),
-            const SizedBox(height: _settingsSectionSpacing),
-            _SettingsLinkCard(
-              children: [
-                _SettingsLinkTile(
-                  title: 'Lorem Ipsum',
-                  subtitle: 'Dolor sit amet, consectetur adipiscing',
-                  icon: Icons.rate_review_outlined,
-                  onTap: () => _showLinkPending(context, 'Lorem Ipsum'),
-                ),
-                _SettingsLinkTile(
-                  title: 'Sed Do Eiusmod',
-                  subtitle: 'Tempor incididunt ut labore et dolore',
-                  icon: Icons.school_outlined,
-                  onTap: () => _showLinkPending(context, 'Sed Do Eiusmod'),
-                ),
-                _SettingsLinkTile(
-                  title: 'Ut Enim Ad Minim',
-                  subtitle: 'Veniam quis nostrud exercitation',
-                  icon: Icons.auto_awesome_outlined,
-                  onTap: () => _showLinkPending(context, 'Ut Enim Ad Minim'),
-                ),
-                _SettingsLinkTile(
-                  title: 'Duis Aute Irure',
-                  subtitle: 'Dolor in reprehenderit in voluptate',
-                  icon: Icons.account_balance_outlined,
-                  onTap: () => _showLinkPending(context, 'Duis Aute Irure'),
-                ),
-                _SettingsLinkTile(
-                  title: 'Excepteur Sint',
-                  subtitle: 'Occaecat cupidatat non proident',
-                  icon: Icons.forum_outlined,
-                  onTap: () => _showLinkPending(context, 'Excepteur Sint'),
-                ),
-              ],
-            ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _pluginTile(BuildContext context, PluginContribution entry) {
+    final l10n = context.l10n;
+    final original = switch (entry.pluginId) {
+      'luotopia.home-settings' => (
+        l10n.settingsHomeSectionTitle,
+        l10n.settingsHomeEntrySubtitle,
+        AppIcons.homeOutlined,
+      ),
+      'luotopia.ai-settings' => (
+        l10n.settingsAiSectionTitle,
+        '模型、密钥与系统提示词',
+        AppIcons.aiOutlined,
+      ),
+      'luotopia.placeholder-1' => (
+        'Lorem Ipsum',
+        'Dolor sit amet, consectetur adipiscing',
+        Icons.rate_review_outlined,
+      ),
+      'luotopia.placeholder-2' => (
+        'Sed Do Eiusmod',
+        'Tempor incididunt ut labore et dolore',
+        Icons.school_outlined,
+      ),
+      'luotopia.placeholder-3' => (
+        'Ut Enim Ad Minim',
+        'Veniam quis nostrud exercitation',
+        Icons.auto_awesome_outlined,
+      ),
+      'luotopia.placeholder-4' => (
+        'Duis Aute Irure',
+        'Dolor in reprehenderit in voluptate',
+        Icons.account_balance_outlined,
+      ),
+      'luotopia.placeholder-5' => (
+        'Excepteur Sint',
+        'Occaecat cupidatat non proident',
+        Icons.forum_outlined,
+      ),
+      _ =>
+        entry.pluginId == 'luotopia.settings' && entry.id == 'general'
+            ? (
+                l10n.settingsGeneralEntryTitle,
+                l10n.settingsGeneralEntrySubtitle,
+                AppIcons.settingsOutlined,
+              )
+            : entry.pluginId == 'luotopia.settings' && entry.id == 'data'
+            ? ('数据更新', '天气、通知、脚本与同步', Icons.sync_outlined)
+            : (entry.title, '', pluginIcon(entry.icon)),
+    };
+    final title =
+        !ref
+            .read(pluginManagerProvider)
+            .hasPresentationOverride(entry.key, 'title')
+        ? original.$1
+        : entry.title;
+    return _SettingsLinkTile(
+      title: title,
+      subtitle: original.$2,
+      icon:
+          !ref
+              .read(pluginManagerProvider)
+              .hasPresentationOverride(entry.key, 'icon')
+          ? original.$3
+          : pluginIcon(entry.icon),
+      onTap: () {
+        if (entry.nativeRoute != null) {
+          context.openSecondary(entry.nativeRoute!);
+        } else if (!entry.pluginId.startsWith('luotopia.')) {
+          context.go(entry.route);
+        } else {
+          _showLinkPending(context, title);
+        }
+      },
     );
   }
 
@@ -508,6 +552,12 @@ class _NotificationSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final manager = ref.watch(pluginManagerProvider);
+    const key = 'luotopia.notification/row';
+    if (!manager.isVisible(key)) {
+      return const SizedBox.shrink();
+    }
+    final contribution = manager.contribution(key);
     final state = ref.watch(notificationProvider);
     final title = state.title;
 
@@ -522,9 +572,13 @@ class _NotificationSection extends ConsumerWidget {
         _SettingsLinkCard(
           children: [
             _SettingsLinkTile(
-              title: title,
+              title: manager.hasPresentationOverride(key, 'title')
+                  ? contribution.title
+                  : title,
               subtitle: _notificationSubtitle(state),
-              icon: _notificationIcon(state.icon),
+              icon: manager.hasPresentationOverride(key, 'icon')
+                  ? pluginIcon(contribution.icon)
+                  : _notificationIcon(state.icon),
               onTap: () =>
                   context.openSecondary(AppRoutePaths.settingsDataUpdates),
             ),
