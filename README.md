@@ -59,7 +59,7 @@ flutter build apk --debug
 
 CSV 验收示例包含第三周日期提前 7 天的反例。可从根目录运行 `python -B -m unittest discover -s src/test -v`，也可按测试说明核对实际导出文件。
 
-[课程 CI 配置](.github/workflows/course-check.yml) 默认执行 App 测试与 APK 构建。已有 [首次 CI 运行](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/runs/43910348699) 的依赖安装通过，Flutter 测试失败，APK 步骤跳过。以 [分支最新运行](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/workflows/course-check.yml?query=branch%3Acourse%2Fdelivery-scaffold) 核对当前状态，最终成功记录待完成。
+[课程 CI](.github/workflows/course-check.yml) 在 PR 和 `devops` 推送时检查 Go、Flutter 与课表数据契约，并构建 Debug APK。[已验证的 devops 运行](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/runs/44892904164) 通过了这些检查。推送或合并到 `main` 时，[发布工作流](.github/workflows/release-apk.yml) 对同一提交复用全套 CI，通过后构建签名 APK，并将 APK 和 SHA-256 校验文件上传到仓库的 **Releases → 对应版本 → Assets**。签名配置、重试与验收见[发布说明](release/RELEASE.md)。
 
 ## 协作与贡献入口
 
