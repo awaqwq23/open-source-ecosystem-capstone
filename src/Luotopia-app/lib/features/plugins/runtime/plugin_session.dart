@@ -5,6 +5,7 @@ import '../domain/plugin_manifest.dart';
 import '../domain/plugin_view.dart';
 import 'plugin_engine.dart';
 import 'plugin_http.dart';
+import 'plugin_school_timetable.dart';
 
 class PluginSession {
   PluginSession(
@@ -13,8 +14,10 @@ class PluginSession {
     this.viewId, {
     this.locale = 'zh',
     this.theme = 'light',
+    this.schoolTimetable,
   }) : generation = manager.generation(contribution.pluginId);
   final PluginManager manager;
+  final PluginSchoolTimetable? schoolTimetable;
   final PluginContribution contribution;
   final int generation;
   final String viewId, locale, theme;
@@ -154,6 +157,18 @@ class PluginSession {
             '只能在用户操作时调用此能力',
             'PERMISSION_DENIED',
           );
+          if (name.startsWith('schoolTimetable.')) {
+            requirePlugin(
+              schoolTimetable != null,
+              '教务课表服务不可用',
+              'PERMISSION_DENIED',
+            );
+            return schoolTimetable!.read(
+              name,
+              args,
+              authorized: manifest.permissions.contains('schoolTimetable.read'),
+            );
+          }
           if (name == 'http.request') {
             requirePlugin(
               manifest.permissions.contains('network.https'),

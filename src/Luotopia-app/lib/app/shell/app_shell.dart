@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart'
     hide AppBar, NavigationBar, NavigationRail, Scaffold;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,62 +134,118 @@ class AppShell extends ConsumerWidget {
     final compactNavBarHeight = showLabels
         ? _compactNavBarHeightWithLabels
         : _compactNavBarHeightIconsOnly;
-    final navIconSize = showLabels ? 24.0 : 28.0;
-    final compactNavBarPadding = showLabels
-        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
-        : const EdgeInsets.fromLTRB(8, 8, 8, 12);
-
-    Widget bar(List<PluginContribution> destinations) => ui.NavigationBar(
-      alignment: ui.NavigationBarAlignment.spaceEvenly,
-      labelType: showLabels
-          ? ui.NavigationLabelType.all
-          : ui.NavigationLabelType.none,
-      expanded: showLabels,
-      expandedSize: compactNavBarHeight,
-      padding: compactNavBarPadding,
-      spacing: showLabels ? 4 : 0,
-      selectedKey: current == null ? null : ValueKey(current.key),
-      onSelected: (key) {
-        final visibleIndex = destinations.indexWhere(
-          (d) => ValueKey(d.key) == key,
-        );
-        if (visibleIndex >= 0) {
-          _onTap(context, destinations[visibleIndex], ref);
-        }
-      },
-      children: [
-        for (final destination in destinations)
-          ui.NavigationItem(
-            key: ValueKey(destination.key),
-            label: Text(_label(context, destination, ref)),
-            child: Icon(
-              _icon(destination, destination.key == current?.key, ref),
-              size: navIconSize,
-            ),
-          ),
-      ],
-    );
-    if (destinations.length <= 5) return bar(destinations);
-    return SizedBox(
-      height: compactNavBarHeight,
-      child: Row(
-        children: [
-          SizedBox(width: 72, child: bar([destinations.first])),
-          Expanded(
-            child: SingleChildScrollView(
+    final visibleCount = ref
+        .watch(appNavigationSettingsProvider)
+        .visibleCount
+        .clamp(4, 8);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final count = destinations.length < visibleCount
+            ? destinations.length
+            : visibleCount;
+        final itemWidth = constraints.maxWidth / (count == 0 ? 1 : count);
+        final navIconSize =
+            (showLabels ? 24.0 : 28.0) * (5 / visibleCount).clamp(0.7, 1.0);
+        return SizedBox(
+          height: compactNavBarHeight,
+          child: _NavigationScroll(
+            overflow: destinations.length > visibleCount,
+            builder: (scrollState) => ReorderableListView.builder(
+              scrollController: scrollState.controller,
+              key: const ValueKey('compact-navigation-strip'),
               scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: (destinations.length - 3) * 76.0,
-                child: bar(destinations.sublist(1, destinations.length - 2)),
-              ),
+              buildDefaultDragHandles: false,
+              autoScrollerVelocityScalar: 20,
+              itemCount: destinations.length,
+              onReorderStart: (_) => scrollState.dragRevision = ref
+                  .read(pluginManagerProvider)
+                  .revision,
+              onReorder: (oldIndex, newIndex) async {
+                final revision = scrollState.dragRevision;
+                scrollState.dragRevision = null;
+                try {
+                  final manager = ref.read(pluginManagerProvider);
+                  if (revision == null ||
+                      manager.revision != revision ||
+                      oldIndex < 0 ||
+                      oldIndex >= destinations.length ||
+                      newIndex < 0 ||
+                      newIndex > destinations.length) {
+                    throw StateError('Navigation changed during drag');
+                  }
+                  if (newIndex > oldIndex) newIndex--;
+                  final order = destinations.map((entry) => entry.key).toList();
+                  order.insert(newIndex, order.removeAt(oldIndex));
+                  await manager.reorder(
+                    ContributionSlot.navigation,
+                    order,
+                    expectedRevision: revision,
+                  );
+                } catch (_) {
+                  if (context.mounted) {
+                    ui.showToast(
+                      context: context,
+                      location: ui.ToastLocation.bottomCenter,
+                      builder: (_, _) => const ui.Alert(
+                        title: Text(
+                          '导航排序保存失败，请重试 / Could not save navigation order',
+                        ),
+                      ),
+                    );
+                  }
+                }
+              },
+              proxyDecorator: (child, index, animation) => child,
+              itemBuilder: (context, index) {
+                final destination = destinations[index];
+                return ReorderableDelayedDragStartListener(
+                  key: ValueKey('navigation-drag-${destination.key}'),
+                  index: index,
+                  child: SizedBox(
+                    width: itemWidth,
+                    child: ui.NavigationBar(
+                      alignment: ui.NavigationBarAlignment.spaceEvenly,
+                      labelType: showLabels
+                          ? ui.NavigationLabelType.all
+                          : ui.NavigationLabelType.none,
+                      expanded: showLabels,
+                      expandedSize: compactNavBarHeight,
+                      padding: showLabels
+                          ? const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            )
+                          : const EdgeInsets.fromLTRB(4, 8, 4, 12),
+                      selectedKey: current == null
+                          ? null
+                          : ValueKey(current.key),
+                      onSelected: (_) => _onTap(context, destination, ref),
+                      children: [
+                        ui.NavigationItem(
+                          key: ValueKey(destination.key),
+                          label: Text(
+                            _label(context, destination, ref),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          child: Icon(
+                            _icon(
+                              destination,
+                              destination.key == current?.key,
+                              ref,
+                            ),
+                            size: navIconSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          SizedBox(
-            width: 144,
-            child: bar(destinations.sublist(destinations.length - 2)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -227,4 +284,40 @@ class AppShell extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _NavigationScroll extends StatefulWidget {
+  const _NavigationScroll({required this.overflow, required this.builder});
+  final bool overflow;
+  final Widget Function(_NavigationScrollState) builder;
+  @override
+  State<_NavigationScroll> createState() => _NavigationScrollState();
+}
+
+class _NavigationScrollState extends State<_NavigationScroll> {
+  final controller = ScrollController();
+  int? dragRevision;
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ScrollConfiguration(
+    behavior: ScrollConfiguration.of(context).copyWith(
+      scrollbars: false,
+      dragDevices: {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
+      },
+    ),
+    child: Scrollbar(
+      controller: controller,
+      thumbVisibility: widget.overflow,
+      child: widget.builder(this),
+    ),
+  );
 }

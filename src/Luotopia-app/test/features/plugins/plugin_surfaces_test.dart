@@ -13,6 +13,7 @@ import 'package:luotopia/features/components/wallpaper/data/bing_wallpaper_repos
 import 'package:luotopia/features/components/wallpaper/domain/models/today_wallpaper.dart';
 import 'package:luotopia/features/pages/campus/presentation/pages/campus_page.dart';
 import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/data/bundled_plugins.dart';
 import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
@@ -42,6 +43,10 @@ void main() {
       routes: [
         GoRoute(path: '/', builder: (_, _) => const CampusPage()),
         GoRoute(
+          path: '/plugins/luotopia.library/card/main',
+          builder: (_, _) => const Text('library plugin destination'),
+        ),
+        GoRoute(
           path: '/campus/timetable',
           builder: (_, _) => const Text('timetable destination'),
         ),
@@ -67,6 +72,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('migrated campus card routes to independent script provider', (
+    tester,
+  ) async {
+    final registry = PluginManager(bundledPackages: await loadBundledPlugins());
+    for (final c in registry.entries(ContributionSlot.campusCard)) {
+      if (c.pluginId != 'luotopia.library') {
+        await registry.setContributionVisible(c.key, false);
+      }
+    }
+    await pump(tester, registry);
+    await tester.tap(find.text('图书借阅'));
+    await tester.pumpAndSettle();
+    expect(find.text('library plugin destination'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'renaming a campus card preserves its native route and hiding updates layout',
     (tester) async {
@@ -225,7 +245,46 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(ui.NavigationBar), findsNWidgets(3));
+      expect(
+        find.byKey(const ValueKey('compact-navigation-strip')),
+        findsOneWidget,
+      );
+      final strip = find.byKey(const ValueKey('compact-navigation-strip'));
+      final beforeDrag = registry.revision;
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const ValueKey('luotopia.home/tab'))),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await gesture.moveTo(
+        Offset(tester.getRect(strip).right - 2, tester.getCenter(strip).dy),
+      );
+      for (var frame = 0; frame < 30; frame++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(of: strip, matching: find.byType(Scrollable)).first,
+      );
+      expect(scrollable.position.pixels, greaterThan(0));
+      await gesture.cancel();
+      await tester.pumpAndSettle();
+      expect(registry.revision, beforeDrag);
+      await tester.drag(strip, const Offset(500, 0));
+      await tester.pumpAndSettle();
+      final reorderGesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const ValueKey('luotopia.home/tab'))),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await reorderGesture.moveTo(
+        tester.getCenter(find.byKey(const ValueKey('luotopia.settings/tab'))),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await reorderGesture.up();
+      await tester.pumpAndSettle();
+      expect(registry.revision, greaterThan(beforeDrag));
+      expect(
+        registry.entries(ContributionSlot.navigation).first.key,
+        isNot('luotopia.home/tab'),
+      );
       await tester.tap(find.byKey(const ValueKey('luotopia.ai/tab')));
       await tester.pumpAndSettle();
       expect(find.text('page /ai'), findsOneWidget);
@@ -307,7 +366,7 @@ void main() {
             expect(find.byType(ui.NavigationSidebar), findsOneWidget);
           } else {
             final bar = tester.widget<ui.NavigationBar>(
-              find.byType(ui.NavigationBar),
+              find.byType(ui.NavigationBar).first,
             );
             expect(bar.expandedSize, 72);
             expect(bar.labelType, ui.NavigationLabelType.none);
@@ -316,10 +375,10 @@ void main() {
                 .toList();
             expect(items.map((item) => (item.key as ValueKey).value), [
               'luotopia.home/tab',
-              'luotopia.list/tab',
-              'luotopia.forum/tab',
               'luotopia.campus/tab',
               'luotopia.settings/tab',
+              'luotopia.list/tab',
+              'luotopia.forum/tab',
             ]);
             for (final item in items) {
               expect((item.child as Icon).size, 28);
@@ -355,7 +414,9 @@ void main() {
             } else {
               expect(
                 tester
-                    .widget<ui.NavigationBar>(find.byType(ui.NavigationBar))
+                    .widget<ui.NavigationBar>(
+                      find.byType(ui.NavigationBar).first,
+                    )
                     .selectedKey,
                 itemKey,
               );

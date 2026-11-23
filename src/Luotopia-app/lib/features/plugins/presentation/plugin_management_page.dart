@@ -1,13 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 import 'package:luotopia/shared/presentation/widgets/app_bar_builder.dart';
 import '../application/plugin_manager.dart';
 import '../data/plugin_package_picker.dart';
+import '../data/plugin_package.dart';
+import 'plugin_market_page.dart';
+import 'plugin_labels.dart';
 import '../domain/plugin_error.dart';
-import '../domain/builtin_plugins.dart';
 import '../domain/plugin_manifest.dart';
 import '../runtime/plugin_session.dart';
+import '../runtime/plugin_engine.dart';
 
 class PluginManagementPage extends ConsumerStatefulWidget {
   const PluginManagementPage({super.key});
@@ -18,6 +23,64 @@ class PluginManagementPage extends ConsumerStatefulWidget {
 
 class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
   bool _busy = false;
+  ContributionSlot _slot = ContributionSlot.navigation;
+  Map<String, int?> _memory = {};
+  Map<String, int?> _lastMemory = {};
+  Timer? _memoryTimer;
+  bool _sampling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshMemory();
+    _memoryTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _refreshMemory(),
+    );
+  }
+
+  Future<void> _refreshMemory() async {
+    if (_sampling) return;
+    _sampling = true;
+    try {
+      final memory = await PluginEngine.memoryUsage();
+      if (!mounted) return;
+      final last = <String, int?>{
+        for (final p in ref.read(pluginManagerProvider).list())
+          p.id: PluginEngine.lastMemoryUsage(p.id),
+      };
+      if (mounted &&
+          (!mapEquals(_memory, memory) || !mapEquals(_lastMemory, last))) {
+        setState(() {
+          _memory = memory;
+          _lastMemory = last;
+        });
+      }
+    } finally {
+      _sampling = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _memoryTimer?.cancel();
+    super.dispose();
+  }
+
+  String _memoryLabel(PluginSummary p) {
+    if (p.script == null) return '内存：宿主共享，无法单独统计';
+    if (!_memory.containsKey(p.id)) {
+      final last = _lastMemory[p.id];
+      return last == null
+          ? 'QuickJS 内存：当前 0 KiB（未运行）'
+          : 'QuickJS 内存：当前未运行 · 上次单页面 JS 堆 ${(last / 1024).toStringAsFixed(1)} KiB';
+    }
+    final bytes = _memory[p.id];
+    return bytes == null
+        ? 'QuickJS 内存：暂时无法读取'
+        : 'QuickJS 内存：${(bytes / 1024).toStringAsFixed(1)} KiB（当前所有页面合计）';
+  }
+
   String? _message;
   Future<void> _run(Future<void> Function() task) async {
     if (_busy) return;
@@ -58,8 +121,15 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
       ) ??
       false;
 
-  Future<void> _import() => _run(() async {
-    final package = await pickPluginPackage();
+  Future<void> _market() async {
+    final package = await Navigator.of(context).push<PluginPackage>(
+      MaterialPageRoute(builder: (_) => const PluginMarketPage()),
+    );
+    if (package != null && mounted) await _import(package);
+  }
+
+  Future<void> _import([PluginPackage? selected]) => _run(() async {
+    final package = selected ?? await pickPluginPackage();
     if (package == null) return;
     if (!mounted) return;
     final manager = ref.read(pluginManagerProvider);
@@ -84,10 +154,7 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
               package.manifest.permissions.isEmpty
                   ? '无'
                   : package.manifest.permissions
-                        .map(
-                          (p) =>
-                              p == 'storage.self' ? '读写本插件数据' : '访问指定 HTTPS 网站',
-                        )
+                        .map(pluginPermissionLabel)
                         .join('\n'),
             ),
             if (package.manifest.networkHosts.isNotEmpty)
@@ -267,25 +334,6 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
     }
   }
 
-  Future<void> _move(PluginManager manager, PluginContribution c, int delta) =>
-      _run(() async {
-        final keys = manager.entries(c.slot).map((c) => c.key).toList();
-        final index = keys.indexOf(c.key);
-        final target = index + delta;
-        if (target < 0 ||
-            target >= keys.length ||
-            manager.contribution(keys[target]).protected ||
-            (c.slot == ContributionSlot.settingsRow &&
-                settingsGroupFor(c.pluginId) !=
-                    settingsGroupFor(
-                      manager.contribution(keys[target]).pluginId,
-                    ))) {
-          return;
-        }
-        keys.removeAt(index);
-        keys.insert(target, c.key);
-        await manager.reorder(c.slot, keys, expectedRevision: manager.revision);
-      });
   @override
   Widget build(BuildContext context) {
     final manager = ref.watch(pluginManagerProvider);
@@ -301,8 +349,12 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
               runSpacing: 8,
               children: [
                 ui.PrimaryButton(
-                  onPressed: _busy ? null : _import,
+                  onPressed: _busy ? null : () => _import(),
                   child: const Text('导入外部插件'),
+                ),
+                ui.SecondaryButton(
+                  onPressed: _busy ? null : _market,
+                  child: const Text('插件市场'),
                 ),
                 ui.SecondaryButton(
                   onPressed: _busy
@@ -347,7 +399,20 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Text('已安装与系统插件'),
             ),
-            for (final p in manager.list())
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final slot in ContributionSlot.values)
+                  ChoiceChip(
+                    label: Text(_slotName(slot)),
+                    selected: _slot == slot,
+                    onSelected: (_) => setState(() => _slot = slot),
+                  ),
+              ],
+            ),
+            for (final p in manager.list().where(
+              (p) => p.contributions.any((c) => c.slot == _slot),
+            ))
               Card(
                 child: ExpansionTile(
                   key: ValueKey(p.id),
@@ -357,7 +422,11 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
                         ? '核心 · 必须保留'
                         : p.source == PluginSource.system
                         ? '系统默认 · 可恢复'
-                        : p.manifest!.version} · ${p.enabled ? '已启用' : '已停用'}',
+                        : '外部插件 · ${p.manifest!.version}'} · ${manager.isRemoved(p.id)
+                        ? '已移除'
+                        : p.enabled
+                        ? '已启用'
+                        : '已停用'}\n${_memoryLabel(p)}',
                   ),
                   children: [
                     Padding(
@@ -368,7 +437,9 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
                           SelectableText(p.id),
                           if (p.source == PluginSource.external) ...[
                             Text(p.manifest!.description),
-                            Text('权限：${p.manifest!.permissions.join('、')}'),
+                            Text(
+                              '权限：${p.manifest!.permissions.map(pluginPermissionLabel).join('、')}',
+                            ),
                             if (p.manifest!.networkHosts.isNotEmpty)
                               Text('网站：${p.manifest!.networkHosts.join('、')}'),
                           ],
@@ -380,19 +451,23 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
                                   onPressed: _busy
                                       ? null
                                       : () => _run(
-                                          () =>
-                                              p.source == PluginSource.system &&
-                                                  !p.enabled
+                                          () => manager.isRemoved(p.id)
                                               ? manager.restoreBuiltin(p.id)
                                               : manager.setEnabled(
                                                   p.id,
                                                   !p.enabled,
                                                 ),
                                         ),
-                                  child: Text(p.enabled ? '停用' : '启用 / 恢复'),
+                                  child: Text(
+                                    manager.isRemoved(p.id)
+                                        ? '重新安装'
+                                        : p.enabled
+                                        ? '停用'
+                                        : '启用',
+                                  ),
                                 ),
                                 TextButton(
-                                  onPressed: _busy
+                                  onPressed: _busy || manager.isRemoved(p.id)
                                       ? null
                                       : () async {
                                           if (await _confirm(
@@ -418,7 +493,9 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
                                   ),
                               ],
                             ),
-                          for (final original in p.contributions)
+                          for (final original in p.contributions.where(
+                            (c) => c.slot == _slot,
+                          ))
                             Builder(
                               builder: (context) {
                                 final c = manager.contribution(original.key);
@@ -480,36 +557,6 @@ class _PluginManagementPageState extends ConsumerState<PluginManagementPage> {
                   ],
                 ),
               ),
-            for (final slot in ContributionSlot.values) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text('${_slotName(slot)}排序'),
-              ),
-              for (final c in manager.entries(slot))
-                ListTile(
-                  title: Text(c.title),
-                  trailing: c.protected
-                      ? const Icon(Icons.lock_outline)
-                      : Wrap(
-                          children: [
-                            IconButton(
-                              tooltip: '上移 ${c.title}',
-                              onPressed: _busy
-                                  ? null
-                                  : () => _move(manager, c, -1),
-                              icon: const Icon(Icons.arrow_upward),
-                            ),
-                            IconButton(
-                              tooltip: '下移 ${c.title}',
-                              onPressed: _busy
-                                  ? null
-                                  : () => _move(manager, c, 1),
-                              icon: const Icon(Icons.arrow_downward),
-                            ),
-                          ],
-                        ),
-                ),
-            ],
           ],
         ),
       ),

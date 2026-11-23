@@ -53,7 +53,7 @@ def validate_manifest(m):
     for key in ('name', 'description', 'author', 'license'):
         require(text(m[key], 2000 if key == 'description' else 128), 'invalid metadata: ' + key)
     permissions = unique_strings(m['permissions'])
-    require(set(permissions) <= {'storage.self', 'network.https'}, 'unknown permission')
+    require(set(permissions) <= {'storage.self', 'network.https', 'schoolTimetable.read'}, 'unknown permission')
     hosts = unique_strings(m['networkHosts'])
     require(len(hosts) <= 16, 'networkHosts count exceeds 16')
     require(not hosts or 'network.https' in permissions, 'networkHosts requires network.https')

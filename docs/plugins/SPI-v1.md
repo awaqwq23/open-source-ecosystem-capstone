@@ -168,6 +168,7 @@ interface HostApi {
 | --- | --- | --- |
 | `storage.get` | `storage.self`；本插件命名空间；不存在返回null | 越权/键非法/读取失败 |
 | `storage.set/remove` | `storage.self`；仅用户动作阶段；每插件最多1MiB；原子写入 | 超额/保存失败；原值保留 |
+| `schoolTimetable.listTimetables/getCourses` | `schoolTimetable.read`，限用户操作，读取本次登录会话下本人已导入的教务课表。字段与分页见 SDK 的 index.d.ts | 未授权、未登录、无归属记录 |
 | `http.request` | `network.https`；仅用户动作阶段；精确域名授权 | 拒绝域名/超时/取消/响应超限 |
 | `openView` | 仅用户动作阶段；继承当前贡献，只进入其allowedViews | view不属于当前贡献/贡献隐藏/插件已停用 |
 | `log` | 当前桥接保留方法但直接丢弃插件提供的日志内容，不转交应用日志 | 无日志交付保证 |
@@ -242,7 +243,7 @@ static Future<void> validatePackage(PluginPackage package);
 ### 方法的关键保证
 
 - 变更方法串行复制当前状态、校验并持久化，成功后才发布到内存；核心管理操作由manager拒绝。reorder可传expectedRevision；install自动捕获并核对revision。
-- `reorder`必须提供该slot当前有效且可见的完整ID排列，拒绝重复、遗漏、未知ID；导航三个核心锚点不能移动。设置仅允许同组可选行排序，核心行位置固定；外部设置使用单独扩展组。读取/恢复布局也按核心位置和分组归一，不能用备份越过此规则。
+- `reorder`必须提供该slot当前有效且可见的完整ID排列，拒绝重复、遗漏、未知ID；核心入口可以排序，仍受禁止隐藏、停用或删除的保护。无自定义排序时，导航先展示首页、校园和设置，再按注册顺序展示其他可见入口。
 - `updatePresentation`只合并title/icon/color，不能修改id、source、protected、route或viewId；当前不接受null单字段恢复，恢复默认布局清除覆盖值。
 - `setEnabled(false)`拒绝核心，解除全部贡献并终止执行；设置可选入口隐藏仅影响该贡献的公共入口，原必要共享服务仍在。
 - `restoreBuiltin`只针对内置可选目录；外部插件不能伪装调用它。

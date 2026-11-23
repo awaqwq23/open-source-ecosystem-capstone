@@ -99,5 +99,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/system_plugins/
     - .env
+    - assets/market/
     - assets/qweather_icons/icons/

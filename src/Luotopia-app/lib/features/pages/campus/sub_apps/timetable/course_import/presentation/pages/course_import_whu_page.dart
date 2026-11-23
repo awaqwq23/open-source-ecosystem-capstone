@@ -1,3 +1,4 @@
+import 'package:luotopia/features/plugins/runtime/plugin_school_timetable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -256,6 +257,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       setState(() {
         _statusText = isZh ? '正在请求教务课表...' : 'Fetching timetable...';
       });
+      final provenance = ref.read(schoolTimetableProvenanceProvider);
       final client = await ref
           .read(whuAuthGatewayProvider)
           .authorizeEducation();
@@ -314,7 +316,7 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
       } else {
         importItems.addAll(payload.items);
       }
-      await ref
+      final importedTimetable = await ref
           .read(courseTimetableRepositoryProvider.notifier)
           .importCourseTimetable(
             name: tableName,
@@ -322,6 +324,10 @@ class _CourseImportWhuPageState extends ConsumerState<CourseImportWhuPage> {
             termLabel: termLabel,
             items: importItems,
           );
+      if (provenance.authenticated &&
+          identical(provenance, ref.read(schoolTimetableProvenanceProvider))) {
+        provenance.timetableIds.add(importedTimetable.id);
+      }
 
       if (!mounted) {
         return;

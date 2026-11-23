@@ -83,3 +83,22 @@ pack.py检查三个精确文件名、普通文件/链接、严格UTF-8、重复J
 在具有SPI v1实现的App中手动选择包、审阅权限和三个入口后安装。分别进入导航/卡片并输入30,45确认75，设置入口查看目标；只隐藏card不影响其他入口；停用后旧链接不可进入。第二版提高version后再导入并验证失败回滚。完整接入验收还需要同一已安装APK前后摘要不变、真实Android运行和故障隔离证据。本SDK的CLI/VM测试不声称完成这些App验收。
 
 本次开发检查及RED/GREEN记录见 `TESTING.md`。
+
+
+### Personal school timetable (read only)
+
+Declare `schoolTimetable.read` in `permissions` and obtain the normal installation approval.
+From `onAction` call `context.host.schoolTimetable.listTimetables()` and
+`context.host.schoolTimetable.getCourses({timetableId, offset: 0, limit: 50})`.
+The host requires the app's current WHU login and checks it on every call.
+Only WHU-imported personal timetables and course occurrences are returned; no
+cookies, tokens, account identifiers, private notes, raw responses or write methods
+are exposed. This reads the app's already imported local snapshot, not the public
+all-school catalogue and not a live school-server refresh. Import/refresh first in
+the existing app screen. A logged-in state alone does not prove snapshot freshness.
+`limit` is 1–100, `offset` 0–100000; defaults are 50 and 0. Results are capped at
+256 KiB; timetable listing returns at most 100. Unknown fields are rejected.
+Login loss returns `AUTH_REQUIRED`, missing permission returns `PERMISSION_DENIED`.
+The API cannot run during activate/render/package preview; use an explicit button.
+
+Privacy boundary: only timetables imported in the current unchanged WHU login session are accessible. Account/status changes revoke session provenance and clear open plugin results. Legacy or synced snapshots and snapshots from before restart fail closed; reimport to enable access. No owner identifiers reach the plugin.

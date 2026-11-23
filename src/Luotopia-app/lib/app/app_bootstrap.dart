@@ -156,6 +156,7 @@ class AppBootstrapLoader {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return NavigationSettings(
         showLabels: json['showLabels'] as bool? ?? false,
+        visibleCount: ((json['visibleCount'] as int?) ?? 5).clamp(4, 8),
         middleTabMode: switch (json['middleTabMode'] as String?) {
           'ai' => MiddleTabMode.ai,
           _ => MiddleTabMode.forum,
@@ -195,5 +196,4 @@ class AppBootstrapLoader {
       ),
     );
   }
-
 }

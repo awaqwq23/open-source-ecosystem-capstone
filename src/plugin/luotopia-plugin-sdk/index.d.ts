@@ -1,6 +1,6 @@
 /** SPI v1. Types describe data; the host validates every boundary at runtime. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-export type Permission = 'storage.self' | 'network.https';
+export type Permission = 'storage.self' | 'network.https' | 'schoolTimetable.read';
 export type ContributionSlot = 'navigation' | 'campusCard' | 'settingsRow';
 export type PluginIcon = 'timer' | 'tune' | 'home' | 'list' | 'forum' | 'school' | 'settings' | 'book' | 'calendar' | 'star' | 'code' | 'cloud' | 'chart' | 'info';
 export type PluginColor = 'sky' | 'blue' | 'green' | 'amber' | 'purple' | 'pink' | 'slate';
@@ -54,6 +54,13 @@ export interface HostApi {
   http: {
     request(request: { url: string; method: 'GET' | 'POST'; headers?: { [key: string]: string }; body?: string }):
       Promise<{ status: number; headers: { [key: string]: string }; body: string }>;
+  };
+  /** Requires schoolTimetable.read and WHU login; onAction only, local imported snapshot. */
+  schoolTimetable: {
+    listTimetables(): Promise<{ id: string; name: string; termLabel: string }[]>;
+    getCourses(query: { timetableId: string; offset?: number; limit?: number }): Promise<{
+      total: number; items: { id: string; title: string; location: string; instructor: string; startAt: string | null; endAt: string | null }[];
+    }>;
   };
   openView(viewId: string): Promise<void>;
   log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;

@@ -63,6 +63,13 @@ Matcher pluginError(String code) =>
     isA<PluginException>().having((e) => e.code, 'code', code);
 
 void main() {
+  test('read-only school permission coexists with existing permissions', () {
+    final manifest = PluginManifest.fromJson({
+      ...exampleManifest(),
+      'permissions': ['storage.self', 'network.https', 'schoolTimetable.read'],
+    });
+    expect(manifest.permissions, contains('schoolTimetable.read'));
+  });
   test(
     'external package declares three stable entry identities and scoped views',
     () {

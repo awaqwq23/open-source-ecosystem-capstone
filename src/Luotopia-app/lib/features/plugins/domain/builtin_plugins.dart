@@ -32,6 +32,7 @@ final builtinPlugins = <BuiltinPlugin>[
       protected: true,
     ),
     for (final row in [
+      ('plugins', '插件管理', '/settings/plugins'),
       ('accounts', '账户', '/settings/accounts'),
       ('general', '通用设置', '/settings/general'),
       ('data', '数据更新与备份', '/settings/data-updates'),
@@ -85,11 +86,11 @@ final builtinPlugins = <BuiltinPlugin>[
     ('home-settings', '首页设置', '/settings/home'),
     ('ai-settings', 'AI 设置', '/settings/ai'),
     ('notification', '通知', ''),
-    ('placeholder-1', 'Lorem Ipsum', ''),
-    ('placeholder-2', 'Sed Do Eiusmod', ''),
-    ('placeholder-3', 'Ut Enim Ad Minim', ''),
-    ('placeholder-4', 'Duis Aute Irure', ''),
-    ('placeholder-5', 'Excepteur Sint', ''),
+    ('placeholder-1', '可选功能示例 1', ''),
+    ('placeholder-2', '可选功能示例 2', ''),
+    ('placeholder-3', '可选功能示例 3', ''),
+    ('placeholder-4', '可选功能示例 4', ''),
+    ('placeholder-5', '可选功能示例 5', ''),
   ])
     BuiltinPlugin('luotopia.${row.$1}', row.$2, PluginSource.system, [
       PluginContribution(

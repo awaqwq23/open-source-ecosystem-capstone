@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'dart:async';
 import 'dart:ui' as dart_ui;
 
@@ -28,6 +29,121 @@ class _CampusPageState extends ConsumerState<CampusPage> {
   Timer? _edgeTimer;
   List<PluginContribution>? _dragEntries;
   int? _dragRevision;
+  PluginContribution? _lifted;
+  Offset _finger = Offset.zero, _anchor = Offset.zero;
+  double _weatherHeight = 300;
+  final _viewport = GlobalKey();
+  List<String> _startingOrder = [];
+  bool _saving = false;
+  int _edgeDirection = 0;
+
+  RenderBox get _box =>
+      _viewport.currentContext!.findRenderObject() as RenderBox;
+  double get _small => (_box.size.width - 56) / 3;
+
+  // In content coordinates, independent of the scrolling viewport and animation.
+  Map<String, Rect> _slots(List<PluginContribution> entries) {
+    final result = <String, Rect>{};
+    double y = 16;
+    var column = 0;
+    for (final e in entries) {
+      if (e.size == 'wide') {
+        if (column != 0) y += _small + 12;
+        final h = e.pluginId == 'luotopia.campus-info'
+            ? _weatherHeight
+            : _small;
+        result[e.key] = Rect.fromLTWH(16, y, _box.size.width - 32, h);
+        y += h + 16;
+        column = 0;
+      } else {
+        result[e.key] = Rect.fromLTWH(
+          16 + column * (_small + 12),
+          y,
+          _small,
+          _small,
+        );
+        if (++column == 3) {
+          column = 0;
+          y += _small + 12;
+        }
+      }
+    }
+    return result;
+  }
+
+  void _start(LongPressStartDetails d) {
+    if (_saving) return;
+    final manager = ref.read(pluginManagerProvider);
+    final entries = _packedEntries(
+      manager.entries(ContributionSlot.campusCard),
+    );
+    PluginContribution? lifted;
+    for (final e in entries) {
+      final box =
+          _cardKeys[e.key]?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached || !box.hasSize) continue;
+      if (e.pluginId == 'luotopia.campus-info') {
+        _weatherHeight = box.size.height;
+      }
+      final local = box.globalToLocal(d.globalPosition);
+      if ((Offset.zero & box.size).contains(local)) {
+        lifted = e;
+        _anchor = local;
+      }
+    }
+    if (lifted == null) return;
+    setState(() {
+      _lifted = lifted;
+      _finger = _box.globalToLocal(d.globalPosition);
+      _dragRevision = manager.revision;
+      _dragEntries = entries;
+      _startingOrder = entries.map((e) => e.key).toList();
+    });
+  }
+
+  void _preview(Offset finger) {
+    final entries = _dragEntries;
+    final lifted = _lifted;
+    if (entries == null || lifted == null || _saving) return;
+    final point = finger + Offset(0, _scroll.offset);
+    final slots = _slots(entries);
+    setState(() {
+      _finger = finger;
+      if (slots[lifted.key]!.inflate(4).contains(point)) return;
+      PluginContribution? target;
+      double distance = double.infinity;
+      for (final e in entries) {
+        if (e.key == lifted.key) continue;
+        final r = slots[e.key]!;
+        final dx = point.dx - point.dx.clamp(r.left, r.right);
+        final dy = point.dy - point.dy.clamp(r.top, r.bottom);
+        final ds = dx * dx + dy * dy;
+        if (ds < distance) {
+          distance = ds;
+          target = e;
+        }
+      }
+      if (target == null) return;
+      final t = target;
+      final rect = slots[t.key]!;
+      final from = entries.indexOf(lifted);
+      final to = entries.indexOf(t);
+      final delta = t.size == 'wide'
+          ? point.dy - rect.center.dy
+          : point.dx - rect.center.dx;
+      final after = delta.abs() < 4 ? from < to : delta > 0;
+      final next = entries.toList()..removeAt(from);
+      var index = next.indexOf(t) + (after ? 1 : 0);
+      if (lifted.size == 'wide' && t.size != 'wide') {
+        final sameRow = next.where((e) => slots[e.key]!.top == rect.top);
+        index = point.dy < rect.center.dy
+            ? next.indexOf(sameRow.first)
+            : next.indexOf(sameRow.last) + 1;
+      }
+      next.insert(index, lifted);
+      _dragEntries = _packedEntries(next);
+    });
+  }
 
   @override
   void dispose() {
@@ -37,41 +153,57 @@ class _CampusPageState extends ConsumerState<CampusPage> {
   }
 
   void _scrollAt(Offset globalPosition) {
-    _edgeTimer?.cancel();
-    final box = context.findRenderObject() as RenderBox;
-    final y = box.globalToLocal(globalPosition).dy;
+    final y = _box.globalToLocal(globalPosition).dy;
     final direction = y < 80
         ? -1
-        : y > box.size.height - 80
+        : y > _box.size.height - 80
         ? 1
         : 0;
+    if (direction == _edgeDirection) return;
+    _edgeDirection = direction;
+    _edgeTimer?.cancel();
     if (direction == 0) return;
     _edgeTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
       if (_scroll.hasClients) {
+        final old = _scroll.offset;
         _scroll.jumpTo(
           (_scroll.offset + direction * 12).clamp(
             0.0,
             _scroll.position.maxScrollExtent,
           ),
         );
+        if (_scroll.offset != old) _preview(_finger);
       }
     });
   }
 
   void _cancelDrag() {
+    if (_lifted == null) return;
     _edgeTimer?.cancel();
     if (mounted) {
       setState(() {
+        _lifted = null;
+        _saving = false;
+        _edgeDirection = 0;
         _dragEntries = null;
         _dragRevision = null;
       });
     }
   }
 
-  Future<void> _drop() async {
+  Future<void> _drop(LongPressEndDetails d) async {
     final entries = _dragEntries;
     final revision = _dragRevision;
-    if (entries == null) return;
+    if (entries == null || _saving) return;
+    _edgeTimer?.cancel();
+    if (!(Offset.zero & _box.size).contains(
+          _box.globalToLocal(d.globalPosition),
+        ) ||
+        listEquals(entries.map((e) => e.key).toList(), _startingOrder)) {
+      _cancelDrag();
+      return;
+    }
+    _saving = true;
     try {
       await ref
           .read(pluginManagerProvider)
@@ -196,48 +328,67 @@ class _CampusPageState extends ConsumerState<CampusPage> {
     );
   }
 
-  Widget _draggable(PluginContribution entry, double width, double height) {
-    return DragTarget<String>(
+  Widget _restingCard(PluginContribution entry) {
+    return Semantics(
       key: _cardKeys.putIfAbsent(entry.key, GlobalKey.new),
-      onWillAcceptWithDetails: (details) => details.data != entry.key,
-      onMove: (details) {
-        final entries = _dragEntries;
-        if (entries == null) return;
-        final from = entries.indexWhere((c) => c.key == details.data);
-        final to = entries.indexWhere((c) => c.key == entry.key);
-        if (from >= 0 && to >= 0 && from != to) {
-          setState(() {
-            entries.insert(to, entries.removeAt(from));
-          });
-        }
-      },
-      onAcceptWithDetails: (_) => _drop(),
-      builder: (context, candidates, rejected) => LongPressDraggable<String>(
-        data: entry.key,
-        onDragStarted: () => setState(() {
-          final manager = ref.read(pluginManagerProvider);
-          _dragEntries = manager.entries(ContributionSlot.campusCard).toList();
-          _dragRevision = manager.revision;
-        }),
-        onDragUpdate: (details) => _scrollAt(details.globalPosition),
-        onDraggableCanceled: (_, _) => _cancelDrag(),
-        onDragEnd: (_) => _edgeTimer?.cancel(),
-        feedback: Material(
-          type: MaterialType.transparency,
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: Opacity(opacity: 0.9, child: _card(entry)),
-          ),
-        ),
-        childWhenDragging: Opacity(opacity: 0.25, child: _card(entry)),
-        child: Semantics(
-          label: entry.title,
-          hint: '长按拖动以调整顺序',
-          child: _card(entry),
-        ),
+      label: entry.title,
+      hint: '长按拖到两张卡片之间以插入',
+      child: _card(entry),
+    );
+  }
+
+  Widget _previewGrid(List<PluginContribution> entries) {
+    final slots = _slots(entries);
+    final bottom = slots.values
+        .map((r) => r.bottom)
+        .reduce((a, b) => a > b ? a : b);
+    return SizedBox(
+      height: bottom + 32,
+      child: Stack(
+        children: [
+          for (final e in entries)
+            AnimatedPositioned.fromRect(
+              key: ValueKey('moving-${e.key}'),
+              rect: slots[e.key]!,
+              duration: const Duration(milliseconds: 170),
+              curve: Curves.easeOutCubic,
+              child: e.key == _lifted?.key
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: .09),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: .38),
+                        ),
+                      ),
+                    )
+                  : KeyedSubtree(key: ValueKey(e.key), child: _card(e)),
+            ),
+        ],
       ),
     );
+  }
+
+  // Fill a partial row before placing the next full-width card.
+  List<PluginContribution> _packedEntries(List<PluginContribution> entries) {
+    final remaining = entries.toList();
+    final packed = <PluginContribution>[];
+    var column = 0;
+    while (remaining.isNotEmpty) {
+      var index = 0;
+      if (column > 0 && remaining.first.size == 'wide') {
+        final small = remaining.indexWhere((entry) => entry.size != 'wide');
+        if (small >= 0) index = small;
+      }
+      final entry = remaining.removeAt(index);
+      packed.add(entry);
+      column = entry.size == 'wide' ? 0 : (column + 1) % 3;
+    }
+    return packed;
   }
 
   @override
@@ -245,7 +396,7 @@ class _CampusPageState extends ConsumerState<CampusPage> {
     final registered = ref
         .watch(pluginManagerProvider)
         .entries(ContributionSlot.campusCard);
-    final entries = _dragEntries ?? registered;
+    final entries = _dragEntries ?? _packedEntries(registered);
     return ui.Scaffold(
       child: Stack(
         children: [
@@ -262,7 +413,7 @@ class _CampusPageState extends ConsumerState<CampusPage> {
                   final smallWidth = (constraints.maxWidth - 56) / 3;
                   final rows = <Widget>[];
                   final gaps = <double>[];
-                  for (var i = 0; i < entries.length;) {
+                  for (var i = 0; _lifted == null && i < entries.length;) {
                     final entry = entries[i];
                     if (entry.size == 'wide') {
                       gaps.add(16);
@@ -273,13 +424,7 @@ class _CampusPageState extends ConsumerState<CampusPage> {
                           height: entry.pluginId == 'luotopia.campus-info'
                               ? null
                               : smallWidth,
-                          child: _draggable(
-                            entry,
-                            constraints.maxWidth - 32,
-                            entry.pluginId == 'luotopia.campus-info'
-                                ? 300
-                                : smallWidth,
-                          ),
+                          child: _restingCard(entry),
                         ),
                       );
                       i++;
@@ -295,7 +440,7 @@ class _CampusPageState extends ConsumerState<CampusPage> {
                             key: ValueKey(cell.key),
                             width: smallWidth,
                             height: smallWidth,
-                            child: _draggable(cell, smallWidth, smallWidth),
+                            child: _restingCard(cell),
                           ),
                         );
                       }
@@ -312,13 +457,60 @@ class _CampusPageState extends ConsumerState<CampusPage> {
                       );
                     }
                   }
-                  return ListView.separated(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    itemCount: rows.length,
-                    separatorBuilder: (_, index) =>
-                        SizedBox(height: gaps[index]),
-                    itemBuilder: (_, index) => rows[index],
+                  final lifted = _lifted;
+                  final dragSize = lifted == null
+                      ? null
+                      : _slots(entries)[lifted.key]!.size;
+                  return GestureDetector(
+                    key: _viewport,
+                    behavior: HitTestBehavior.translucent,
+                    onLongPressStart: _start,
+                    onLongPressMoveUpdate: (d) {
+                      if (_lifted == null) return;
+                      _preview(_box.globalToLocal(d.globalPosition));
+                      _scrollAt(d.globalPosition);
+                    },
+                    onLongPressCancel: _cancelDrag,
+                    onLongPressEnd: _drop,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: ListView(
+                            controller: _scroll,
+                            padding: lifted == null
+                                ? const EdgeInsets.fromLTRB(16, 16, 16, 32)
+                                : EdgeInsets.zero,
+                            children: lifted != null
+                                ? [_previewGrid(entries)]
+                                : [
+                                    for (var i = 0; i < rows.length; i++) ...[
+                                      if (i > 0) SizedBox(height: gaps[i - 1]),
+                                      rows[i],
+                                    ],
+                                  ],
+                          ),
+                        ),
+                        if (lifted != null)
+                          Positioned(
+                            left: _finger.dx - _anchor.dx,
+                            top: _finger.dy - _anchor.dy,
+                            width: dragSize!.width,
+                            height: dragSize.height,
+                            child: IgnorePointer(
+                              child: Transform.scale(
+                                scale: 1.035,
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: Opacity(
+                                    opacity: .94,
+                                    child: _card(lifted),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -721,7 +913,7 @@ class _ReminderTile extends StatelessWidget {
   }
 }
 
-class _CampusTile extends StatelessWidget {
+class _CampusTile extends ConsumerWidget {
   const _CampusTile({
     required this.entry,
     this.app,
@@ -733,7 +925,7 @@ class _CampusTile extends StatelessWidget {
   final _CampusApp? app;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final accent = !customColor && app != null
         ? app!.colorAssoc.resolve(theme.brightness)
@@ -745,7 +937,11 @@ class _CampusTile extends StatelessWidget {
         onTap: () {
           if (entry.nativeRoute != null) {
             context.openSecondary(entry.nativeRoute!);
-          } else if (!entry.pluginId.startsWith('luotopia.')) {
+          } else if (ref
+                  .read(pluginManagerProvider)
+                  .details(entry.pluginId)
+                  .script !=
+              null) {
             context.go(entry.route);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

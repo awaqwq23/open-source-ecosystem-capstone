@@ -143,7 +143,7 @@ class PluginManifest {
   Map<String, dynamic> toJson() =>
       jsonDecode(jsonEncode(_json)) as Map<String, dynamic>;
 
-  factory PluginManifest.fromJson(Object? value) {
+  factory PluginManifest.fromJson(Object? value, {bool bundledAsset = false}) {
     final m = pluginObject(value);
     pluginFields(m, {
       'schemaVersion',
@@ -167,7 +167,11 @@ class PluginManifest {
       'UNSUPPORTED_API',
     );
     final id = pluginText(m['id'], 96);
-    requirePlugin(!id.startsWith('luotopia.'), '内置插件标识不可使用', 'RESERVED_ID');
+    requirePlugin(
+      !id.startsWith('luotopia.') || bundledAsset,
+      '内置插件标识不可使用',
+      'RESERVED_ID',
+    );
     requirePlugin(
       RegExp(r'^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$').hasMatch(id),
       '插件标识不正确',
@@ -182,9 +186,11 @@ class PluginManifest {
       '版本应为 major.minor.patch',
     );
     requirePlugin(m['entry'] == 'main.js', '入口必须为 main.js');
-    final permissions = pluginStrings(m['permissions'], 2);
+    final permissions = pluginStrings(m['permissions'], 3);
     requirePlugin(
-      permissions.every({'storage.self', 'network.https'}.contains),
+      permissions.every(
+        {'storage.self', 'network.https', 'schoolTimetable.read'}.contains,
+      ),
       '权限不受支持',
     );
     final hosts = pluginStrings(m['networkHosts'], 16);

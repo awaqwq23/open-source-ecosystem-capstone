@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:luotopia/app/router/app_navigator.dart';
 import 'package:luotopia/features/plugins/application/plugin_manager.dart';
 import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
 import 'package:luotopia/core/localization/locale_extensions.dart';
@@ -44,11 +43,6 @@ class SettingsNavigationPage extends ConsumerWidget {
                   state.navigationSettings.copyWith(showLabels: value),
                 ),
               ),
-            ),
-            SettingsFlatTile(
-              title: isZh ? '管理导航入口' : 'Manage navigation plugins',
-              leading: const Icon(Icons.extension_outlined),
-              onTap: () => context.openSecondary('/settings/plugins'),
             ),
             SettingsFlatTile(
               title: isZh ? '启动时默认页面' : 'Default home tab',

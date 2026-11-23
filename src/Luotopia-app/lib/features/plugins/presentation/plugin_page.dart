@@ -1,3 +1,7 @@
+import 'package:luotopia/features/whu_auth/whu_auth.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_agenda_item_repository.dart';
+import 'package:luotopia/shared/data/repositories/in_memory_course_timetable_repository.dart';
+import '../runtime/plugin_school_timetable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,6 +62,15 @@ class _PluginPageState extends ConsumerState<PluginPage> {
         manager,
         c,
         widget.viewId,
+        schoolTimetable: PluginSchoolTimetable(
+          isAuthenticated: () => ref.read(whuAuthProvider).isAuthenticated,
+          ownsTimetable: (id) => ref
+              .read(schoolTimetableProvenanceProvider)
+              .timetableIds
+              .contains(id),
+          store: () => ref.read(courseTimetableRepositoryProvider),
+          items: () => ref.read(agendaItemRepositoryProvider),
+        ),
         locale: Localizations.localeOf(context).languageCode == 'zh'
             ? 'zh'
             : 'en',
@@ -100,6 +113,15 @@ class _PluginPageState extends ConsumerState<PluginPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(schoolTimetableProvenanceProvider, (previous, next) {
+      if (previous != null && !identical(previous, next)) {
+        _session?.dispose();
+        setState(() {
+          _result = null;
+          _error = '教务账户状态已变化，请重新打开插件并导入课表。';
+        });
+      }
+    });
     ref.watch(pluginManagerProvider);
     final error =
         _error ??

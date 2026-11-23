@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:luotopia/features/plugins/domain/plugin_error.dart';
 import 'package:luotopia/features/plugins/application/plugin_manager.dart';
 import 'package:luotopia/features/plugins/domain/builtin_plugins.dart';
 import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
@@ -38,8 +39,11 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final ScrollController _scrollController = ScrollController();
 
+  EdgeDraggingAutoScroller? _dragScroll;
+
   @override
   void dispose() {
+    _dragScroll?.stopAutoScroll();
     _scrollController.dispose();
     super.dispose();
   }
@@ -121,18 +125,78 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             for (var index = 0; index < sections.length; index++) ...[
               if (sections[index].singleOrNull?.pluginId ==
                   'luotopia.notification')
-                const _NotificationSection()
+                _sortable(sections[index].single, const _NotificationSection())
               else ...[
                 const SizedBox(height: _settingsSectionSpacing),
                 _SettingsLinkCard(
                   children: [
                     for (final entry in sections[index])
-                      _pluginTile(context, entry),
+                      _sortable(entry, _pluginTile(context, entry)),
                   ],
                 ),
               ],
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sortable(PluginContribution entry, Widget tile) {
+    final manager = ref.read(pluginManagerProvider);
+    return Builder(
+      key: ValueKey('settings-row-${entry.key}'),
+      builder: (rowContext) => DragTarget<(String, int)>(
+        onWillAcceptWithDetails: (drag) => drag.data.$1 != entry.key,
+        onAcceptWithDetails: (drag) async {
+          final keys = manager
+              .entries(ContributionSlot.settingsRow)
+              .map((r) => r.key)
+              .toList();
+          final target = keys.indexOf(entry.key);
+          if (target < 0 || !keys.remove(drag.data.$1)) return;
+          keys.insert(target, drag.data.$1);
+          try {
+            await manager.reorder(
+              ContributionSlot.settingsRow,
+              keys,
+              expectedRevision: drag.data.$2,
+            );
+          } on PluginException catch (error) {
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(error.message)));
+            }
+          }
+        },
+        builder: (context, hovering, _) => LongPressDraggable<(String, int)>(
+          data: (entry.key, manager.revision),
+          maxSimultaneousDrags: 1,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          onDragStarted: () => _dragScroll = EdgeDraggingAutoScroller(
+            Scrollable.of(rowContext),
+            velocityScalar: 12,
+          ),
+          onDragUpdate: (drag) => _dragScroll?.startAutoScrollIfNecessary(
+            Rect.fromCenter(center: drag.globalPosition, width: 1, height: 84),
+          ),
+          onDragEnd: (_) => _dragScroll?.stopAutoScroll(),
+          feedback: Material(
+            elevation: 5,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(entry.title),
+            ),
+          ),
+          childWhenDragging: Opacity(opacity: 0.4, child: tile),
+          child: ColoredBox(
+            color: hovering.isEmpty
+                ? Colors.transparent
+                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            child: tile,
+          ),
         ),
       ),
     );
@@ -152,29 +216,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         AppIcons.aiOutlined,
       ),
       'luotopia.placeholder-1' => (
-        'Lorem Ipsum',
-        'Dolor sit amet, consectetur adipiscing',
+        '可选功能示例 1',
+        '尚未接入功能，可在插件管理中隐藏',
         Icons.rate_review_outlined,
       ),
       'luotopia.placeholder-2' => (
-        'Sed Do Eiusmod',
-        'Tempor incididunt ut labore et dolore',
+        '可选功能示例 2',
+        '尚未接入功能，可在插件管理中隐藏',
         Icons.school_outlined,
       ),
       'luotopia.placeholder-3' => (
-        'Ut Enim Ad Minim',
-        'Veniam quis nostrud exercitation',
+        '可选功能示例 3',
+        '尚未接入功能，可在插件管理中隐藏',
         Icons.auto_awesome_outlined,
       ),
       'luotopia.placeholder-4' => (
-        'Duis Aute Irure',
-        'Dolor in reprehenderit in voluptate',
+        '可选功能示例 4',
+        '尚未接入功能，可在插件管理中隐藏',
         Icons.account_balance_outlined,
       ),
       'luotopia.placeholder-5' => (
-        'Excepteur Sint',
-        'Occaecat cupidatat non proident',
+        '可选功能示例 5',
+        '尚未接入功能，可在插件管理中隐藏',
         Icons.forum_outlined,
+      ),
+      'luotopia.settings' when entry.id == 'plugins' => (
+        '插件管理',
+        '管理核心功能、系统插件与外部插件',
+        Icons.extension_outlined,
       ),
       _ =>
         entry.pluginId == 'luotopia.settings' && entry.id == 'general'
@@ -187,6 +256,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ? ('数据更新', '天气、通知、脚本与同步', Icons.sync_outlined)
             : (entry.title, '', pluginIcon(entry.icon)),
     };
+    final hasScript =
+        ref.read(pluginManagerProvider).details(entry.pluginId).script != null;
+    final description = hasScript ? '独立插件页面' : original.$2;
+    final sourceLabel = switch (ref
+        .read(pluginManagerProvider)
+        .details(entry.pluginId)
+        .source) {
+      PluginSource.core => '核心功能 · 受保护',
+      PluginSource.system => '系统插件 · 可选',
+      PluginSource.external => '外部插件',
+    };
     final title =
         !ref
             .read(pluginManagerProvider)
@@ -195,7 +275,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         : entry.title;
     return _SettingsLinkTile(
       title: title,
-      subtitle: original.$2,
+      subtitle: description.isEmpty
+          ? sourceLabel
+          : '$sourceLabel · $description',
       icon:
           !ref
               .read(pluginManagerProvider)
@@ -205,7 +287,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       onTap: () {
         if (entry.nativeRoute != null) {
           context.openSecondary(entry.nativeRoute!);
-        } else if (!entry.pluginId.startsWith('luotopia.')) {
+        } else if (ref
+                .read(pluginManagerProvider)
+                .details(entry.pluginId)
+                .script !=
+            null) {
           context.go(entry.route);
         } else {
           _showLinkPending(context, title);
@@ -217,7 +303,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _showLinkPending(BuildContext context, String title) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$title placeholder'),
+        content: Text('$title 尚未接入功能，可在插件管理中隐藏'),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),

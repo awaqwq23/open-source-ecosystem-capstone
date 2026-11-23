@@ -32,9 +32,13 @@ class PluginSummary {
 }
 
 class PluginManager extends ChangeNotifier {
-  PluginManager({this.store, bool legacyAi = false})
-    : _state = _defaults(legacyAi);
+  PluginManager({
+    this.store,
+    bool legacyAi = false,
+    this.bundledPackages = const [],
+  }) : _state = _defaults(legacyAi);
   final PluginStore? store;
+  final List<PluginPackage> bundledPackages;
   Map<String, dynamic> _state;
   List<PluginSummary>? _catalog;
   Future<void> _queue = Future.value();
@@ -44,6 +48,7 @@ class PluginManager extends ChangeNotifier {
     'schema': 1,
     'revision': 0,
     'disabled': <String>[],
+    'removedSystem': <String>[],
     'hidden': [ai ? 'luotopia.forum/tab' : 'luotopia.ai/tab'],
     'external': <String, dynamic>{},
     'presentation': <String, dynamic>{},
@@ -86,16 +91,38 @@ class PluginManager extends ChangeNotifier {
   }
 
   List<PluginSummary> list() => _catalog ??= List.unmodifiable([
-    for (final p in builtinPlugins)
-      PluginSummary(
-        p.id,
-        p.name,
-        p.source,
-        p.source == PluginSource.core || !_list('disabled').contains(p.id),
-        p.contributions,
-      ),
+    for (final p in builtinPlugins) _builtinSummary(p),
+    for (final p in bundledPackages)
+      if (!builtinPlugins.any((b) => b.id == p.manifest.id)) _bundledSummary(p),
     for (final e in _map('external').entries) _externalSummary(e),
   ]);
+  PluginSummary _builtinSummary(BuiltinPlugin builtin) {
+    final matches = bundledPackages.where((p) => p.manifest.id == builtin.id);
+    if (matches.isNotEmpty) {
+      final p = matches.single;
+      return _bundledSummary(p);
+    }
+    return PluginSummary(
+      builtin.id,
+      builtin.name,
+      builtin.source,
+      builtin.source == PluginSource.core ||
+          !_list('disabled').contains(builtin.id),
+      builtin.contributions,
+    );
+  }
+
+  PluginSummary _bundledSummary(PluginPackage p) => PluginSummary(
+    p.manifest.id,
+    p.manifest.name,
+    PluginSource.system,
+    !_list('disabled').contains(p.manifest.id),
+    p.manifest.contributions,
+    manifest: p.manifest,
+    script: p.script,
+    digest: p.digest,
+  );
+
   PluginSummary _externalSummary(MapEntry<String, dynamic> e) {
     final value = pluginObject(e.value);
     final m = PluginManifest.fromJson(value['manifest']);
@@ -145,10 +172,16 @@ class PluginManager extends ChangeNotifier {
   }
 
   List<PluginContribution> entries(ContributionSlot slot) {
+    final hidden = _list('hidden').toSet();
+    final overrides = _map('presentation');
     final all = [
       for (final p in list())
         for (final c in p.contributions)
-          if (c.slot == slot && isVisible(c.key)) contribution(c.key),
+          if (c.slot == slot &&
+              (c.protected || (p.enabled && !hidden.contains(c.key))))
+            c.present(
+              Map<String, dynamic>.from(overrides[c.key] as Map? ?? {}),
+            ),
     ];
     if (slot == ContributionSlot.settingsRow) {
       final notification = all
@@ -159,6 +192,11 @@ class PluginManager extends ChangeNotifier {
         all.insert(all.isEmpty ? 0 : 1, notification);
       }
     }
+    if (slot == ContributionSlot.navigation) {
+      final core = all.where((c) => c.protected).toList();
+      all.removeWhere((c) => c.protected);
+      all.insertAll(0, core);
+    }
     final order = List<String>.from(_map('order')[slot.name] as List? ?? []);
     final original = {for (var i = 0; i < all.length; i++) all[i].key: i};
     int rank(PluginContribution c) {
@@ -166,28 +204,7 @@ class PluginManager extends ChangeNotifier {
       return i < 0 ? order.length + original[c.key]! : i;
     }
 
-    final defaultOrder = List<PluginContribution>.of(all);
     all.sort((a, b) => rank(a).compareTo(rank(b)));
-    if (slot == ContributionSlot.settingsRow) {
-      // Restore/import cannot move a core row or cross an original group either.
-      final optional = <String, List<PluginContribution>>{};
-      for (final c in all.where((c) => !c.protected)) {
-        (optional[settingsGroupFor(c.pluginId)] ??= []).add(c);
-      }
-      return [
-        for (final c in defaultOrder)
-          c.protected ? c : optional[settingsGroupFor(c.pluginId)]!.removeAt(0),
-      ];
-    }
-    if (slot == ContributionSlot.navigation) {
-      return [
-        for (final id in ['luotopia.home'])
-          ...all.where((c) => c.pluginId == id),
-        ...all.where((c) => !c.protected),
-        for (final id in ['luotopia.campus', 'luotopia.settings'])
-          ...all.where((c) => c.pluginId == id),
-      ];
-    }
     return all;
   }
 
@@ -265,8 +282,11 @@ class PluginManager extends ChangeNotifier {
     '核心插件必须保留',
     'CORE_PLUGIN_LOCKED',
   );
+  bool isRemoved(String id) => _list('removedSystem').contains(id);
+
   Future<void> setEnabled(String id, bool enabled) => _mutate((s) {
     _editable(id);
+    requirePlugin(!isRemoved(id), '请先重新安装系统插件', 'PLUGIN_NOT_FOUND');
     final disabled = s['disabled'] as List;
     disabled.remove(id);
     if (!enabled) disabled.add(id);
@@ -284,6 +304,8 @@ class PluginManager extends ChangeNotifier {
       };
       (s['external'] as Map).remove(id);
     } else {
+      final removed = s['removedSystem'] as List;
+      if (!removed.contains(id)) removed.add(id);
       (s['disabled'] as List).remove(id);
       (s['disabled'] as List).add(id);
     }
@@ -300,7 +322,11 @@ class PluginManager extends ChangeNotifier {
   });
   Future<void> restoreBuiltin(String id) => _mutate((s) {
     requirePlugin(details(id).source == PluginSource.system, '仅可恢复内置可选插件');
+    (s['removedSystem'] as List).remove(id);
     (s['disabled'] as List).remove(id);
+    if ((s['sealedData'] as Map).containsKey(id)) {
+      (s['data'] as Map)[id] = (s['sealedData'] as Map).remove(id);
+    }
     for (final c in details(id).contributions) {
       (s['hidden'] as List).remove(c.key);
     }
@@ -357,34 +383,10 @@ class PluginManager extends ChangeNotifier {
       '排序必须包括所有可见入口',
       'INVALID_INPUT',
     );
-    if (slot == ContributionSlot.navigation) {
-      requirePlugin(
-        keys.first == 'luotopia.home/tab' &&
-            keys[keys.length - 2] == 'luotopia.campus/tab' &&
-            keys.last == 'luotopia.settings/tab',
-        '核心导航位置不可修改',
-        'CORE_PLUGIN_LOCKED',
-      );
-    }
-    if (slot == ContributionSlot.settingsRow) {
-      for (var i = 0; i < current.length; i++) {
-        final original = contribution(current[i]);
-        requirePlugin(
-          !original.protected || keys[i] == current[i],
-          '核心设置位置不可修改',
-          'CORE_PLUGIN_LOCKED',
-        );
-        requirePlugin(
-          settingsGroupFor(original.pluginId) ==
-              settingsGroupFor(contribution(keys[i]).pluginId),
-          '设置只能在同一分组内排序',
-          'INVALID_INPUT',
-        );
-      }
-    }
     (s['order'] as Map)[slot.name] = keys;
   }, expectedRevision: expectedRevision);
   Future<void> restoreDefaultLayout() => _mutate((s) {
+    s['removedSystem'] = [];
     s['order'] = {};
     s['presentation'] = {};
     s['disabled'] = _list(
@@ -421,6 +423,9 @@ class PluginManager extends ChangeNotifier {
       '请明确同意全部申请权限',
       'PERMISSION_DENIED',
     );
+    // The external installation boundary never accepts shipped reserved IDs,
+    // including a package object previously read from an app asset.
+    PluginManifest.fromJson(package.manifest.toJson());
     final before = revision;
     await validate(package);
     await _mutate((s) {
@@ -539,6 +544,7 @@ class PluginManager extends ChangeNotifier {
               'layout': {
                 for (final field in [
                   'disabled',
+                  'removedSystem',
                   'hidden',
                   'order',
                   'presentation',
@@ -588,6 +594,7 @@ class PluginManager extends ChangeNotifier {
     final layout = pluginObject(backup['layout'], 'INVALID_INPUT');
     pluginFields(layout, {
       'disabled',
+      'removedSystem',
       'hidden',
       'order',
       'presentation',
@@ -598,7 +605,15 @@ class PluginManager extends ChangeNotifier {
       '布局备份过大',
       'INVALID_INPUT',
     );
-    pluginStrings(layout['disabled'], 1024);
+    final disabled = pluginStrings(layout['disabled'], 1024);
+    final removed = pluginStrings(layout['removedSystem'] ?? [], 1024);
+    requirePlugin(
+      removed.every(
+        (id) => id.startsWith('luotopia.') && disabled.contains(id),
+      ),
+      '已移除插件状态无效',
+      'INVALID_INPUT',
+    );
     pluginStrings(layout['hidden'], 1024);
     final order = pluginObject(layout['order'], 'INVALID_INPUT');
     pluginFields(
@@ -697,6 +712,7 @@ class PluginManager extends ChangeNotifier {
         (id) => (id as String).startsWith('luotopia.'),
       ),
     ];
+    s['removedSystem'] = layout['removedSystem'] ?? [];
     s['hidden'] = layout['hidden'];
     s['order'] = layout['order'];
     s['presentation'] = layout['presentation'];

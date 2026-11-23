@@ -24,6 +24,50 @@ class PluginEngine {
   Future<bool> get terminated => _terminated.future;
   static int _active = 0;
   static final _perPlugin = <String, int>{};
+  static final _engines = <PluginEngine>{};
+  static final _lastMemory = <String, int>{};
+  static int? lastMemoryUsage(String pluginId) => _lastMemory[pluginId];
+  Completer<int?>? _memoryRequest;
+  int _memorySequence = 0;
+
+  /// Current QuickJS heap bytes, summed across all open views of each plugin.
+  /// Null means an active engine could not be measured; absent means no engine.
+  static Future<Map<String, int?>> memoryUsage() async {
+    final engines = _engines.where((e) => !e.closed).toList();
+    final values = await Future.wait(engines.map((e) => e._readMemory()));
+    final totals = <String, int?>{};
+    for (var i = 0; i < engines.length; i++) {
+      final engine = engines[i];
+      final id = engine._pluginId;
+      if (engine.closed || id == null || !_engines.contains(engine)) continue;
+      final value = values[i];
+      totals[id] =
+          value == null || (totals.containsKey(id) && totals[id] == null)
+          ? null
+          : (totals[id] ?? 0) + value;
+    }
+    return totals;
+  }
+
+  Future<int?> _readMemory() async {
+    if (_closed || _worker == null) return null;
+    if (_memoryRequest != null) {
+      return _memoryRequest!.future.timeout(
+        const Duration(seconds: 1),
+        onTimeout: () => null,
+      );
+    }
+    final pending = Completer<int?>();
+    _memoryRequest = pending;
+    _worker!.send({'type': 'memory', 'sequence': ++_memorySequence});
+    // Keep the outstanding request until its reply, even after a UI timeout.
+    // Otherwise repeated sampling could fill a busy isolate's command queue.
+    return pending.future.timeout(
+      const Duration(seconds: 1),
+      onTimeout: () => null,
+    );
+  }
+
   String? _pluginId;
   bool get closed => _closed;
 
@@ -41,6 +85,7 @@ class PluginEngine {
     _active++;
     _perPlugin[pluginId] = (_perPlugin[pluginId] ?? 0) + 1;
     _pluginId = pluginId;
+    _engines.add(this);
     final ready = Completer<void>();
     _events = ReceivePort();
     _subscription = _events!.listen((dynamic message) async {
@@ -51,6 +96,15 @@ class PluginEngine {
         return;
       }
       if (message is Map && message['type'] == 'closed') {
+        final id = _pluginId;
+        final bytes = message['bytes'];
+        if (id != null && bytes is int && bytes >= 0) {
+          _lastMemory.remove(id);
+          _lastMemory[id] = bytes;
+          if (_lastMemory.length > 64) {
+            _lastMemory.remove(_lastMemory.keys.first);
+          }
+        }
         _finishShutdown(true);
         return;
       }
@@ -60,6 +114,14 @@ class PluginEngine {
           ready.completeError(
             const PluginException('UNSUPPORTED_RUNTIME', '此平台无法启动插件执行环境'),
           );
+        }
+        return;
+      }
+      if (message['type'] == 'memory') {
+        if (message['sequence'] == _memorySequence &&
+            _memoryRequest?.isCompleted == false) {
+          _memoryRequest!.complete(message['bytes'] as int?);
+          _memoryRequest = null;
         }
         return;
       }
@@ -170,6 +232,8 @@ class PluginEngine {
   void close() {
     if (_closed) return;
     _closed = true;
+    _engines.remove(this);
+    if (_memoryRequest?.isCompleted == false) _memoryRequest!.complete(null);
     if (_isolate != null) {
       _beginShutdown();
     } else if (_pluginId == null) {
@@ -195,6 +259,7 @@ class PluginEngine {
 
   void _finishShutdown(bool freed) {
     if (_terminated.isCompleted) return;
+    _engines.remove(this);
     _shutdownTimer?.cancel();
     _subscription?.cancel();
     _events?.close();
@@ -315,6 +380,20 @@ void _engineWorker(SendPort parent) async {
         pump?.cancel();
         break;
       }
+      if (message['type'] == 'memory') {
+        int? bytes;
+        try {
+          bytes = qjs.getMemoryUsage()?.memoryUsedSize;
+        } catch (_) {
+          // A failed diagnostic must not stop a working plugin.
+        }
+        parent.send({
+          'type': 'memory',
+          'sequence': message['sequence'],
+          'bytes': bytes,
+        });
+        continue;
+      }
       try {
         if (message['type'] == 'reply') {
           if (busy && message['request'] == request) {
@@ -347,8 +426,12 @@ void _engineWorker(SendPort parent) async {
   } finally {
     commands.close();
     try {
+      int? bytes;
+      try {
+        bytes = engine?.getMemoryUsage()?.memoryUsedSize;
+      } catch (_) {}
       engine?.dispose();
-      parent.send({'type': 'closed'});
+      parent.send({'type': 'closed', 'bytes': bytes});
     } catch (_) {}
   }
 }
@@ -395,6 +478,7 @@ const _bridgeSource = r'''
   const api = freeze({
     storage: freeze({get: key => host('storage.get',[key]), set: (key,value) => host('storage.set',[key,value]), remove: key => host('storage.remove',[key])}),
     http: freeze({request: request => host('http.request',[request])}),
+    schoolTimetable: freeze({listTimetables: () => host('schoolTimetable.listTimetables',[]), getCourses: query => host('schoolTimetable.getCourses',[query])}),
     openView: id => host('openView',[id]),
     log: (level,message) => { /* Logs deliberately contain no plugin-supplied data. */ }
   });

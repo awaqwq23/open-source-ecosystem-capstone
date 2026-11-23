@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import '../domain/plugin_error.dart';
@@ -11,7 +11,26 @@ class PluginPackage {
   final String script, license, digest;
   static const maxBytes = 5 * 1024 * 1024;
 
-  factory PluginPackage.decode(List<int> bytes) {
+  static Future<PluginPackage> loadBundledAsset(
+    String path,
+    AssetBundle bundle,
+  ) async {
+    requirePlugin(
+      path.startsWith('assets/system_plugins/') &&
+          path.endsWith('.luoplugin') &&
+          !path.contains('..'),
+      '不是应用内置插件路径',
+    );
+    final bytes = await bundle.load(path);
+    return PluginPackage._decode(
+      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+      bundledAsset: true,
+    );
+  }
+
+  factory PluginPackage.decode(List<int> bytes) => PluginPackage._decode(bytes);
+
+  static PluginPackage _decode(List<int> bytes, {bool bundledAsset = false}) {
     requirePlugin(
       bytes.length <= maxBytes,
       '插件压缩包超过 5 MiB',
@@ -68,7 +87,10 @@ class PluginPackage {
         '脚本和许可不能为空',
       );
       return PluginPackage(
-        PluginManifest.fromJson(_decodeManifest(texts['manifest.json']!)),
+        PluginManifest.fromJson(
+          _decodeManifest(texts['manifest.json']!),
+          bundledAsset: bundledAsset,
+        ),
         texts['main.js']!,
         texts['LICENSE.txt']!,
         sha256.convert(bytes).toString(),

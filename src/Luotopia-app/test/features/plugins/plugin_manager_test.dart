@@ -55,64 +55,27 @@ class FailingStore extends PluginStore {
 
 void main() {
   test(
-    'settings ordering protects core positions and original groups',
+    'settings rows including protected entries retain custom order after restore',
     () async {
       final manager = PluginManager();
       addTearDown(manager.dispose);
-      final original = manager
+      final order = manager
           .entries(ContributionSlot.settingsRow)
-          .map((c) => c.key)
-          .toList();
-      List<String> swapped(String a, String b) {
-        final next = [...original];
-        final first = next.indexOf(a), second = next.indexOf(b);
-        next[first] = b;
-        next[second] = a;
-        return next;
-      }
-
-      await expectLater(
-        manager.reorder(
-          ContributionSlot.settingsRow,
-          swapped('luotopia.settings/general', 'luotopia.home-settings/row'),
-        ),
-        throwsA(pluginError('CORE_PLUGIN_LOCKED')),
-      );
-      await expectLater(
-        manager.reorder(
-          ContributionSlot.settingsRow,
-          swapped('luotopia.home-settings/row', 'luotopia.placeholder-1/row'),
-        ),
-        throwsA(pluginError('INVALID_INPUT')),
-      );
-      final valid = swapped(
-        'luotopia.home-settings/row',
-        'luotopia.ai-settings/row',
-      );
-      await manager.reorder(ContributionSlot.settingsRow, valid);
-      expect(
-        manager.entries(ContributionSlot.settingsRow).map((c) => c.key),
-        valid,
-      );
-      final backup = manager.exportBackup();
-      ((backup['layout'] as Map)['order'] as Map)['settingsRow'] = original
+          .map((entry) => entry.key)
+          .toList()
           .reversed
           .toList();
+      await manager.reorder(ContributionSlot.settingsRow, order);
+      final backup = manager.exportBackup();
+      await manager.restoreDefaultLayout();
       await manager.restoreBackup(backup);
-      final restored = manager
-          .entries(ContributionSlot.settingsRow)
-          .map((c) => c.key)
-          .toList();
-      for (final key in [
-        'luotopia.settings/accounts',
-        'luotopia.settings/general',
-        'luotopia.settings/data',
-      ]) {
-        expect(restored.indexOf(key), original.indexOf(key));
-      }
       expect(
-        restored.indexOf('luotopia.notification/row'),
-        original.indexOf('luotopia.notification/row'),
+        manager.entries(ContributionSlot.settingsRow).map((c) => c.key),
+        order,
+      );
+      expect(
+        manager.contribution('luotopia.settings/general').protected,
+        isTrue,
       );
     },
   );
@@ -169,10 +132,10 @@ void main() {
       addTearDown(ai.dispose);
       expect(navigation(ai), [
         'luotopia.home/tab',
-        'luotopia.list/tab',
-        'luotopia.ai/tab',
         'luotopia.campus/tab',
         'luotopia.settings/tab',
+        'luotopia.list/tab',
+        'luotopia.ai/tab',
       ]);
       final order = [
         'luotopia.home/tab',
@@ -183,12 +146,18 @@ void main() {
       ];
       await manager.reorder(ContributionSlot.navigation, order);
       await manager.uninstall('luotopia.forum');
+      expect(manager.isRemoved('luotopia.forum'), isTrue);
+      await expectLater(
+        manager.setEnabled('luotopia.forum', true),
+        throwsA(isA<PluginException>()),
+      );
       expect(
         navigation(manager),
         order.where((key) => key != 'luotopia.forum/tab'),
       );
       expect(manager.redirectNative('/forum/topic'), '/');
       await manager.restoreBuiltin('luotopia.forum');
+      expect(manager.isRemoved('luotopia.forum'), isFalse);
       expect(navigation(manager), order);
       expect(manager.redirectNative('/forum/topic'), isNull);
       final reloaded = PluginManager(store: store);
@@ -221,12 +190,10 @@ void main() {
           throwsA(pluginError('INVALID_INPUT')),
         );
       }
-      await expectLater(
-        manager.reorder(ContributionSlot.navigation, order.reversed.toList()),
-        throwsA(pluginError('CORE_PLUGIN_LOCKED')),
-      );
-      expect(navigation(manager), order);
-      expect(manager.revision, 1);
+      final reversed = order.reversed.toList();
+      await manager.reorder(ContributionSlot.navigation, reversed);
+      expect(navigation(manager), reversed);
+      expect(manager.revision, 2);
     },
   );
 
