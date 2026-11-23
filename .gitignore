@@ -41,6 +41,7 @@ src/Luotopia-app/lib/core/localization/generated/
 .pub/
 /build/
 **/build/
+/src/plugin/flutter_qjs_next/android/.cxx/
 /coverage/
 **/coverage/
 **/.gocache/
@@ -86,3 +87,17 @@ app.*.map.json
 !/release/已验证交付物/README.md
 
 !/docs/UPSTREAM-DEVELOPMENT.md
+
+# Plugin requirements and public SPI specification
+!/docs/plugins/
+/docs/plugins/*
+!/docs/plugins/SPI-v1.md
+!/docs/plugins/IMPLEMENTATION.md
+!/docs/superpowers/
+/docs/superpowers/*
+!/docs/superpowers/specs/
+/docs/superpowers/specs/*
+!/docs/superpowers/specs/2026-11-21-system-plugin-design.md
+!/docs/superpowers/plans/
+/docs/superpowers/plans/*
+!/docs/superpowers/plans/2026-11-21-runtime-plugins.md

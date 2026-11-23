@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "apiVersion": 1,
+  "id": "luotopia.library",
+  "name": "图书借阅",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "description": "图书借阅独立页面；当前为功能说明，不提供尚未接入的校园服务。",
+  "author": "Luotopia contributors",
+  "license": "MIT",
+  "permissions": [],
+  "networkHosts": [],
+  "views": [
+    "main"
+  ],
+  "contributions": [
+    {
+      "id": "card",
+      "slot": "campusCard",
+      "title": "图书借阅",
+      "icon": "book",
+      "viewId": "main",
+      "allowedViews": [
+        "main"
+      ],
+      "size": "small",
+      "color": "sky"
+    }
+  ],
+  "config": []
+}

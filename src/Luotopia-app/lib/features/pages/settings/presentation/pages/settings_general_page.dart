@@ -50,6 +50,31 @@ class SettingsGeneralPage extends ConsumerWidget {
                   ),
                 ),
                 SettingsFlatTile(
+                  title: isZh ? '导航栏显示数量' : 'Visible navigation items',
+                  subtitle: isZh
+                      ? '左右滑动浏览，长按拖动排序'
+                      : 'Swipe to browse; hold and drag to reorder',
+                  leading: const Icon(Icons.view_week_outlined),
+                  trailing: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: state.navigationSettings.visibleCount,
+                      items: [
+                        for (final count in [4, 5, 6, 7, 8])
+                          DropdownMenuItem(value: count, child: Text('$count')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          viewModel.saveNavigationSettings(
+                            state.navigationSettings.copyWith(
+                              visibleCount: value,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                SettingsFlatTile(
                   title: l10n.settingsNavigationEntryTitle,
                   subtitle: l10n.settingsNavigationEntrySubtitle,
                   leading: const Icon(Icons.explore_outlined),

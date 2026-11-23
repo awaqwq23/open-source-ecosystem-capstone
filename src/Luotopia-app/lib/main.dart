@@ -1,4 +1,10 @@
 import 'package:flutter/widgets.dart';
+import 'dart:io';
+import 'package:luotopia/features/plugins/data/bundled_plugins.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/data/plugin_store.dart';
+import 'package:luotopia/features/pages/settings/domain/models/navigation_settings.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:luotopia/app/app.dart';
@@ -15,10 +21,18 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   final preferences = await SharedPreferences.getInstance();
   final bootstrap = await AppBootstrapLoader.load(preferences);
+  final support = await getApplicationSupportDirectory();
+  final plugins = PluginManager(
+    store: PluginStore(Directory('${support.path}/plugins-v1')),
+    legacyAi: bootstrap.navigationSettings.middleTabMode == MiddleTabMode.ai,
+    bundledPackages: Platform.isAndroid ? await loadBundledPlugins() : const [],
+  );
+  await plugins.load();
 
   runApp(
     ProviderScope(
       overrides: [
+        pluginManagerProvider.overrideWith((ref) => plugins),
         sharedPreferencesProvider.overrideWithValue(preferences),
         appLocaleProvider.overrideWith((ref) => bootstrap.locale),
         appThemeModeProvider.overrideWith((ref) => bootstrap.themeMode),

@@ -328,6 +328,7 @@ class _SettingsDataUpdatesPageState
         title: const Text('导入用户数据'),
         content: const Text(
           '导入会覆盖当前本地非课程事项与个人设置，并重置对应同步状态。'
+          '备份中的插件数据也会替换同标识数据并封存，对应外部插件需重新导入和授权后使用。'
           '账号、天气缓存、服务通知和全校课表缓存不会被恢复。',
         ),
         actions: [

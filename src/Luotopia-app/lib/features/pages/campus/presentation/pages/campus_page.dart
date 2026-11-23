@@ -1,9 +1,14 @@
+import 'package:flutter/foundation.dart' show listEquals;
+import 'dart:async';
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/domain/plugin_manifest.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_icons.dart';
 import 'package:luotopia/app/router/app_navigator.dart';
-import 'package:luotopia/app/router/app_route_paths.dart';
 import 'package:luotopia/features/components/wallpaper/presentation/widgets/app_wallpaper_background.dart';
 import 'package:luotopia/features/weather/presentation/providers/weather_providers.dart';
 import 'package:luotopia/features/weather/presentation/widgets/qweather_icon.dart';
@@ -11,8 +16,212 @@ import 'package:luotopia/features/unified_pull/data/pull_response.dart';
 import 'package:luotopia/shared/value_objects/item_color_option.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as ui;
 
-class CampusPage extends StatelessWidget {
+class CampusPage extends ConsumerStatefulWidget {
   const CampusPage({super.key});
+
+  @override
+  ConsumerState<CampusPage> createState() => _CampusPageState();
+}
+
+class _CampusPageState extends ConsumerState<CampusPage> {
+  final _scroll = ScrollController();
+  final _cardKeys = <String, GlobalKey>{};
+  Timer? _edgeTimer;
+  List<PluginContribution>? _dragEntries;
+  int? _dragRevision;
+  PluginContribution? _lifted;
+  Offset _finger = Offset.zero, _anchor = Offset.zero;
+  double _weatherHeight = 300;
+  final _viewport = GlobalKey();
+  List<String> _startingOrder = [];
+  bool _saving = false;
+  int _edgeDirection = 0;
+
+  RenderBox get _box =>
+      _viewport.currentContext!.findRenderObject() as RenderBox;
+  double get _small => (_box.size.width - 56) / 3;
+
+  // In content coordinates, independent of the scrolling viewport and animation.
+  Map<String, Rect> _slots(List<PluginContribution> entries) {
+    final result = <String, Rect>{};
+    double y = 16;
+    var column = 0;
+    for (final e in entries) {
+      if (e.size == 'wide') {
+        if (column != 0) y += _small + 12;
+        final h = e.pluginId == 'luotopia.campus-info'
+            ? _weatherHeight
+            : _small;
+        result[e.key] = Rect.fromLTWH(16, y, _box.size.width - 32, h);
+        y += h + 16;
+        column = 0;
+      } else {
+        result[e.key] = Rect.fromLTWH(
+          16 + column * (_small + 12),
+          y,
+          _small,
+          _small,
+        );
+        if (++column == 3) {
+          column = 0;
+          y += _small + 12;
+        }
+      }
+    }
+    return result;
+  }
+
+  void _start(LongPressStartDetails d) {
+    if (_saving) return;
+    final manager = ref.read(pluginManagerProvider);
+    final entries = _packedEntries(
+      manager.entries(ContributionSlot.campusCard),
+    );
+    PluginContribution? lifted;
+    for (final e in entries) {
+      final box =
+          _cardKeys[e.key]?.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached || !box.hasSize) continue;
+      if (e.pluginId == 'luotopia.campus-info') {
+        _weatherHeight = box.size.height;
+      }
+      final local = box.globalToLocal(d.globalPosition);
+      if ((Offset.zero & box.size).contains(local)) {
+        lifted = e;
+        _anchor = local;
+      }
+    }
+    if (lifted == null) return;
+    setState(() {
+      _lifted = lifted;
+      _finger = _box.globalToLocal(d.globalPosition);
+      _dragRevision = manager.revision;
+      _dragEntries = entries;
+      _startingOrder = entries.map((e) => e.key).toList();
+    });
+  }
+
+  void _preview(Offset finger) {
+    final entries = _dragEntries;
+    final lifted = _lifted;
+    if (entries == null || lifted == null || _saving) return;
+    final point = finger + Offset(0, _scroll.offset);
+    final slots = _slots(entries);
+    setState(() {
+      _finger = finger;
+      if (slots[lifted.key]!.inflate(4).contains(point)) return;
+      PluginContribution? target;
+      double distance = double.infinity;
+      for (final e in entries) {
+        if (e.key == lifted.key) continue;
+        final r = slots[e.key]!;
+        final dx = point.dx - point.dx.clamp(r.left, r.right);
+        final dy = point.dy - point.dy.clamp(r.top, r.bottom);
+        final ds = dx * dx + dy * dy;
+        if (ds < distance) {
+          distance = ds;
+          target = e;
+        }
+      }
+      if (target == null) return;
+      final t = target;
+      final rect = slots[t.key]!;
+      final from = entries.indexOf(lifted);
+      final to = entries.indexOf(t);
+      final delta = t.size == 'wide'
+          ? point.dy - rect.center.dy
+          : point.dx - rect.center.dx;
+      final after = delta.abs() < 4 ? from < to : delta > 0;
+      final next = entries.toList()..removeAt(from);
+      var index = next.indexOf(t) + (after ? 1 : 0);
+      if (lifted.size == 'wide' && t.size != 'wide') {
+        final sameRow = next.where((e) => slots[e.key]!.top == rect.top);
+        index = point.dy < rect.center.dy
+            ? next.indexOf(sameRow.first)
+            : next.indexOf(sameRow.last) + 1;
+      }
+      next.insert(index, lifted);
+      _dragEntries = _packedEntries(next);
+    });
+  }
+
+  @override
+  void dispose() {
+    _edgeTimer?.cancel();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _scrollAt(Offset globalPosition) {
+    final y = _box.globalToLocal(globalPosition).dy;
+    final direction = y < 80
+        ? -1
+        : y > _box.size.height - 80
+        ? 1
+        : 0;
+    if (direction == _edgeDirection) return;
+    _edgeDirection = direction;
+    _edgeTimer?.cancel();
+    if (direction == 0) return;
+    _edgeTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (_scroll.hasClients) {
+        final old = _scroll.offset;
+        _scroll.jumpTo(
+          (_scroll.offset + direction * 12).clamp(
+            0.0,
+            _scroll.position.maxScrollExtent,
+          ),
+        );
+        if (_scroll.offset != old) _preview(_finger);
+      }
+    });
+  }
+
+  void _cancelDrag() {
+    if (_lifted == null) return;
+    _edgeTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _lifted = null;
+        _saving = false;
+        _edgeDirection = 0;
+        _dragEntries = null;
+        _dragRevision = null;
+      });
+    }
+  }
+
+  Future<void> _drop(LongPressEndDetails d) async {
+    final entries = _dragEntries;
+    final revision = _dragRevision;
+    if (entries == null || _saving) return;
+    _edgeTimer?.cancel();
+    if (!(Offset.zero & _box.size).contains(
+          _box.globalToLocal(d.globalPosition),
+        ) ||
+        listEquals(entries.map((e) => e.key).toList(), _startingOrder)) {
+      _cancelDrag();
+      return;
+    }
+    _saving = true;
+    try {
+      await ref
+          .read(pluginManagerProvider)
+          .reorder(
+            ContributionSlot.campusCard,
+            entries.map((c) => c.key).toList(),
+            expectedRevision: revision,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('布局保存失败，请重试')));
+      }
+    } finally {
+      _cancelDrag();
+    }
+  }
 
   static const _gridApps = <_CampusApp>[
     _CampusApp(
@@ -82,43 +291,228 @@ class CampusPage extends StatelessWidget {
     ),
   ];
 
+  Widget _card(PluginContribution entry) {
+    if (entry.pluginId == 'luotopia.campus-info') {
+      final weather = ref.watch(weatherProvider);
+      return _CampusInfoCard(
+        weather: weather.weather,
+        loading: weather.loading,
+        isMock: weather.isMock,
+      );
+    }
+    const ids = [
+      'timetable',
+      'seat-reservation',
+      'library',
+      'sports-reservation',
+      'luojia-ecard',
+      'ecard-payment-code',
+      'score',
+      'empty-classroom',
+      'audit-course',
+      'all-school-timetable',
+      'grading',
+      'course-review',
+      'study-materials',
+    ];
+    final index = ids.indexOf(entry.pluginId.replaceFirst('luotopia.', ''));
+    return _CampusTile(
+      entry: entry,
+      app: index < 0 ? null : _gridApps[index],
+      customIcon: ref
+          .read(pluginManagerProvider)
+          .hasPresentationOverride(entry.key, 'icon'),
+      customColor: ref
+          .read(pluginManagerProvider)
+          .hasPresentationOverride(entry.key, 'color'),
+    );
+  }
+
+  Widget _restingCard(PluginContribution entry) {
+    return Semantics(
+      key: _cardKeys.putIfAbsent(entry.key, GlobalKey.new),
+      label: entry.title,
+      hint: '长按拖到两张卡片之间以插入',
+      child: _card(entry),
+    );
+  }
+
+  Widget _previewGrid(List<PluginContribution> entries) {
+    final slots = _slots(entries);
+    final bottom = slots.values
+        .map((r) => r.bottom)
+        .reduce((a, b) => a > b ? a : b);
+    return SizedBox(
+      height: bottom + 32,
+      child: Stack(
+        children: [
+          for (final e in entries)
+            AnimatedPositioned.fromRect(
+              key: ValueKey('moving-${e.key}'),
+              rect: slots[e.key]!,
+              duration: const Duration(milliseconds: 170),
+              curve: Curves.easeOutCubic,
+              child: e.key == _lifted?.key
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: .09),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: .38),
+                        ),
+                      ),
+                    )
+                  : KeyedSubtree(key: ValueKey(e.key), child: _card(e)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Fill a partial row before placing the next full-width card.
+  List<PluginContribution> _packedEntries(List<PluginContribution> entries) {
+    final remaining = entries.toList();
+    final packed = <PluginContribution>[];
+    var column = 0;
+    while (remaining.isNotEmpty) {
+      var index = 0;
+      if (column > 0 && remaining.first.size == 'wide') {
+        final small = remaining.indexWhere((entry) => entry.size != 'wide');
+        if (small >= 0) index = small;
+      }
+      final entry = remaining.removeAt(index);
+      packed.add(entry);
+      column = entry.size == 'wide' ? 0 : (column + 1) % 3;
+    }
+    return packed;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final registered = ref
+        .watch(pluginManagerProvider)
+        .entries(ContributionSlot.campusCard);
+    final entries = _dragEntries ?? _packedEntries(registered);
     return ui.Scaffold(
       child: Stack(
         children: [
           const Positioned.fill(
             child: RepaintBoundary(child: AppWallpaperBackground()),
           ),
-          // Slight dark overlay for readability over bright images
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.10)),
           ),
-          // Scrollable content
           SafeArea(
             child: BackdropGroup(
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: Consumer(
-                        builder: (context, ref, _) {
-                          final weatherState = ref.watch(weatherProvider);
-                          return _CampusInfoCard(
-                            weather: weatherState.weather,
-                            loading: weatherState.loading,
-                            isMock: weatherState.isMock,
-                          );
-                        },
-                      ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final smallWidth = (constraints.maxWidth - 56) / 3;
+                  final rows = <Widget>[];
+                  final gaps = <double>[];
+                  for (var i = 0; _lifted == null && i < entries.length;) {
+                    final entry = entries[i];
+                    if (entry.size == 'wide') {
+                      gaps.add(16);
+                      rows.add(
+                        SizedBox(
+                          key: ValueKey(entry.key),
+                          width: double.infinity,
+                          height: entry.pluginId == 'luotopia.campus-info'
+                              ? null
+                              : smallWidth,
+                          child: _restingCard(entry),
+                        ),
+                      );
+                      i++;
+                    } else {
+                      gaps.add(12);
+                      final cells = <Widget>[];
+                      while (i < entries.length &&
+                          entries[i].size != 'wide' &&
+                          cells.length < 3) {
+                        final cell = entries[i++];
+                        cells.add(
+                          SizedBox(
+                            key: ValueKey(cell.key),
+                            width: smallWidth,
+                            height: smallWidth,
+                            child: _restingCard(cell),
+                          ),
+                        );
+                      }
+                      rows.add(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (var c = 0; c < cells.length; c++) ...[
+                              if (c > 0) const SizedBox(width: 12),
+                              cells[c],
+                            ],
+                          ],
+                        ),
+                      );
+                    }
+                  }
+                  final lifted = _lifted;
+                  final dragSize = lifted == null
+                      ? null
+                      : _slots(entries)[lifted.key]!.size;
+                  return GestureDetector(
+                    key: _viewport,
+                    behavior: HitTestBehavior.translucent,
+                    onLongPressStart: _start,
+                    onLongPressMoveUpdate: (d) {
+                      if (_lifted == null) return;
+                      _preview(_box.globalToLocal(d.globalPosition));
+                      _scrollAt(d.globalPosition);
+                    },
+                    onLongPressCancel: _cancelDrag,
+                    onLongPressEnd: _drop,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: ListView(
+                            controller: _scroll,
+                            padding: lifted == null
+                                ? const EdgeInsets.fromLTRB(16, 16, 16, 32)
+                                : EdgeInsets.zero,
+                            children: lifted != null
+                                ? [_previewGrid(entries)]
+                                : [
+                                    for (var i = 0; i < rows.length; i++) ...[
+                                      if (i > 0) SizedBox(height: gaps[i - 1]),
+                                      rows[i],
+                                    ],
+                                  ],
+                          ),
+                        ),
+                        if (lifted != null)
+                          Positioned(
+                            left: _finger.dx - _anchor.dx,
+                            top: _finger.dy - _anchor.dy,
+                            width: dragSize!.width,
+                            height: dragSize.height,
+                            child: IgnorePointer(
+                              child: Transform.scale(
+                                scale: 1.035,
+                                child: Material(
+                                  type: MaterialType.transparency,
+                                  child: Opacity(
+                                    opacity: .94,
+                                    child: _card(lifted),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  const SliverPadding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    sliver: _AppGrid(apps: _gridApps),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -519,98 +913,75 @@ class _ReminderTile extends StatelessWidget {
   }
 }
 
-class _AppGrid extends StatelessWidget {
-  const _AppGrid({required this.apps});
-
-  final List<_CampusApp> apps;
+class _CampusTile extends ConsumerWidget {
+  const _CampusTile({
+    required this.entry,
+    this.app,
+    required this.customIcon,
+    required this.customColor,
+  });
+  final bool customIcon, customColor;
+  final PluginContribution entry;
+  final _CampusApp? app;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    return SliverGrid.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.0,
-      ),
-      itemCount: apps.length,
-      itemBuilder: (context, index) {
-        final app = apps[index];
-        final accent = app.colorAssoc.resolve(theme.brightness);
-        return _CampusGlassCard(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _openApp(context, app.name),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(app.icon, size: 26, color: accent),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  app.name,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    final accent = !customColor && app != null
+        ? app!.colorAssoc.resolve(theme.brightness)
+        : pluginColor(entry.color);
+    return _CampusGlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          if (entry.nativeRoute != null) {
+            context.openSecondary(entry.nativeRoute!);
+          } else if (ref
+                  .read(pluginManagerProvider)
+                  .details(entry.pluginId)
+                  .script !=
+              null) {
+            context.go(entry.route);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${entry.title} 功能正在开发中'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                !customIcon && app != null ? app!.icon : pluginIcon(entry.icon),
+                size: 26,
+                color: accent,
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 10),
+            Text(
+              entry.title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  void _openApp(BuildContext context, String name) {
-    switch (name) {
-      case '课程表':
-        context.openSecondary(AppRoutePaths.campusTimetable);
-        return;
-      case '成绩':
-        context.openSecondary(AppRoutePaths.campusScore);
-        return;
-      case '自习预约':
-        context.openSecondary(AppRoutePaths.campusSeatReservation);
-        return;
-      case '运动场馆':
-        context.openSecondary(AppRoutePaths.campusSportsReservation);
-        return;
-      case '珞珈E卡':
-        context.openSecondary(AppRoutePaths.campusLuojiaEcard);
-        return;
-      case 'E卡付款码':
-        context.openSecondary(AppRoutePaths.campusEcardPaymentCode);
-        return;
-      case '空闲教室':
-        context.openSecondary(AppRoutePaths.campusEmptyClassroom);
-        return;
-      case '全校课表':
-        context.openSecondary(AppRoutePaths.campusAllSchoolTimetable);
-        return;
-      case '课程评价':
-        context.openSecondary(AppRoutePaths.campusCourseReview);
-        return;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$name 功能正在开发中'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-    }
   }
 }
 

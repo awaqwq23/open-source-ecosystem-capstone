@@ -1,4 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:luotopia/features/plugins/application/plugin_manager.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_page.dart';
+import 'package:luotopia/features/plugins/presentation/plugin_management_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:animations/animations.dart';
 import 'package:go_router/go_router.dart';
@@ -58,8 +61,25 @@ import 'package:luotopia/shared/value_objects/repeat_rule.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final navSettings = ref.read(appNavigationSettingsProvider);
+  final plugins = ref.read(pluginManagerProvider);
   return GoRouter(
-    initialLocation: navSettings.defaultTab,
+    initialLocation:
+        plugins.redirectNative(navSettings.defaultTab) ??
+        navSettings.defaultTab,
+    refreshListenable: plugins,
+    redirect: (context, state) {
+      final path = state.uri.path;
+      if (path.startsWith('/plugins/')) {
+        final parts = state.uri.pathSegments;
+        if (parts.length != 4) return '/';
+        try {
+          plugins.checkAccess('${parts[1]}/${parts[2]}', parts[3]);
+        } catch (_) {
+          return '/';
+        }
+      }
+      return plugins.redirectNative(path);
+    },
     routes: [
       StatefulShellRoute(
         navigatorContainerBuilder: (context, navigationShell, children) {
@@ -354,6 +374,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const SettingsPage(),
                 routes: [
                   GoRoute(
+                    path: 'plugins',
+                    builder: (context, state) => const PluginManagementPage(),
+                  ),
+                  GoRoute(
                     path: 'general',
                     pageBuilder: (context, state) =>
                         AppRouteTransitions.sharedAxisPage<void>(
@@ -417,6 +441,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            initialLocation: '/plugins/unavailable/entry/main',
+            routes: [
+              GoRoute(
+                path: '/plugins/:pluginId/:contributionId/:viewId',
+                builder: (context, state) => PluginPage(
+                  pluginId: state.pathParameters['pluginId']!,
+                  contributionId: state.pathParameters['contributionId']!,
+                  viewId: state.pathParameters['viewId']!,
+                ),
               ),
             ],
           ),

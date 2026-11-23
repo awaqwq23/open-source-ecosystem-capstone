@@ -1,0 +1,317 @@
+# flutter_qjs_next
+
+Flutter / Dart bindings for [QuickJS](https://github.com/bellard/quickjs) via `dart:ffi`.
+
+- Embedded QuickJS **2026-06-04**
+- Platforms: **Android, iOS, macOS, Linux, Windows** (no Web — native FFI only)
+- API style compatible with [flutter_js](https://github.com/abner/flutter_js) (`JavascriptRuntime`, `getJavascriptRuntime()`)
+
+## Install
+
+```bash
+flutter pub add flutter_qjs_next
+```
+
+```dart
+import 'package:flutter_qjs_next/flutter_qjs.dart';
+```
+
+## Quick start
+
+```dart
+import 'package:flutter_qjs_next/flutter_qjs.dart';
+
+void main() {
+  final js = getJavascriptRuntime(
+    timeout: 5000, // recommended for untrusted scripts; null/0 = off
+    // memoryLimit defaults to 64 MiB; use 0 for unlimited
+  );
+
+  final r = js.evaluate('Math.trunc(Math.random() * 100).toString()');
+  print(r.stringResult);
+
+  // Promise / setTimeout need the host event loop:
+  // either call js.dispatch() after async work, or use evaluateAsync + handlePromises.
+  js.dispose(); // always dispose — free native heap + channel maps
+}
+```
+
+### Limits
+
+| Parameter | Meaning | Default |
+|-----------|---------|---------|
+| `stackSize` | JS stack size in bytes | 1 MiB |
+| `timeout` | Interrupt after this many **ms** of wall-clock JS work (`null`/`0` = off) | off |
+| `memoryLimit` | Heap limit in bytes (`0` = unlimited) | **64 MiB** |
+
+Each `getJavascriptRuntime()` is a **separate** QuickJS engine (own heap, channels, `ReceivePort`). Create many only when you need isolation; otherwise reuse one runtime or use a pool.
+
+### Multi-engine pool
+
+```dart
+final pool = JsEnginePool(
+  maxSize: 4,
+  config: JsEnginePoolConfig(
+    timeout: 3000,
+    // default: resetMode none (warm reuse).
+    // multi-tenant: prefer soft; hard/resetOnRelease only when soft is not enough
+    // resetMode: EngineResetMode.soft,
+  ),
+);
+final out = await pool.withEngine((js) async {
+  return js.evaluate('1 + 1').stringResult;
+});
+pool.dispose();
+```
+
+Production (pool size, soft reset, `evaluateJson` / TypedArray, process RSS):
+see **[Production checklist](doc/wiki/guides/production-checklist.md)** and
+`example/lib/production_tenant_worker.dart`.
+
+Engine ids include the isolate hash (`qjs-<isolate>-<serial>-<us>`) so parallel isolates do not collide in channel maps.
+
+`forceJavascriptCoreOnAndroid` and `xhr` are accepted for API compatibility with flutter_js but **are not implemented** (always QuickJS; there is no XHR).
+
+### Web APIs
+
+Every engine gets timers, `queueMicrotask`, `console`, `performance`,
+`structuredClone`, `atob`/`btoa` and `crypto` random values. The standard
+library (`URL`, streams, `Headers`/`Request`/`Response`, `crypto.subtle`, …) and
+`fetch` are opt-in:
+
+```dart
+final js = getJavascriptRuntime(
+  webApis: JsWebApis.standard(
+    fetch: JsFetchOptions(allowUrl: (url) => url.host == 'api.example.com'),
+  ),
+);
+```
+
+Or name individual modules — `JsWebApis(modules: {JsWebModule.url})` installs URL
+parsing and nothing else. Some features need a second module that is never
+pulled in for you: `response.blob()` / `formData()` need `JsWebModule.blob`,
+`TextEncoderStream` needs `JsWebModule.encoding`. Modules are a functional
+split, not a sandbox; network access is governed by `JsFetchOptions`.
+
+Walkthrough: **[Recipe: choosing Web APIs](doc/wiki/recipes/choosing-web-apis.md)**.
+Reference (module table, per-module costs, deviations):
+**[Web APIs](doc/wiki/api/web-apis.md)**.
+
+### Dart ↔ JS bridge
+
+```dart
+js.onMessage('log', (args) {
+  print(args); // typically a List from JSON
+});
+```
+
+```js
+sendMessage('log', JSON.stringify([1, 2, 3]));
+```
+
+Prefer `setupBridge` / newer channel APIs when available; channel names and payloads should be treated as untrusted if they come from user scripts.
+
+### TypedArray / binary
+
+`TypedData` (e.g. `Uint8List`) maps to JS TypedArrays via a bulk buffer path.  
+`ByteBuffer` maps to `ArrayBuffer`.  
+Use `evaluateJson` when you only need a Dart JSON-like tree (often faster for large objects).
+
+### Event loop / Promises
+
+QuickJS jobs are drained through the runtime’s `ReceivePort`. Timer and `fetch` callbacks run their own microtask checkpoint; for other async paths call `dispatch()` (or rely on paths that already pump the port, e.g. promise helpers in `handle_promises.dart`).
+
+```dart
+// Drain Promise microtasks / jobs in a tight loop:
+js.executePendingJobs(); // or executePendingJob() once per job
+
+// QuickJsRuntime2 only:
+// (js as QuickJsRuntime2).hasPendingJobs
+```
+
+#### `autoExecutePendingJobs` (QuickJsRuntime2)
+
+Default is **`true`**: after `evaluate`, `evaluateJson`, `evaluateBytecode`, and `callFunction`, the runtime automatically drains the QuickJS job queue via `executePendingJobs()` (Promise reactions / microtasks).
+
+Implications:
+
+- Synchronous scripts that schedule Promises often settle without an extra manual drain.
+- Call order / timing can differ from engines that only run jobs when you call `dispatch()` / `executePendingJobs()` yourself.
+- There is a small cost after each of those entry points when jobs are pending.
+
+Disable when you need explicit control or minimal post-call work:
+
+```dart
+final js = QuickJsRuntime2(autoExecutePendingJobs: false);
+// or:
+(js as QuickJsRuntime2).autoExecutePendingJobs = false;
+```
+
+With `autoExecutePendingJobs: false`, drain jobs yourself (`executePendingJobs()`, `dispatch()`, or `handlePromises`) after async JS.
+
+### Memory / GC
+
+```dart
+js.runGC();
+final m = js.getMemoryUsage(); // JsMemoryUsage? (malloc / JS heap sizes)
+```
+
+Default **heap limit is 64 MiB** (`memoryLimit: 0` for unlimited). Always call **`dispose()`** so native `JSRuntime` / `JSContext`, `ReceivePort`, and channel maps are released.
+
+### Logging
+
+```dart
+FlutterQjsLogger.level = FlutterQjsLogLevel.debug;
+FlutterQjsLogger.handler = (level, message, error) { /* ... */ };
+```
+
+## Documentation
+
+Full package wiki: **[doc/wiki/](doc/wiki/README.md)**
+
+| | |
+|--|--|
+| Start here | [Getting started](doc/wiki/getting-started.md) · [Concepts](doc/wiki/concepts.md) |
+| API | [API reference](doc/wiki/api/overview.md) · [Runtime](doc/wiki/api/runtime.md) · [Bridge](doc/wiki/api/bridge.md) |
+| Guides | [**Production checklist**](doc/wiki/guides/production-checklist.md) · [Security](doc/wiki/guides/security.md) · [Performance](doc/wiki/guides/performance.md) · [Migration](doc/wiki/guides/migration-from-flutter-js.md) |
+| Recipes | [Hello evaluate](doc/wiki/recipes/hello-evaluate.md) · [Async bridge](doc/wiki/recipes/async-bridge.md) · [Pool](doc/wiki/recipes/multi-tenant-pool.md) |
+| Ops | [FAQ](doc/wiki/faq.md) · [Troubleshooting](doc/wiki/troubleshooting.md) · [Testing](doc/wiki/testing-and-benchmarks.md) |
+
+## Example app
+
+See `example/` for a full Flutter demo (AJV, typed arrays, etc.).
+
+```bash
+cd example && flutter run
+```
+
+## Benchmark
+
+**Use Flutter’s test harness** (loads the plugin native library correctly).
+Do **not** use bare `dart run` on this package: on recent Dart SDKs, standalone
+compilation of `dart:ffi` callbacks (`Pointer.fromFunction`) can crash the
+compiler before any code runs.
+
+```bash
+cd example
+# default: 8 RNG seeds → mean ± σ (us/op; buffers also MiB/s)
+flutter test test/benchmark_test.dart
+
+# adjust repeats (1 = single seed, faster smoke)
+flutter test test/benchmark_test.dart --dart-define=BENCH_RUNS=3
+flutter test test/benchmark_test.dart --dart-define=BENCH_RUNS=1
+
+# base seed (used when BENCH_RUNS=1, or to extend seeds when runs>8)
+flutter test test/benchmark_test.dart --dart-define=BENCH_SEED=464037
+```
+
+Shared logic: `example/lib/benchmark_runner.dart`
+(`runFlutterQjsBenchmarkSuite` / `runFlutterQjsBenchmarks`).
+
+Coverage:
+
+1. Hot path: tiny `evaluate` and cached `JSInvokable.invoke`
+2. String / small `Map` Dart↔JS identity round-trips
+3. Buffer size ladder (1 KiB / 64 KiB / 1 MiB / 16 MiB) for owned TypedArray paths
+4. TypedArray variants and non-zero-offset views in both directions
+5. `evaluateJson` vs full `evaluate` (deep jsToDart) on array and object payloads
+6. Multi-seed mean ± σ (`kBenchmarkDefaultSeeds`, default **8** runs) plus OS /
+   CPU / executable banner for cross-commit comparison
+
+Interactive option:
+
+```bash
+cd example && flutter run
+# tap "Run Benchmarks" (same 8-run suite as the test default)
+```
+
+`benchmark/flutter_qjs_benchmark.dart` only prints these instructions if invoked
+with `dart run` by mistake.
+
+### Performance vs pre-optimization baseline
+
+Compared the current revision to git commit **`3261eb4`** (pre bulk-buffer /
+marshalling work) on the same machine and seeds with **`BENCH_RUNS=32`**.
+The old commit uses a compatibility runner: its 16 MiB JS→Dart case is omitted
+because it cannot complete a practical multi-seed run, and its 1 MiB JS→Dart
+steady cases use two iterations instead of twenty. Large-path ratios are
+therefore directional, not exact apples-to-apples results.
+
+| Scenario | 3261eb4 (us/op) | current (us/op) | Speedup |
+|----------|----------------:|----------------:|--------:|
+| evaluate tiny (`1+1`) | 4.1 | 3.5 | **1.2×** |
+| host invoke `(a,b)=>a+b` | 2.4 | 2.2 | **1.1×** |
+| string Dart→JS→Dart | 3.2 | 3.1 | **1.0×** |
+| small Map Dart→JS→Dart | 21.1 | 18.1 | **1.2×** |
+| Dart `Uint8List`→JS (1 MiB) | 141.6 | 49.3 | **2.9×** |
+| Dart `Float64List`→JS (10k) | 1863.5 | 4.6 | **405×** |
+| evaluate large array (full jsToDart) | 3004.1 | 1877.5 | **1.6×** |
+| evaluate large object (full jsToDart) | 5934.5 | 4916.3 | **1.2×** |
+| JS `Uint8Array`→Dart (1 KiB) | 602.7 | 5.9 | **102×** |
+| JS `Uint8Array`→Dart (64 KiB) | 47392.2 | 21.9 | **2164×** |
+| JS `Uint8Array`→Dart (1 MiB) | 975550.7 | 421.5 | **2314×** |
+| JS `Float64Array`→Dart (10k) | 7844.7 | 623.1 | **12.6×** |
+| JS `Uint8ClampedArray`→Dart (offset) | 22206.8 | 9.3 | **2388×** |
+
+**What improved most**
+
+- **TypedArray / buffer paths** — bulk copy instead of per-element marshalling
+  (largest wins on JS→Dart and non-byte TypedArrays Dart→JS).
+- **String / host invoke** — leaner FFI and value conversion.
+- **Large array `evaluate`** — faster recursive jsToDart; use **`evaluateJson`**
+  when you only need a JSON-like tree (avoids deep object graph conversion).
+
+Raw logs (full suite output + aggregated means):  
+`benchmark_results/3261eb4/3261eb4_BENCH_RUNS32.txt`,
+`benchmark_results/1c9561d/optimized_BENCH_RUNS32_clamped.txt`.
+
+Numbers are single-host microbenchmarks (Linux `flutter_tester`); treat them as
+relative, not absolute product SLOs.
+
+1.5.0 removed a message posted on every call into JS: `invoke` is 2.2× faster in
+this suite and ~4× over millions of calls, where 1.4 also held the backlog in
+memory. See [Performance](doc/wiki/guides/performance.md#call-cost-since-150)
+and `benchmark_results/87a7363/`.
+
+### Soak / stress (long-haul)
+
+Separate from micro-benchmarks: high-concurrency burn-in, RSS/metrics, fail-fast
+dump (not us/op). Shared logic: `example/lib/soak_stress_runner.dart`.
+
+```bash
+cd example
+# short smoke (default ~30s)
+flutter test test/soak_stress_test.dart
+
+# ≥1h burn-in example
+flutter test test/soak_stress_test.dart \
+  --dart-define=SOAK_DURATION_SEC=3600 \
+  --dart-define=SOAK_POOL_SIZE=8 \
+  --dart-define=SOAK_WORKERS=32
+```
+
+On failure, a dump is written under `soak_dumps/` (config, pool stats, RSS,
+recent ops, sample `getMemoryUsage`). Native core dump is optional/external
+(`gcore` / `ulimit -c`).
+
+## Architecture (short)
+
+- `lib/quickjs/*` — Dart FFI bindings and marshalling  
+- `cxx/ffi.cpp` — stable C ABI around QuickJS (`JSValue*` on the heap)  
+- `cxx/quickjs/` — embedded engine (same tree used on Windows via `cxx-windows/`)
+
+## Limitations / security
+
+- Scripts run with full engine capability; do not eval untrusted code without your own sandbox policy.
+- Prefer **`timeout`** (wall-clock interrupt) and the default **`memoryLimit`** (64 MiB) for untrusted scripts.
+- No Flutter Web target (native FFI only) and no XHR; `fetch` is opt-in through `JsFetchOptions`.
+- Dispose runtimes you create (`dispose()`) to free native resources.
+- Module sources from `moduleHandler` are copied into QuickJS then **`free`’d in native** (no Dart microtask free race).
+- `JSValue*` returned across the FFI boundary is heap-allocated; callers must free via the package APIs (`jsFreeValue` / Dart wrappers) — double-free of the same handle after dispose is undefined.
+
+## References
+
+- [bellard/quickjs](https://github.com/bellard/quickjs)
+- [ekibun/flutter_qjs](https://github.com/ekibun/flutter_qjs)
+- [abner/flutter_js](https://github.com/abner/flutter_js)
+- [kodjodevf/flutter_qjs](https://github.com/kodjodevf/flutter_qjs)

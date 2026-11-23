@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "apiVersion": 1,
+  "id": "luotopia.study-materials",
+  "name": "学习资料共享",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "description": "学习资料共享独立页面；当前为功能说明，不提供尚未接入的校园服务。",
+  "author": "Luotopia contributors",
+  "license": "MIT",
+  "permissions": [],
+  "networkHosts": [],
+  "views": [
+    "main"
+  ],
+  "contributions": [
+    {
+      "id": "card",
+      "slot": "campusCard",
+      "title": "学习资料共享",
+      "icon": "book",
+      "viewId": "main",
+      "allowedViews": [
+        "main"
+      ],
+      "size": "small",
+      "color": "sky"
+    }
+  ],
+  "config": []
+}

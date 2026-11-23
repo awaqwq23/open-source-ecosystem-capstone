@@ -1,0 +1,52 @@
+group = 'io.github.nancunchild.flutter_qjs_next'
+version = '1.0-SNAPSHOT'
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    if (project.android.hasProperty("namespace")) {
+        namespace = 'io.github.nancunchild.flutter_qjs_next'
+    }
+
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cxx/CMakeLists.txt")
+            version = "3.18.1+"
+        }
+    }
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    dependencies {
+        testImplementation 'org.mockito:mockito-core:5.0.0'
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+
+            testLogging {
+               events "passed", "skipped", "failed", "standardOut", "standardError"
+               outputs.upToDateWhen {false}
+               showStandardStreams = true
+            }
+        }
+    }
+}
