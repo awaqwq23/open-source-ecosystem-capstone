@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "apiVersion": 1,
+  "id": "luotopia.placeholder-2",
+  "name": "可选功能示例 2",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "description": "可选功能示例 2独立页面；当前为功能说明，不提供尚未接入的校园服务。",
+  "author": "Luotopia contributors",
+  "license": "MIT",
+  "permissions": [],
+  "networkHosts": [],
+  "views": [
+    "main"
+  ],
+  "contributions": [
+    {
+      "id": "row",
+      "slot": "settingsRow",
+      "title": "可选功能示例 2",
+      "icon": "settings",
+      "viewId": "main",
+      "allowedViews": [
+        "main"
+      ],
+      "group": "extensions"
+    }
+  ],
+  "config": []
+}

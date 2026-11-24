@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "org.example.school-timetable",
+  "name": "我的教务课表",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "main.js",
+  "description": "只读查看已登录应用内导入的武大课表",
+  "author": "Luotopia SDK 示例",
+  "license": "MIT",
+  "permissions": [
+    "schoolTimetable.read"
+  ],
+  "networkHosts": [],
+  "views": [
+    "main"
+  ],
+  "contributions": [
+    {
+      "id": "card",
+      "slot": "campusCard",
+      "title": "我的教务课表",
+      "icon": "school",
+      "viewId": "main",
+      "allowedViews": [
+        "main"
+      ],
+      "size": "small",
+      "color": "blue"
+    }
+  ],
+  "config": []
+}

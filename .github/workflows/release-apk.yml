@@ -87,10 +87,13 @@ jobs:
           trap 'rm -f "$LUOTOPIA_RELEASE_KEYSTORE"' EXIT
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$LUOTOPIA_RELEASE_KEYSTORE"
           unset ANDROID_KEYSTORE_BASE64
-          flutter build apk --release --no-pub --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
+          # Flutter regenerates the Android registrant for release, excluding test plugins.
+          flutter build apk --release --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
+          git diff --exit-code -- pubspec.lock
           apk=build/app/outputs/flutter-apk/app-release.apk
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
           "$signer" verify "$apk"
+          python3 ../test/check_plugin_apk.py "$apk"
           mkdir -p "$RUNNER_TEMP/release"
           cp "$apk" "$RUNNER_TEMP/release/luotopia-$TAG.apk"
           cd "$RUNNER_TEMP/release"

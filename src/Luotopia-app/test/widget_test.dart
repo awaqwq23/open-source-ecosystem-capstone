@@ -10,11 +10,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: LuotopiaApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: LuotopiaApp()));
     await tester.pumpAndSettle();
   }
 
@@ -23,7 +19,7 @@ void main() {
   ) async {
     await pumpApp(tester, const Size(390, 844));
 
-    expect(find.byType(ui.NavigationBar), findsOneWidget);
+    expect(find.byType(ui.NavigationBar), findsNWidgets(5));
     expect(find.text('主页'), findsWidgets);
     expect(find.text('日程'), findsWidgets);
     expect(find.text('论坛'), findsWidgets);

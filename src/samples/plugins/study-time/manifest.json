@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "org.example.study-time",
+  "name": "学习时长统计",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "main.js",
+  "description": "统计逗号分隔的学习分钟数",
+  "author": "Luotopia SDK 示例",
+  "license": "MIT",
+  "permissions": [],
+  "networkHosts": [],
+  "views": ["main", "preferences"],
+  "contributions": [
+    {"id":"tab","slot":"navigation","title":"学习统计","icon":"timer","viewId":"main","allowedViews":["main"]},
+    {"id":"card","slot":"campusCard","title":"学习统计","icon":"timer","viewId":"main","allowedViews":["main"],"size":"small","color":"sky"},
+    {"id":"settings","slot":"settingsRow","title":"学习统计设置","icon":"tune","viewId":"preferences","allowedViews":["preferences"],"group":"extensions"}
+  ],
+  "config": [{"key":"targetMinutes","type":"number","label":"目标分钟数","default":120,"min":1,"max":1440}]
+}

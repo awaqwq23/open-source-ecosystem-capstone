@@ -1,0 +1,1521 @@
+/*
+ * @Description: ffi
+ * @Author: ekibun
+ * @Date: 2020-09-19 10:29:04
+ * @LastEditors: ekibun
+ * @LastEditTime: 2020-12-02 11:14:35
+ */
+import 'dart:convert';
+import 'dart:ffi';
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
+import 'package:ffi/ffi.dart';
+
+extension ListFirstWhere<T> on Iterable<T> {
+  T? firstWhereOrNull(bool Function(T) test) {
+    try {
+      return firstWhere(test);
+    } on StateError {
+      return null;
+    }
+  }
+}
+
+abstract class JSRef {
+  int _refCount = 0;
+  int? _runtimeRefId;
+
+  int? get runtimeRefId => _runtimeRefId;
+  void dup() {
+    _refCount++;
+  }
+
+  void free() {
+    _refCount--;
+    if (_refCount < 0) destroy();
+  }
+
+  void destroy();
+
+  static void freeRecursive(dynamic obj) {
+    _callRecursive(obj, (ref) => ref.free());
+  }
+
+  static void dupRecursive(dynamic obj) {
+    _callRecursive(obj, (ref) => ref.dup());
+  }
+
+  static void _callRecursive(
+    dynamic obj,
+    void Function(JSRef) cb, [
+    Set? cache,
+  ]) {
+    if (obj == null) return;
+    if (cache == null) cache = Set();
+    if (cache.contains(obj)) return;
+    if (obj is List) {
+      cache.add(obj);
+      List.from(obj).forEach((e) => _callRecursive(e, cb, cache));
+    }
+    if (obj is Map) {
+      cache.add(obj);
+      obj.values.toList().forEach((e) => _callRecursive(e, cb, cache));
+    }
+    if (obj is JSRef) {
+      cb(obj);
+    }
+  }
+}
+
+abstract class JSRefLeakable {}
+
+class JSEvalFlag {
+  static const GLOBAL = 0 << 0;
+  static const MODULE = 1 << 0;
+}
+
+class JSChannelType {
+  static const METHON = 0;
+  static const MODULE = 1;
+  static const PROMISE_TRACK = 2;
+  static const FREE_OBJECT = 3;
+}
+
+class JSProp {
+  static const CONFIGURABLE = (1 << 0);
+  static const WRITABLE = (1 << 1);
+  static const ENUMERABLE = (1 << 2);
+  static const C_W_E = (CONFIGURABLE | WRITABLE | ENUMERABLE);
+}
+
+class JSTag {
+  static const FIRST = -9; /* first negative tag */
+  static const BIG_INT = -9;
+  static const SYMBOL = -8;
+  static const STRING = -7;
+  static const STRING_ROPE = -6; /* used internally */
+  static const MODULE = -3; /* used internally */
+  static const FUNCTION_BYTECODE = -2; /* used internally */
+  static const OBJECT = -1;
+
+  static const INT = 0;
+  static const BOOL = 1;
+  static const NULL = 2;
+  static const UNDEFINED = 3;
+  static const UNINITIALIZED = 4;
+  static const CATCH_OFFSET = 5;
+  static const EXCEPTION = 6;
+  static const SHORT_BIG_INT = 7;
+  static const FLOAT64 = 8;
+}
+
+abstract base class JSValue extends Opaque {}
+
+abstract base class JSContext extends Opaque {}
+
+abstract base class JSRuntime extends Opaque {}
+
+abstract base class JSPropertyEnum extends Opaque {}
+
+final DynamicLibrary _qjsLib = _openQuickJsLibrary();
+
+/// Exports that only exist in native builds matching this Dart code. Flutter
+/// tests load a prebuilt plugin and never rebuild it, so a stale library would
+/// otherwise only surface as a masked `JSError` deep inside value conversion.
+const List<String> _requiredNativeSymbols = [
+  'jsBeginCall',
+  'jsEndCall',
+  'jsNewWebNatives',
+  'jsSetStripInfo',
+  'jsGetStripInfo',
+  'jsCompile',
+  'jsReadModuleBytecode',
+  'jsTrimNativeHeap',
+  'jsNativeHeapUsage',
+];
+
+DynamicLibrary _checkNativeAbi(DynamicLibrary library, String origin) {
+  for (final symbol in _requiredNativeSymbols) {
+    try {
+      library.lookup<NativeFunction<Void Function()>>(symbol);
+    } on ArgumentError {
+      throw StateError(
+        'flutter_qjs_next native library is stale ($origin): missing '
+        '$symbol. Rebuild it (from example/: flutter build linux --debug) or '
+        'point FLUTTER_QJS_NEXT_LIBRARY at a matching build.',
+      );
+    }
+  }
+  return library;
+}
+
+DynamicLibrary _openQuickJsLibrary() {
+  // Prefer FLUTTER_QJS_NEXT_LIBRARY; legacy FLUTTER_QJS_ES2023_LIBRARY still accepted.
+  final explicitPath =
+      Platform.environment['FLUTTER_QJS_NEXT_LIBRARY'] ??
+      Platform.environment['FLUTTER_QJS_ES2023_LIBRARY'];
+  if (explicitPath != null && explicitPath.isNotEmpty) {
+    return _checkNativeAbi(DynamicLibrary.open(explicitPath), explicitPath);
+  }
+  if (Platform.isWindows) {
+    return _checkNativeAbi(
+      DynamicLibrary.open('flutter_qjs_next_plugin.dll'),
+      'flutter_qjs_next_plugin.dll',
+    );
+  }
+  if (Platform.isAndroid) {
+    return _checkNativeAbi(
+      DynamicLibrary.open('libflutter_qjs_next.so'),
+      'libflutter_qjs_next.so',
+    );
+  }
+  const isFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
+  if (Platform.isLinux &&
+      (isFlutterTest || Platform.environment['FLUTTER_TEST'] == 'true')) {
+    final candidates = [
+      'libflutter_qjs_next_plugin.so',
+      'build/linux/x64/debug/bundle/lib/libflutter_qjs_next_plugin.so',
+      'build/linux/x64/release/bundle/lib/libflutter_qjs_next_plugin.so',
+      '../example/build/linux/x64/debug/bundle/lib/libflutter_qjs_next_plugin.so',
+      '../example/build/linux/x64/release/bundle/lib/libflutter_qjs_next_plugin.so',
+      'example/build/linux/x64/debug/bundle/lib/libflutter_qjs_next_plugin.so',
+      'example/build/linux/x64/release/bundle/lib/libflutter_qjs_next_plugin.so',
+      'example/build/linux/x64/debug/plugins/flutter_qjs_next/libflutter_qjs_next_plugin.so',
+      'example/build/linux/x64/release/plugins/flutter_qjs_next/libflutter_qjs_next_plugin.so',
+      '../example/build/linux/x64/debug/plugins/flutter_qjs_next/libflutter_qjs_next_plugin.so',
+      '../example/build/linux/x64/release/plugins/flutter_qjs_next/libflutter_qjs_next_plugin.so',
+    ];
+    StateError? staleError;
+    for (final path in candidates) {
+      if (!path.startsWith('lib') && !File(path).existsSync()) continue;
+      final DynamicLibrary library;
+      try {
+        library = DynamicLibrary.open(path);
+      } catch (_) {
+        continue;
+      }
+      try {
+        return _checkNativeAbi(library, path);
+      } on StateError catch (error) {
+        staleError ??= error;
+      }
+    }
+    if (staleError != null) throw staleError;
+    throw StateError(
+      'Unable to load flutter_qjs_next native library for Flutter tests. '
+      'Build the Linux example first or set FLUTTER_QJS_NEXT_LIBRARY to the '
+      'absolute path of libflutter_qjs_next_plugin.so.',
+    );
+  }
+  return DynamicLibrary.process();
+}
+
+/// DLLEXPORT JSValue *jsThrow(JSContext *ctx, JSValue *obj)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, Pointer<JSValue> obj)
+jsThrow = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>)
+      >
+    >('jsThrow')
+    .asFunction();
+
+/// JSValue *jsEXCEPTION()
+final Pointer<JSValue> Function() jsEXCEPTION = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function()>>('jsEXCEPTION')
+    .asFunction();
+
+/// JSValue *jsUNDEFINED()
+final Pointer<JSValue> Function() jsUNDEFINED = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function()>>('jsUNDEFINED')
+    .asFunction();
+
+typedef _JSChannel =
+    Pointer<JSValue> Function(
+      Pointer<JSContext> ctx,
+      int method,
+      Pointer<JSValue> argv,
+    );
+typedef _JSChannelNative =
+    Pointer<JSValue> Function(
+      Pointer<JSContext> ctx,
+      IntPtr method,
+      Pointer<JSValue> argv,
+    );
+
+/// JSRuntime *jsNewRuntime(JSChannel channel)
+final Pointer<JSRuntime> Function(
+  Pointer<NativeFunction<_JSChannelNative>>,
+  int,
+)
+_jsNewRuntime = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSRuntime> Function(
+          Pointer<NativeFunction<_JSChannelNative>>,
+          Int64,
+        )
+      >
+    >('jsNewRuntime')
+    .asFunction();
+
+class _RuntimeOpaque {
+  final _JSChannel _channel;
+  final Map<int, JSRef> _ref = <int, JSRef>{};
+  int _nextRefId = 1;
+  bool eventLoopActive = false;
+  final ReceivePort _port;
+  final int? memoryLimit;
+  int? _dartObjectClassId;
+  _RuntimeOpaque(this._channel, this._port, this.memoryLimit);
+
+  int? get dartObjectClassId => _dartObjectClassId;
+
+  int addRef(JSRef ref) {
+    final id = _nextRefId++;
+    ref._runtimeRefId = id;
+    _ref[id] = ref;
+    return id;
+  }
+
+  bool removeRef(JSRef ref) {
+    final id = ref._runtimeRefId;
+    if (id == null) return false;
+    ref._runtimeRefId = null;
+    return _ref.remove(id) != null;
+  }
+
+  JSRef? getRef(bool Function(JSRef ref) test) {
+    for (final ref in _ref.values) {
+      if (test(ref)) return ref;
+    }
+    return null;
+  }
+
+  JSRef? refById(int id) => _ref[id];
+}
+
+int jsRuntimeReferenceCount(Pointer<JSRuntime> rt) =>
+    runtimeOpaques[rt]?._ref.length ?? 0;
+
+late final compileFn = _compile
+    .asFunction<
+      Pointer<Uint8> Function(
+        Pointer<JSContext>,
+        Pointer<Char>,
+        Pointer<Char>,
+        Pointer<IntPtr>,
+      )
+    >();
+late final _compile = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<Uint8> Function(
+          Pointer<JSContext>,
+          Pointer<Char>,
+          Pointer<Char>,
+          Pointer<IntPtr>,
+        )
+      >
+    >('CompileScript');
+
+/// DLLEXPORT uint8_t *jsCompile(JSContext *, const char *script,
+///     const char *fileName, int32_t eval_flags, size_t *lengthPtr)
+late final compileWithFlagsFn = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<Uint8> Function(
+          Pointer<JSContext>,
+          Pointer<Char>,
+          Pointer<Char>,
+          Int32,
+          Pointer<IntPtr>,
+        )
+      >
+    >('jsCompile')
+    .asFunction<
+      Pointer<Uint8> Function(
+        Pointer<JSContext>,
+        Pointer<Char>,
+        Pointer<Char>,
+        int,
+        Pointer<IntPtr>,
+      )
+    >();
+
+/// DLLEXPORT int32_t jsReadModuleBytecode(JSContext *, size_t, uint8_t *, int32_t)
+late final readModuleBytecodeFn = _qjsLib
+    .lookup<
+      NativeFunction<
+        Int32 Function(Pointer<JSContext>, Size, Pointer<Uint8>, Int32)
+      >
+    >('jsReadModuleBytecode')
+    .asFunction<
+      int Function(Pointer<JSContext>, int, Pointer<Uint8>, int)
+    >();
+
+late final evaluateBytecodeFn = _evaluateBytecode
+    .asFunction<
+      Pointer<JSValue> Function(Pointer<JSContext>, int, Pointer<Uint8>)
+    >();
+late final _evaluateBytecode = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Size, Pointer<Uint8>)
+      >
+    >('EvaluateBytecode');
+
+final Map<Pointer<JSRuntime>, _RuntimeOpaque> runtimeOpaques = Map();
+
+Pointer<JSValue> channelDispacher(
+  Pointer<JSContext> ctx,
+  int type,
+  Pointer<JSValue> argv,
+) {
+  final rt = type == JSChannelType.FREE_OBJECT
+      ? ctx.cast<JSRuntime>()
+      : jsGetRuntime(ctx);
+
+  final runtimeOpaque = runtimeOpaques[rt];
+
+  assert(
+    runtimeOpaque != null,
+    'The requested runtime opaque does not exist: $rt',
+  );
+
+  return runtimeOpaque!._channel(ctx, type, argv);
+}
+
+Pointer<JSRuntime> jsNewRuntime(
+  _JSChannel callback,
+  int timeout,
+  ReceivePort port, {
+  int? memoryLimit,
+}) {
+  final rt = _jsNewRuntime(Pointer.fromFunction(channelDispacher), timeout);
+  runtimeOpaques[rt] = _RuntimeOpaque(callback, port, memoryLimit);
+  return rt;
+}
+
+/// DLLEXPORT void jsSetMaxStackSize(JSRuntime *rt, size_t stack_size)
+final void Function(Pointer<JSRuntime>, int) jsSetMaxStackSize = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSRuntime>, IntPtr)>>(
+      'jsSetMaxStackSize',
+    )
+    .asFunction();
+
+/// DLLEXPORT void jsSetMemoryLimit(JSRuntime *rt, size_t limit);
+final void Function(Pointer<JSRuntime>, int) jsSetMemoryLimit = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSRuntime>, IntPtr)>>(
+      'jsSetMemoryLimit',
+    )
+    .asFunction();
+
+/// DLLEXPORT int32_t jsIsJobPending(JSRuntime *rt)
+final int Function(Pointer<JSRuntime>) jsIsJobPending = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Pointer<JSRuntime>)>>(
+      'jsIsJobPending',
+    )
+    .asFunction();
+
+/// DLLEXPORT void jsRunGC(JSRuntime *rt)
+final void Function(Pointer<JSRuntime>) jsRunGC = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSRuntime>)>>('jsRunGC')
+    .asFunction();
+
+final int Function() _jsTrimNativeHeap = _qjsLib
+    .lookup<NativeFunction<Int32 Function()>>('jsTrimNativeHeap')
+    .asFunction();
+
+/// Ask the C allocator to return free pages to the OS, and report whether it
+/// released anything. Unsupported allocators return `false`.
+///
+/// Churning QuickJS engines (`dispose`, [JavascriptRuntime.reinitialize]) frees
+/// thousands of small blocks whose pages the allocator keeps for reuse, so
+/// process RSS stays high while the live heap is tiny. This is the lever for
+/// giving those pages back; see `doc/wiki/guides/soak-rss-analysis.md`.
+bool trimNativeHeap() => _jsTrimNativeHeap() != 0;
+
+final void Function(Pointer<Int64>, int) _jsNativeHeapUsage = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<Int64>, Int32)>>(
+      'jsNativeHeapUsage',
+    )
+    .asFunction();
+
+/// C heap accounting: what the allocator holds vs what is actually live.
+///
+/// A growing [arenaBytes] with a flat [inUseBytes] is allocator residency or
+/// fragmentation, not a leak. All fields are 0 where the platform allocator has
+/// no equivalent (currently: everything but glibc ≥ 2.33).
+class NativeHeapUsage {
+  const NativeHeapUsage({
+    required this.arenaBytes,
+    required this.inUseBytes,
+    required this.freeBytes,
+    required this.mmappedBytes,
+  });
+
+  /// Total bytes the allocator obtained from the OS for its main arena.
+  final int arenaBytes;
+
+  /// Bytes handed out and not yet freed.
+  final int inUseBytes;
+
+  /// Bytes free inside the arena — held by the process, unused by the program.
+  final int freeBytes;
+
+  /// Bytes in blocks the allocator mapped separately (returned to the OS on
+  /// free, so they do not accumulate).
+  final int mmappedBytes;
+
+  bool get isSupported => arenaBytes != 0 || mmappedBytes != 0;
+
+  Map<String, int> toJson() => <String, int>{
+    'arena': arenaBytes,
+    'inUse': inUseBytes,
+    'free': freeBytes,
+    'mmapped': mmappedBytes,
+  };
+
+  @override
+  String toString() =>
+      'NativeHeapUsage(arena=$arenaBytes, inUse=$inUseBytes, '
+      'free=$freeBytes, mmapped=$mmappedBytes)';
+}
+
+/// Snapshot of [NativeHeapUsage] for the whole process.
+NativeHeapUsage readNativeHeapUsage() {
+  final out = calloc<Int64>(4);
+  try {
+    _jsNativeHeapUsage(out, 4);
+    return NativeHeapUsage(
+      arenaBytes: out[0],
+      inUseBytes: out[1],
+      freeBytes: out[2],
+      mmappedBytes: out[3],
+    );
+  } finally {
+    calloc.free(out);
+  }
+}
+
+/// DLLEXPORT void jsComputeMemoryUsage(JSRuntime *rt, int64_t *out, int32_t n)
+final void Function(Pointer<JSRuntime>, Pointer<Int64>, int)
+_jsComputeMemoryUsage = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<JSRuntime>, Pointer<Int64>, Int32)>
+    >('jsComputeMemoryUsage')
+    .asFunction();
+
+/// Snapshot of QuickJS [JSMemoryUsage] fields used for monitoring.
+class JsMemoryUsage {
+  final int mallocSize;
+  final int mallocLimit;
+  final int memoryUsedSize;
+  final int mallocCount;
+  final int memoryUsedCount;
+  final int atomCount;
+  final int atomSize;
+  final int strCount;
+  final int strSize;
+  final int objCount;
+  final int objSize;
+  final int propCount;
+  final int propSize;
+
+  const JsMemoryUsage({
+    required this.mallocSize,
+    required this.mallocLimit,
+    required this.memoryUsedSize,
+    required this.mallocCount,
+    required this.memoryUsedCount,
+    required this.atomCount,
+    required this.atomSize,
+    required this.strCount,
+    required this.strSize,
+    required this.objCount,
+    required this.objSize,
+    required this.propCount,
+    required this.propSize,
+  });
+
+  @override
+  String toString() =>
+      'JsMemoryUsage(malloc=$mallocSize, used=$memoryUsedSize, objs=$objCount)';
+}
+
+JsMemoryUsage jsComputeMemoryUsage(Pointer<JSRuntime> rt) {
+  final out = calloc<Int64>(13);
+  try {
+    _jsComputeMemoryUsage(rt, out, 13);
+    return JsMemoryUsage(
+      mallocSize: out[0],
+      mallocLimit: out[1],
+      memoryUsedSize: out[2],
+      mallocCount: out[3],
+      memoryUsedCount: out[4],
+      atomCount: out[5],
+      atomSize: out[6],
+      strCount: out[7],
+      strSize: out[8],
+      objCount: out[9],
+      objSize: out[10],
+      propCount: out[11],
+      propSize: out[12],
+    );
+  } finally {
+    calloc.free(out);
+  }
+}
+
+/// void jsFreeRuntime(JSRuntime *rt)
+final void Function(Pointer<JSRuntime>) _jsFreeRuntime = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSRuntime>)>>('jsFreeRuntime')
+    .asFunction();
+
+/// Release Dart-side references while [ctx] is still valid.
+///
+/// QuickJS contexts must be released before the runtime, but JSRef cleanup
+/// needs the context to free JSValues. Returning the leak report lets callers
+/// finish native teardown before surfacing the diagnostic.
+String? jsReleaseRuntimeRefs(Pointer<JSRuntime> rt, Pointer<JSContext> ctx) {
+  final referenceleak = <String>[];
+  final opaque = runtimeOpaques[rt];
+  if (opaque == null) return null;
+
+  while (true) {
+    JSRef? ref;
+    for (final candidate in opaque._ref.values) {
+      if (candidate is JSRefLeakable) {
+        ref = candidate;
+        break;
+      }
+    }
+    if (ref == null) break;
+    ref.destroy();
+  }
+  while (opaque._ref.isNotEmpty) {
+    final ref = opaque._ref.values.first;
+    final objStrs = ref.toString().split('\n');
+    final objStr = objStrs.isNotEmpty ? objStrs[0] + " ..." : objStrs[0];
+    referenceleak.add(
+      "  ${identityHashCode(ref)}\t${ref._refCount + 1}\t${ref.runtimeType.toString()}\t$objStr",
+    );
+    ref.destroy();
+  }
+  return referenceleak.isEmpty
+      ? null
+      : 'reference leak:\n    ADDR\tREF\tTYPE\tPROP\n${referenceleak.join('\n')}';
+}
+
+void jsFreeRuntime(Pointer<JSRuntime> rt) {
+  final referenceleak = <String>[];
+  // Keep [runtimeOpaques] until after ref cleanup so nested [destroy]/[free]
+  // can still [removeRef] (e.g. Future resolve/reject held by _DartObject).
+  final opaque = runtimeOpaques[rt];
+  if (opaque != null) {
+    while (true) {
+      JSRef? ref;
+      for (final candidate in opaque._ref.values) {
+        if (candidate is JSRefLeakable) {
+          ref = candidate;
+          break;
+        }
+      }
+      if (ref == null) break;
+      ref.destroy();
+    }
+    while (opaque._ref.isNotEmpty) {
+      final ref = opaque._ref.values.first;
+      final objStrs = ref.toString().split('\n');
+      final objStr = objStrs.isNotEmpty ? objStrs[0] + " ..." : objStrs[0];
+      referenceleak.add(
+        "  ${identityHashCode(ref)}\t${ref._refCount + 1}\t${ref.runtimeType.toString()}\t$objStr",
+      );
+      ref.destroy();
+    }
+    runtimeOpaques.remove(rt);
+  }
+  _jsFreeRuntime(rt);
+  if (referenceleak.isNotEmpty) {
+    throw ('reference leak:\n    ADDR\tREF\tTYPE\tPROP\n' +
+        referenceleak.join('\n'));
+  }
+}
+
+/// JSValue *jsNewCFunction(JSContext *ctx, JSValue *funcData)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> funcData,
+)
+jsNewCFunction = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>)
+      >
+    >('jsNewCFunction')
+    .asFunction();
+
+/// JSContext *jsNewContext(JSRuntime *rt)
+final Pointer<JSContext> Function(Pointer<JSRuntime> rt) _jsNewContext = _qjsLib
+    .lookup<NativeFunction<Pointer<JSContext> Function(Pointer<JSRuntime>)>>(
+      'jsNewContext',
+    )
+    .asFunction();
+
+Pointer<JSContext> jsNewContext(Pointer<JSRuntime> rt) {
+  final ctx = _jsNewContext(rt);
+  if (ctx.address == 0) throw Exception('Context create failed!');
+  final runtimeOpaque = runtimeOpaques[rt];
+  if (runtimeOpaque == null) throw Exception('Runtime has been released!');
+  runtimeOpaque._dartObjectClassId = jsNewClass(ctx, 'DartObject');
+  return ctx;
+}
+
+/// void jsFreeContext(JSContext *ctx)
+final void Function(Pointer<JSContext>) jsFreeContext = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSContext>)>>('jsFreeContext')
+    .asFunction();
+
+/// JSRuntime *jsGetRuntime(JSContext *ctx)
+final Pointer<JSRuntime> Function(Pointer<JSContext>) jsGetRuntime = _qjsLib
+    .lookup<NativeFunction<Pointer<JSRuntime> Function(Pointer<JSContext>)>>(
+      'jsGetRuntime',
+    )
+    .asFunction();
+
+/// void jsBeginCall(JSContext *ctx)
+final void Function(Pointer<JSContext>) jsBeginCall = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSContext>)>>('jsBeginCall')
+    .asFunction();
+
+/// void jsEndCall(JSContext *ctx)
+final void Function(Pointer<JSContext>) jsEndCall = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSContext>)>>('jsEndCall')
+    .asFunction();
+
+/// JSValue *jsEval(JSContext *ctx, const char *input, size_t input_len, const char *filename, int eval_flags)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Utf8> input,
+  int inputLen,
+  Pointer<Utf8> filename,
+  int evalFlags,
+)
+_jsEval = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(
+          Pointer<JSContext>,
+          Pointer<Utf8>,
+          IntPtr,
+          Pointer<Utf8>,
+          Int32,
+        )
+      >
+    >('jsEval')
+    .asFunction();
+
+Pointer<JSValue> jsEval(
+  Pointer<JSContext> ctx,
+  String input,
+  String filename,
+  int evalFlags,
+) {
+  final utf8input = input.toNativeUtf8();
+  final utf8filename = filename.toNativeUtf8();
+  final val = _jsEval(
+    ctx,
+    utf8input,
+    utf8input.length,
+    utf8filename,
+    evalFlags,
+  );
+  malloc.free(utf8input);
+  malloc.free(utf8filename);
+  final opaque = runtimeOpaques[jsGetRuntime(ctx)];
+  if (opaque?.eventLoopActive ?? false) {
+    opaque!._port.sendPort.send(#eval);
+  }
+  return val;
+}
+
+/// DLLEXPORT int32_t jsValueGetTag(JSValue *val)
+final int Function(Pointer<JSValue> val) jsValueGetTag = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Pointer<JSValue>)>>('jsValueGetTag')
+    .asFunction();
+
+/// void *jsValueGetPtr(JSValue *val)
+final int Function(Pointer<JSValue> val) jsValueGetPtr = _qjsLib
+    .lookup<NativeFunction<IntPtr Function(Pointer<JSValue>)>>('jsValueGetPtr')
+    .asFunction();
+
+/// DLLEXPORT bool jsTagIsFloat64(int32_t tag)
+final int Function(int val) jsTagIsFloat64 = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Int32)>>('jsTagIsFloat64')
+    .asFunction();
+
+/// JSValue *jsNewBool(JSContext *ctx, int val)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, int val) jsNewBool =
+    _qjsLib
+        .lookup<
+          NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>, Int32)>
+        >('jsNewBool')
+        .asFunction();
+
+/// JSValue *jsNewInt64(JSContext *ctx, int64_t val)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, int val) jsNewInt64 =
+    _qjsLib
+        .lookup<
+          NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>, Int64)>
+        >('jsNewInt64')
+        .asFunction();
+
+/// JSValue *jsNewBigInt64(JSContext *ctx, int64_t v)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, int val) jsNewBigInt64 =
+    _qjsLib
+        .lookup<
+          NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>, Int64)>
+        >('jsNewBigInt64')
+        .asFunction();
+
+/// JSValue *jsNewFloat64(JSContext *ctx, double val)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, double val)
+jsNewFloat64 = _qjsLib
+    .lookup<
+      NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>, Double)>
+    >('jsNewFloat64')
+    .asFunction();
+
+/// JSValue *jsNewString(JSContext *ctx, const char *str, size_t len)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Uint8> str,
+  int len,
+)
+_jsNewString = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<Uint8>, IntPtr)
+      >
+    >('jsNewString')
+    .asFunction();
+
+Pointer<JSValue> jsNewString(Pointer<JSContext> ctx, String str) {
+  // Pass the byte length explicitly: the string may contain U+0000.
+  final bytes = utf8.encode(str);
+  final utf8str = malloc<Uint8>(bytes.length + 1);
+  utf8str.asTypedList(bytes.length).setAll(0, bytes);
+  final jsStr = _jsNewString(ctx, utf8str, bytes.length);
+  malloc.free(utf8str);
+  return jsStr;
+}
+
+/// JSValue *jsNewArrayBufferCopy(JSContext *ctx, const uint8_t *buf, size_t len)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Uint8> buf,
+  int len,
+)
+jsNewArrayBufferCopy = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<Uint8>, IntPtr)
+      >
+    >('jsNewArrayBufferCopy')
+    .asFunction();
+
+/// uint8_t *jsAllocBuffer(size_t len)
+final Pointer<Uint8> Function(int len) jsAllocBuffer = _qjsLib
+    .lookup<NativeFunction<Pointer<Uint8> Function(IntPtr)>>('jsAllocBuffer')
+    .asFunction();
+
+/// void jsMemcpy(uint8_t *dst, const uint8_t *src, size_t len)
+final void Function(Pointer<Uint8>, Pointer<Uint8>, int) jsMemcpy = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<Uint8>, Pointer<Uint8>, IntPtr)>
+    >('jsMemcpy')
+    .asFunction();
+
+/// Native bridge operation counters used by diagnostic tests and profiling.
+final void Function() jsBridgeStatsReset = _qjsLib
+    .lookup<NativeFunction<Void Function()>>('jsBridgeStatsReset')
+    .asFunction();
+
+final int Function() jsBridgeStatsAllocCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsAllocCalls')
+    .asFunction();
+
+final int Function() jsBridgeStatsAllocBytes = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsAllocBytes')
+    .asFunction();
+
+final int Function() jsBridgeStatsFreeCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsFreeCalls')
+    .asFunction();
+
+final int Function() jsBridgeStatsMemcpyCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsMemcpyCalls')
+    .asFunction();
+
+final int Function() jsBridgeStatsMemcpyBytes = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsMemcpyBytes')
+    .asFunction();
+
+final void Function(int) jsBridgeStatsRecordCopy = _qjsLib
+    .lookup<NativeFunction<Void Function(IntPtr)>>('jsBridgeStatsRecordCopy')
+    .asFunction();
+
+final int Function() jsBridgeStatsCopyCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsCopyCalls')
+    .asFunction();
+
+final int Function() jsBridgeStatsCopyBytes = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>('jsBridgeStatsCopyBytes')
+    .asFunction();
+
+final int Function() jsBridgeStatsOwnedTypedArrayCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>(
+      'jsBridgeStatsOwnedTypedArrayCalls',
+    )
+    .asFunction();
+
+final int Function() jsBridgeStatsTypedArrayDataCalls = _qjsLib
+    .lookup<NativeFunction<Uint64 Function()>>(
+      'jsBridgeStatsTypedArrayDataCalls',
+    )
+    .asFunction();
+
+Map<String, int> readBridgeStats() => {
+  'allocCalls': jsBridgeStatsAllocCalls(),
+  'allocBytes': jsBridgeStatsAllocBytes(),
+  'freeCalls': jsBridgeStatsFreeCalls(),
+  'memcpyCalls': jsBridgeStatsMemcpyCalls(),
+  'memcpyBytes': jsBridgeStatsMemcpyBytes(),
+  'copyCalls': jsBridgeStatsCopyCalls(),
+  'copyBytes': jsBridgeStatsCopyBytes(),
+  'ownedTypedArrayCalls': jsBridgeStatsOwnedTypedArrayCalls(),
+  'typedArrayDataCalls': jsBridgeStatsTypedArrayDataCalls(),
+};
+
+/// JSValue *jsNewArrayBufferOwned(JSContext *ctx, uint8_t *buf, size_t len)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Uint8> buf,
+  int len,
+)
+jsNewArrayBufferOwned = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<Uint8>, IntPtr)
+      >
+    >('jsNewArrayBufferOwned')
+    .asFunction();
+
+/// JSValue *jsNewArray(JSContext *ctx)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx) jsNewArray = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>)>>(
+      'jsNewArray',
+    )
+    .asFunction();
+
+/// JSValue *jsNewObject(JSContext *ctx)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx) jsNewObject = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>)>>(
+      'jsNewObject',
+    )
+    .asFunction();
+
+/// void jsFreeValue(JSContext *ctx, JSValue *val, int32_t free)
+final void Function(Pointer<JSContext> ctx, Pointer<JSValue> val, int free)
+_jsFreeValue = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<JSContext>, Pointer<JSValue>, Int32)>
+    >('jsFreeValue')
+    .asFunction();
+
+void jsFreeValue(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> val, {
+  bool free = true,
+}) {
+  _jsFreeValue(ctx, val, free ? 1 : 0);
+}
+
+/// void jsFreeValue(JSRuntime *rt, JSValue *val, int32_t free)
+final void Function(Pointer<JSRuntime> rt, Pointer<JSValue> val, int free)
+_jsFreeValueRT = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<JSRuntime>, Pointer<JSValue>, Int32)>
+    >('jsFreeValueRT')
+    .asFunction();
+
+void jsFreeValueRT(
+  Pointer<JSRuntime> rt,
+  Pointer<JSValue> val, {
+  bool free = true,
+}) {
+  _jsFreeValueRT(rt, val, free ? 1 : 0);
+}
+
+/// JSValue *jsDupValue(JSContext *ctx, JSValueConst *v)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, Pointer<JSValue> val)
+jsDupValue = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>)
+      >
+    >('jsDupValue')
+    .asFunction();
+
+/// JSValue *jsDupValueRT(JSRuntime *rt, JSValue *v)
+final Pointer<JSValue> Function(Pointer<JSRuntime> rt, Pointer<JSValue> val)
+jsDupValueRT = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSRuntime>, Pointer<JSValue>)
+      >
+    >('jsDupValueRT')
+    .asFunction();
+
+/// int32_t jsToBool(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsToBool =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsToBool')
+        .asFunction();
+
+/// int64_t jsToFloat64(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsToInt64 =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int64 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsToInt64')
+        .asFunction();
+
+/// double jsToFloat64(JSContext *ctx, JSValueConst *val)
+final double Function(Pointer<JSContext> ctx, Pointer<JSValue> val)
+jsToFloat64 = _qjsLib
+    .lookup<
+      NativeFunction<Double Function(Pointer<JSContext>, Pointer<JSValue>)>
+    >('jsToFloat64')
+    .asFunction();
+
+/// const char *jsToCString(JSContext *ctx, JSValue *val, size_t *plen)
+final Pointer<Utf8> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> val,
+  Pointer<IntPtr> plen,
+)
+_jsToCString = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<Utf8> Function(
+          Pointer<JSContext>,
+          Pointer<JSValue>,
+          Pointer<IntPtr>,
+        )
+      >
+    >('jsToCString')
+    .asFunction();
+
+/// Reused out-parameter for [_jsToCString]. Native code writes it after any
+/// nested JS/Dart callbacks have returned, so reading it right after the call
+/// is safe.
+final Pointer<IntPtr> _cStringLength = calloc<IntPtr>();
+
+/// void jsFreeCString(JSContext *ctx, const char *ptr)
+final void Function(Pointer<JSContext> ctx, Pointer<Utf8> val)
+jsFreeCString = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSContext>, Pointer<Utf8>)>>(
+      'jsFreeCString',
+    )
+    .asFunction();
+
+String jsToCString(Pointer<JSContext> ctx, Pointer<JSValue> val) {
+  final ptr = _jsToCString(ctx, val, _cStringLength);
+  if (ptr.address == 0) throw Exception('JSValue cannot convert to string');
+  final length = _cStringLength.value;
+  final bytes = ptr.cast<Uint8>();
+  // Utf8Decoder silently drops a leading BOM: decode past it and restore it.
+  final str =
+      length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF
+      ? '\uFEFF${(bytes + 3).cast<Utf8>().toDartString(length: length - 3)}'
+      : ptr.toDartString(length: length);
+  jsFreeCString(ctx, ptr);
+  return str;
+}
+
+/// DLLEXPORT uint32_t jsNewClass(JSContext *ctx, const char *name)
+final int Function(Pointer<JSContext> ctx, Pointer<Utf8> name)
+_jsNewClass = _qjsLib
+    .lookup<NativeFunction<Uint32 Function(Pointer<JSContext>, Pointer<Utf8>)>>(
+      'jsNewClass',
+    )
+    .asFunction();
+
+int jsNewClass(Pointer<JSContext> ctx, String name) {
+  final utf8name = name.toNativeUtf8();
+  final val = _jsNewClass(ctx, utf8name);
+  malloc.free(utf8name);
+  return val;
+}
+
+/// DLLEXPORT JSValue *jsNewObjectClass(JSContext *ctx, uint32_t QJSClassId, void *opaque)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, int classId, int opaque)
+jsNewObjectClass = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Uint32, IntPtr)
+      >
+    >('jsNewObjectClass')
+    .asFunction();
+
+/// DLLEXPORT void *jsGetObjectOpaque(JSValue *obj, uint32_t classid)
+final int Function(Pointer<JSValue> obj, int classid) jsGetObjectOpaque =
+    _qjsLib
+        .lookup<NativeFunction<IntPtr Function(Pointer<JSValue>, Uint32)>>(
+          'jsGetObjectOpaque',
+        )
+        .asFunction();
+
+/// uint8_t *jsGetArrayBuffer(JSContext *ctx, size_t *psize, JSValueConst *obj)
+final Pointer<Uint8> Function(
+  Pointer<JSContext> ctx,
+  Pointer<IntPtr> psize,
+  Pointer<JSValue> val,
+)
+jsGetArrayBuffer = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<Uint8> Function(
+          Pointer<JSContext>,
+          Pointer<IntPtr>,
+          Pointer<JSValue>,
+        )
+      >
+    >('jsGetArrayBuffer')
+    .asFunction();
+
+/// JSTypedArrayEnum values (order matches quickjs.h).
+class JSTypedArrayType {
+  static const UINT8C = 0;
+  static const INT8 = 1;
+  static const UINT8 = 2;
+  static const INT16 = 3;
+  static const UINT16 = 4;
+  static const INT32 = 5;
+  static const UINT32 = 6;
+  static const BIG_INT64 = 7;
+  static const BIG_UINT64 = 8;
+  static const FLOAT16 = 9;
+  static const FLOAT32 = 10;
+  static const FLOAT64 = 11;
+}
+
+/// A native buffer whose ownership can be transferred to a QuickJS TypedArray.
+///
+/// The buffer is allocated outside the Dart heap. Call [dispose] when it is
+/// no longer needed, unless it has been passed to [QuickJsRuntime2], in which
+/// case QuickJS owns it and will release it during garbage collection.
+class JsTypedArrayTransfer {
+  final Pointer<Uint8> pointer;
+  final int byteLength;
+  final int type;
+  bool _transferred = false;
+
+  JsTypedArrayTransfer(this.pointer, this.byteLength, this.type)
+    : assert(byteLength >= 0);
+
+  /// Allocate a buffer suitable for a zero-copy Dart-to-native handoff.
+  factory JsTypedArrayTransfer.allocate({
+    required int byteLength,
+    required int type,
+  }) {
+    if (byteLength < 0) throw ArgumentError.value(byteLength, 'byteLength');
+    final pointer = jsAllocBuffer(byteLength);
+    if (pointer.address == 0) throw StateError('Out of memory');
+    return JsTypedArrayTransfer(pointer, byteLength, type);
+  }
+
+  /// The native-owned bytes. Writes are visible to the eventual JS view.
+  Uint8List get bytes => pointer.asTypedList(byteLength);
+
+  bool get transferred => _transferred;
+
+  /// Release the buffer if ownership has not been transferred.
+  void dispose() {
+    if (_transferred) return;
+    _transferred = true;
+    malloc.free(pointer);
+  }
+
+  Pointer<Uint8> takeOwnership() {
+    if (_transferred) {
+      throw StateError('TypedArray buffer was already transferred or disposed');
+    }
+    _transferred = true;
+    return pointer;
+  }
+}
+
+/// JSValue *jsNewTypedArray(JSContext *ctx, const uint8_t *buf, size_t len, int32_t type)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Uint8> buf,
+  int len,
+  int type,
+)
+jsNewTypedArray = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(
+          Pointer<JSContext>,
+          Pointer<Uint8>,
+          IntPtr,
+          Int32,
+        )
+      >
+    >('jsNewTypedArray')
+    .asFunction();
+
+/// JSValue *jsNewTypedArrayOwned(JSContext *ctx, uint8_t *buf, size_t len, int32_t type)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<Uint8> buf,
+  int len,
+  int type,
+)
+jsNewTypedArrayOwned = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(
+          Pointer<JSContext>,
+          Pointer<Uint8>,
+          IntPtr,
+          Int32,
+        )
+      >
+    >('jsNewTypedArrayOwned')
+    .asFunction();
+
+/// uint8_t *jsGetTypedArrayData(JSContext *ctx, JSValueConst *val, size_t *plength, int32_t *ptype)
+final Pointer<Uint8> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> val,
+  Pointer<IntPtr> plength,
+  Pointer<Int32> ptype,
+)
+jsGetTypedArrayData = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<Uint8> Function(
+          Pointer<JSContext>,
+          Pointer<JSValue>,
+          Pointer<IntPtr>,
+          Pointer<Int32>,
+        )
+      >
+    >('jsGetTypedArrayData')
+    .asFunction();
+
+/// int32_t jsIsFunction(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsIsFunction =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsIsFunction')
+        .asFunction();
+
+/// int32_t jsIsPromise(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsIsPromise =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsIsPromise')
+        .asFunction();
+
+/// int32_t jsIsArray(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsIsArray =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsIsArray')
+        .asFunction();
+
+/// DLLEXPORT int32_t jsIsError(JSContext *ctx, JSValueConst *val);
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsIsError =
+    _qjsLib
+        .lookup<
+          NativeFunction<Int32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsIsError')
+        .asFunction();
+
+/// DLLEXPORT JSValue *jsNewError(JSContext *ctx);
+final Pointer<JSValue> Function(Pointer<JSContext> ctx) jsNewError = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>)>>(
+      'jsNewError',
+    )
+    .asFunction();
+
+/// JSValue *jsGetProperty(JSContext *ctx, JSValueConst *this_obj,
+///                           JSAtom prop)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> thisObj,
+  int prop,
+)
+jsGetProperty = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>, Uint32)
+      >
+    >('jsGetProperty')
+    .asFunction();
+
+/// int jsDefinePropertyValue(JSContext *ctx, JSValueConst *this_obj,
+///                           JSAtom prop, JSValue *val, int flags)
+final int Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> thisObj,
+  int prop,
+  Pointer<JSValue> val,
+  int flag,
+)
+jsDefinePropertyValue = _qjsLib
+    .lookup<
+      NativeFunction<
+        Int32 Function(
+          Pointer<JSContext>,
+          Pointer<JSValue>,
+          Uint32,
+          Pointer<JSValue>,
+          Int32,
+        )
+      >
+    >('jsDefinePropertyValue')
+    .asFunction();
+
+/// void jsFreeAtom(JSContext *ctx, JSAtom v)
+final void Function(Pointer<JSContext> ctx, int v) jsFreeAtom = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSContext>, Uint32)>>(
+      'jsFreeAtom',
+    )
+    .asFunction();
+
+/// JSValue *jsGetPropertyUint32(JSContext *ctx, JSValueConst *this_obj, uint32_t idx)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> thisObj,
+  int idx,
+)
+jsGetPropertyUint32 = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>, Uint32)
+      >
+    >('jsGetPropertyUint32')
+    .asFunction();
+
+/// int jsDefinePropertyValueUint32(JSContext *ctx, JSValueConst *this_obj,
+///                                 uint32_t idx, JSValue *val, int flags)
+final int Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> thisObj,
+  int idx,
+  Pointer<JSValue> val,
+  int flag,
+)
+jsDefinePropertyValueUint32 = _qjsLib
+    .lookup<
+      NativeFunction<
+        Int32 Function(
+          Pointer<JSContext>,
+          Pointer<JSValue>,
+          Uint32,
+          Pointer<JSValue>,
+          Int32,
+        )
+      >
+    >('jsDefinePropertyValueUint32')
+    .asFunction();
+
+/// JSAtom jsValueToAtom(JSContext *ctx, JSValueConst *val)
+final int Function(Pointer<JSContext> ctx, Pointer<JSValue> val) jsValueToAtom =
+    _qjsLib
+        .lookup<
+          NativeFunction<Uint32 Function(Pointer<JSContext>, Pointer<JSValue>)>
+        >('jsValueToAtom')
+        .asFunction();
+
+/// JSValue *jsAtomToValue(JSContext *ctx, JSAtom val)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx, int val) jsAtomToValue =
+    _qjsLib
+        .lookup<
+          NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>, Uint32)>
+        >('jsAtomToValue')
+        .asFunction();
+
+/// int jsGetOwnPropertyNames(JSContext *ctx, JSPropertyEnum **ptab,
+///                           uint32_t *plen, JSValueConst *obj, int flags)
+final int Function(
+  Pointer<JSContext> ctx,
+  Pointer<Pointer<JSPropertyEnum>> ptab,
+  Pointer<Uint32> plen,
+  Pointer<JSValue> obj,
+  int flags,
+)
+jsGetOwnPropertyNames = _qjsLib
+    .lookup<
+      NativeFunction<
+        Int32 Function(
+          Pointer<JSContext>,
+          Pointer<Pointer<JSPropertyEnum>>,
+          Pointer<Uint32>,
+          Pointer<JSValue>,
+          Int32,
+        )
+      >
+    >('jsGetOwnPropertyNames')
+    .asFunction();
+
+/// JSAtom jsPropertyEnumGetAtom(JSPropertyEnum *ptab, int i)
+final int Function(Pointer<JSPropertyEnum> ptab, int i)
+jsPropertyEnumGetAtom = _qjsLib
+    .lookup<NativeFunction<Uint32 Function(Pointer<JSPropertyEnum>, Int32)>>(
+      'jsPropertyEnumGetAtom',
+    )
+    .asFunction();
+
+/// uint32_t sizeOfJSValue()
+final int Function() _sizeOfJSValue = _qjsLib
+    .lookup<NativeFunction<Uint32 Function()>>('sizeOfJSValue')
+    .asFunction();
+
+final sizeOfJSValue = _sizeOfJSValue();
+
+/// void setJSValueList(JSValue *list, int i, JSValue *val)
+final void Function(Pointer<JSValue> list, int i, Pointer<JSValue> val)
+setJSValueList = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<JSValue>, Uint32, Pointer<JSValue>)>
+    >('setJSValueList')
+    .asFunction();
+
+/// JSValue *jsCall(JSContext *ctx, JSValueConst *func_obj, JSValueConst *this_obj,
+///                 int argc, JSValueConst *argv)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> funcObj,
+  Pointer<JSValue> thisObj,
+  int argc,
+  Pointer<JSValue> argv,
+)
+_jsCall = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(
+          Pointer<JSContext>,
+          Pointer<JSValue>,
+          Pointer<JSValue>,
+          Int32,
+          Pointer<JSValue>,
+        )
+      >
+    >('jsCall')
+    .asFunction();
+
+Pointer<JSValue> jsCall(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> funcObj,
+  Pointer<JSValue> thisObj,
+  List<Pointer<JSValue>> argv,
+) {
+  final jsArgs = calloc<Uint8>(
+    argv.isNotEmpty ? sizeOfJSValue * argv.length : 1,
+  ).cast<JSValue>();
+  for (int i = 0; i < argv.length; ++i) {
+    Pointer<JSValue> jsArg = argv[i];
+    setJSValueList(jsArgs, i, jsArg);
+  }
+  final func1 = jsDupValue(ctx, funcObj);
+  final _thisObj = thisObj;
+  final jsRet = _jsCall(ctx, funcObj, _thisObj, argv.length, jsArgs);
+  jsFreeValue(ctx, func1);
+  malloc.free(jsArgs);
+  // Only wake a running [dispatch] loop. Without the guard the message queues
+  // on a ReceivePort nobody listens to and the engine's port buffer grows for
+  // the life of the runtime (same reason [jsEval] checks this flag).
+  final opaque = runtimeOpaques[jsGetRuntime(ctx)];
+  if (opaque?.eventLoopActive ?? false) {
+    opaque!._port.sendPort.send(#call);
+  }
+  return jsRet;
+}
+
+/// int jsIsException(JSValueConst *val)
+final int Function(Pointer<JSValue> val) jsIsException = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Pointer<JSValue>)>>('jsIsException')
+    .asFunction();
+
+/// JSValue *jsGetException(JSContext *ctx)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx) jsGetException = _qjsLib
+    .lookup<NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>)>>(
+      'jsGetException',
+    )
+    .asFunction();
+
+/// int jsExecutePendingJob(JSRuntime *rt)
+final int Function(Pointer<JSRuntime> ctx) jsExecutePendingJob = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Pointer<JSRuntime>)>>(
+      'jsExecutePendingJob',
+    )
+    .asFunction();
+
+/// JSValue *jsNewPromiseCapability(JSContext *ctx, JSValue *resolving_funcs)
+final Pointer<JSValue> Function(
+  Pointer<JSContext> ctx,
+  Pointer<JSValue> resolvingFuncs,
+)
+jsNewPromiseCapability = _qjsLib
+    .lookup<
+      NativeFunction<
+        Pointer<JSValue> Function(Pointer<JSContext>, Pointer<JSValue>)
+      >
+    >('jsNewPromiseCapability')
+    .asFunction();
+
+/// void jsFree(JSContext *ctx, void *ptab)
+final void Function(Pointer<JSContext> ctx, Pointer<JSPropertyEnum> ptab)
+jsFree = _qjsLib
+    .lookup<
+      NativeFunction<Void Function(Pointer<JSContext>, Pointer<JSPropertyEnum>)>
+    >('jsFree')
+    .asFunction();
+
+/// JS_STRIP_SOURCE: drop function source text from compiled code.
+const int jsStripSource = 1 << 0;
+
+/// void jsSetStripInfo(JSRuntime *rt, int32_t flags)
+final void Function(Pointer<JSRuntime> rt, int flags) jsSetStripInfo = _qjsLib
+    .lookup<NativeFunction<Void Function(Pointer<JSRuntime>, Int32)>>(
+      'jsSetStripInfo',
+    )
+    .asFunction();
+
+/// int32_t jsGetStripInfo(JSRuntime *rt)
+final int Function(Pointer<JSRuntime> rt) jsGetStripInfo = _qjsLib
+    .lookup<NativeFunction<Int32 Function(Pointer<JSRuntime>)>>(
+      'jsGetStripInfo',
+    )
+    .asFunction();
+
+/// JSValue *jsNewWebNatives(JSContext *ctx)
+final Pointer<JSValue> Function(Pointer<JSContext> ctx) jsNewWebNatives =
+    _qjsLib
+        .lookup<NativeFunction<Pointer<JSValue> Function(Pointer<JSContext>)>>(
+          'jsNewWebNatives',
+        )
+        .asFunction();

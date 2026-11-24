@@ -35,12 +35,16 @@ class RiverpodSettingsRepository implements SettingsRepository {
   WidgetSettings get widgetSettings => _ref.read(appWidgetSettingsProvider);
 
   @override
-  NavigationSettings get navigationSettings => _ref.read(appNavigationSettingsProvider);
+  NavigationSettings get navigationSettings =>
+      _ref.read(appNavigationSettingsProvider);
 
   @override
   Future<void> saveLocale(Locale locale) async {
     _ref.read(appLocaleProvider.notifier).state = locale;
-    await _prefs?.setString(AppBootstrapStorageKeys.locale, locale.languageCode);
+    await _prefs?.setString(
+      AppBootstrapStorageKeys.locale,
+      locale.languageCode,
+    );
   }
 
   @override
@@ -103,6 +107,7 @@ class RiverpodSettingsRepository implements SettingsRepository {
       AppBootstrapStorageKeys.navigationSettings,
       jsonEncode({
         'showLabels': settings.showLabels,
+        'visibleCount': settings.visibleCount,
         'middleTabMode': settings.middleTabMode.name,
         'defaultTab': settings.defaultTab,
       }),
