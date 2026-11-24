@@ -1,13 +1,21 @@
 # 本次版本交付
 
-## 自动发布 Android 安装包
+## 从验收包到公开 Release
 
-推送或合并到 `main` 会启动 **Release APK**。流程依次执行全套 CI、构建并校验签名 APK、上传 APK 与 SHA-256，再公开 GitHub Release。任一步失败，后续步骤停止。PR 和 `devops` 推送仅运行课程 CI。
+1. **构建**。推送或合并到 `main` 会运行 **Build signed APK**。全套 CI 通过后，签名并校验 APK、插件内容和 SHA-256。打开该次运行的 **Artifacts**，下载 `signed-apk-<完整提交 SHA>-<运行尝试序号>`。PR 和 `devops` 推送执行课程 CI。
+2. **验收**。解压得到 `luotopia.apk`、`luotopia.apk.sha256`。安装 APK 测试，用 `Get-FileHash .\luotopia.apk -Algorithm SHA256` 比对摘要，记录运行链接、提交 SHA、产物 ID 和摘要。产物 ID 可在上传步骤输出的 artifact URL 末尾找到。有仓库读取权限并已登录 GitHub 的用户可下载有效期内的 Actions 产物。
+3. **发布**。确认分发授权与验收结果后，给已验收的 SHA 创建标签并推送。将下面示例中的 SHA 和产物 ID 替换为实际值：
 
-- **首次配置**：仓库管理员在 Settings → Secrets and variables → Actions 配置 `ANDROID_KEYSTORE_BASE64`（签名密钥库文件的 Base64）、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。沿用同一正式签名密钥以支持安装升级。发布作业需要创建标签与 Release 的仓库写权限。缺少签名配置时构建会失败。
-- **自动版本**：每次 main 推送使用发布工作流的运行序号 N，标签为 `course-v0.1.N`，Android 版本名为 `0.1.N`，版本号为 N。标签指向通过检查的完整提交。也支持推送 `v1.2.3`、`course-v0.1.0` 等版本标签；手动入口按输入版本名生成 `v<版本名>` 标签。手动指定的 Android 版本号应高于已分发版本。
-- **下载与验证**：在 Releases → 对应版本 → Assets 下载 `luotopia-<标签>.apk` 和同名的 `.sha256` 文件。用 PowerShell 的 `Get-FileHash <APK路径> -Algorithm SHA256` 与校验文件第一列比对。Actions 运行的 Artifacts 下也保留签名构建产物。
-- **重试**：在原运行中选择 Re-run failed jobs。发布作业校验 APK 摘要，先在草稿中准备两个附件，上传成功后公开。相同运行沿用原标签，已公开且附件自校验通过的版本保留原件，标签已指向其他提交时发布会停止。
+   ```powershell
+   git tag -a course-v0.1.0 <已验收的提交SHA> -m "发布课程验收版" -m "Artifact-ID: 123456789"
+   git push origin refs/tags/course-v0.1.0
+   ```
+
+4. **领取**。**Publish tagged APK** 会核对标签提交、成功的 main 构建、产物 ID 与摘要，将原 APK 和校验文件上传到草稿后公开。最终下载入口是 **Releases → 对应标签 → Assets**。标签发布不重新签名或编译。
+
+**命名与重试**。支持 `v1.2.3`、`course-v0.1.0` 及 `-rc.1` 等预发布后缀。一个提交只有一份有效候选产物时可省略 `Artifact-ID`。有多份时，使用附注标签明确选择验收过的那份。来源不符、构建失败、产物过期或摘要有误时停止发布；若仅上传中断，在原标签运行中选择 **Re-run failed jobs**。产物过期后须重新构建并验收，再以有效的版本标签发布。
+
+**版本与权限**。APK 内部版本在构建时确定，默认版本名为 `0.1.N`、版本号为构建运行序号 N。需要指定 APK 内部版本时，可在 main 手动运行 **Build signed APK** 并填写版本。仓库的 Actions Secrets 需配置 `ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。公开发布作业需要读取 Actions 产物并写入 Release 的权限。
 
 ## 课程验收记录
 

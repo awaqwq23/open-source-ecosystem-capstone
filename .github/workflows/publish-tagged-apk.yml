@@ -1,0 +1,72 @@
+name: Publish tagged APK
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      - 'course-v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event.deleted == false
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    concurrency: apk-release-${{ github.ref }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Locate accepted main build
+        id: candidate
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^(course-)?v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]
+          sha=$(git rev-parse HEAD)
+          git merge-base --is-ancestor "$sha" origin/main
+          # An annotated tag can select the exact artifact tested by the team.
+          artifact_id=''
+          if [[ "$(git cat-file -t "$GITHUB_REF")" == tag ]]; then
+            artifact_id=$(git for-each-ref --format='%(contents:trailers:key=Artifact-ID,valueonly)' "$GITHUB_REF")
+          fi
+          python3 .github/scripts/select_apk.py "$sha" "$artifact_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download selected artifact
+        env:
+          ARTIFACT_ID: ${{ steps.candidate.outputs.artifact_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/candidate.zip"
+          unzip "$RUNNER_TEMP/candidate.zip" luotopia.apk luotopia.apk.sha256 -d release-files
+
+      - name: Verify and publish original APK
+        shell: bash
+        working-directory: release-files
+        env:
+          BUILD_RUN_ID: ${{ steps.candidate.outputs.run_id }}
+          ARTIFACT_ID: ${{ steps.candidate.outputs.artifact_id }}
+        run: |
+          sha256sum luotopia.apk | cmp - luotopia.apk.sha256
+          git fetch --no-tags origin "$GITHUB_REF"
+          [[ $(git rev-parse 'FETCH_HEAD^{commit}') == "$(git rev-parse HEAD)" ]]
+          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft); then
+            if [[ "$draft" == false ]]; then
+              gh release download "$TAG" -p luotopia.apk -p luotopia.apk.sha256 -D published
+              cmp luotopia.apk.sha256 published/luotopia.apk.sha256
+              (cd published && sha256sum luotopia.apk | cmp - luotopia.apk.sha256)
+              exit 0
+            fi
+          else
+            flags=()
+            if [[ "${TAG#*v}" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$TAG" --verify-tag --draft "${flags[@]}" --title "$TAG" --generate-notes \
+              --notes "提交 $(git rev-parse HEAD)，验收产物 $ARTIFACT_ID。[构建记录]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID)"
+          fi
+          gh release upload "$TAG" luotopia.apk luotopia.apk.sha256 --clobber
+          gh release edit "$TAG" --draft=false

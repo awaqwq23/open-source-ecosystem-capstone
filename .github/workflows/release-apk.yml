@@ -1,16 +1,13 @@
-name: Release APK
+name: Build signed APK
 
 on:
   push:
     branches: [main]
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-      - 'course-v[0-9]+.[0-9]+.[0-9]+*'
   workflow_dispatch:
     inputs:
       build-name:
         description: '版本名，例如 1.0.0'
-        required: true
+        required: false
         type: string
       build-number:
         description: 'Android 版本号，留空使用本次运行序号'
@@ -21,13 +18,12 @@ permissions:
 
 jobs:
   checks:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/course-check.yml
 
   build:
     needs: checks
     runs-on: ubuntu-24.04
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,20 +36,10 @@ jobs:
           INPUT_NUMBER: ${{ inputs.build-number }}
         run: |
           number=${INPUT_NUMBER:-$GITHUB_RUN_NUMBER}
-          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
-            name=$INPUT_NAME
-            tag="v$name"
-          elif [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            tag=$GITHUB_REF_NAME
-            name=${tag#course-}
-            name=${name#v}
-          else
-            name="0.1.$GITHUB_RUN_NUMBER"
-            tag="course-v$name"
-          fi
+          name=${INPUT_NAME:-0.1.$GITHUB_RUN_NUMBER}
           [[ "$name" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]] || { echo 'Invalid version name'; exit 1; }
           [[ "$number" =~ ^[1-9][0-9]{0,9}$ ]] && (( number <= 2100000000 )) || { echo 'Invalid Android version code'; exit 1; }
-          printf 'tag=%s\nname=%s\nnumber=%s\n' "$tag" "$name" "$number" >> "$GITHUB_OUTPUT"
+          printf 'name=%s\nnumber=%s\n' "$name" "$number" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
         with:
@@ -78,7 +64,6 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.number }}
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
           : "${ANDROID_KEYSTORE_BASE64:?Missing signing keystore}" "${ANDROID_KEYSTORE_PASSWORD:?Missing store password}"
           : "${ANDROID_KEY_ALIAS:?Missing signing alias}" "${ANDROID_KEY_PASSWORD:?Missing key password}"
@@ -95,58 +80,11 @@ jobs:
           "$signer" verify "$apk"
           python3 ../test/check_plugin_apk.py "$apk"
           mkdir -p "$RUNNER_TEMP/release"
-          cp "$apk" "$RUNNER_TEMP/release/luotopia-$TAG.apk"
+          cp "$apk" "$RUNNER_TEMP/release/luotopia.apk"
           cd "$RUNNER_TEMP/release"
-          sha256sum "luotopia-$TAG.apk" > "luotopia-$TAG.apk.sha256"
+          sha256sum "luotopia.apk" > "luotopia.apk.sha256"
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-apk-${{ steps.version.outputs.tag }}
+          name: signed-apk-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/release/
           if-no-files-found: error
-          overwrite: true
-
-  publish:
-    needs: build
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    concurrency: apk-release-${{ needs.build.outputs.tag }}
-    env:
-      TAG: ${{ needs.build.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: signed-apk-${{ needs.build.outputs.tag }}
-          path: release-files
-      - name: Publish verified assets on the tested commit
-        working-directory: release-files
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          apk="luotopia-$TAG.apk"
-          sha256sum --check "$apk.sha256"
-          ref="refs/tags/$TAG"
-          remote_tag=$(git ls-remote --refs origin "$ref")
-          if [[ -n "$remote_tag" ]]; then
-            git fetch --no-tags origin "$ref"
-            [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$GITHUB_SHA" ]] || { echo 'Tag belongs to another commit'; exit 1; }
-          else
-            git push origin "$GITHUB_SHA:$ref"
-          fi
-
-          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft); then
-            if [[ "$draft" == false ]]; then
-              # A rerun must preserve the signed files already delivered.
-              gh release download "$TAG" --pattern "$apk" --pattern "$apk.sha256" --dir published
-              (cd published && sha256sum --check "$apk.sha256")
-              exit 0
-            fi
-          else
-            flags=()
-            if [[ "${TAG#*v}" == *-* ]]; then flags+=(--prerelease); fi
-            gh release create "$TAG" --verify-tag --draft "${flags[@]}" --title "$TAG" --generate-notes --notes "Commit: $GITHUB_SHA"
-          fi
-          gh release upload "$TAG" "$apk" "$apk.sha256" --clobber
-          gh release edit "$TAG" --draft=false
