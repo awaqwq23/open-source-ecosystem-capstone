@@ -3,20 +3,48 @@ name: Course build and test
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [devops]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  server:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/Luotopia-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: src/Luotopia-server/go.mod
+          cache-dependency-path: src/Luotopia-server/go.sum
+      - run: go mod download
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test -count=1 -mod=readonly ./...
+        env:
+          TIMETABLE_CONTRACT_BUNDLE: ${{ runner.temp }}/contract.sqlite.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timetable-contract
+          path: ${{ runner.temp }}/contract.sqlite.gz
+          if-no-files-found: error
+      - run: git diff --exit-code -- go.mod go.sum
+
   app:
+    needs: server
     runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: src/Luotopia-app
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -29,8 +57,26 @@ jobs:
         run: cp .env.example .env
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
+      - name: Check formatting of changed Dart sources
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/heads/devops || -z "$BASE" || "$BASE" =~ ^0+$ || "$GITHUB_REF_TYPE" == tag ]]; then
+            BASE=$(git merge-base HEAD origin/main)
+          fi
+          git diff --name-only --diff-filter=ACMR -z "$BASE"...HEAD --relative -- '*.dart' |
+            xargs -0 -r dart format --output=none --set-exit-if-changed
+      - run: flutter analyze --no-pub
+      - name: Check CSV acceptance examples
+        run: python -m unittest discover -s ../test -p 'test_*.py'
+      - uses: actions/download-artifact@v4
+        with:
+          name: timetable-contract
+          path: ${{ runner.temp }}
       - name: Run app tests
-        run: flutter test
+        env:
+          TIMETABLE_CONTRACT_BUNDLE: ${{ runner.temp }}/contract.sqlite.gz
+        run: flutter test --no-pub
       - name: Check plugin implementation
         run: dart analyze lib/features/plugins test/features/plugins integration_test
       - name: Check plugin SDK and executable example
@@ -42,4 +88,4 @@ jobs:
           node src/samples/bundled-plugins/test.mjs
           node src/plugin/luotopia-plugin-sdk/tests/bridge-security.mjs
       - name: Build demo APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-pub

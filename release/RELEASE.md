@@ -1,15 +1,26 @@
 # 本次版本交付
 
+## 自动发布 Android 安装包
+
+推送或合并到 `main` 会启动 **Release APK**。流程依次执行全套 CI、构建并校验签名 APK、上传 APK 与 SHA-256，再公开 GitHub Release。任一步失败，后续步骤停止。PR 和 `devops` 推送仅运行课程 CI。
+
+- **首次配置**：仓库管理员在 Settings → Secrets and variables → Actions 配置 `ANDROID_KEYSTORE_BASE64`（签名密钥库文件的 Base64）、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。沿用同一正式签名密钥以支持安装升级。发布作业需要创建标签与 Release 的仓库写权限。缺少签名配置时构建会失败。
+- **自动版本**：每次 main 推送使用发布工作流的运行序号 N，标签为 `course-v0.1.N`，Android 版本名为 `0.1.N`，版本号为 N。标签指向通过检查的完整提交。也支持推送 `v1.2.3`、`course-v0.1.0` 等版本标签；手动入口按输入版本名生成 `v<版本名>` 标签。手动指定的 Android 版本号应高于已分发版本。
+- **下载与验证**：在 Releases → 对应版本 → Assets 下载 `luotopia-<标签>.apk` 和同名的 `.sha256` 文件。用 PowerShell 的 `Get-FileHash <APK路径> -Algorithm SHA256` 与校验文件第一列比对。Actions 运行的 Artifacts 下也保留签名构建产物。
+- **重试**：在原运行中选择 Re-run failed jobs。发布作业校验 APK 摘要，先在草稿中准备两个附件，上传成功后公开。相同运行沿用原标签，已公开且附件自校验通过的版本保留原件，标签已指向其他提交时发布会停止。
+
+## 课程验收记录
+
 > 2026-11-21插件重构已完成本地测试构建和独立模拟器验证，实际结果见 [插件实现与验收说明](../docs/plugins/IMPLEMENTATION.md)。以下保留课程正式发布模板与历史记录，不代表当前本地验证状态；最终提交、Tag、组员Review及许可确认仍未完成，发布决定保持HOLD。
 
 - **版本及选择理由** `course-v0.1.0` 为计划中的首次课程验收版本。
 - **最终 Commit（完整 SHA）** 待冻结并验证最终提交。原项目基线为 `e40a726a2aff07fdd17be15668f8180bebecac53`。
 - **Tag 及其目标 Commit（完整 SHA）** 待打 Tag 后填写。
-- **工作区状态、构建／测试结果及 CI 真实状态** 最终版本待核对。此前的 [课程 CI](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/runs/43910348699) 在 Flutter 测试阶段失败，APK 未构建。
+- **工作区状态、构建／测试结果及 CI 真实状态** [devops 基线 CI](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/runs/44892904164) 成功。最终课程版本的 main 发布运行及安装结果待登记。
 - **交付物名称、环境要求与运行命令** 计划交付 Android APK。实际文件名、系统版本、安装命令及 App 样例入口待实测。 [交付物目录](已验证交付物/README.md)
 - **交付物 SHA-256、原件／副本一致性** 待取得制品并解包后填写实际摘要和比对结果。
-- **核心场景及扩展操作的实际结果** 待验证原页面查课、教学班详情、导出日期、禁用和失败回退。
-- **本次变化、已知限制与未验证范围** 项目目录、设计初稿和合成样例已整理。课程扩展、离线入口及最终发布尚待完成。
+- **核心场景及扩展操作的实际结果** 最终 APK 需复核插件导入、启停、入口展示与原业务回归。
+- **本次变化、已知限制与未验证范围** 项目目录、设计初稿和合成样例已整理。运行时插件已合入，最终签名制品及课程验收记录待核对。
 - **发布决定** **HOLD**。课程场景、质量检查和制品一致性尚未完成验收。
 
 ## 提交前自检

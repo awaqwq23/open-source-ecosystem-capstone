@@ -63,6 +63,8 @@ flutter build apk --debug
 
 [课程 CI 配置](.github/workflows/course-check.yml) 和 [GitHub运行记录](https://github.com/awaqwq23/open-source-ecosystem-capstone/actions/workflows/course-check.yml) 可用于核对对应提交。历史运行不代表本轮提交状态；远程CI与最终制品结果需记录实际提交和日志。
 
+推送或合并到 `main` 时，[发布工作流](.github/workflows/release-apk.yml) 对同一提交复用 Go、Flutter、插件 SDK 与示例检查，通过后签名并发布 APK 与 SHA-256。配置、下载及重试见[发布说明](release/RELEASE.md)。
+
 ## 协作与贡献入口
 
 在 GitHub Issues 或 PR 说明问题与验收条件，在个人分支提交改动。由另一位实际组员审查，作者回应或修正后由审查人复核，再由小组确认合并。保存实际作者、审查人、审查提交、意见和处理结果。平台不可用时把同样信息写入 README。
