@@ -14,6 +14,14 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
+// CI supplies the keystore outside the checkout and credentials via the environment.
+val ciKeystore = System.getenv("LUOTOPIA_RELEASE_KEYSTORE")
+if (ciKeystore != null) {
+    keystoreProperties.setProperty("storeFile", ciKeystore)
+    keystoreProperties.setProperty("storePassword", System.getenv("ANDROID_KEYSTORE_PASSWORD"))
+    keystoreProperties.setProperty("keyAlias", System.getenv("ANDROID_KEY_ALIAS"))
+    keystoreProperties.setProperty("keyPassword", System.getenv("ANDROID_KEY_PASSWORD"))
+}
 
 android {
     namespace = "org.openwhu.luotopia"
@@ -46,7 +54,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
+            signingConfig = if (ciKeystore != null || keystorePropertiesFile.exists()) {
                 signingConfigs.create("release") {
                     keyAlias = keystoreProperties["keyAlias"] as String?
                     keyPassword = keystoreProperties["keyPassword"] as String?
